@@ -1,0 +1,38 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!-- We need a doctype to allow us to use special characters like &nbsp; 
+	 We use a "strict" DTD to make IE follow the alignment rules. -->
+	 
+<html xmlns:t="http://tapestry.apache.org/schema/tapestry_5_4.xsd">
+<body class="container">
+	<h3>Action Links</h3>
+		
+	<div class="eg"> 
+		<div class="alert alert-info">
+			Count = ${count}.
+		</div>
+		
+		<t:actionlink t:id="addX" t:context="literal:1">Add 1</t:actionlink><br/> 
+		<t:actionlink t:id="addY" t:context="literal:2">Add 2</t:actionlink><br/>  
+		<t:actionlink t:id="clear">Clear</t:actionlink>
+	</div>	  
+
+	<p>The second big difference between ActionLink and EventLink is server-side:</p>
+	<ul>
+		<li>ActionLink always "bubbles up" the same event: <em>action</em>.</li>
+	</ul>
+	
+	So, whereas in the EventLinks example we had <code>onAdd(int count)</code> and <code>onClear()</code>, 
+	in this ActionLinks example we have <code>onActionFromAddX(int count)</code>, 
+	<code>onActionFromAddY(int count)</code>, and <code>onActionFromClear()</code>.<br/><br/>
+	
+	In the rest of JumpStart we will use EventLink, not ActionLink.<br/><br/>
+
+	References:	
+	<a href="http://tapestry.apache.org/5.4/apidocs/org/apache/tapestry5/corelib/components/ActionLink.html">ActionLink</a>, 
+	<a href="http://tapestry.apache.org/page-navigation.html">Page Navigation</a>, 
+	<a href="http://tapestry.apache.org/component-events.html">Component Events</a>.<br/><br/>
+
+	<t:pagelink t:page="Index">Home</t:pagelink><br/><br/>
+
+</body>
+</html>

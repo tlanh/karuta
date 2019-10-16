@@ -1,5 +1,6 @@
 package eportfolium.com.karuta.business.contract;
 
+import java.sql.Connection;
 import java.util.List;
 import java.util.Map;
 
@@ -74,9 +75,9 @@ public interface ConfigurationManager {
 	 * Return ID a configuration key
 	 *
 	 * @param string key
-	 * @return int Configuration key ID
+	 * @return long Configuration key ID
 	 */
-	Integer getIdByName(String key);
+	Long getIdByName(String key);
 
 	/**
 	 * Return Value a configuration value
@@ -87,5 +88,9 @@ public interface ConfigurationManager {
 	String getValueByName(String key);
 
 	String getKarutaURL(Boolean ssl);
+
+	void transferConfigurationTable(Connection con);
+
+	void removeConfigurations(Connection con);
 
 }

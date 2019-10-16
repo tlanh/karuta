@@ -2,16 +2,17 @@ package eportfolium.com.karuta.model.bean;
 // Generated 13 juin 2019 19:14:13 by Hibernate Tools 5.2.10.Final
 
 import java.io.Serializable;
-import java.util.UUID;
 
-import javax.persistence.AssociationOverride;
-import javax.persistence.AssociationOverrides;
 import javax.persistence.AttributeOverride;
 import javax.persistence.AttributeOverrides;
 import javax.persistence.Column;
 import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
+import javax.persistence.Lob;
+import javax.persistence.ManyToOne;
+import javax.persistence.MapsId;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
@@ -20,8 +21,6 @@ import javax.persistence.Transient;
  */
 @Entity
 @Table(name = "group_rights")
-@AssociationOverrides({
-		@AssociationOverride(name = "id.groupRightInfo", joinColumns = @JoinColumn(name = "grid", nullable = false)) })
 public class GroupRights implements Serializable {
 
 	private static final long serialVersionUID = 7563709378804723952L;
@@ -44,6 +43,8 @@ public class GroupRights implements Serializable {
 	private String typesId;
 	private String rulesId;
 	private String notifyRoles;
+
+	private GroupRightInfo groupRightInfo;
 
 	public GroupRights() {
 	}
@@ -77,10 +78,42 @@ public class GroupRights implements Serializable {
 		this.notifyRoles = notifyRoles;
 	}
 
+	public GroupRights(GroupRights rights) {
+		this.id = new GroupRightsId();
+		this.read = rights.read;
+		this.write = rights.write;
+		this.delete = rights.delete;
+		this.submit = rights.submit;
+		this.add = rights.add;
+		this.typesId = rights.typesId;
+		this.rulesId = rights.rulesId;
+	}
+
 	@EmbeddedId
-	@AttributeOverrides({ @AttributeOverride(name = "id", column = @Column(name = "id", nullable = false)) })
+	@AttributeOverrides({
+			@AttributeOverride(name = "id", column = @Column(name = "id", nullable = false, length = 36)) })
 	public GroupRightsId getId() {
 		return this.id;
+	}
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@MapsId("groupRightInfoId")
+	@JoinColumn(name = "grid", nullable = false, insertable = false, updatable = false)
+	public GroupRightInfo getGroupRightInfo() {
+		return groupRightInfo;
+	}
+
+	public void setGroupRightInfo(GroupRightInfo groupRightInfo) {
+		this.groupRightInfo = groupRightInfo;
+	}
+
+	@Transient
+	public String getGroupRightsId() {
+		return getId().getId();
+	}
+
+	public void setGroupRightsId(String id) {
+		getId().setId(id);
 	}
 
 	public void setId(GroupRightsId id) {
@@ -132,7 +165,8 @@ public class GroupRights implements Serializable {
 		this.add = add;
 	}
 
-	@Column(name = "types_id", length = 65535)
+	@Lob
+	@Column(name = "types_id")
 	public String getTypesId() {
 		return this.typesId;
 	}
@@ -141,7 +175,8 @@ public class GroupRights implements Serializable {
 		this.typesId = typesId;
 	}
 
-	@Column(name = "rules_id", length = 65535)
+	@Lob
+	@Column(name = "rules_id")
 	public String getRulesId() {
 		return this.rulesId;
 	}
@@ -150,31 +185,14 @@ public class GroupRights implements Serializable {
 		this.rulesId = rulesId;
 	}
 
-	@Column(name = "notify_roles", length = 65535)
+	@Lob
+	@Column(name = "notify_roles")
 	public String getNotifyRoles() {
 		return this.notifyRoles;
 	}
 
 	public void setNotifyRoles(String notifyRoles) {
 		this.notifyRoles = notifyRoles;
-	}
-
-	@Transient
-	public GroupRightInfo getGroupRightInfo() {
-		return getId().getGroupRightInfo();
-	}
-
-	public void setGroupRightInfo(GroupRightInfo groupRightInfo) {
-		getId().setGroupRightInfo(groupRightInfo);
-	}
-
-	@Transient
-	public UUID getGroupRightsId() {
-		return getId().getId();
-	}
-
-	public void setGroupRightsId(UUID id) {
-		getId().setId(id);
 	}
 
 	@Override

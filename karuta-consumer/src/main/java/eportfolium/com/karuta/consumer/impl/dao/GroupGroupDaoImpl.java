@@ -1,9 +1,6 @@
 package eportfolium.com.karuta.consumer.impl.dao;
 // Generated 17 juin 2019 11:33:18 by Hibernate Tools 5.2.10.Final
 
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
-
 import org.springframework.stereotype.Repository;
 
 import eportfolium.com.karuta.consumer.contract.dao.GroupGroupDao;
@@ -17,9 +14,6 @@ import eportfolium.com.karuta.model.bean.GroupGroup;
  */
 @Repository
 public class GroupGroupDaoImpl extends AbstractDaoImpl<GroupGroup> implements GroupGroupDao {
-
-	@PersistenceContext
-	private EntityManager entityManager;
 
 	public GroupGroupDaoImpl() {
 		super();

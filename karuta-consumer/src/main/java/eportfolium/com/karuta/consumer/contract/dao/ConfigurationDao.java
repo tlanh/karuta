@@ -2,6 +2,8 @@ package eportfolium.com.karuta.consumer.contract.dao;
 // Generated 21 sept. 2017 22:49:01 by Hibernate Tools 5.2.3.Final
 
 import java.io.Serializable;
+import java.sql.Connection;
+import java.sql.ResultSet;
 import java.util.List;
 import java.util.Map;
 
@@ -93,9 +95,9 @@ public interface ConfigurationDao {
 	 * Return ID a configuration key
 	 *
 	 * @param string key
-	 * @return int Configuration key ID
+	 * @return long Configuration key ID
 	 */
-	Integer getIdByName(String key);
+	Long getIdByName(String key);
 
 	/**
 	 * Return Value a configuration value
@@ -108,5 +110,11 @@ public interface ConfigurationDao {
 	String getDomain();
 
 	String getDomainSsl();
+
+	ResultSet findAll(String table, Connection con) ;
+
+	List<Configuration> findAll();
+	
+	void removeAll();
 
 }

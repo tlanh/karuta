@@ -3,14 +3,15 @@ package eportfolium.com.karuta.model.bean;
 
 import java.io.Serializable;
 
-import javax.persistence.AssociationOverride;
-import javax.persistence.AssociationOverrides;
 import javax.persistence.AttributeOverride;
 import javax.persistence.AttributeOverrides;
 import javax.persistence.Column;
 import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.MapsId;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
@@ -19,12 +20,11 @@ import javax.persistence.Transient;
  */
 @Entity
 @Table(name = "credential_substitution")
-@AssociationOverrides({
-		@AssociationOverride(name = "id.credential", joinColumns = @JoinColumn(name = "userid", nullable = false)) })
 public class CredentialSubstitution implements Serializable {
 
 	private static final long serialVersionUID = 5216864434102983759L;
 	private CredentialSubstitutionId id;
+	private Credential credential;
 
 	public CredentialSubstitution() {
 	}
@@ -32,9 +32,12 @@ public class CredentialSubstitution implements Serializable {
 	public CredentialSubstitution(CredentialSubstitutionId id) {
 		this.id = id;
 	}
+	
+//	@AttributeOverride(name = "userid", column = @Column(name = "userid", nullable = false)
 
 	@EmbeddedId
-	@AttributeOverrides({ @AttributeOverride(name = "id", column = @Column(name = "id", nullable = false)),
+	@AttributeOverrides({ 
+			@AttributeOverride(name = "id", column = @Column(name = "id", nullable = false)),
 			@AttributeOverride(name = "type", column = @Column(name = "type", nullable = false, length = 5)) })
 	public CredentialSubstitutionId getId() {
 		return this.id;
@@ -44,13 +47,15 @@ public class CredentialSubstitution implements Serializable {
 		this.id = id;
 	}
 
-	@Transient
+	@ManyToOne(fetch = FetchType.LAZY)
+	@MapsId("credentialId")
+	@JoinColumn(name = "userid", nullable = false, insertable = false, updatable = false)
 	public Credential getCredential() {
-		return getId().getCredential();
+		return credential;
 	}
 
 	public void setCredential(Credential credential) {
-		getId().setCredential(credential);
+		this.credential = credential;
 	}
 
 	@Transient

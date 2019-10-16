@@ -1,0 +1,13 @@
+<!DOCTYPE HTML>
+<html xmlns:t="http://tapestry.apache.org/schema/tapestry_5_4.xsd">
+<head>
+	<title>Accès refusé</title>
+</head>
+<body>
+	<h1>Accès refusé</h1>
+	Vous n'êtes pas autorisé à consulter la page ${urlDenied}.
+	<br/>
+	<br/>
+	<a t:type="pageLink" t:page="Index">Accueil</a>
+</body>
+</html>

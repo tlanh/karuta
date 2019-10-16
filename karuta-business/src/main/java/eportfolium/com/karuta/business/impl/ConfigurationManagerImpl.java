@@ -1,16 +1,24 @@
 package eportfolium.com.karuta.business.impl;
 
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang3.BooleanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import eportfolium.com.karuta.business.contract.ConfigurationManager;
 import eportfolium.com.karuta.consumer.contract.dao.ConfigurationDao;
+import eportfolium.com.karuta.model.bean.Configuration;
 
 @Service
+@Transactional
 public class ConfigurationManagerImpl implements ConfigurationManager {
 
 	@Autowired
@@ -45,7 +53,7 @@ public class ConfigurationManagerImpl implements ConfigurationManager {
 		configurationDao.set(key, values, id_shop_group, id_shop);
 	}
 
-	public Integer getIdByName(String key) {
+	public Long getIdByName(String key) {
 		return configurationDao.getIdByName(key);
 	}
 
@@ -65,6 +73,32 @@ public class ConfigurationManagerImpl implements ConfigurationManager {
 		String base = ((ssl != null && ssl && ssl_enabled) ? "https://" + configurationDao.getDomainSsl()
 				: "http://" + configurationDao.getDomain());
 		return base;
+	}
+
+	@Override
+	@Transactional(isolation = Isolation.DEFAULT, propagation = Propagation.REQUIRES_NEW)
+	public void transferConfigurationTable(Connection con) {
+
+		ResultSet res = configurationDao.findAll("configuration", con);
+		Configuration cf = null;
+		try {
+			while (res.next()) {
+				cf = new Configuration();
+				cf.setId(res.getLong("id_configuration"));
+				cf.setName(res.getString("name"));
+				cf.setValue(res.getString("value"));
+				cf.setModifDate(res.getDate("modifDate"));
+				cf = configurationDao.merge(cf);
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+
+	@Override
+	@Transactional(isolation = Isolation.DEFAULT, propagation = Propagation.REQUIRES_NEW)
+	public void removeConfigurations(Connection con) {
+		configurationDao.removeAll();
 	}
 
 }

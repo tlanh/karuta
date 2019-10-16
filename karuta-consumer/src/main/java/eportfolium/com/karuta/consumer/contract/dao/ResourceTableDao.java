@@ -1,10 +1,11 @@
 package eportfolium.com.karuta.consumer.contract.dao;
 
 import java.io.Serializable;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.UUID;
-
-import javax.activation.MimeType;
 
 import eportfolium.com.karuta.model.bean.ResourceTable;
 import eportfolium.com.karuta.model.exception.DoesNotExistException;
@@ -21,9 +22,13 @@ public interface ResourceTableDao {
 
 	void removeById(Serializable id) throws DoesNotExistException;
 
-	ResourceTable getResource(String nodeUuid);
+	ResourceTable getResource(String resUuid);
 
-	ResourceTable getResourceByNodeParentUuid(String nodeParentUuid);
+	ResourceTable getResourceByXsiType(UUID resUuid, String xsiType);
+
+	ResourceTable getResourceByXsiType(String resUuid, String xsiType);
+
+	ResourceTable getResourceByNodeParentUuid(String nodeParentUuid) throws DoesNotExistException;
 
 	ResourceTable getResourceOfResourceByNodeUuid(String nodeUuid);
 
@@ -31,7 +36,7 @@ public interface ResourceTableDao {
 
 	String getResNodeContentByNodeUuid(String nodeUuid);
 
-	ResourceTable getResourceByNodeParentUuid(UUID nodeParentUuid);
+	ResourceTable getResourceByNodeParentUuid(UUID nodeParentUuid) throws DoesNotExistException;
 
 	List<ResourceTable> getResourcesByPortfolioUUID(String portfolioUuid);
 
@@ -43,9 +48,7 @@ public interface ResourceTableDao {
 
 	Object deleteResource(String resourceUuid, Long userId, Long groupId) throws Exception;
 
-	UUID getResourceNodeUuidByParentNodeUuid(String nodeParentUuid);
-
-	UUID getResourceNodeUuidByParentNodeUuid(UUID nodeParentUuid);
+	String getResourceNodeUuidByParentNodeUuid(String nodeParentUuid) throws DoesNotExistException;
 
 	int updateResource(UUID nodeUuid, String content, Long userId);
 
@@ -58,21 +61,13 @@ public interface ResourceTableDao {
 	int updateContextResource(UUID nodeUuid, String content, Long userId);
 
 	int updateContextResource(String nodeUuid, String content, Long userId);
-	// --------------------------------------------------------------------------------------------------------------------
 
-	public ResourceTable getResource(MimeType outMimeType, String nodeParentUuid, int userId, int groupId)
-			throws Exception;
+	int createResource(String uuid, String parentUuid, String xsiType, String content, String portfolioModelId,
+			boolean sharedNodeRes, boolean sharedRes, Long userId);
 
-	public List<ResourceTable> getResources(MimeType outMimeType, String portfolioUuid, int userId, int groupId)
-			throws Exception;
+	ResultSet getMysqlResources(Connection con) throws SQLException;
 
-	public Object putResource(MimeType inMimeType, String nodeParentUuid, String in, int userId, int groupId)
-			throws Exception;
+	ResultSet findAll(String table, Connection con);
 
-	public Object postResource(MimeType inMimeType, String nodeParentUuid, String in, int userId, int groupId)
-			throws Exception;
-
-
-
-
+	void removeAll();
 }

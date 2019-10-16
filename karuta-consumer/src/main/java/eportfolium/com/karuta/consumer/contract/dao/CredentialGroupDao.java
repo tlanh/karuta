@@ -1,6 +1,8 @@
 package eportfolium.com.karuta.consumer.contract.dao;
 
 import java.io.Serializable;
+import java.sql.Connection;
+import java.sql.ResultSet;
 import java.util.List;
 
 import eportfolium.com.karuta.model.bean.CredentialGroup;
@@ -20,17 +22,21 @@ public interface CredentialGroupDao {
 
 	void removeById(Serializable id) throws DoesNotExistException;
 
-	CredentialGroup getGroupByGroupLabel(String groupLabel);
+	CredentialGroup getGroupByName(String name);
 
-	Boolean putUserGroupLabel(Long siteGroupId, String label);
+	Boolean renameCredentialGroup(Long groupId, String newName);
 
 	/**
 	 * REPLACE postUserGroup
 	 * 
-	 * @param label
+	 * @param name
 	 * @return
 	 * @throws Exception
 	 */
-	Long createUserGroup(String label) throws Exception;
+	Long createCredentialGroup(String name) throws Exception;
+
+	ResultSet findAll(String table, Connection con);
+
+	void removeAll();
 
 }

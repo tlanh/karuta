@@ -1,9 +1,7 @@
 package eportfolium.com.karuta.consumer.impl.dao;
 // Generated 17 juin 2019 11:33:18 by Hibernate Tools 5.2.10.Final
 
-import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
-import javax.persistence.PersistenceContext;
 import javax.persistence.TypedQuery;
 
 import org.apache.commons.logging.Log;
@@ -24,20 +22,17 @@ public class CredentialGroupDaoImpl extends AbstractDaoImpl<CredentialGroup> imp
 
 	private static final Log log = LogFactory.getLog(CredentialGroupDaoImpl.class);
 
-	@PersistenceContext
-	private EntityManager em;
-
 	public CredentialGroupDaoImpl() {
 		super();
 		setCls(CredentialGroup.class);
 	}
 
-	public CredentialGroup getGroupByGroupLabel(String groupLabel) {
+	public CredentialGroup getGroupByName(String name) {
 		CredentialGroup cr = null;
 		String sql = "SELECT cg FROM CredentialGroup cg";
 		sql += " WHERE cg.label = :label";
 		TypedQuery<CredentialGroup> q = em.createQuery(sql, CredentialGroup.class);
-		q.setParameter("label", groupLabel);
+		q.setParameter("label", name);
 		try {
 			cr = q.getSingleResult();
 		} catch (NoResultException e) {
@@ -46,15 +41,15 @@ public class CredentialGroupDaoImpl extends AbstractDaoImpl<CredentialGroup> imp
 		return cr;
 	}
 
-	public Boolean putUserGroupLabel(Long siteGroupId, String label) {
+	public Boolean renameCredentialGroup(Long groupId, String newName) {
 		boolean isOK = true;
 
-		String sql = "SELECT cg FROM CredentialGroup cg WHERE cg.id = :siteGroupId";
+		String sql = "SELECT cg FROM CredentialGroup cg WHERE cg.id = :groupId";
 		TypedQuery<CredentialGroup> q = em.createQuery(sql, CredentialGroup.class);
-		q.setParameter("siteGroupId", siteGroupId);
+		q.setParameter("groupId", groupId);
 		try {
 			CredentialGroup cg = q.getSingleResult();
-			cg.setLabel(label);
+			cg.setLabel(newName);
 			merge(cg);
 
 		} catch (Exception e) {
@@ -65,10 +60,10 @@ public class CredentialGroupDaoImpl extends AbstractDaoImpl<CredentialGroup> imp
 		return isOK;
 	}
 
-	public Long createUserGroup(String label) throws Exception {
+	public Long createCredentialGroup(String name) throws Exception {
 		try {
 			CredentialGroup cg = new CredentialGroup();
-			cg.setLabel(label);
+			cg.setLabel(name);
 			cg = merge(cg);
 			return cg.getId();
 		} catch (Exception re) {

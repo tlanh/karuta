@@ -3,9 +3,7 @@ package eportfolium.com.karuta.consumer.impl.dao;
 
 import java.util.List;
 
-import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
-import javax.persistence.PersistenceContext;
 import javax.persistence.TypedQuery;
 
 import org.springframework.stereotype.Repository;
@@ -25,11 +23,6 @@ import eportfolium.com.karuta.util.ValidateUtil;
 @Repository
 public class PortfolioGroupDaoImpl extends AbstractDaoImpl<PortfolioGroup> implements PortfolioGroupDao {
 
-	@PersistenceContext
-	private EntityManager em;
-
-//	private static final Log log = LogFactory.getLog(PortfolioGroupDaoImpl.class);
-
 	public PortfolioGroupDaoImpl() {
 		super();
 		setCls(PortfolioGroup.class);
@@ -40,19 +33,43 @@ public class PortfolioGroupDaoImpl extends AbstractDaoImpl<PortfolioGroup> imple
 		return 0;
 	}
 
-	public Long getPortfolioGroupIdFromLabel(String groupLabel) {
-		Long groupID = Long.valueOf(-1);
-
-		String sql = "SELECT pg.id FROM PortfolioGroup pg";
+	public PortfolioGroup getPortfolioGroupFromLabel(String groupLabel) {
+		PortfolioGroup group = null;
+		String sql = "SELECT pg FROM PortfolioGroup pg";
 		sql += " WHERE pg.label = :label";
-		TypedQuery<Long> q = em.createQuery(sql, Long.class);
+		TypedQuery<PortfolioGroup> q = em.createQuery(sql, PortfolioGroup.class);
 		q.setParameter(1, groupLabel);
 		try {
-			groupID = q.getSingleResult();
+			group = q.getSingleResult();
 		} catch (NoResultException e) {
 			e.printStackTrace();
 		}
-		return groupID;
+		return group;
+	}
+
+	public Long getPortfolioGroupIdFromLabel(String groupLabel) {
+		PortfolioGroup group = getPortfolioGroupFromLabel(groupLabel);
+		return group != null ? group.getId() : -1L;
+	}
+
+	/**
+	 * Check if exist with correct type
+	 */
+	public boolean exists(Long id, String type) {
+		boolean exists = false;
+		String sql = "SELECT pg FROM PortfolioGroup pg";
+		sql += " WHERE pg.id = :id";
+		sql += " AND pg.type = :type";
+		TypedQuery<PortfolioGroup> q = em.createQuery(sql, PortfolioGroup.class);
+		q.setParameter("id", id);
+		q.setParameter("type", type);
+		try {
+			q.getSingleResult();
+			exists = true;
+		} catch (NoResultException e) {
+			e.printStackTrace();
+		}
+		return exists;
 	}
 
 	public String getPortfolioGroupListFromPortfolio(String portfolioid, int userId) {
@@ -80,11 +97,6 @@ public class PortfolioGroupDaoImpl extends AbstractDaoImpl<PortfolioGroup> imple
 	public String deletePortfolioGroups(int portfolioGroupId, int userId) {
 		// TODO Auto-generated method stub
 		return null;
-	}
-
-	public int putPortfolioInGroup(String uuid, Integer portfolioGroupId, String label, int userId) {
-		// TODO Auto-generated method stub
-		return 0;
 	}
 
 	public String deletePortfolioFromPortfolioGroups(String uuid, int portfolioGroupId, int userId) {

@@ -1,16 +1,16 @@
 package eportfolium.com.karuta.consumer.impl.dao;
 // Generated 17 juin 2019 11:33:18 by Hibernate Tools 5.2.10.Final
 
-import java.sql.SQLException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.List;
-import java.util.UUID;
 
-import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
-import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.commons.logging.Log;
@@ -37,9 +37,6 @@ public class CredentialDaoImpl extends AbstractDaoImpl<Credential> implements Cr
 
 	private static final Log log = LogFactory.getLog(CredentialDaoImpl.class);
 
-	@PersistenceContext
-	private EntityManager em;
-
 	public CredentialDaoImpl() {
 		super();
 		setCls(Credential.class);
@@ -56,9 +53,9 @@ public class CredentialDaoImpl extends AbstractDaoImpl<Credential> implements Cr
 
 	public boolean isAdmin(Long uid) {
 		boolean status = false;
-		String query = "SELECT c FROM Credential c";
+		String query = "FROM Credential c";
 		query += " WHERE c.id = :userid";
-		query += " AND c.isAdmin = 1 ";
+		query += " AND c.isAdmin=1";
 		Query q = em.createQuery(query);
 		q.setParameter("userid", uid);
 		try {
@@ -79,30 +76,20 @@ public class CredentialDaoImpl extends AbstractDaoImpl<Credential> implements Cr
 	 * @return
 	 */
 	public boolean isDesigner(Long userId, String nodeId) {
-		return isDesigner(userId, UUID.fromString(nodeId));
-	}
-
-	/**
-	 * Specific portfolio designer
-	 * 
-	 * @param userId
-	 * @param nodeId
-	 * @return
-	 */
-	public boolean isDesigner(Long userId, UUID nodeId) {
 		boolean status = false;
 		if (userId == null)
 			return status;
 
-		String query = "SELECT gu.id.credential.id FROM Node n";
+		String query = "SELECT gu.id.credentialId FROM Node n";
 		query += " INNER JOIN n.portfolio p";
 		query += " INNER JOIN p.groupRightInfo gri WITH gri.label='designer'";
 		query += " INNER JOIN gri.groupInfo gi";
-		query += " INNER JOIN gi.groupUser gu WITH gu.id.credential.id = :userID";
+		query += " INNER JOIN gi.groupUser gu";
+//		query += " WHERE gu.id.credentialId = :userID";
 		query += " WHERE n.id = :nodeUuid";
 		try {
 			Query q = em.createQuery(query);
-			q.setParameter("userID", userId);
+//			q.setParameter("userID", userId);
 			q.setParameter("nodeUuid", nodeId);
 			q.getSingleResult();
 			status = true;
@@ -111,17 +98,11 @@ public class CredentialDaoImpl extends AbstractDaoImpl<Credential> implements Cr
 		return status;
 	}
 
-	/**
-	 * Requete permettant de recuperer toutes les informations dans la table
-	 * credential pour un userid(utilisateur)particulier
-	 * 
-	 * @param userId
-	 * @return
-	 */
-	public Credential getInfUser(Long userId) {
+	@Override
+	public Credential getUserInfos(Long userId) {
 		Credential res = null;
-		String sql = "SELECT c FROM credential c";
-		sql += " LEFT JOIN c.credentialSubstitution cs";
+		String sql = "SELECT c FROM Credential c";
+		sql += " LEFT JOIN FETCH c.credentialSubstitution cs";
 		sql += " WHERE c.id = :userId";
 		try {
 			TypedQuery<Credential> q = em.createQuery(sql, Credential.class);
@@ -134,8 +115,8 @@ public class CredentialDaoImpl extends AbstractDaoImpl<Credential> implements Cr
 	}
 
 	public List<CredentialGroupMembers> getUsersByUserGroup(Long userGroupId) {
-		String sql = "FROM CredentialGroupMembers";
-		sql += " WHERE id.credentialGroup.id = :userGroupId";
+		String sql = "FROM CredentialGroupMembers cgm";
+		sql += " WHERE cgm.id.credentialGroupId = :userGroupId";
 		TypedQuery<CredentialGroupMembers> q = em.createQuery(sql, CredentialGroupMembers.class);
 		q.setParameter("userGroupId", userGroupId);
 		return q.getResultList();
@@ -158,16 +139,22 @@ public class CredentialDaoImpl extends AbstractDaoImpl<Credential> implements Cr
 
 	public List<Credential> getUsersByRole(Long userId, String portfolioUuid, String role) {
 		String sql = "SELECT c FROM Credential c";
-		sql += " group_right_info gri, group_info gi, group_user gu";
-		sql += " WHERE c.userid = gu.userid";
-		sql += " AND gu.gid = gi.gid";
-		sql += " AND gi.grid = gri.grid";
-		sql += " AND gri.portfolio_id = uuid2bin(?)";
-		sql += " AND gri.label = ?";
+		sql += " INNER JOIN c.groups gu";
+		sql += " INNER JOIN gu.groupInfo gi";
+		sql += " INNER JOIN gi.groupRightInfo gri";
+		sql += " INNER JOIN gri.portfolio p";
+		sql += " WHERE gri.label = :role";
+		sql += " AND p.id = :portfolioUuid";
+
+//		sql += " WHERE c.id = gu.id.credentialId";
+//		sql += " AND gu.id.groupInfoId = gi.id";
+//		sql += " AND gi.groupRightInfo.id = gri.id";
+//		sql += " AND gri.portfolio.id = :portfolioUuid";
+//		sql += " AND gri.label = :role";
 
 		TypedQuery<Credential> q = em.createQuery(sql, Credential.class);
-		q.setParameter(1, portfolioUuid);
-		q.setParameter(2, role);
+		q.setParameter("portfolioUuid", portfolioUuid);
+		q.setParameter("role", role);
 		return q.getResultList();
 	}
 
@@ -175,51 +162,6 @@ public class CredentialDaoImpl extends AbstractDaoImpl<Credential> implements Cr
 			throws BusinessException {
 		// TODO Auto-generated method stub
 		return null;
-	}
-
-	public String getUserUidByTokenAndLogin(String login, String token) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public int deleteCredential(int userId) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	public String getListUsers(Long userId, String username, String firstname, String lastname) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public String getUserGroupByPortfolio(String portfolioUuid, int userId) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public Object putUser(int userId, String oAuthToken, String oAuthSecret) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public Object postUser(String xmluser, int userId) throws SQLException, Exception {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public String postUsersGroups(int userId) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public Object deleteUser(int userid, int userId1) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public int deleteUsers(Integer userId, Integer userid2) {
-		// TODO Auto-generated method stub
-		return 0;
 	}
 
 	public boolean userExists(String login) {
@@ -382,7 +324,7 @@ public class CredentialDaoImpl extends AbstractDaoImpl<Credential> implements Cr
 		}
 
 		Credential result = null;
-		String sql = "SELECT c.login FROM " + Settings._DB_PREFIX_ + "Credential c";
+		String sql = "SELECT c FROM " + Settings._DB_PREFIX_ + "Credential c";
 		sql += " WHERE c.email = :email";
 		sql += " AND c.active = 1";
 		if (StringUtils.isNotEmpty(passwd)) {
@@ -431,7 +373,6 @@ public class CredentialDaoImpl extends AbstractDaoImpl<Credential> implements Cr
 
 	public Long getPublicUid() {
 		Long publicId = null;
-
 		// Fetching 'sys_public' userid
 		String sql = "SELECT id FROM Credential";
 		sql += " WHERE login='sys_public'";
@@ -441,13 +382,11 @@ public class CredentialDaoImpl extends AbstractDaoImpl<Credential> implements Cr
 		} catch (NoResultException e) {
 			e.printStackTrace();
 		}
-
 		return publicId;
 	}
 
 	public int updateCredentialToken(Long userId, String token) {
 		int result = 0;
-
 		String sql = "SELECT c FROM Credential c WHERE c.id  = :userId ";
 		TypedQuery<Credential> q = em.createQuery(sql, Credential.class);
 		q.setParameter("userId", userId);
@@ -482,22 +421,20 @@ public class CredentialDaoImpl extends AbstractDaoImpl<Credential> implements Cr
 			e.printStackTrace();
 			status = false;
 		}
-
 		return status;
 	}
 
-	@Override
-	public Credential getActiveByUserId(Long userID) {
-		if (!ValidateUtil.isUnsignedId(userID.intValue())) {
-			log.error("Fatal Error : userID is not correct");
-			throw new RuntimeException();
+	public Credential getActiveByUserId(Long userId) {
+		if (userId == null || !ValidateUtil.isUnsignedId(userId.intValue())) {
+			log.error("Fatal Error : userId is not correct");
+			throw new IllegalArgumentException();
 		}
 		Credential result = null;
 		String sql = "SELECT cr FROM Credential cr";
-		sql += " WHERE cr.id = :userID";
-		sql += " AND c.active = 1";
+		sql += " WHERE cr.id = :userId";
+		sql += " AND cr.active = 1";
 		TypedQuery<Credential> q = em.createQuery(sql, Credential.class);
-		q.setParameter("customerID", userID);
+		q.setParameter("userId", userId);
 
 		try {
 			result = q.getSingleResult();
@@ -505,6 +442,110 @@ public class CredentialDaoImpl extends AbstractDaoImpl<Credential> implements Cr
 			log.error("getActiveByUserId failed", e);
 		}
 		return result;
+	}
+
+	public Credential getByLogin(String login, boolean isAdmin) {
+		if (StringUtils.isEmpty(login)) {
+			throw new IllegalArgumentException();
+		}
+		Credential cr = null;
+		String sql = "SELECT c FROM Credential c";
+		sql += " WHERE c.login = :login";
+		sql += " AND c.isAdmin = :isAdmin";
+		TypedQuery<Credential> q = em.createQuery(sql, Credential.class);
+		q.setParameter("login", login);
+		q.setParameter("isAdmin", BooleanUtils.toInteger(isAdmin));
+		try {
+			cr = q.getSingleResult();
+		} catch (NoResultException e) {
+		}
+		return cr;
+	}
+
+	public boolean isUserMemberOfRole(Long userId, Long roleId) {
+		boolean status = false;
+		String sql = "FROM GroupUser gu";
+		sql += " WHERE gu.id.credentialId = :userid";
+		sql += " AND gu.groupInfo.groupRightInfo.id = :grid";
+		Query q = em.createQuery(sql);
+		q.setParameter("userid", userId);
+		q.setParameter("grid", roleId);
+		try {
+			q.getSingleResult();
+			status = true;
+		} catch (NoResultException e) {
+			// TODO: handle exception
+		}
+		return status;
+	}
+
+	public String getLoginById(Long userId) {
+		String result = null;
+		String buf = "SELECT c.login FROM Credential c";
+		buf += " WHERE c.id = :userId";
+		TypedQuery<String> q = em.createQuery(buf, String.class);
+		q.setParameter("userId", userId);
+		try {
+			result = q.getSingleResult();
+		} catch (NoResultException e) {
+			log.error("getLoginById failed", e);
+		}
+		return result;
+	}
+
+	/***************************************************************************************************************/
+	public ResultSet getMysqlUsers(Connection con, String username, String firstname, String lastname) {
+		PreparedStatement st;
+		String sql;
+		try {
+			// On récupère d'abord les informations dans la table structures
+			sql = "SELECT * FROM credential c " + "LEFT JOIN credential_substitution cs " + "ON c.userid=cs.userid ";
+			int count = 0;
+			if (username != null)
+				count++;
+			if (firstname != null)
+				count++;
+			if (lastname != null)
+				count++;
+			if (count > 0) {
+				sql += "WHERE ";
+				if (username != null) {
+					sql += "login LIKE ? ";
+					if (count > 1)
+						sql += "AND ";
+				}
+				if (firstname != null) {
+					sql += "display_firstname LIKE ? ";
+					if (count > 1)
+						sql += "AND ";
+				}
+				if (lastname != null) {
+					sql += "display_lastname LIKE ? ";
+				}
+			}
+			sql += "ORDER BY c.userid";
+			st = con.prepareStatement(sql);
+
+			int start = 1;
+			if (username != null) {
+				st.setString(start, "%" + username + "%");
+				start++;
+			}
+			if (firstname != null) {
+				st.setString(start, "%" + firstname + "%");
+				start++;
+			}
+			if (lastname != null) {
+				st.setString(start, "%" + lastname + "%");
+				start++;
+			}
+
+			return st.executeQuery();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		return null;
 	}
 
 }

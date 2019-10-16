@@ -36,6 +36,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import eportfolium.com.karuta.business.contract.ConfigurationManager;
 import eportfolium.com.karuta.business.contract.EmailManager;
@@ -46,6 +47,7 @@ import eportfolium.com.karuta.util.ValidateUtil;
 import freemarker.template.Configuration;
 
 @Service
+@Transactional
 public class EmailManagerImpl implements EmailManager {
 	public static final int TYPE_HTML = 1;
 	public static final int TYPE_TEXT = 2;

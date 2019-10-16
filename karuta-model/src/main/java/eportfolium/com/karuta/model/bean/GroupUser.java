@@ -3,13 +3,12 @@ package eportfolium.com.karuta.model.bean;
 
 import java.io.Serializable;
 
-import javax.persistence.AssociationOverride;
-import javax.persistence.AssociationOverrides;
 import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.MapsId;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 
 /**
  * @author mlengagne
@@ -20,13 +19,13 @@ import javax.persistence.Transient;
  */
 @Entity
 @Table(name = "group_user")
-@AssociationOverrides({
-		@AssociationOverride(name = "id.groupInfo", joinColumns = @JoinColumn(name = "gid", nullable = false)),
-		@AssociationOverride(name = "id.credential", joinColumns = @JoinColumn(name = "userid", nullable = false)) })
 public class GroupUser implements Serializable {
 
 	private static final long serialVersionUID = -1516598438094285942L;
+
 	private GroupUserId id;
+	private GroupInfo groupInfo;
+	private Credential credential;
 
 	public GroupUser() {
 	}
@@ -44,22 +43,29 @@ public class GroupUser implements Serializable {
 		this.id = id;
 	}
 
-	@Transient
+//	@AssociationOverride(name = "id.groupInfo", joinColumns = ),
+//	@AssociationOverride(name = "id.credential", joinColumns = ) })
+//
+	@ManyToOne
+	@MapsId("groupInfoId")
+	@JoinColumn(name = "gid", nullable = false)
 	public GroupInfo getGroupInfo() {
-		return getId().getGroupInfo();
+		return groupInfo;
 	}
 
 	public void setGroupInfo(GroupInfo groupInfo) {
-		getId().setGroupInfo(groupInfo);
+		this.groupInfo = groupInfo;
 	}
 
-	@Transient
+	@ManyToOne
+	@MapsId("credentialId")
+	@JoinColumn(name = "userid", nullable = false)
 	public Credential getCredential() {
-		return getId().getCredential();
+		return credential;
 	}
 
 	public void setCredential(Credential credential) {
-		getId().setCredential(credential);
+		this.credential = credential;
 	}
 
 	@Override

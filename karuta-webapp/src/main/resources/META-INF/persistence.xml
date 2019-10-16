@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence version="2.0"
+	xmlns="http://java.sun.com/xml/ns/persistence"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://java.sun.com/xml/ns/persistence http://java.sun.com/xml/ns/persistence/persistence_2_0.xsd">
+	<persistence-unit name="karuta-backend">
+		<provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+		<class>eportfolium.com.karuta.model.bean.Annotation</class>
+		<class>eportfolium.com.karuta.model.bean.Configuration</class>
+		<class>eportfolium.com.karuta.model.bean.CredentialGroup</class>
+		<class>eportfolium.com.karuta.model.bean.CredentialGroupMembers</class>
+		<class>eportfolium.com.karuta.model.bean.Credential</class>
+		<class>eportfolium.com.karuta.model.bean.CredentialSubstitution</class>
+		<class>eportfolium.com.karuta.model.bean.DataTable</class>
+		<class>eportfolium.com.karuta.model.bean.GroupGroup</class>
+		<class>eportfolium.com.karuta.model.bean.GroupInfo</class>
+		<class>eportfolium.com.karuta.model.bean.GroupRightInfo</class>
+		<class>eportfolium.com.karuta.model.bean.GroupRights</class>
+		<class>eportfolium.com.karuta.model.bean.GroupUser</class>
+		<class>eportfolium.com.karuta.model.bean.LogTable</class>
+		<class>eportfolium.com.karuta.model.bean.Node</class>
+		<class>eportfolium.com.karuta.model.bean.PortfolioGroup</class>
+		<class>eportfolium.com.karuta.model.bean.PortfolioGroupMembers</class>
+		<class>eportfolium.com.karuta.model.bean.Portfolio</class>
+		<class>eportfolium.com.karuta.model.bean.ResourceTable</class>
+		<properties>
+			<property name="javax.persistence.jdbc.driver"
+				value="com.mysql.cj.jdbc.Driver" />
+			<property name="javax.persistence.jdbc.url"
+				value="jdbc:mysql://localhost:3306/karutaBackend?autoReconnect=true&amp;transformedBitIsBoolean=true&amp;characterEncoding=utf-8&amp;serverTimezone=UTC&amp;zeroDateTimeBehavior=convertToNull" />
+			<property name="javax.persistence.jdbc.user" value="karuta" />
+			<property name="javax.persistence.jdbc.password"
+				value="karuta_password" />
+			<property name="configurationClass"
+				value="org.hibernate.cfg.AnnotationConfiguration" />
+			<property name="hibernate.dialect"
+				value="org.hibernate.dialect.MySQL5Dialect" />
+			<property name="hibernate.format_sql" value="false" />
+			<property name="hibernate.show_sql" value="false" />
+			<property name="hibernate.use_sql_comments" value="false" />
+			<property name="hibernate.ejb.naming_strategy"
+				value="org.hibernate.cfg.DefaultNamingStrategy" />
+			<property name="hibernate.hbm2ddl.auto" value="create-drop" />
+		</properties>
+	</persistence-unit>
+</persistence>
