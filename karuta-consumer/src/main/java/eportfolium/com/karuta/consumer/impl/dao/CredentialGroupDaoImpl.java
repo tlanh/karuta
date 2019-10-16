@@ -32,12 +32,12 @@ public class CredentialGroupDaoImpl extends AbstractDaoImpl<CredentialGroup> imp
 		setCls(CredentialGroup.class);
 	}
 
-	public CredentialGroup getGroupByGroupLabel(String groupLabel) {
+	public CredentialGroup getGroupByName(String name) {
 		CredentialGroup cr = null;
 		String sql = "SELECT cg FROM CredentialGroup cg";
 		sql += " WHERE cg.label = :label";
 		TypedQuery<CredentialGroup> q = em.createQuery(sql, CredentialGroup.class);
-		q.setParameter("label", groupLabel);
+		q.setParameter("label", name);
 		try {
 			cr = q.getSingleResult();
 		} catch (NoResultException e) {
@@ -46,15 +46,15 @@ public class CredentialGroupDaoImpl extends AbstractDaoImpl<CredentialGroup> imp
 		return cr;
 	}
 
-	public Boolean putUserGroupLabel(Long siteGroupId, String label) {
+	public Boolean renameCredentialGroup(Long groupId, String newName) {
 		boolean isOK = true;
 
-		String sql = "SELECT cg FROM CredentialGroup cg WHERE cg.id = :siteGroupId";
+		String sql = "SELECT cg FROM CredentialGroup cg WHERE cg.id = :groupId";
 		TypedQuery<CredentialGroup> q = em.createQuery(sql, CredentialGroup.class);
-		q.setParameter("siteGroupId", siteGroupId);
+		q.setParameter("groupId", groupId);
 		try {
 			CredentialGroup cg = q.getSingleResult();
-			cg.setLabel(label);
+			cg.setLabel(newName);
 			merge(cg);
 
 		} catch (Exception e) {
@@ -65,10 +65,10 @@ public class CredentialGroupDaoImpl extends AbstractDaoImpl<CredentialGroup> imp
 		return isOK;
 	}
 
-	public Long createUserGroup(String label) throws Exception {
+	public Long createCredentialGroup(String name) throws Exception {
 		try {
 			CredentialGroup cg = new CredentialGroup();
-			cg.setLabel(label);
+			cg.setLabel(name);
 			cg = merge(cg);
 			return cg.getId();
 		} catch (Exception re) {

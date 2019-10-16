@@ -39,6 +39,10 @@ public class GroupRightInfo implements Serializable {
 	public GroupRightInfo() {
 	}
 
+	public GroupRightInfo(Long id) {
+		this.id = id;
+	}
+
 	public GroupRightInfo(Long id, long owner, String label, boolean changeRights) {
 		this.id = id;
 		this.owner = owner;

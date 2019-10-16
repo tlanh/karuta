@@ -3,8 +3,8 @@ package eportfolium.com.karuta.model.bean;
 
 import java.io.Serializable;
 import java.util.Date;
+import java.util.LinkedHashSet;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.UUID;
 
 import javax.persistence.Column;
@@ -37,7 +37,7 @@ public class Node implements Serializable {
 	private UUID id;
 	private Node parentNode;
 	private String childrenStr;
-	private Set<Node> children = new TreeSet<Node>();
+	private Set<Node> children = new LinkedHashSet<Node>();
 	private int nodeOrder;
 	private String metadata;
 	private String metadataWad;
@@ -73,6 +73,39 @@ public class Node implements Serializable {
 
 	public Node(UUID id) {
 		this.id = id;
+	}
+
+	public Node(Node original) {
+		this.parentNode = original.parentNode != null ? new Node(original.parentNode.getId()) : null;
+		this.childrenStr = original.childrenStr;
+		this.nodeOrder = original.nodeOrder;
+		this.metadata = original.metadata;
+		this.metadataWad = original.metadataWad;
+		this.metadataEpm = original.metadataEpm;
+
+		this.resource = original.resource != null ? new ResourceTable(original.resource) : null;
+		this.resResource = original.resResource != null ? new ResourceTable(original.resResource) : null;
+		this.contextResource = original.contextResource != null ? new ResourceTable(original.contextResource) : null;
+
+		this.sharedRes = original.sharedRes;
+		this.sharedNode = original.sharedNode;
+		this.sharedNodeRes = original.sharedNodeRes;
+
+		this.sharedResUuid = original.sharedResUuid;
+		this.sharedNodeUuid = original.sharedNodeUuid;
+		this.sharedNodeResUuid = original.sharedNodeResUuid;
+		this.asmType = original.asmType;
+		this.xsiType = original.xsiType;
+		this.semtag = original.semtag;
+		this.semantictag = original.semantictag;
+		this.label = original.label;
+		this.code = original.code;
+		this.descr = original.descr;
+		this.format = original.format;
+
+		this.modifUserId = original.modifUserId;
+		this.modifDate = original.modifDate != null ? new Date(original.modifDate.getTime()) : null;
+		this.portfolio = original.portfolio != null ? new Portfolio(original.portfolio.getId()) : null;
 	}
 
 	public Node(UUID id, int nodeOrder, String metadata, String metadataWad, String metadataEpm, boolean sharedRes,

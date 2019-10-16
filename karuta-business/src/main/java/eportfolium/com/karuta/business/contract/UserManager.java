@@ -20,32 +20,53 @@ public interface UserManager {
 	 */
 	String getUsers(Long userId, String username, String firstname, String lastname);
 
-	String getListUsers(Long userId, String username, String firstname, String lastname);
-
-	Boolean deleteUsersGroups(Long userGroupId);
+	String getUserList(Long userId, String username, String firstname, String lastname);
 
 	String getUsersByUserGroup(Long userGroupId);
 
-	void addGroups(Long userID, List<Long> groups);
-
-	String getUserGroups(Long userId) throws Exception;
-
-	String getUserGroupList();
-
-	boolean postGroupsUsers(Long user, Long userId, Long groupId) throws BusinessException;
+	boolean addUserToGroup(Long user, Long userId, Long groupId) throws BusinessException;
 
 	String getUserGroupByPortfolio(String portfolioUuid, Long userId);
 
 	String getUsersByRole(Long userId, String portfolioUuid, String role);
 
-	String getRole(Long grid);
+	String getRole(Long groupRightInfoId) throws BusinessException;
 
 	String getInfUser(Long userId) throws BusinessException;
 
-	Long getUserID(String username);
+	Long getUserId(String username);
 
 	String getUserRolesByUserId(Long userId);
 
 	Long getPublicUserId();
+
+	String getEmailByLogin(String username);
+
+	Long getUserId(String username, String email);
+
+	/**
+	 * Add user in groups
+	 * 
+	 * @param userId
+	 * @param credentialGroupIds
+	 * @return
+	 */
+	boolean addUserInGroups(Long userId, List<Long> credentialGroupIds);
+
+	Boolean deleteUsersFromUserGroups(Long userId, Long groupId);
+
+	String getRoleList(String portfolio, Long userId, String role) throws BusinessException;
+
+	/**
+	 * Liste des RRG utilisateurs d'un portfolio donne
+	 * 
+	 * @param portId
+	 * @param id
+	 * @return
+	 * @throws Exception
+	 */
+	String findUserRolesByPortfolio(String portId, Long id) throws Exception;
+
+	String findUserRole(Long userId, Long rrgid);
 
 }

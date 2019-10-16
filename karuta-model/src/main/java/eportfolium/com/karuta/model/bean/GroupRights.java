@@ -77,6 +77,17 @@ public class GroupRights implements Serializable {
 		this.notifyRoles = notifyRoles;
 	}
 
+	public GroupRights(GroupRights rights) {
+		this.id = new GroupRightsId();
+		this.read = rights.read;
+		this.write = rights.write;
+		this.delete = rights.delete;
+		this.submit = rights.submit;
+		this.add = rights.add;
+		this.typesId = rights.typesId;
+		this.rulesId = rights.rulesId;
+	}
+
 	@EmbeddedId
 	@AttributeOverrides({ @AttributeOverride(name = "id", column = @Column(name = "id", nullable = false)) })
 	public GroupRightsId getId() {

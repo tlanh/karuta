@@ -1,90 +1,127 @@
 package eportfolium.com.karuta.consumer.contract.dao;
 
 import java.io.Serializable;
-import java.sql.SQLException;
 import java.util.List;
 import java.util.UUID;
 
-import javax.activation.MimeType;
-
 import eportfolium.com.karuta.model.bean.GroupRights;
+import eportfolium.com.karuta.model.bean.Node;
 import eportfolium.com.karuta.model.exception.DoesNotExistException;
 
+/**
+ * @author mlengagne
+ *
+ */
+/**
+ * @author mlengagne
+ *
+ */
 public interface GroupRightsDao {
 
 	void persist(GroupRights transientInstance);
 
+	GroupRights merge(GroupRights detachedInstance);
+
 	void remove(GroupRights persistentInstance);
 
-	GroupRights merge(GroupRights detachedInstance);
+	/**
+	 * @return Tous les droits disponibles
+	 */
+	List<GroupRights> findAll();
+
 
 	GroupRights findById(Serializable id) throws DoesNotExistException;
 
-	List<GroupRights> getGroupRights(Long groupId) throws Exception;
+	List<GroupRights> getRightsById(String uuid);
 
-	GroupRights getPublicRightsByUserId(Long userId, UUID nodeUUID);
+	List<GroupRights> getRightsById(UUID uuid);
 
-	GroupRights getPublicRightsByGroupId(String nodeUuid, Long groupId);
+	List<GroupRights> getRightsByGroupId(Long groupId);
 
-	GroupRights getPublicRightsByGroupId(UUID nodeUuid, Long groupId);
+	List<GroupRights> getRightsByIdAndGroup(UUID id, Long groupId);
 
-	GroupRights getRightsByGrid(String nodeUuid, Long groupId);
+	GroupRights getPublicRightsByGroupId(String uuid, Long groupId);
 
-	GroupRights getRightsByGrid(UUID nodeUuid, Long grid);
+	GroupRights getPublicRightsByGroupId(UUID uuid, Long groupId);
 
-	List<GroupRights> getRightsByPortfolio(UUID nodeUuid, UUID portfolioUuid);
+	GroupRights getRightsByGrid(String uuid, Long groupId);
 
-	List<GroupRights> getRightsByPortfolio(String nodeUuid, String portfolioUuid);
+	GroupRights getRightsByGrid(UUID uuid, Long grid);
 
-	GroupRights getRightsFromGroups(String nodeUuid, Long userId);
+	GroupRights getPublicRightsByUserId(UUID uuid, Long userId);
 
-	GroupRights getRightsFromGroups(UUID nodeUuid, Long userId);
+	GroupRights getPublicRightsByUserId(String uuid, Long userId);
 
-	GroupRights getRightsByGroupId(UUID nodeUuid, Long userId, Long groupId);
+	List<GroupRights> getRightsByPortfolio(UUID uuid, UUID portfolioUuid);
 
-	GroupRights getRightsByGroupId(String nodeUuid, Long userId, Long groupId);
-
-	GroupRights getSpecificRightsForUser(String nodeUuid, Long userId);
-
-	GroupRights getSpecificRightsForUser(UUID nodeUuid, Long userId);
+	List<GroupRights> getRightsByPortfolio(String uuid, String portfolioUuid);
 
 	/**
-	 * Ajout des droits du portfolio dans group_right_info, group_rights
+	 * Regarde si l'utilisateur à un droit sur ce noeud dans l'un des groupes du
+	 * portfolio. <br>
 	 * 
-	 * @param label
+	 * Pas de sélection de groupe donc le noeud pourrait etre référencé dans
+	 * plusieurs groupes. On retourne le premier de la liste.
+	 * 
 	 * @param uuid
-	 * @param droit
-	 * @param portfolioUuid
 	 * @param userId
 	 * @return
 	 */
-	boolean postGroupRight(String label, String uuid, String droit, String portfolioUuid, Long userId);
+	GroupRights getRightsByIdAndUser(String uuid, Long userId);
 
-	// ---------------------------------------------------------------------------------------------------------------------------
+	/**
+	 * Regarde si l'utilisateur à un droit sur ce noeud dans l'un des groupes du
+	 * portfolio. <br>
+	 * 
+	 * Pas de sélection de groupe donc le noeud pourrait etre référencé dans
+	 * plusieurs groupes. On retourne le premier de la liste.
+	 * 
+	 * @param uuid
+	 * @param userId
+	 * @return
+	 */
+	GroupRights getRightsByIdAndUser(UUID uuid, Long userId);
 
-	String getGroupRightsInfos(int userId, String portfolioId) throws SQLException;
+	GroupRights getRightsByUserAndGroup(UUID uuid, Long userId, Long groupId);
 
-	String getRolePortfolio(MimeType mimeType, String role, String portfolioId, int userId) throws SQLException;
+	GroupRights getRightsByUserAndGroup(String uuid, Long userId, Long groupId);
 
-	String getRole(MimeType mimeType, int grid, int userId) throws SQLException;
+	GroupRights getSpecificRightsForUser(String uuid, Long userId);
 
-	Object putRole(String xmlRole, int userId, int roleId) throws Exception;
+	GroupRights getSpecificRightsForUser(UUID uuid, Long userId);
 
-	String postRoleUser(int userId, int grid, Integer userid2) throws SQLException;
+	GroupRights getRightsByIdAndLabel(UUID uuid, String label);
 
-	boolean postNodeRight(int userId, String nodeUuid) throws Exception;
+	GroupRights getRightsByIdAndLabel(String uuid, String label);
 
-	boolean postRightGroup(int groupRightId, int groupId, Integer userId);
+	void removeById(UUID groupRightsId) throws Exception;
 
-	boolean setPublicState(int userId, String portfolio, boolean isPublic);
+	List<GroupRights> getByPortfolioAndGridList(UUID portfolioUuid, Long grid1, Long grid2, Long grid3);
 
-	@Deprecated
-	int postShareGroup(String portfolio, int user, Integer userId, String write);
+	/**
+	 * Récupère les droits donnés par le portfolio à 'tout le monde' et les droits
+	 * donnés specifiquement à un utilisateur
+	 * 
+	 * @param portfolioUuid
+	 * @param userLogin
+	 * @param groupId
+	 * @return
+	 */
+	List<GroupRights> getPortfolioAndUserRights(UUID portfolioUuid, String userLogin, Long groupId);
 
-	int deleteShareGroup(String portfolio, Integer userId);
+	Long getUserIdFromNode(String uuid);
 
-	int deleteSharePerson(String portfolio, int user, Integer userId);
+	void updateNodeRights(String nodeUuid, List<String> asList, String macroName);
 
-	Object deleteGroupRights(Integer groupId, Integer groupRightId, Integer userId);
+	void updateNodeRights(UUID nodeUuid, List<String> labels, String macroName);
+
+	void updateNodeRights(UUID nodeUuid, List<String> labels);
+
+	void updateNodeRights(String nodeUuid, List<String> asList);
+
+	boolean updateAllNodesRights(List<Node> nodes, Long grid);
+
+	boolean updateNodesRights(List<Node> nodes, Long grid);
+
 
 }

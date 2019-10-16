@@ -1,7 +1,10 @@
 package eportfolium.com.karuta.business.contract;
 
+import java.util.UUID;
+
 import eportfolium.com.karuta.model.bean.Credential;
 import eportfolium.com.karuta.model.exception.BusinessException;
+import eportfolium.com.karuta.model.exception.DoesNotExistException;
 
 public interface SecurityManager {
 
@@ -15,6 +18,14 @@ public interface SecurityManager {
 	 */
 	boolean changePassword(String username, String password);
 
+	/**
+	 * This method provides a way for users to change their own userPassword.
+	 * 
+	 * @param userId
+	 * @param currentPassword
+	 * @param newPassword
+	 * @throws BusinessException
+	 */
 	void changeUserPassword(Long userId, String currentPassword, String newPassword) throws BusinessException;
 
 	boolean registerUser(String username, String password);
@@ -25,13 +36,13 @@ public interface SecurityManager {
 
 	String generatePassword();
 
-	int deleteCredential(Long userId) throws BusinessException;
+	int deleteUser(Long userId) throws BusinessException;
 
-	int deleteUsers(Long userId, Long groupId);
+	void deleteUsers(Long userId, Long groupId) throws BusinessException;
 
-	void changeCustomer(Credential user) throws BusinessException;
+	void changeUser(Credential user) throws BusinessException;
 
-	String userChangeInfo(Long userId, Long userId2, String in) throws BusinessException;
+	String changeUser(Long userId, Long userId2, String xmlData) throws BusinessException;
 
 	boolean isAdmin(Long id);
 
@@ -45,6 +56,54 @@ public interface SecurityManager {
 	 */
 	boolean checkPassword(Long userID, String passwd);
 
-	String putInfUser(Long userId, long userId2, String xmlUser) throws BusinessException;
+	String changeUserInfo(Long userId, long userId2, String xmlUser) throws BusinessException;
+
+	String[] postCredentialFromXml(int dummy, String login, String password, String substit);
+
+	boolean isUserMemberOfRole(long userId, long roleId);
+
+	String addOrUpdateRole(String xmlRole, Long userId) throws Exception;
+
+	String addUsers(String in, Long userId) throws Exception;
+
+	Long createRole(String portfolioUuid, String role, Long userId) throws BusinessException;
+
+	Long createRole(UUID portfolioUuid, String role, Long userId) throws BusinessException;;
+
+	/**
+	 * Add user to a role
+	 * 
+	 * @param userId
+	 * @param grid    roleId
+	 * @param userId2
+	 * @return
+	 * @throws BusinessException
+	 */
+	String addUserRole(Long userId, Long grid, Long userId2) throws BusinessException;
+
+	/**
+	 * Add user to a role
+	 * 
+	 * @param userId
+	 * @param rrgId
+	 * @param user
+	 * @return
+	 * @throws BusinessException
+	 */
+	String addUserRole2(Long userId, Long rrgId, Long user) throws BusinessException;
+
+	void removeUserRole(Long userId, Long groupRightInfoId) throws BusinessException;
+
+	void removeUsersFromRole(Long userId, String portId) throws Exception;
+
+	void removeRole(Long userId, Long groupRightInfoId) throws Exception;
+
+	void removeRights(Long groupId, Long userId) throws BusinessException;
+
+	void changeRole(Long id, Long rrgId, String data) throws DoesNotExistException, BusinessException, Exception;
+
+	String addUsersToRole(Long id, Long rrgId, String xmlNode) throws BusinessException;
+
+	boolean addUserToGroup(Long user, Long userId, Long groupId) throws BusinessException;
 
 }

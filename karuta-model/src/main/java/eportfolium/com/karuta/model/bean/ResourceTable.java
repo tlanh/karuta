@@ -43,6 +43,18 @@ public class ResourceTable implements Serializable {
 	public ResourceTable() {
 	}
 
+	public ResourceTable(ResourceTable resource) {
+		this.xsiType = resource.xsiType != null ? new String(resource.xsiType) : null;
+		this.content = resource.content != null ? new String(resource.content) : null;
+		this.credential = resource.credential != null ? new Credential(resource.credential.getId()) : null;
+		this.modifUserId = resource.modifUserId != null ? Long.valueOf(resource.modifUserId) : null;
+		this.modifDate = resource.modifDate != null ? new Date(resource.modifDate.getTime()) : null;
+	}
+
+	public ResourceTable(UUID id) {
+		this.id = id;
+	}
+
 	public ResourceTable(UUID nodeUuid, Long modifUserId) {
 		this.id = nodeUuid;
 		this.modifUserId = modifUserId;

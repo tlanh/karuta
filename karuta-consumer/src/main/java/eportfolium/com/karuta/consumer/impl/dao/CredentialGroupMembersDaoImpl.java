@@ -112,11 +112,6 @@ public class CredentialGroupMembersDaoImpl extends AbstractDaoImpl<CredentialGro
 		return 0;
 	}
 
-	public Boolean deleteUsersGroups(int usersgroup, int currentUid) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
 	public Boolean deleteUsersFromUserGroups(Long userId, Long usersgroupId) {
 		Boolean result = Boolean.FALSE;
 		String sql = "SELECT cg FROM CredentialGroupMembers cgm";

@@ -47,6 +47,15 @@ public class Portfolio implements Serializable {
 	public Portfolio() {
 	}
 
+	public Portfolio(Portfolio original) {
+		this.rootNode = original.rootNode;
+		this.credential = original.credential != null ? new Credential(original.credential.getId()) : null;
+		this.modelId = original.modelId;
+		this.modifUserId = original.modifUserId;
+		this.modifDate = original.modifDate != null ? new Date(original.modifDate.getTime()) : null;
+		this.active = original.active;
+	}
+
 	public Portfolio(UUID id) {
 		this.id = id;
 	}

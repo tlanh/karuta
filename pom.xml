@@ -191,6 +191,16 @@
 				<version>4.5.10</version>
 			</dependency>
 			<dependency>
+				<groupId>org.apache.httpcomponents</groupId>
+				<artifactId>httpmime</artifactId>
+				<version>4.5.10</version>
+			</dependency>
+			<dependency>
+				<groupId>commons-io</groupId>
+				<artifactId>commons-io</artifactId>
+				<version>2.6</version>
+			</dependency>
+			<dependency>
 				<groupId>org.apache.commons</groupId>
 				<artifactId>commons-text</artifactId>
 				<version>1.6</version>
@@ -199,6 +209,11 @@
 				<groupId>org.apache.commons</groupId>
 				<artifactId>commons-crypto</artifactId>
 				<version>1.0.0</version>
+			</dependency>
+			<dependency>
+				<groupId>commons-fileupload</groupId>
+				<artifactId>commons-fileupload</artifactId>
+				<version>1.4</version>
 			</dependency>
 			<dependency>
 				<groupId>commons-logging</groupId>
@@ -240,6 +255,16 @@
 				<groupId>org.json</groupId>
 				<artifactId>json</artifactId>
 				<version>20190722</version>
+			</dependency>
+			<dependency>
+				<groupId>org.jasig.cas.client</groupId>
+				<artifactId>cas-client-core</artifactId>
+				<version>3.5.1</version>
+			</dependency>
+			<dependency>
+				<groupId>cas</groupId>
+				<artifactId>casclient</artifactId>
+				<version>2.1.1</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>

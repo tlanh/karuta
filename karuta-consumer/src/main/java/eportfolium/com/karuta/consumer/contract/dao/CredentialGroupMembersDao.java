@@ -46,8 +46,6 @@ public interface CredentialGroupMembersDao {
 
 	int postUserGroup(String label, int userid);
 
-	Boolean deleteUsersGroups(int usersgroup, int currentUid);
-
 	Boolean deleteUsersFromUserGroups(Long userId, Long usersgroupId);
 
 }

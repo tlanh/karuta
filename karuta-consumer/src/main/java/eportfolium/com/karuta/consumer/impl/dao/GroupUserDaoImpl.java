@@ -1,6 +1,7 @@
 package eportfolium.com.karuta.consumer.impl.dao;
 // Generated 17 juin 2019 11:33:18 by Hibernate Tools 5.2.10.Final
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
@@ -11,13 +12,17 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
+import eportfolium.com.karuta.consumer.contract.dao.GroupRightInfoDao;
 import eportfolium.com.karuta.consumer.contract.dao.GroupUserDao;
 import eportfolium.com.karuta.model.bean.Credential;
 import eportfolium.com.karuta.model.bean.GroupInfo;
+import eportfolium.com.karuta.model.bean.GroupRightInfo;
 import eportfolium.com.karuta.model.bean.GroupUser;
 import eportfolium.com.karuta.model.bean.GroupUserId;
+import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.util.PhpUtil;
 import eportfolium.com.karuta.util.Tools;
 
@@ -33,12 +38,15 @@ public class GroupUserDaoImpl extends AbstractDaoImpl<GroupUser> implements Grou
 	@PersistenceContext
 	private EntityManager em;
 
+	@Autowired
+	private GroupRightInfoDao groupRightInfoDao;
+
 	public GroupUserDaoImpl() {
 		super();
 		setCls(GroupUser.class);
 	}
 
-	public List<GroupUser> getUserGroups() {
+	public List<GroupUser> findAll() {
 		String sql = "SELECT gu FROM GroupUser gu";
 		sql += " INNER JOIN FETCH gu.id.credential cr";
 		sql += " INNER JOIN FETCH gu.id.groupInfo gi";
@@ -47,7 +55,7 @@ public class GroupUserDaoImpl extends AbstractDaoImpl<GroupUser> implements Grou
 		return q.getResultList();
 	}
 
-	public List<GroupUser> getUserGroups(final Long userId) {
+	public List<GroupUser> getByUser(final Long userId) {
 		if (PhpUtil.empty(userId)) {
 			throw new IllegalArgumentException(Tools.displayError("userId invalide"));
 		}
@@ -62,7 +70,7 @@ public class GroupUserDaoImpl extends AbstractDaoImpl<GroupUser> implements Grou
 		return q.getResultList();
 	}
 
-	public boolean isUserInGroup(final String uid, final String gid) {
+	public boolean isUserInGroup(final String userId, final String groupId) {
 		String sql;
 		boolean retval = false;
 
@@ -70,8 +78,8 @@ public class GroupUserDaoImpl extends AbstractDaoImpl<GroupUser> implements Grou
 		sql += " WHERE gu.id.credential.id = :userID";
 		sql += " AND gu.id.groupInfo.id = :groupID";
 		Query q = em.createQuery(sql);
-		q.setParameter("userID", uid);
-		q.setParameter("groupID", gid);
+		q.setParameter("userID", userId);
+		q.setParameter("groupID", groupId);
 		try {
 			q.getSingleResult();
 			retval = true;
@@ -103,11 +111,11 @@ public class GroupUserDaoImpl extends AbstractDaoImpl<GroupUser> implements Grou
 		return false;
 	}
 
-	public List<GroupUser> getUserGroupByPortfolio(String portfolioUuid) {
-		return getUserGroupByPortfolio(UUID.fromString(portfolioUuid));
+	public List<GroupUser> getByPortfolio(String portfolioUuid) {
+		return getByPortfolio(UUID.fromString(portfolioUuid));
 	}
 
-	public List<GroupUser> getUserGroupByPortfolio(UUID portfolioUuid) {
+	public List<GroupUser> getByPortfolio(UUID portfolioUuid) {
 		String sql = "SELECT gu FROM GroupUser gu";
 		sql += " INNER JOIN FETCH gu.id.groupInfo gi";
 		sql += " INNER JOIN FETCH gi.groupRightInfo gri";
@@ -117,11 +125,11 @@ public class GroupUserDaoImpl extends AbstractDaoImpl<GroupUser> implements Grou
 		return q.getResultList();
 	}
 
-	public List<GroupUser> getUserGroupByPortfolioAndUser(String portfolioUuid, Long userId) {
-		return getUserGroupByPortfolioAndUser(UUID.fromString(portfolioUuid), userId);
+	public List<GroupUser> getByPortfolioAndUser(String portfolioUuid, Long userId) {
+		return getByPortfolioAndUser(UUID.fromString(portfolioUuid), userId);
 	}
 
-	public List<GroupUser> getUserGroupByPortfolioAndUser(UUID portfolioUuid, Long userId) {
+	public List<GroupUser> getByPortfolioAndUser(UUID portfolioUuid, Long userId) {
 		String sql = "SELECT gu FROM GroupUser gu";
 		sql += " INNER JOIN FETCH gu.id.credential cr";
 		sql += " INNER JOIN FETCH gu.id.groupInfo gi";
@@ -134,11 +142,14 @@ public class GroupUserDaoImpl extends AbstractDaoImpl<GroupUser> implements Grou
 		return q.getResultList();
 	}
 
-	public Integer putUserGroup(String usergroup, String userPut) {
+	/**
+	 * Ajoute la personne dans ce groupe
+	 */
+	public Integer addUserInGroup(String usergroupId, String userId) {
 		Integer retval = Integer.valueOf(0);
 		try {
-			final Long gid = Long.valueOf(usergroup);
-			final Long uid = Long.valueOf(userPut);
+			final Long gid = Long.valueOf(usergroupId);
+			final Long uid = Long.valueOf(userId);
 			final GroupUser gu = new GroupUser(new GroupUserId(new GroupInfo(gid), new Credential(uid)));
 			persist(gu);
 		} catch (Exception ex) {
@@ -148,9 +159,52 @@ public class GroupUserDaoImpl extends AbstractDaoImpl<GroupUser> implements Grou
 		return retval;
 	}
 
-	public int deleteUserGroupByPortfolio(UUID portId) {
+	/**
+	 * Ajoute la personne dans ce groupe
+	 */
+	public Long addUserInGroup(Long userId, Long groupid) {
+		Long retval = Long.valueOf(0);
+		try {
+			final GroupUser gu = new GroupUser(new GroupUserId(new GroupInfo(groupid), new Credential(userId)));
+			persist(gu);
+		} catch (Exception ex) {
+			ex.printStackTrace();
+			retval = Long.valueOf(1);
+		}
+		return retval;
+	}
+
+	@Override
+	public void removeByUserAndRole(Long userId, Long rrgId) throws BusinessException {
+		remove(getByUserAndRole(userId, rrgId));
+	}
+
+	public void removeByPortfolio(String portId) throws Exception {
+		deleteByPortfolio2(UUID.fromString(portId));
+	}
+
+	public void deleteByPortfolio2(UUID portId) throws Exception {
+		List<GroupRightInfo> griList = groupRightInfoDao.getByPortfolioID(portId);
+		List<Long> gidList = new ArrayList<Long>(griList.size());
+		for (GroupRightInfo gri : griList) {
+			gidList.add(gri.getGroupInfo().getId());
+		}
+
+		String sql = "SELECT gu FROM GroupUser gu";
+		sql += " WHERE gu.id.groupInfo.id IN (" + PhpUtil.implode(",", gidList) + ")";
+
+		TypedQuery<GroupUser> query = em.createQuery(sql, GroupUser.class);
+		List<GroupUser> guList = query.getResultList();
+
+		for (Iterator<GroupUser> it = guList.iterator(); it.hasNext();) {
+			remove(it.next());
+			it.remove();
+		}
+	}
+
+	public int deleteByPortfolio(UUID portId) {
 		int result = 0;
-		List<GroupUser> l = getUserGroupByPortfolio(portId);
+		List<GroupUser> l = getByPortfolio(portId);
 		Iterator<GroupUser> it = l.iterator();
 		try {
 			while (it.hasNext()) {
@@ -162,8 +216,49 @@ public class GroupUserDaoImpl extends AbstractDaoImpl<GroupUser> implements Grou
 		return result;
 	}
 
-	public int deleteUserGroupByPortfolio(String portId) {
-		return deleteUserGroupByPortfolio(UUID.fromString(portId));
+	public int deleteByPortfolio(String portId) {
+		return deleteByPortfolio(UUID.fromString(portId));
+	}
+
+	public GroupUser getByUserAndRole(Long userId, Long rrgid) {
+		GroupUser res = null;
+		String sql = "SELECT gu FROM GroupUser gu";
+		sql += " INNER JOIN FETCH gu.id.credential cr";
+		sql += " INNER JOIN FETCH gu.id.groupInfo gi";
+		sql += " INNER JOIN FETCH gi.groupRightInfo gri";
+		sql += " WHERE cr.id = :userId";
+		sql += " AND gri.id = :grid";
+		TypedQuery<GroupUser> q = em.createQuery(sql, GroupUser.class);
+		q.setParameter("userId", userId);
+		q.setParameter("grid", rrgid);
+		try {
+			res = q.getSingleResult();
+		} catch (NoResultException e) {
+		}
+		return res;
+	}
+
+	@Override
+	public GroupUser getUniqueByUser(Long userId) {
+		if (PhpUtil.empty(userId)) {
+			throw new IllegalArgumentException(Tools.displayError("userId invalide"));
+		}
+
+		GroupUser gu = null;
+		String sql = "SELECT gu FROM GroupUser gu";
+		sql += " INNER JOIN FETCH gu.id.credential cr";
+		sql += " INNER JOIN FETCH gu.id.groupInfo gi";
+		sql += " INNER JOIN FETCH gi.groupRightInfo gri";
+		sql += " WHERE cr.id = :userId";
+		sql += " AND cr.login = gri.label";
+
+		TypedQuery<GroupUser> q = em.createQuery(sql, GroupUser.class);
+		q.setParameter("userId", userId);
+		try {
+			gu = q.getSingleResult();
+		} catch (Exception e) {
+		}
+		return gu;
 	}
 
 }

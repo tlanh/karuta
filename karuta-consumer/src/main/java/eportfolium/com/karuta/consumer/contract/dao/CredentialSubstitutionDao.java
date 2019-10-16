@@ -14,5 +14,11 @@ public interface CredentialSubstitutionDao {
 	CredentialSubstitution merge(CredentialSubstitution detachedInstance);
 
 	CredentialSubstitution findById(Serializable id) throws DoesNotExistException;
-	
+
+	CredentialSubstitution getSubstitutionRule(Long userId, Long csId, String type) throws DoesNotExistException;
+
+	Long getSubuidFromUserType(String login, Long userId);
+
+	Long getSubuidFromGroupType(String login, Long userId);
+
 }

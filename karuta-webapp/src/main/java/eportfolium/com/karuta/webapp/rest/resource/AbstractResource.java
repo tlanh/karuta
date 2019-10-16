@@ -11,6 +11,9 @@ import eportfolium.com.karuta.model.bean.CredentialSubstitutionId;
 
 public abstract class AbstractResource {
 
+	protected static final String logFormat = "[%1$s] %2$s %3$s: %4$s -- %5$s (%6$s) === %7$s\n";
+	protected static final String logFormatShort = "%7$s\n";
+
 	/**
 	 * Fetch user session info
 	 * 
@@ -24,7 +27,7 @@ public abstract class AbstractResource {
 		HttpSession session = request.getSession(true);
 
 		Credential ui = new Credential();
-		initService(request);
+//		initService(request);
 		Long val = (Long) session.getAttribute("uid");
 		if (val != null)
 			ui.setId(val);

@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 import eportfolium.com.karuta.model.bean.GroupUser;
+import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.model.exception.DoesNotExistException;
 
 public interface GroupUserDao {
@@ -19,25 +20,32 @@ public interface GroupUserDao {
 
 	void removeById(final Serializable id) throws DoesNotExistException;
 
-	List<GroupUser> getUserGroups();
+	List<GroupUser> findAll();
 
-	List<GroupUser> getUserGroups(final Long userId);
+	List<GroupUser> getByUser(final Long userId);
 
-	boolean isUserInGroup(String uid, String gid);
+	boolean isUserInGroup(String userId, String groupId);
 
 	boolean isUserMemberOfGroup(Long userId, Long groupId);
 
 	boolean postGroupsUsers(int user, int userId, int groupId);
 
-	List<GroupUser> getUserGroupByPortfolio(String portfolioUuid);
+	List<GroupUser> getByPortfolio(String portfolioUuid);
 
-	List<GroupUser> getUserGroupByPortfolio(UUID portfolioUuid);
+	List<GroupUser> getByPortfolio(UUID portfolioUuid);
 
-	List<GroupUser> getUserGroupByPortfolioAndUser(String portfolioUuid, Long userId);
+	List<GroupUser> getByPortfolioAndUser(String portfolioUuid, Long userId);
 
-	List<GroupUser> getUserGroupByPortfolioAndUser(UUID portfolioUuid, Long userId);
+	List<GroupUser> getByPortfolioAndUser(UUID portfolioUuid, Long userId);
 
-	Integer putUserGroup(String usergroup, String userPut);
+	/**
+	 * Ajoute la personne dans ce groupe
+	 * 
+	 * @param userGroupId
+	 * @param userId
+	 * @return
+	 */
+	Integer addUserInGroup(String userGroupId, String userId);
 
 	/**
 	 * Supprime les utilisateurs des RRG d'un portfolio donné
@@ -45,8 +53,28 @@ public interface GroupUserDao {
 	 * @param portId
 	 * @return
 	 */
-	int deleteUserGroupByPortfolio(String portId);
+	int deleteByPortfolio(String portId);
 
-	int deleteUserGroupByPortfolio(UUID portId);
+	int deleteByPortfolio(UUID portId);
+
+	/**
+	 * Ajoute la personne dans ce groupe
+	 * 
+	 * @param userId
+	 * @param groupid
+	 * 
+	 * @return
+	 */
+	Long addUserInGroup(Long userId, Long groupid);
+
+	GroupUser getByUserAndRole(Long userId, Long rrgid);
+
+	void removeByUserAndRole(Long userId, Long rrgId) throws BusinessException;
+
+	void removeByPortfolio(String portId) throws Exception;
+
+	void deleteByPortfolio2(UUID portId) throws Exception;
+
+	GroupUser getUniqueByUser(Long userId) throws Exception;
 
 }

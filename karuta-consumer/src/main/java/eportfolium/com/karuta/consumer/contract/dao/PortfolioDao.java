@@ -5,8 +5,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import javax.activation.MimeType;
-
 import eportfolium.com.karuta.model.bean.Node;
 import eportfolium.com.karuta.model.bean.Portfolio;
 import eportfolium.com.karuta.model.exception.BusinessException;
@@ -30,9 +28,9 @@ public interface PortfolioDao {
 
 	List<Portfolio> getPortfolios(Long userId, Long substid, Boolean portfolioActive);
 
-	Portfolio getPortfolioByPortfolioCode(String portfolioCode);
+	Portfolio getPortfolioFromNodeCode(String portfolioCode);
 
-	UUID getPortfolioUuidByPortfolioCode(String portfolioCode);
+	UUID getPortfolioUuidFromNodeCode(String portfolioCode);
 
 	UUID getPortfolioModelUuid(UUID portfolioUuid);
 
@@ -44,13 +42,13 @@ public interface PortfolioDao {
 
 	Node getPortfolioRootNode(String portfolioUuid);
 
-	int updatePortfolioModelId(UUID portfolioUuid, UUID portfolioModelId);
+	Portfolio getPortfolioFromNode(UUID nodeUuid);
 
-	int updatePortfolioModelId(String portfolioUuid, String portfolioModelId);
+	Portfolio getPortfolioFromNode(String nodeUuid);
 
-	UUID getPortfolioUuidByNodeUuid(String nodeUuid);
+	UUID getPortfolioUuidFromNode(String nodeUuid);
 
-	UUID getPortfolioUuidByNodeUuid(UUID nodeUuid);
+	UUID getPortfolioUuidFromNode(UUID nodeUuid);
 
 //	String getPortfolioShared(int user, int userId) throws SQLException;
 
@@ -64,51 +62,48 @@ public interface PortfolioDao {
 
 	boolean isOwner(Long userId, UUID portfolioUuid);
 
-	boolean putPortfolioOwner(String portfolioUuid, Long ownerId);
+	boolean changePortfolioOwner(String portfolioUuid, Long ownerId);
 
-	boolean putPortfolioOwner(UUID portfolioUuid, Long ownerId);
+	boolean changePortfolioOwner(UUID portfolioUuid, Long ownerId);
 
-	Portfolio putPortfolioConfiguration(String portfolioUuid, Boolean portfolioActive);
+	Portfolio add(String rootNodeUuid, UUID modelId, Long userId, Portfolio porfolio) throws BusinessException;
 
-	Portfolio putPortfolioConfiguration(UUID portfolioUuid, Boolean portfolioActive);
+	boolean isPublic(String portfolioUuid);
 
-	Portfolio addPortfolio(String rootNodeUuid, UUID modelId, Long userId, Portfolio porfolio) throws BusinessException;
+	boolean isPublic(UUID portfolioUuid);
 
-	void changePortfolio(Portfolio portfolio) throws BusinessException;
-	// ---------------------------------------------------------------------------------------------------------
+	Portfolio updatePortfolioConfiguration(String portfolioUuid, Boolean portfolioActive);
 
-	Portfolio getPortfolio(MimeType outMimeType, String portfolioUuid, int userId, int groupId, String label,
-			String resource, String files, int substid, Integer cutoff) throws Exception;
+	Portfolio updatePortfolioConfiguration(UUID portfolioUuid, Boolean portfolioActive);
 
-	Portfolio getPortfolioZip(MimeType mimeType, String portfolioUuid, int userId, int groupId, String label,
-			Boolean resource, Boolean files) throws Exception;
+	int updatePortfolioModelId(UUID portfolioUuid, UUID portfolioModelId);
 
-	Object putPortfolio(MimeType inMimeType, MimeType outMimeType, String in, String portfolioUuid, int userId,
-			Boolean portfolioActive, int groupId, String modelId) throws Exception;
+	int updatePortfolioModelId(UUID portfolioUuid, String portfolioModelId);
 
-	Object postPortfolio(MimeType inMimeType, MimeType outMimeType, String in, int userId, int groupId, String modelId,
-			int substid, boolean parseRights, String projectName) throws Exception;
+	int updatePortfolioModelId(String portfolioUuid, String portfolioModelId);
 
-//	Object postPortfolioZip(MimeType mimeType, MimeType mimeType2, HttpServletRequest httpServletRequest,
-//			InputStream inputStream, int userId, int groupId, String modelId, int substid, boolean parseRights,
-//			String projectName) throws Exception;
+	void updateTime(String portfolioUuid) throws DoesNotExistException;
 
-	Object postInstanciatePortfolio(MimeType inMimeType, String portfolioUuid, String srcCode, String newCode,
-			int userId, int groupId, boolean copyshared, String portfGroupName, boolean setOwner) throws Exception;
+	void updateTime(UUID portfolioUuid) throws DoesNotExistException;
 
-	Object postCopyPortfolio(MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, int userId,
-			boolean setOwner) throws Exception;
+	boolean updateTimeByNode(String nodeUuid);
 
-	Object postPortfolioParserights(String portfolioUuid, int userId);
+	/**
+	 * 
+	 * Check if there's shared node in this portfolio
+	 * 
+	 * @param portfolioUuid
+	 * @return
+	 */
+	boolean hasSharedNodes(String portfolioUuid);
 
-	@Deprecated
-	Object getModels(MimeType mimeType, int userId) throws Exception;
-
-	@Deprecated
-	Object getModel(MimeType mimeType, Integer modelId, int userId) throws Exception;
-
-	@Deprecated
-	Object postModels(MimeType mimeType, String xmlModel, int userId) throws Exception;
-
+	/**
+	 * 
+	 * Check if there's shared node in this portfolio
+	 * 
+	 * @param portfolioUuid
+	 * @return
+	 */
+	boolean hasSharedNodes(UUID portfolioUuid);
 
 }

@@ -1,5 +1,6 @@
 package eportfolium.com.karuta.business.impl;
 
+import java.io.StringReader;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -11,11 +12,14 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -28,23 +32,34 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
 
 import eportfolium.com.karuta.business.contract.EmailManager;
 import eportfolium.com.karuta.business.contract.SecurityManager;
 import eportfolium.com.karuta.consumer.contract.dao.ConfigurationDao;
 import eportfolium.com.karuta.consumer.contract.dao.CredentialDao;
 import eportfolium.com.karuta.consumer.contract.dao.CredentialSubstitutionDao;
+import eportfolium.com.karuta.consumer.contract.dao.GroupInfoDao;
+import eportfolium.com.karuta.consumer.contract.dao.GroupRightInfoDao;
 import eportfolium.com.karuta.consumer.contract.dao.GroupUserDao;
+import eportfolium.com.karuta.consumer.contract.dao.PortfolioDao;
 import eportfolium.com.karuta.consumer.util.DomUtils;
 import eportfolium.com.karuta.model.bean.Credential;
 import eportfolium.com.karuta.model.bean.CredentialSubstitution;
 import eportfolium.com.karuta.model.bean.CredentialSubstitutionId;
+import eportfolium.com.karuta.model.bean.GroupInfo;
+import eportfolium.com.karuta.model.bean.GroupRightInfo;
+import eportfolium.com.karuta.model.bean.GroupUser;
+import eportfolium.com.karuta.model.bean.GroupUserId;
+import eportfolium.com.karuta.model.bean.Node;
+import eportfolium.com.karuta.model.bean.Portfolio;
 import eportfolium.com.karuta.model.exception.AuthenticationException;
 import eportfolium.com.karuta.model.exception.BusinessException;
+import eportfolium.com.karuta.model.exception.DoesNotExistException;
 import eportfolium.com.karuta.model.exception.GenericBusinessException;
 import eportfolium.com.karuta.model.exception.ValueRequiredException;
+import eportfolium.com.karuta.util.PhpUtil;
 import eportfolium.com.karuta.util.StringUtil;
 import eportfolium.com.karuta.util.ValidateUtil;
 
@@ -56,6 +71,9 @@ import eportfolium.com.karuta.util.ValidateUtil;
 public class SecurityManagerImpl implements SecurityManager {
 
 	@Autowired
+	private EmailManager emailManager;
+
+	@Autowired
 	private CredentialDao credentialDao;
 
 	@Autowired
@@ -65,10 +83,16 @@ public class SecurityManagerImpl implements SecurityManager {
 	private GroupUserDao groupUserDao;
 
 	@Autowired
-	private ConfigurationDao configurationDao;
+	private GroupRightInfoDao groupRightInfoDao;
 
 	@Autowired
-	private EmailManager emailManager;
+	private GroupInfoDao groupInfoDao;
+
+	@Autowired
+	private PortfolioDao portfolioDao;
+
+	@Autowired
+	private ConfigurationDao configurationDao;
 
 	/**
 	 * Each token produced by this class uses this identifier as a prefix.
@@ -153,7 +177,7 @@ public class SecurityManagerImpl implements SecurityManager {
 		credentialDao.merge(user);
 	}
 
-	public void changeCustomer(Credential user) throws BusinessException {
+	public void changeUser(Credential user) throws BusinessException {
 		Credential c = credentialDao.merge(user);
 
 		// If id is different it means the person did not exist so merge has created a
@@ -305,7 +329,7 @@ public class SecurityManagerImpl implements SecurityManager {
 		}
 	}
 
-	public int deleteCredential(Long userId) throws BusinessException {
+	public int deleteUser(Long userId) throws BusinessException {
 		if (!credentialDao.isAdmin(userId))
 			throw new GenericBusinessException("Status.FORBIDDEN : No admin right");
 
@@ -313,23 +337,18 @@ public class SecurityManagerImpl implements SecurityManager {
 		return res;
 	}
 
-	public int deleteUsers(Long userId, Long groupId) {
-		int result = 0;
-
-		try {
-			credentialDao.removeById(userId);
-			groupUserDao.removeById(groupId);
-
-		} catch (Exception e) {
-			e.printStackTrace();
-			result = 1;
+	public void deleteUsers(Long userId, Long userId2) throws DoesNotExistException {
+		credentialDao.removeById(userId);
+		List<GroupUser> guList = groupUserDao.getByUser(userId2);
+		for (java.util.Iterator<GroupUser> it = guList.iterator(); it.hasNext();) {
+			groupUserDao.remove(it.next());
+			it.remove();
 		}
-		return result;
 	}
 
-	public String postUsers(String in, Long userId) throws Exception {
+	public String addUsers(String in, Long userId) throws Exception {
 		if (!credentialDao.isAdmin(userId) && !credentialDao.isCreator(userId))
-			throw new GenericBusinessException("Status.FORBIDDEN : No admin right");
+			throw new GenericBusinessException("403 FORBIDDEN : No admin right");
 
 		String result = null;
 		Credential cr = null;
@@ -344,7 +363,7 @@ public class SecurityManagerImpl implements SecurityManager {
 		String other = "";
 		Long id = 0L;
 		NodeList children2 = null;
-		Node item = null;
+		org.w3c.dom.Node item = null;
 		String nodeName = null;
 
 		// On recupere le body
@@ -505,7 +524,7 @@ public class SecurityManagerImpl implements SecurityManager {
 		return isRegistered;
 	}
 
-	public String userChangeInfo(Long userId, Long userId2, String in) throws BusinessException {
+	public String changeUser(Long userId, Long userId2, String xmlData) throws BusinessException {
 		if (userId != userId2)
 			throw new GenericBusinessException("Not authorized");
 
@@ -520,7 +539,7 @@ public class SecurityManagerImpl implements SecurityManager {
 		Document doc;
 		Element infUser = null;
 		try {
-			doc = DomUtils.xmlString2Document(in, new StringBuffer());
+			doc = DomUtils.xmlString2Document(xmlData, new StringBuffer());
 			infUser = doc.getDocumentElement();
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -580,7 +599,7 @@ public class SecurityManagerImpl implements SecurityManager {
 	}
 
 	/**
-	 * Check if customer password is the right one
+	 * Check if user password is the right one
 	 *
 	 * @param passwd Password
 	 * @return bool result
@@ -590,13 +609,11 @@ public class SecurityManagerImpl implements SecurityManager {
 			log.error("Fatal Error : illegal checkPassword parameters");
 			throw new RuntimeException();
 		}
-
 		Credential cr = credentialDao.getActiveByUserId(userID);
 		return cr != null ? authenticate(passwd.toCharArray(), cr.getPassword()) : false;
 	}
 
-	public String putInfUser(Long userId, long userId2, String in) throws BusinessException {
-
+	public String changeUserInfo(Long userId, long userId2, String in) throws BusinessException {
 		String result1 = null;
 		String originalp = null;
 		String password = null;
@@ -734,6 +751,375 @@ public class SecurityManagerImpl implements SecurityManager {
 		result1 = "" + userId2;
 
 		return result1;
+	}
+
+	/**
+	 * Cree le role
+	 * 
+	 * @param portfolioUuid
+	 * @param role
+	 * @param userId
+	 * @return
+	 */
+	public Long createRole(UUID portfolioUuid, String role, Long userId) throws BusinessException {
+		Long groupId = 0L;
+		Node rootNode = portfolioDao.getPortfolioRootNode(portfolioUuid);
+
+		if (!credentialDao.isAdmin(userId) && !credentialDao.isDesigner(userId, rootNode.getId())
+				&& !credentialDao.isCreator(userId))
+			throw new GenericBusinessException("No admin right");
+
+		try {
+			GroupRightInfo gri = groupRightInfoDao.getByPortfolioAndLabel(portfolioUuid, role);
+			if (gri != null) {
+				groupId = gri.getGroupInfo().getId();
+			} else {
+				Long grid = groupRightInfoDao.add(portfolioUuid, role);
+				if (grid != 0) {
+					groupInfoDao.add(gri, 1L, role);
+				}
+			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+		return groupId;
+	}
+
+	/**
+	 * Cree le role
+	 * 
+	 * @param portfolioUuid
+	 * @param role
+	 * @param userId
+	 * @return
+	 */
+	public Long createRole(String portfolioUuid, String role, Long userId) throws BusinessException {
+		return createRole(UUID.fromString(portfolioUuid), role, userId);
+	}
+
+	public boolean addUserToGroup(Long user, Long userId, Long groupId) throws BusinessException {
+		if (!credentialDao.isAdmin(user))
+			throw new GenericBusinessException("403 FORBIDDEN : No admin right");
+
+		try {
+			GroupUser gu = null;
+			GroupUserId gid = new GroupUserId();
+			gid.setCredential(new Credential(userId));
+			gid.setGroupInfo(new GroupInfo(groupId));
+			try {
+				gu = groupUserDao.findById(gid);
+			} catch (DoesNotExistException e) {
+				gu = new GroupUser();
+				gu.setId(gid);
+				groupUserDao.persist(gu);
+			}
+			return true;
+		} catch (Exception ex) {
+			ex.printStackTrace();
+			return false;
+		}
+	}
+
+	public String addUserRole(Long userId, Long grid, Long userId2) throws BusinessException {
+		if (!credentialDao.isAdmin(userId))
+			throw new GenericBusinessException("403 FORBIDDEN : No admin right");
+
+		String label = null;
+		long owner = 0L;
+		long gid = 0L;
+
+		GroupUser gu = null;
+		GroupRightInfo gri = null;
+		/// Vérifie si un groupe existe et s'il est déjà associé à un role.
+		GroupInfo gi = groupInfoDao.getGroupByGrid(grid);
+
+		if (gi == null) {
+			try {
+				gri = groupRightInfoDao.findById(grid);
+				label = gri.getLabel();
+				owner = gri.getOwner();
+			} catch (Exception e) {
+			}
+
+			gi = new GroupInfo();
+			gi.setGroupRightInfo(gri);
+			gi.setOwner(owner);
+			gi.setLabel(label);
+
+			groupInfoDao.persist(gi);
+
+			// Ajoute la personne
+			gu = new GroupUser(new GroupUserId());
+			gu.setCredential(new Credential(userId2));
+			gu.setGroupInfo(gi);
+			groupUserDao.persist(gu);
+
+		} else {
+			GroupUserId guid = new GroupUserId();
+			guid.setCredential(new Credential(userId2));
+			guid.setGroupInfo(gi);
+			try {
+				gu = groupUserDao.findById(guid);
+			} catch (Exception e) {
+				gu = new GroupUser();
+				gu.setId(guid);
+				groupUserDao.persist(gu);
+			}
+		}
+
+		return "user " + userId2 + " rajoute au groupd gid " + gid + " pour correspondre au groupRight grid " + grid;
+	}
+
+	public String addUserRole2(Long userId, Long rrgid, Long user) throws BusinessException {
+		if (!credentialDao.isAdmin(userId) && !groupRightInfoDao.isOwner(userId, rrgid))
+			throw new GenericBusinessException("403 FORBIDDEN : No admin right");
+
+		/// Verifie si un group_info/grid existe
+		GroupInfo gi = groupInfoDao.getGroupByGrid(rrgid);
+
+		if (gi == null) {
+			/// Copie de RRG vers group_info
+			GroupRightInfo gri = groupRightInfoDao.findById(rrgid);
+			gi = new GroupInfo();
+			gi.setGroupRightInfo(gri);
+			gi.setLabel(gri.getLabel());
+			gi.setOwner(gri.getOwner());
+			groupInfoDao.persist(gi);
+		}
+
+		/// Ajout des utilisateurs
+		GroupUser gu = null;
+		GroupUserId gid = new GroupUserId();
+		gid.setCredential(new Credential(user));
+		gid.setGroupInfo(gi);
+		try {
+			gu = groupUserDao.findById(gid);
+		} catch (DoesNotExistException e) {
+			gu = new GroupUser();
+			gu.setId(gid);
+			groupUserDao.persist(gu);
+		}
+		return "user " + user + " rajoute au groupd gid " + gid + " pour correspondre au groupRight grid " + rrgid;
+	}
+
+	public String[] postCredentialFromXml(int dummy, String login, String password, String substitute) {
+		String[] returnValue = null;
+		Long uid = 0L;
+		Long subuid = 0L;
+		try {
+			Credential c = credentialDao.getUserByLogin(login);
+			if (c != null) {
+				if (!authenticate(password.toCharArray(), c.getPassword()))
+					return returnValue;
+				else
+					uid = c.getId();
+			} else {
+				return returnValue;
+			}
+
+			if (substitute != null) {
+				/// Specific lenient substitution rule
+				CredentialSubstitution cs = credentialSubstitutionDao.getSubstitutionRule(uid, 0L, "USER");
+
+				if (cs != null) {
+					// User can get "any" account, except admin one
+					Credential cr = credentialDao.getByLogin(substitute, false);
+					if (cr != null)
+						subuid = cr.getId();
+				} else {
+					/// General rule, when something specific is written in 'id', with USER or GROUP
+					subuid = credentialSubstitutionDao.getSubuidFromUserType(substitute, uid);
+					if (subuid == null)
+						subuid = credentialSubstitutionDao.getSubuidFromGroupType(substitute, uid);
+				}
+			}
+
+			returnValue = new String[5];
+			returnValue[1] = login; // login
+			returnValue[2] = Long.toString(uid); // User id
+			returnValue[4] = Long.toString(subuid); // Substitute
+			Credential cr = null;
+			if (!PhpUtil.empty(subuid)) {
+				returnValue[3] = substitute;
+				cr = credentialDao.getUserByLogin(substitute);
+			} else {
+				returnValue[3] = "";
+				cr = credentialDao.getUserByLogin(login);
+			}
+
+			returnValue[0] = "<credential>";
+			returnValue[0] += DomUtils.getXmlElementOutput("useridentifier", cr.getLogin());
+			returnValue[0] += DomUtils.getXmlElementOutput("token", cr.getToken());
+			returnValue[0] += DomUtils.getXmlElementOutput("firstname", cr.getDisplayFirstname());
+			returnValue[0] += DomUtils.getXmlElementOutput("lastname", cr.getDisplayLastname());
+			returnValue[0] += DomUtils.getXmlElementOutput("admin", String.valueOf(cr.getIsAdmin()));
+			returnValue[0] += DomUtils.getXmlElementOutput("designer", String.valueOf(cr.getIsDesigner()));
+			returnValue[0] += DomUtils.getXmlElementOutput("email", cr.getEmail());
+			returnValue[0] += DomUtils.getXmlElementOutput("other", cr.getOther());
+			returnValue[0] += "</credential>";
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return returnValue;
+	}
+
+	public boolean isUserMemberOfRole(long userId, long roleId) {
+		return credentialDao.isUserMemberOfRole(userId, roleId);
+	}
+
+	public String addOrUpdateRole(String xmlRole, Long userId) throws Exception {
+		if (!credentialDao.isAdmin(userId))
+			throw new GenericBusinessException("403 FORBIDDEN : no admin rights");
+
+		String result = null;
+		String label = null;
+		Long id = 0L;
+
+		// On recupere le body
+		Document doc;
+
+		doc = DomUtils.xmlString2Document(xmlRole, new StringBuffer());
+		Element role = doc.getDocumentElement();
+
+		NodeList children = null;
+
+		children = role.getChildNodes();
+		// On parcourt une premiere fois les enfants pour recuperer la liste e ecrire en
+		// base
+
+		// On verifie le bon format
+		if (role.getNodeName().equals("role")) {
+			for (int i = 0; i < children.getLength(); i++) {
+				if (children.item(i).getNodeName().equals("label")) {
+					label = DomUtils.getInnerXml(children.item(i));
+				}
+			}
+		} else {
+			result = "Erreur lors de la recuperation des attributs de l'utilisateur dans le XML";
+		}
+
+		// On ajoute le groupe dans la base de donnees
+		try {
+			GroupInfo gi = groupInfoDao.getGroupByName(label);
+			if (gi == null) {
+				gi = new GroupInfo();
+				gi.setLabel(label);
+			}
+			gi.setOwner(userId);
+			gi = groupInfoDao.merge(gi);
+			id = gi.getId();
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		result = "" + id;
+
+		return result;
+	}
+
+	public void removeRole(Long userId, Long groupRightInfoId) throws Exception {
+		if (!credentialDao.isAdmin(userId) && !groupRightInfoDao.isOwner(userId, groupRightInfoId))
+			throw new GenericBusinessException("403 FORBIDDEN : no admin rights");
+		groupRightInfoDao.removeById(groupRightInfoId);
+	}
+
+	public void removeUserRole(Long userId, Long groupRightInfoId) throws BusinessException {
+		if (!credentialDao.isAdmin(userId) && !groupRightInfoDao.isOwner(userId, groupRightInfoId))
+			throw new GenericBusinessException("403 FORBIDDEN : no admin rights");
+
+		try {
+			groupUserDao.removeByUserAndRole(userId, groupRightInfoId);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void removeUsersFromRole(Long userId, String portId) throws Exception {
+		if (!credentialDao.isAdmin(userId))
+			throw new GenericBusinessException("403 FORBIDDEN : no admin rights");
+		groupUserDao.removeByPortfolio(portId);
+	}
+
+	public void removeRights(Long groupId, Long userId) throws BusinessException {
+		if (!credentialDao.isAdmin(userId))
+			throw new GenericBusinessException("403 FORBIDDEN : no admin rights");
+
+		groupInfoDao.removeById(groupId);
+	}
+
+	public void changeRole(Long userId, Long rrgId, String data)
+			throws DoesNotExistException, BusinessException, Exception {
+		if (!credentialDao.isAdmin(userId) && !groupRightInfoDao.isOwner(userId, rrgId))
+			throw new GenericBusinessException("403 FORBIDDEN, no admin rights");
+
+		/// Parse data
+		DocumentBuilder documentBuilder;
+		Document document = null;
+		DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+		documentBuilder = documentBuilderFactory.newDocumentBuilder();
+		InputSource is = new InputSource(new StringReader(data));
+		document = documentBuilder.parse(is);
+
+		NodeList labelNodes = document.getElementsByTagName("label");
+		org.w3c.dom.Node labelNode = labelNodes.item(0);
+
+		GroupRightInfo gri = groupRightInfoDao.findById(rrgId);
+		if (labelNode != null) {
+			org.w3c.dom.Node labelText = labelNode.getFirstChild();
+			if (labelText != null) {
+				gri.setLabel(labelText.getNodeValue());
+			}
+		}
+
+		NodeList portfolioNodes = document.getElementsByTagName("portfolio");
+		Element portfolioNode = (Element) portfolioNodes.item(0);
+		if (portfolioNode != null) {
+			gri.setPortfolio(new Portfolio(UUID.fromString(portfolioNode.getAttribute("id"))));
+		}
+
+		gri = groupRightInfoDao.merge(gri);
+	}
+
+	public String addUsersToRole(Long userId, Long rrgid, String data) throws BusinessException {
+		if (!credentialDao.isAdmin(userId) && !groupRightInfoDao.isOwner(userId, rrgid))
+			throw new GenericBusinessException("403 FORBIDDEN : no admin right");
+
+		String value = "";
+		/// Parse data
+		DocumentBuilder documentBuilder;
+		Document document = null;
+		try {
+			DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+			documentBuilder = documentBuilderFactory.newDocumentBuilder();
+			InputSource is = new InputSource(new StringReader(data));
+			document = documentBuilder.parse(is);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		/// Probleme de parsage
+		if (document == null)
+			return value;
+
+		try {
+			Element root = document.getDocumentElement();
+
+			/// Ajout des utilisateurs
+			NodeList users = root.getElementsByTagName("user");
+			Long uid = null;
+			String uidl = null;
+			Element user = null;
+			for (int j = 0; j < users.getLength(); ++j) {
+				user = (Element) users.item(j);
+				uidl = user.getAttribute("id");
+				uid = Long.valueOf(uidl);
+				addUserRole2(userId, rrgid, uid);
+			}
+		} catch (Exception e) {
+		}
+
+		return value;
 	}
 
 }

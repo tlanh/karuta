@@ -66,6 +66,16 @@ public interface CredentialDao {
 	Credential getByLogin(String login, String passwd);
 
 	/**
+	 * Return credential instance from its login. <br>
+	 * Check if user is admin or not.
+	 * 
+	 * @param login
+	 * @param isAdmin
+	 * @return Credential instance
+	 */
+	Credential getByLogin(String login, boolean isAdmin);
+
+	/**
 	 * Return credential instance from its e-mail
 	 *
 	 * @param string email e-mail
@@ -109,7 +119,13 @@ public interface CredentialDao {
 	boolean isDesigner(Long userId, UUID nodeId);
 
 	boolean isCreator(Long userId);
+	
+	boolean isUserMemberOfRole(Long userId, Long roleId);
+	
+	String getEmailByLogin(String login);
 
+	String getLoginById(Long userId);
+	
 	// ----------------------------------------------------------------------
 
 	String[] postCredentialFromXml(Integer userId, String username, String password, String substitute)
@@ -131,10 +147,11 @@ public interface CredentialDao {
 
 	Object postUser(String xmluser, int userId) throws SQLException, Exception;
 
-	String postUsersGroups(int userId);
-
 	Object deleteUser(int userid, int userId1);
 
 	int deleteUsers(Integer userId, Integer userid2);
+
+
+	
 
 }

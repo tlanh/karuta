@@ -11,6 +11,7 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.commons.logging.Log;
@@ -157,17 +158,16 @@ public class CredentialDaoImpl extends AbstractDaoImpl<Credential> implements Cr
 	}
 
 	public List<Credential> getUsersByRole(Long userId, String portfolioUuid, String role) {
-		String sql = "SELECT c FROM Credential c";
-		sql += " group_right_info gri, group_info gi, group_user gu";
-		sql += " WHERE c.userid = gu.userid";
-		sql += " AND gu.gid = gi.gid";
-		sql += " AND gi.grid = gri.grid";
-		sql += " AND gri.portfolio_id = uuid2bin(?)";
-		sql += " AND gri.label = ?";
+		String sql = "SELECT c FROM Credential c, GroupRightInfo gri, GroupInfo gi, GroupUser gu";
+		sql += " WHERE c.id = gu.id.credential.id";
+		sql += " AND gu.id.groupInfo.id = gi.id";
+		sql += " AND gi.groupRightInfo.id = gri.id";
+		sql += " AND gri.portfolio.id = :portfolioUuid";
+		sql += " AND gri.label = :role";
 
 		TypedQuery<Credential> q = em.createQuery(sql, Credential.class);
-		q.setParameter(1, portfolioUuid);
-		q.setParameter(2, role);
+		q.setParameter("portfolioUuid", UUID.fromString(portfolioUuid));
+		q.setParameter("role", role);
 		return q.getResultList();
 	}
 
@@ -203,11 +203,6 @@ public class CredentialDaoImpl extends AbstractDaoImpl<Credential> implements Cr
 	}
 
 	public Object postUser(String xmluser, int userId) throws SQLException, Exception {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public String postUsersGroups(int userId) {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -431,7 +426,6 @@ public class CredentialDaoImpl extends AbstractDaoImpl<Credential> implements Cr
 
 	public Long getPublicUid() {
 		Long publicId = null;
-
 		// Fetching 'sys_public' userid
 		String sql = "SELECT id FROM Credential";
 		sql += " WHERE login='sys_public'";
@@ -441,13 +435,11 @@ public class CredentialDaoImpl extends AbstractDaoImpl<Credential> implements Cr
 		} catch (NoResultException e) {
 			e.printStackTrace();
 		}
-
 		return publicId;
 	}
 
 	public int updateCredentialToken(Long userId, String token) {
 		int result = 0;
-
 		String sql = "SELECT c FROM Credential c WHERE c.id  = :userId ";
 		TypedQuery<Credential> q = em.createQuery(sql, Credential.class);
 		q.setParameter("userId", userId);
@@ -482,11 +474,9 @@ public class CredentialDaoImpl extends AbstractDaoImpl<Credential> implements Cr
 			e.printStackTrace();
 			status = false;
 		}
-
 		return status;
 	}
 
-	@Override
 	public Credential getActiveByUserId(Long userID) {
 		if (!ValidateUtil.isUnsignedId(userID.intValue())) {
 			log.error("Fatal Error : userID is not correct");
@@ -503,6 +493,56 @@ public class CredentialDaoImpl extends AbstractDaoImpl<Credential> implements Cr
 			result = q.getSingleResult();
 		} catch (NoResultException e) {
 			log.error("getActiveByUserId failed", e);
+		}
+		return result;
+	}
+
+	public Credential getByLogin(String login, boolean isAdmin) {
+		if (StringUtils.isEmpty(login)) {
+			throw new IllegalArgumentException();
+		}
+		Credential cr = null;
+		String sql = "SELECT c FROM Credential c";
+		sql += " WHERE c.login = :login";
+		sql += " AND c.isAdmin = :isAdmin";
+		TypedQuery<Credential> q = em.createQuery(sql, Credential.class);
+		q.setParameter("login", login);
+		q.setParameter("isAdmin", BooleanUtils.toInteger(isAdmin));
+		try {
+			cr = q.getSingleResult();
+		} catch (NoResultException e) {
+		}
+		return cr;
+	}
+
+	public boolean isUserMemberOfRole(Long userId, Long roleId) {
+		boolean status = false;
+		String sql = "SELECT gu.id.credential.id FROM GroupUser gu";
+		sql += " INNER JOIN gu.id.groupInfo gi";
+		sql += " WHERE gu.id.credential.id = :userid";
+		sql += " AND gi.groupRightInfo.id = :grid";
+		TypedQuery<Long> q = em.createQuery(sql, Long.class);
+		q.setParameter("userid", userId);
+		q.setParameter("grid", roleId);
+		try {
+			q.getSingleResult();
+			status = true;
+		} catch (NoResultException e) {
+			// TODO: handle exception
+		}
+		return status;
+	}
+
+	public String getLoginById(Long userId) {
+		String result = null;
+		String buf = "SELECT c.login FROM Credential c";
+		buf += " WHERE c.id = :userId";
+		TypedQuery<String> q = em.createQuery(buf, String.class);
+		q.setParameter("userId", userId);
+		try {
+			result = q.getSingleResult();
+		} catch (NoResultException e) {
+			log.error("getLoginById failed", e);
 		}
 		return result;
 	}

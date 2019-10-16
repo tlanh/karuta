@@ -17,6 +17,8 @@ public interface PortfolioGroupDao {
 
 	PortfolioGroup findById(Serializable id) throws DoesNotExistException;
 
+	PortfolioGroup getPortfolioGroupFromLabel(String groupLabel);
+
 	Long getPortfolioGroupIdFromLabel(String groupLabel);
 
 	int postPortfolioGroup(String groupname, String type, Integer parent, int userId);
@@ -29,8 +31,10 @@ public interface PortfolioGroupDao {
 
 	String deletePortfolioGroups(int portfolioGroupId, int userId);
 
-	int putPortfolioInGroup(String uuid, Integer portfolioGroupId, String label, int userId);
-
 	String deletePortfolioFromPortfolioGroups(String uuid, int portfolioGroupId, int userId);
+
+	boolean exists(Long id, String type);
+
+	List<PortfolioGroup> findAll();
 
 }

@@ -31,6 +31,10 @@ public class PortfolioGroup implements Serializable {
 	public PortfolioGroup() {
 	}
 
+	public PortfolioGroup(Long id) {
+		this.id = id;
+	}
+
 	public PortfolioGroup(Long id, String label, String type) {
 		this.id = id;
 		this.label = label;
