@@ -1,11 +1,21 @@
 package eportfolium.com.karuta.business.contract;
 
-import java.util.UUID;
+import java.util.List;
 
 import eportfolium.com.karuta.model.bean.Credential;
+import eportfolium.com.karuta.model.exception.AuthenticationException;
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.model.exception.DoesNotExistException;
 
+/**
+ * Cette classe rassemble la gestion et la modification des utilisateurs, des
+ * groupes et des rôles. Le cycle de vie entier de l’utilisateur, de la création
+ * à la suppression de son identité au sein du système, est alors contrôlé en un
+ * seul endroit.
+ * 
+ * @author mlengagne
+ *
+ */
 public interface SecurityManager {
 
 	/**
@@ -28,25 +38,47 @@ public interface SecurityManager {
 	 */
 	void changeUserPassword(Long userId, String currentPassword, String newPassword) throws BusinessException;
 
+	/**
+	 * 
+	 * This method provides a way for security officers to change info of other
+	 * users.
+	 * 
+	 * @param byUserId
+	 * @param forUserId
+	 * @param xmlUser
+	 * @return
+	 * @throws BusinessException
+	 */
+	String changeUser(Long byUserId, Long forUserId, String xmlUser) throws BusinessException;
+
+	/**
+	 * This method provides a way for users to change their personal info.
+	 * 
+	 * @param byUserId
+	 * @param forUserId
+	 * @param xmlUser
+	 * @return
+	 * @throws BusinessException
+	 */
+	String changeUserInfo(Long byUserId, Long forUserId, String xmlUser) throws BusinessException;
+
 	boolean registerUser(String username, String password);
 
-	Long createUser(String username, String email) throws BusinessException;
+	Long addUser(String username, String email) throws BusinessException;
 
-	boolean createUser(String username, String email, boolean isDesigner, long userId) throws Exception;
+	boolean addUser(String username, String email, boolean isDesigner, long userId) throws Exception;
 
 	String generatePassword();
 
-	int deleteUser(Long userId) throws BusinessException;
+	void removeUser(Long byUser, Long forUser) throws BusinessException;
 
-	void deleteUsers(Long userId, Long groupId) throws BusinessException;
+	void removeUsers(Long byUser, Long forUser) throws BusinessException;
 
 	void changeUser(Credential user) throws BusinessException;
 
-	String changeUser(Long userId, Long userId2, String xmlData) throws BusinessException;
+	boolean isAdmin(Long userId);
 
-	boolean isAdmin(Long id);
-
-	boolean isCreator(Long id);
+	boolean isCreator(Long userId);
 
 	/**
 	 * Check if customer password is the right one
@@ -56,41 +88,24 @@ public interface SecurityManager {
 	 */
 	boolean checkPassword(Long userID, String passwd);
 
-	String changeUserInfo(Long userId, long userId2, String xmlUser) throws BusinessException;
+	String[] postCredentialFromXml(String login, String password, String substit);
 
-	String[] postCredentialFromXml(int dummy, String login, String password, String substit);
+	boolean userHasRole(long userId, long roleId);
 
-	boolean isUserMemberOfRole(long userId, long roleId);
+	String addUsers(String xmlUsers, Long userId) throws Exception;
 
-	String addOrUpdateRole(String xmlRole, Long userId) throws Exception;
-
-	String addUsers(String in, Long userId) throws Exception;
-
-	Long createRole(String portfolioUuid, String role, Long userId) throws BusinessException;
-
-	Long createRole(UUID portfolioUuid, String role, Long userId) throws BusinessException;;
+	Long addRole(String portfolioUuid, String role, Long userId) throws BusinessException;
 
 	/**
 	 * Add user to a role
 	 * 
-	 * @param userId
-	 * @param grid    roleId
-	 * @param userId2
+	 * @param byUserId
+	 * @param grid      roleId
+	 * @param forUserId
 	 * @return
 	 * @throws BusinessException
 	 */
-	String addUserRole(Long userId, Long grid, Long userId2) throws BusinessException;
-
-	/**
-	 * Add user to a role
-	 * 
-	 * @param userId
-	 * @param rrgId
-	 * @param user
-	 * @return
-	 * @throws BusinessException
-	 */
-	String addUserRole2(Long userId, Long rrgId, Long user) throws BusinessException;
+	String addUserRole(Long byUserId, Long grid, Long forUserId) throws BusinessException;
 
 	void removeUserRole(Long userId, Long groupRightInfoId) throws BusinessException;
 
@@ -98,12 +113,32 @@ public interface SecurityManager {
 
 	void removeRole(Long userId, Long groupRightInfoId) throws Exception;
 
-	void removeRights(Long groupId, Long userId) throws BusinessException;
+	void removeRights(Long userId, Long groupId) throws BusinessException;
 
-	void changeRole(Long id, Long rrgId, String data) throws DoesNotExistException, BusinessException, Exception;
+	Long changeRole(Long userId, Long rrgId, String xmlRole) throws DoesNotExistException, BusinessException, Exception;
 
-	String addUsersToRole(Long id, Long rrgId, String xmlNode) throws BusinessException;
+	String addUsersToRole(Long id, Long rrgId, String xmlUser) throws BusinessException;
 
-	boolean addUserToGroup(Long user, Long userId, Long groupId) throws BusinessException;
+	void addUserToGroup(Long byUser, Long forUser, Long groupId) throws BusinessException;
+
+	Credential authenticateUser(String login, String password) throws AuthenticationException;
+
+	/**
+	 * Add user in user groups.
+	 * 
+	 * @param userId
+	 * @param credentialGroupIds
+	 * @return
+	 */
+	boolean addUserInCredentialGroups(Long userId, List<Long> credentialGroupIds);
+
+	/**
+	 * Remove a user from a user group,
+	 * 
+	 * @param userId
+	 * @param credentialGroupId
+	 * @return
+	 */
+	Boolean deleteUserFromCredentialGroup(Long userId, Long credentialGroupId);
 
 }

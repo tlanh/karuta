@@ -5,7 +5,6 @@ import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
 
-import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -18,21 +17,28 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 import javax.persistence.UniqueConstraint;
 
+import org.hibernate.search.annotations.Indexed;
+
 /**
  * @author mlengagne
  *         <p>
- *         a qualification, achievement, personal quality, or aspect of a
+ *         A qualification, achievement, personal quality, or aspect of a
  *         person's background, typically when used to indicate that they are
  *         suitable for something. recruitment is based mainly on academic
  *         credentials
  *         </p>
  *
  */
+@Indexed
 @Entity
 @Table(name = "credential", uniqueConstraints = @UniqueConstraint(columnNames = "login"))
 public class Credential implements Serializable {
 
 	private static final long serialVersionUID = -8685729959105792177L;
+
+	public static final String defaultDateInputPattern = "dd/MM/yy";
+	public static final String defaultDateViewPattern = "dd MMM yyyy";
+	public static final String defaultDateListPattern = "yyyy-MM-dd";
 
 	private Long id;
 	private String login;
@@ -49,12 +55,16 @@ public class Credential implements Serializable {
 	private String other;
 	private CredentialSubstitution credentialSubstitution;
 
-	protected Set<GroupUser> groups = new HashSet<GroupUser>();
-	protected Set<Portfolio> portfolios = new HashSet<Portfolio>();
+	private Set<GroupUser> groups = new HashSet<GroupUser>();
+	private Set<Portfolio> portfolios = new HashSet<Portfolio>();
 
 	private String subUser;
 
 	public Credential() {
+	}
+
+	public Credential(String login) {
+		this.login = login;
 	}
 
 	public Credential(Long id) {
@@ -93,9 +103,15 @@ public class Credential implements Serializable {
 		this.other = other;
 	}
 
+	public Credential(Long crId, String login, String firstName) {
+		this.id = crId;
+		this.login = login;
+		this.displayFirstname = firstName;
+	}
+
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(name = "userid", unique = true, nullable = false)
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	public Long getId() {
 		return this.id;
 	}
@@ -212,7 +228,7 @@ public class Credential implements Serializable {
 		this.other = other;
 	}
 
-	@OneToOne(fetch = FetchType.LAZY, mappedBy = "id.credential", cascade = CascadeType.ALL)
+	@OneToOne(fetch = FetchType.LAZY, mappedBy = "id.credential")
 	public CredentialSubstitution getCredentialSubstitution() {
 		return credentialSubstitution;
 	}
@@ -225,7 +241,7 @@ public class Credential implements Serializable {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((id == null) ? 0 : id.hashCode());
+		result = prime * result + ((getId() == null) ? 0 : getId().hashCode());
 		return result;
 	}
 
@@ -238,10 +254,10 @@ public class Credential implements Serializable {
 		if (getClass() != obj.getClass())
 			return false;
 		Credential other = (Credential) obj;
-		if (id == null) {
-			if (other.id != null)
+		if (getId() == null) {
+			if (other.getId() != null)
 				return false;
-		} else if (!id.equals(other.id))
+		} else if (!getId().equals(other.getId()))
 			return false;
 		return true;
 	}
@@ -301,6 +317,14 @@ public class Credential implements Serializable {
 	 */
 	public void internalRemovePortfolio(Portfolio portfolio) {
 		portfolios.remove(portfolio);
+	}
+
+	@Override
+	public String toString() {
+		return "Credential [id=" + id + ", login=" + login + ", canSubstitute=" + canSubstitute + ", isAdmin=" + isAdmin
+				+ ", isDesigner=" + isDesigner + ", active=" + active + ", displayFirstname=" + displayFirstname
+				+ ", displayLastname=" + displayLastname + ", email=" + email + ", password=" + password + ", token="
+				+ token + ", other=" + other + "]";
 	}
 
 }

@@ -1,9 +1,5 @@
 package eportfolium.com.karuta.webapp.rest.resource;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -12,30 +8,26 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.CookieParam;
-import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogConfigurationException;
 import org.apache.commons.logging.LogFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import edu.yale.its.tp.cas.client.ServiceTicketValidator;
@@ -44,16 +36,14 @@ import eportfolium.com.karuta.business.contract.EmailManager;
 import eportfolium.com.karuta.business.contract.SecurityManager;
 import eportfolium.com.karuta.business.contract.UserManager;
 import eportfolium.com.karuta.config.Consts;
-import eportfolium.com.karuta.model.bean.Credential;
 import eportfolium.com.karuta.model.exception.BusinessException;
-import eportfolium.com.karuta.model.exception.DoesNotExistException;
 import eportfolium.com.karuta.util.StrToTime;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
+import eportfolium.com.karuta.webapp.eventbus.KEvent;
 import eportfolium.com.karuta.webapp.rest.provider.mapper.exception.RestWebApplicationException;
-import eportfolium.com.karuta.webapp.rest.resource.RestServicePortfolio.UserInfo;
 import eportfolium.com.karuta.webapp.util.DomUtils;
-import eportfolium.com.karuta.webapp.util.javaUtils;
 
+@Path("/credential")
 public class CredentialResource extends AbstractResource {
 
 	@Autowired
@@ -72,7 +62,7 @@ public class CredentialResource extends AbstractResource {
 	private static Logger logger;
 
 	/**
-	 * Fetch current user info <br>
+	 * Fetch current user info. <br>
 	 * GET /rest/api/credential
 	 * 
 	 * @param user
@@ -85,21 +75,27 @@ public class CredentialResource extends AbstractResource {
 	 *         <designer>1/0</designer> <active>1/0</active>
 	 *         <substitute>1/0</substitute> </user>
 	 */
-	@Path("/credential")
+
+	@Path("/test")
+	@GET
+	public String getHello() {
+		return "Bonjour :)";
+	}
+
 	@GET
 	@Produces(MediaType.APPLICATION_XML)
 	public Response getCredential(@CookieParam("user") String user, @CookieParam("credential") String token,
 			@QueryParam("group") int groupId, @Context ServletConfig sc,
 			@Context HttpServletRequest httpServletRequest) {
-		Credential ui = checkCredential(httpServletRequest, user, token, null);
+		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
-		if (ui.getId() == 0) // Non valid userid
+		if (ui.userId == 0) // userid not valid -- id de l'utilisateur non valide.
 		{
 			return Response.status(401).build();
 		}
 
 		try {
-			String xmluser = userManager.getInfUser(ui.getId());
+			String xmluser = userManager.getUserInfos(ui.userId);
 
 			/// Add shibboleth info if needed
 			HttpSession session = httpServletRequest.getSession(false);
@@ -129,10 +125,10 @@ public class CredentialResource extends AbstractResource {
 					String xmlInfUser = String.format(
 							"<user id=\"%s\">" + "<firstname>%s</firstname>" + "<lastname>%s</lastname>"
 									+ "<email>%s</email>" + "</user>",
-							ui.getId(), updatevals.get("display_firstname"), updatevals.get("display_lastname"),
+							ui.userId, updatevals.get("display_firstname"), updatevals.get("display_lastname"),
 							updatevals.get("email"));
 					/// User update its own info automatically
-					securityManager.changeUser(ui.getId(), ui.getId(), xmlInfUser);
+					securityManager.changeUser(ui.userId, ui.userId, xmlInfUser);
 					/// Consider it done
 					session.removeAttribute("updatefromshibe");
 				}
@@ -148,88 +144,7 @@ public class CredentialResource extends AbstractResource {
 	}
 
 	/**
-	 * Modify user info <br>
-	 * PUT /rest/api/users/user/{user-id} body: <user id="uid">
-	 * <username></username> <firstname></firstname> <lastname></lastname>
-	 * <admin>1/0</admin> <designer>1/0</designer> <email></email>
-	 * <active>1/0</active> <substitute>1/0</substitute> </user>
-	 *
-	 * @param xmlInfUser
-	 * @param user
-	 * @param token
-	 * @param groupId
-	 * @param userid
-	 * @param sc
-	 * @param httpServletRequest
-	 * @return <user id="uid"> <username></username> <firstname></firstname>
-	 *         <lastname></lastname> <admin>1/0</admin> <designer>1/0</designer>
-	 *         <email></email> <active>1/0</active> <substitute>1/0</substitute>
-	 *         </user>
-	 */
-	@Path("/users/user/{user-id}")
-	@PUT
-	@Produces(MediaType.APPLICATION_XML)
-	public String putUser(String xmlInfUser, @CookieParam("user") String user, @CookieParam("credential") String token,
-			@QueryParam("group") int groupId, @PathParam("user-id") long userid, @Context ServletConfig sc,
-			@Context HttpServletRequest httpServletRequest) {
-		Credential ui = checkCredential(httpServletRequest, user, token, null);
-
-		try {
-
-			String queryUser = "";
-			if (securityManager.isAdmin(ui.getId()) || securityManager.isCreator(ui.getId())) {
-				queryUser = securityManager.changeUserInfo(ui.getId(), userid, xmlInfUser);
-			} else if (ui.getId() == userid) /// Changing self
-			{
-				String ip = httpServletRequest.getRemoteAddr();
-				logger.info(String.format("[%s] ", ip));
-				queryUser = securityManager.changeUser(ui.getId(), userid, xmlInfUser);
-			} else
-				throw new RestWebApplicationException(Status.FORBIDDEN, "Not authorized");
-
-			return queryUser;
-		} catch (RestWebApplicationException ex) {
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
-		} catch (Exception ex) {
-			ex.printStackTrace();
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, "Error : " + ex.getMessage());
-		}
-	}
-
-	/**
-	 * Add user to a role (?) <br>
-	 * POST /rest/api/roleUser
-	 * 
-	 * @param user
-	 * @param token
-	 * @param groupId
-	 * @param sc
-	 * @param httpServletRequest
-	 * @param grid
-	 * @param userid
-	 * @return
-	 */
-	@Path("/roleUser")
-	@POST
-	@Produces(MediaType.APPLICATION_XML)
-	public String postRoleUser(@CookieParam("user") String user, @CookieParam("credential") String token,
-			@QueryParam("group") long groupId, @Context ServletConfig sc,
-			@Context HttpServletRequest httpServletRequest, @QueryParam("grid") long grid,
-			@QueryParam("user-id") Long userid) {
-		Credential ui = checkCredential(httpServletRequest, user, token, null);
-		try {
-			return securityManager.addUserRole(ui.getId(), grid, userid).toString();
-		} catch (BusinessException ex) {
-			throw new RestWebApplicationException(Status.FORBIDDEN,
-					"Vous n'avez pas les droits necessaires " + ex.getMessage());
-		} catch (Exception ex) {
-			ex.printStackTrace();
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		}
-	}
-
-	/**
-	 * Send login information <br>
+	 * Send login information. <br>
 	 * PUT /rest/api/credential/login
 	 * 
 	 * @param xmlCredential
@@ -240,7 +155,7 @@ public class CredentialResource extends AbstractResource {
 	 * @param httpServletRequest
 	 * @return
 	 */
-	@Path("/credential/login")
+	@Path("/login")
 	@PUT
 	@Produces(MediaType.APPLICATION_XML)
 	@Consumes(MediaType.APPLICATION_XML)
@@ -251,9 +166,18 @@ public class CredentialResource extends AbstractResource {
 	}
 
 	/**
-	 * Send login information POST /rest/api/credential/login parameters: return:
-	 **/
-	@Path("/credential/login")
+	 * Send login information. <br>
+	 * POST /rest/api/credential/login
+	 * 
+	 * @param xmlCredential
+	 * @param user
+	 * @param token
+	 * @param groupId
+	 * @param sc
+	 * @param httpServletRequest
+	 * @return
+	 */
+	@Path("/login")
 	@POST
 	@Produces(MediaType.APPLICATION_XML)
 	@Consumes(MediaType.APPLICATION_XML)
@@ -272,7 +196,7 @@ public class CredentialResource extends AbstractResource {
 		try {
 			if (!"".equals(authlog) && authlog != null)
 				authLog = LogFactory.getLog(authlog);
-		} catch (IOException e1) {
+		} catch (LogConfigurationException e1) {
 			logger.error("Could not create authentification log file");
 		}
 
@@ -291,11 +215,10 @@ public class CredentialResource extends AbstractResource {
 				login = templogin[0];
 			}
 
-			int dummy = 0;
-			String[] resultCredential = securityManager.postCredentialFromXml(dummy, login, password, substit);
-			// 0: xml de retour
-			// 1,2: username, uid
-			// 3,4: substitute name, substitute id
+			String[] resultCredential = securityManager.postCredentialFromXml(login, password, substit);
+			// 0 : XML de retour
+			// 1,2 : username, uid
+			// 3,4 : substitute name, substitute id
 			if (resultCredential == null) {
 				event.status = 403;
 				retVal = "invalid credential";
@@ -333,7 +256,7 @@ public class CredentialResource extends AbstractResource {
 				event.status = 200;
 				retVal = resultCredential[0];
 			}
-			eventbus.processEvent(event);
+			// eventbus.processEvent(event);
 
 			return Response.status(event.status).entity(retVal).type(event.mediaType).build();
 		} catch (RestWebApplicationException ex) {
@@ -350,14 +273,15 @@ public class CredentialResource extends AbstractResource {
 	}
 
 	/**
-	 * Tell system to forgot your password POST /rest/api/credential/forgot
+	 * Tell system to forgot your password. <br>
+	 * POST /rest/api/credential/forgot
 	 * 
 	 * @param xml
 	 * @param sc
 	 * @param httpServletRequest
 	 * @return
 	 */
-	@Path("/credential/forgot")
+	@Path("/forgot")
 	@POST
 	@Consumes(MediaType.APPLICATION_XML)
 	public Response postForgotCredential(String xml, @Context ServletConfig sc,
@@ -435,7 +359,8 @@ public class CredentialResource extends AbstractResource {
 	}
 
 	/**
-	 * Fetch current user information (CAS) GET /rest/api/credential/login/cas
+	 * Fetch current user information (CAS). <br>
+	 * GET /rest/api/credential/login/cas
 	 * 
 	 * @param content
 	 * @param user
@@ -448,7 +373,7 @@ public class CredentialResource extends AbstractResource {
 	 * @return
 	 */
 	@POST
-	@Path("/credential/login/cas")
+	@Path("/login/cas")
 	public Response postCredentialFromCas(String content, @CookieParam("user") String user,
 			@CookieParam("credential") String token, @QueryParam("group") int groupId,
 			@QueryParam("ticket") String ticket, @QueryParam("redir") String redir, @Context ServletConfig sc,
@@ -456,8 +381,8 @@ public class CredentialResource extends AbstractResource {
 		return getCredentialFromCas(user, token, groupId, ticket, redir, sc, httpServletRequest);
 	}
 
-	@Path("/credential/login/cas")
 	@GET
+	@Path("/login/cas")
 	public Response getCredentialFromCas(@CookieParam("user") String user, @CookieParam("credential") String token,
 			@QueryParam("group") int groupId, @QueryParam("ticket") String ticket, @QueryParam("redir") String redir,
 			@Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
@@ -547,235 +472,20 @@ public class CredentialResource extends AbstractResource {
 	}
 
 	/**
-	 * Ask to logout, clear session POST /rest/api/credential/logout parameters:
-	 * return:
-	 **/
-	@Path("/credential/logout")
+	 * Ask to logout, clear session. <br>
+	 * POST /rest/api/credential/logout
+	 * 
+	 * @param sc
+	 * @param httpServletRequest
+	 * @return
+	 */
+	@Path("/logout")
 	@POST
 	public Response logout(@Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
 		HttpSession session = httpServletRequest.getSession(false);
 		if (session != null)
 			session.invalidate();
 		return Response.ok("logout").build();
-	}
-
-	/**
-	 * Modify a role PUT /rest/api/roles/role/{role-id} parameters: return:
-	 **/
-	@Path("/roles/role/{role-id}")
-	@PUT
-	@Produces(MediaType.APPLICATION_XML)
-	public String putRole(String xmlRole, @CookieParam("user") String user, @CookieParam("credential") String token,
-			@QueryParam("group") int groupId, @Context ServletConfig sc, @Context HttpServletRequest httpServletRequest,
-			@PathParam("role-id") int roleId) {
-
-		Credential ui = new Credential(); // FIXME
-		try {
-			String returnValue = securityManager.addOrUpdateRole(xmlRole, ui.getId()).toString();
-			return returnValue;
-		} catch (BusinessException ex) {
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
-		} catch (Exception ex) {
-			ex.printStackTrace();
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		}
-	}
-
-	/**
-	 * Get roles in a portfolio GET /rest/api/credential/group/{portfolio-id}
-	 * parameters: return:
-	 *
-	 **/
-	@Path("/credential/group/{portfolio-id}")
-	@GET
-	@Produces(MediaType.APPLICATION_XML)
-	public String getUserGroupByPortfolio(@CookieParam("user") String user, @CookieParam("credential") String token,
-			@QueryParam("group") int groupId, @PathParam("portfolio-id") String portfolioUuid,
-			@Context ServletConfig sc, @Context HttpServletRequest httpServletRequest) {
-		if (!isUUID(portfolioUuid)) {
-			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
-		}
-		Credential ui = new Credential();
-		try {
-			String xmlGroups = userManager.getUserGroupByPortfolio(portfolioUuid, ui.getId());
-
-			DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
-			DocumentBuilder documentBuilder = null;
-			Document document = null;
-			documentBuilder = documentBuilderFactory.newDocumentBuilder();
-			document = documentBuilder.newDocument();
-			document.setXmlStandalone(true);
-			Document doc = documentBuilder.parse(new ByteArrayInputStream(xmlGroups.getBytes("UTF-8")));
-			NodeList groups = doc.getElementsByTagName("group");
-			if (groups.getLength() == 1) {
-				Node groupnode = groups.item(0);
-				String gid = groupnode.getAttributes().getNamedItem("id").getNodeValue();
-				if (gid != null) {
-				}
-			} else if (groups.getLength() == 0) // Pas de groupe, on rend invalide le choix
-			{
-			}
-
-			return xmlGroups;
-		} catch (Exception ex) {
-			ex.printStackTrace();
-			logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		}
-	}
-
-	/**
-	 * Delete a role DELETE
-	 * /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id} parameters:
-	 * return:
-	 **/
-	@Path("/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}")
-	@DELETE
-	@Produces(MediaType.APPLICATION_XML)
-	public String deleteRightGroup(String xmlNode, @CookieParam("user") String user,
-			@CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc,
-			@Context HttpServletRequest httpServletRequest, @PathParam("rolerightsgroup-id") Long groupRightInfoId) {
-		Credential ui = checkCredential(httpServletRequest, user, token, group);
-
-		try {
-			securityManager.removeRole(ui.getId(), groupRightInfoId);
-			return "";
-		} catch (BusinessException ex) {
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
-		} catch (Exception ex) {
-			ex.printStackTrace();
-			logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		}
-	}
-
-	/**
-	 * Remove user from a role DELETE
-	 * /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}/users/user/{user-id}
-	 *
-	 **/
-	@Path("/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}/users/user/{user-id}")
-	@DELETE
-	@Produces(MediaType.APPLICATION_XML)
-	public String deleteRightGroupUser(String xmlNode, @CookieParam("user") String user,
-			@CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc,
-			@Context HttpServletRequest httpServletRequest, @PathParam("rolerightsgroup-id") Long rrgId,
-			@PathParam("user-id") Integer queryuser) {
-		Credential ui = checkCredential(httpServletRequest, user, token, group);
-
-		String returnValue = "";
-		try {
-			securityManager.removeUserRole(ui.getId(), rrgId);
-			return returnValue;
-		} catch (BusinessException ex) {
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
-		} catch (Exception ex) {
-			ex.printStackTrace();
-			logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		}
-	}
-
-	/**
-	 * Remove all users from a role DELETE /rest/api/rolerightsgroups/all/users
-	 *
-	 **/
-	@Path("/rolerightsgroups/all/users")
-	@DELETE
-	@Produces(MediaType.APPLICATION_XML)
-	public String deletePortfolioRightInfo(String xmlNode, @CookieParam("user") String user,
-			@CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc,
-			@Context HttpServletRequest httpServletRequest, @QueryParam("portfolio") String portId) {
-		Credential cr = checkCredential(httpServletRequest, user, token, group);
-
-		String returnValue = "";
-		try {
-			// Retourne le contenu du type
-			if (portId != null) {
-				securityManager.removeUsersFromRole(cr.getId(), portId);
-			}
-			return returnValue;
-		} catch (BusinessException ex) {
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
-		} catch (Exception ex) {
-			ex.printStackTrace();
-			logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		}
-	}
-
-	/**
-	 * Change a right in role <br>
-	 * PUT /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}
-	 * 
-	 * @param xmlNode
-	 * @param user
-	 * @param token
-	 * @param group
-	 * @param sc
-	 * @param httpServletRequest
-	 * @param rrgId
-	 * @return
-	 */
-	@Path("/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}")
-	@PUT
-	@Produces(MediaType.APPLICATION_XML)
-	public String putRightInfo(String xmlNode, @CookieParam("user") String user,
-			@CookieParam("credential") String token, @CookieParam("group") String group, @Context ServletConfig sc,
-			@Context HttpServletRequest httpServletRequest, @PathParam("rolerightsgroup-id") Long rrgId) {
-		Credential ui = checkCredential(httpServletRequest, user, token, group);
-
-		String returnValue = "";
-		try {
-			// Retourne le contenu du type
-			if (rrgId != null) {
-				securityManager.changeRole(ui.getId(), rrgId, xmlNode);
-			}
-			return returnValue;
-		} catch (DoesNotExistException e) {
-			throw new RestWebApplicationException(Status.NOT_FOUND, "Role with id " + rrgId + " not found");
-		} catch (BusinessException ex) {
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
-		} catch (Exception ex) {
-			ex.printStackTrace();
-			logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		}
-	}
-
-	/**
-	 * Insert a user in a user group <br>
-	 * POST /rest/api/groupsUsers
-	 * 
-	 * @param user
-	 * @param token
-	 * @param groupId            group: gid
-	 * @param sc
-	 * @param httpServletRequest
-	 * @param userId             userId
-	 * @return <ok/>
-	 */
-	@Path("/groupsUsers")
-	@POST
-	@Produces(MediaType.APPLICATION_XML)
-	public String postGroupsUsers(@CookieParam("user") String user, @CookieParam("credential") String token,
-			@QueryParam("group") long groupId, @Context ServletConfig sc,
-			@Context HttpServletRequest httpServletRequest, @QueryParam("userId") long userId) {
-		Credential ui = checkCredential(httpServletRequest, user, token, null);
-
-		try {
-			if (securityManager.addUserToGroup(ui.getId(), userId, groupId)) {
-				return "<ok/>";
-			} else
-				throw new RestWebApplicationException(Status.FORBIDDEN,
-						ui.getId() + " ne fait pas parti du groupe " + groupId);
-		} catch (RestWebApplicationException ex) {
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
-		} catch (Exception ex) {
-			ex.printStackTrace();
-			logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		}
 	}
 
 }

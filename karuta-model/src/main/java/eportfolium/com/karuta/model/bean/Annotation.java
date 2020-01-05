@@ -9,6 +9,7 @@ import javax.persistence.AttributeOverrides;
 import javax.persistence.Column;
 import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
+import javax.persistence.Lob;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
@@ -46,7 +47,8 @@ public class Annotation implements Serializable {
 	}
 
 	@EmbeddedId
-	@AttributeOverrides({ @AttributeOverride(name = "nodeid", column = @Column(name = "nodeid", nullable = false)),
+	@AttributeOverrides({
+			@AttributeOverride(name = "nodeid", column = @Column(name = "nodeid", nullable = false, length = 128)),
 			@AttributeOverride(name = "rank", column = @Column(name = "rank", nullable = false)) })
 	public AnnotationId getId() {
 		return this.id;
@@ -56,7 +58,8 @@ public class Annotation implements Serializable {
 		this.id = id;
 	}
 
-	@Column(name = "text", length = 65535)
+	@Lob
+	@Column(name = "text")
 	public String getText() {
 		return this.text;
 	}
@@ -84,7 +87,7 @@ public class Annotation implements Serializable {
 		this.AUser = AUser;
 	}
 
-	@Column(name = "wad_identifier", length = 45)
+	@Column(name = "wad_identifier")
 	public String getWadIdentifier() {
 		return this.wadIdentifier;
 	}
@@ -93,4 +96,23 @@ public class Annotation implements Serializable {
 		this.wadIdentifier = wadIdentifier;
 	}
 
+	@Override
+	public boolean equals(Object o) {
+		if (this == o)
+			return true;
+		if (o == null || getClass() != o.getClass())
+			return false;
+
+		Annotation that = (Annotation) o;
+
+		if (getId() != null ? !getId().equals(that.getId()) : that.getId() != null)
+			return false;
+
+		return true;
+	}
+
+	@Override
+	public int hashCode() {
+		return (getId() != null ? getId().hashCode() : 0);
+	}
 }

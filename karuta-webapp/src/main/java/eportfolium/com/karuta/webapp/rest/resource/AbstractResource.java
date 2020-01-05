@@ -5,14 +5,17 @@ import java.util.UUID;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
-import eportfolium.com.karuta.model.bean.Credential;
-import eportfolium.com.karuta.model.bean.CredentialSubstitution;
-import eportfolium.com.karuta.model.bean.CredentialSubstitutionId;
-
 public abstract class AbstractResource {
 
 	protected static final String logFormat = "[%1$s] %2$s %3$s: %4$s -- %5$s (%6$s) === %7$s\n";
 	protected static final String logFormatShort = "%7$s\n";
+
+	class UserInfo {
+		String subUser = "";
+		long subId = 0L;
+		String User = "";
+		long userId = 0L;
+	}
 
 	/**
 	 * Fetch user session info
@@ -23,24 +26,18 @@ public abstract class AbstractResource {
 	 * @param group
 	 * @return
 	 */
-	public Credential checkCredential(HttpServletRequest request, String login, String token, String group) {
+	public UserInfo checkCredential(HttpServletRequest request, String login, String token, String group) {
 		HttpSession session = request.getSession(true);
 
-		Credential ui = new Credential();
-//		initService(request);
+		UserInfo ui = new UserInfo();
 		Long val = (Long) session.getAttribute("uid");
 		if (val != null)
-			ui.setId(val);
-//			ui.groupId = val;
+			ui.userId = val;
 		val = (Long) session.getAttribute("subuid");
-		CredentialSubstitution cs = new CredentialSubstitution(new CredentialSubstitutionId());
-		if (val != null) {
-			cs.setCredentialSubstitutionId(val);
-			ui.setCredentialSubstitution(cs);
-		}
-
-		ui.setLogin((String) session.getAttribute("user"));
-		ui.setSubUser((String) session.getAttribute("subuser"));
+		if (val != null)
+			ui.subId = val;
+		ui.User = (String) session.getAttribute("user");
+		ui.subUser = (String) session.getAttribute("subuser");
 
 		return ui;
 	}
@@ -54,4 +51,5 @@ public abstract class AbstractResource {
 
 		return true;
 	}
+
 }

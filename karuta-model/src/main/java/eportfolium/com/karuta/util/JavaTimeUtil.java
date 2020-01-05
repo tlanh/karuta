@@ -1,18 +1,22 @@
 package eportfolium.com.karuta.util;
 
-import java.util.Date;
-import java.util.TimeZone;
 import java.sql.Time;
 import java.sql.Timestamp;
-import java.time.*;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Date;
+import java.util.TimeZone;
 
 public class JavaTimeUtil {
-	public static final ZoneId paris = ZoneId.of("Europe/Paris");
+	public static ZoneId paris = ZoneId.of("Europe/Paris");
 	public static ZoneId losAngeles = ZoneId.of("America/Los_Angeles");
 	public static ZoneId brisbane = ZoneId.of("Australia/Brisbane");
 	public static ZoneId perth = ZoneId.of("Australia/Perth");
-	public static ZoneId date_default_timezone = null;
+	public static ZoneId date_default_timezone = ZoneId.of("Europe/Paris");
 	public static final DateTimeFormatter localDateFormatter = DateTimeFormatter.ofPattern("YYYYMMDD");
 
 	// ///////////////////////////////////////////

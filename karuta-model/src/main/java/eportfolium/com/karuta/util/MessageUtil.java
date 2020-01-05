@@ -6,7 +6,7 @@ import java.util.Properties;
 import eportfolium.com.karuta.model.exception.UtilRuntimeException;
 
 public class MessageUtil {
-	static private String MESSAGE_FILE_NAME = "dulocaldansnosassiettes/business/messageDefs.properties";
+	static private String MESSAGE_FILE_NAME = "eportfolium/com/karuta/util/messageDefs.properties";
 	static private Properties messageDefs = null;
 
 	static private Properties loadMessageDefs(Object anyObject) {
@@ -25,13 +25,11 @@ public class MessageUtil {
 			String s = p.getProperty(messageId);
 			if (s != null) {
 				return s;
-			}
-			else {
+			} else {
 				return ("[Contact I.T.  MessageUtil cannot find message id \"" + messageId + "\" in "
 						+ MESSAGE_FILE_NAME + ".]");
 			}
-		}
-		catch (UtilRuntimeException e) {
+		} catch (UtilRuntimeException e) {
 			System.err.println("Failed to get message for \"" + messageId + "\".");
 			throw e;
 		}
@@ -50,16 +48,15 @@ public class MessageUtil {
 		if (s != null) {
 			if (messageArgs == null) {
 				message = s;
-			}
-			else {
+			} else {
 				MessageFormat messageFormat = new MessageFormat(s);
 				message = messageFormat.format(messageArgs);
 			}
 
 			return message;
-		}
-		else {
-			return ("[Contact I.T.  MessageUtil cannot find message id \"" + messageId + "\" in " + MESSAGE_FILE_NAME + ".]");
+		} else {
+			return ("[Contact I.T.  MessageUtil cannot find message id \"" + messageId + "\" in " + MESSAGE_FILE_NAME
+					+ ".]");
 		}
 
 	}

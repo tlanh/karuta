@@ -12,6 +12,8 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -51,6 +53,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.MimeType;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -96,6 +101,7 @@ import eportfolium.com.karuta.util.Tools;
 import eportfolium.com.karuta.util.ValidateUtil;
 
 @Service
+@Transactional
 public class PortfolioManagerImpl extends BaseManager implements PortfolioManager {
 
 	@Autowired
@@ -143,6 +149,43 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 	@Autowired
 	private FileManager fileManager;
 
+	/// temp class
+
+	class groupright {
+		right getGroup(String label) {
+			right r = rights.get(label.trim());
+			if (r == null) {
+				r = new right();
+				rights.put(label, r);
+			}
+			return r;
+		}
+
+		void setNotify(String roles) {
+			Iterator<right> iter = rights.values().iterator();
+			while (iter.hasNext()) {
+				right r = iter.next();
+				r.notify = roles.trim();
+			}
+		}
+
+		Map<String, right> rights = new HashMap<String, right>();
+	}
+
+	class resolver {
+		groupright getUuid(String uuid) {
+			groupright gr = resolve.get(uuid);
+			if (gr == null) {
+				gr = new groupright();
+				resolve.put(uuid, gr);
+			}
+			return gr;
+		};
+
+		Map<String, groupright> resolve = new HashMap<String, groupright>();
+		Map<String, Long> groups = new HashMap<String, Long>();
+	}
+
 	static private final Logger logger = LoggerFactory.getLogger(PortfolioManagerImpl.class);
 
 	public boolean changePortfolioDate(String fromNodeuuid, String fromPortuuid) {
@@ -157,7 +200,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 				portfolio.setModifDate(now);
 				hasChanged = true;
 			} else if (fromPortuuid != null) {
-				portfolio = portfolioDao.findById(UUID.fromString(fromPortuuid));
+				portfolio = portfolioDao.findById(fromPortuuid);
 				portfolio.setModifDate(now);
 				hasChanged = true;
 			}
@@ -169,7 +212,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		return hasChanged;
 	}
 
-	public boolean deletePortfolioGroups(Long portfolioGroupId) {
+	public boolean removePortfolioGroups(Long portfolioGroupId) {
 		boolean res = false;
 		try {
 			PortfolioGroup pg = portfolioGroupDao.findById(portfolioGroupId);
@@ -188,15 +231,14 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		return res;
 	}
 
-	public boolean deletePortfolioFromPortfolioGroups(String portfolioUuid, Long portfolioGroupId) {
+	public boolean removePortfolioFromPortfolioGroups(String portfolioUuid, Long portfolioGroupId) {
 		boolean result = false;
 
 		try {
 			PortfolioGroupMembersId pgmID = new PortfolioGroupMembersId();
-			pgmID.setPortfolio(portfolioDao.findById(UUID.fromString(portfolioUuid)));
-			pgmID.setPortfolioGroup(portfolioGroupDao.findById(portfolioGroupId));
-			PortfolioGroupMembers portfolioGroupMembers = portfolioGroupMembersDao.findById(pgmID);
-			portfolioGroupMembersDao.remove(portfolioGroupMembers);
+			pgmID.setPortfolio(new Portfolio(UUID.fromString(portfolioUuid)));
+			pgmID.setPortfolioGroup(new PortfolioGroup(portfolioGroupId));
+			portfolioGroupMembersDao.removeById(pgmID);
 			result = true;
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -205,10 +247,10 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		return result;
 	}
 
-	public String getPortfolioByPortfolioGroup(Long portfolioGroupId) {
+	public String getPortfoliosByPortfolioGroup(Long portfolioGroupId) {
 		StringBuilder result = new StringBuilder();
 		result.append("<group id=\"").append(portfolioGroupId).append("\">");
-		List<Portfolio> portfolios = portfolioGroupDao.getPortfolioByPortfolioGroup(portfolioGroupId);
+		List<Portfolio> portfolios = portfolioGroupDao.getPortfoliosByPortfolioGroup(portfolioGroupId);
 		Iterator<Portfolio> it = portfolios.iterator();
 		while (it.hasNext()) {
 			result.append("<portfolio");
@@ -222,7 +264,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		return result.toString();
 	}
 
-	public int setPortfolioActive(String portfolioUuid, Boolean active) {
+	public int changePortfolioActive(String portfolioUuid, Boolean active) {
 		int result = -1;
 		try {
 			Portfolio portfolio = portfolioDao.findById(UUID.fromString(portfolioUuid));
@@ -403,47 +445,48 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		GroupRights rights = null;
 
 		// Cas admin, designer, owner
-		if (rootNode != null && (credentialDao.isAdmin(userId) || credentialDao.isDesigner(userId, rootNode.getId())
-				|| userId == portfolioDao.getOwner(portfolioUuid))) {
+		if (rootNode != null
+				&& (credentialDao.isAdmin(userId) || credentialDao.isDesigner(userId, rootNode.getId().toString())
+						|| userId == portfolioDao.getOwner(portfolioUuid))) {
 			List<Node> nodes = nodeDao.getNodesWithResources(portfolioUuid);
 			for (Node node : nodes) {
-				rights = new GroupRights(true, true, true, true);
+				rights = new GroupRights(new GroupRightsId(new GroupRightInfo(), null), true, true, true, true, true);
 				portfolioStructure.add(Pair.of(node, rights));
 			}
 		}
-		/// FIXME: Il faudrait peut-etre prendre une autre strategie pour selectionner
-		/// les bonnes donnees : Cas proprietaire OU cas general (via les droits
+		/// FIXME: Il faudrait peut-être prendre une autre stratégie pour sélectionner
+		/// les bonnes données : Cas propriétaire OU cas general (via les droits
 		/// partagés)
 		else if (hasRights(userId, portfolioUuid)) {
 			time2 = System.currentTimeMillis();
-			Map<UUID, GroupRights> t_rights_22 = new HashMap<UUID, GroupRights>();
+			Map<String, GroupRights> t_rights_22 = new HashMap<String, GroupRights>();
 			time3 = System.currentTimeMillis();
 
 			String login = credentialDao.getLoginById(userId);
-//				FIXME: Devrait peut-etre verifier si la personne a les droits d'y acceder?
+//				FIXME: Devrait peut-être verifier si la personne a les droits d'y accéder?
 			List<GroupRights> grList = groupRightsDao.getPortfolioAndUserRights(UUID.fromString(portfolioUuid), login,
 					groupId);
 			for (GroupRights gr : grList) {
-				if (t_rights_22.containsKey(gr.getGroupRightsId())) {
-					GroupRights original = t_rights_22.get(gr.getGroupRightsId());
+				if (t_rights_22.containsKey(gr.getGroupRightsId().toString())) {
+					GroupRights original = t_rights_22.get(gr.getGroupRightsId().toString());
 					original.setRead(Boolean.logicalOr(gr.isRead(), original.isRead()));
 					original.setWrite(Boolean.logicalOr(gr.isWrite(), original.isWrite()));
 					original.setDelete(Boolean.logicalOr(gr.isDelete(), original.isDelete()));
 					original.setSubmit(Boolean.logicalOr(gr.isSubmit(), original.isSubmit()));
 					original.setAdd(Boolean.logicalOr(gr.isAdd(), original.isAdd()));
 				} else {
-					t_rights_22.put(gr.getGroupRightsId(), gr);
+					t_rights_22.put(gr.getGroupRightsId().toString(), gr);
 				}
 			}
 
 			time4 = System.currentTimeMillis();
 
-			List<Node> nodes = nodeDao.getNodes(t_rights_22.keySet());
+			List<Node> nodes = nodeDao.getNodes(new ArrayList<>(t_rights_22.keySet()));
 
-			// Selectionne les donnees selon la filtration
+			// Sélectionne les données selon la filtration
 			for (Node node : nodes) {
-				if (t_rights_22.containsKey(node.getId())) { // Verification des droits
-					rights = t_rights_22.get(node.getId());
+				if (t_rights_22.containsKey(node.getId().toString())) { // Verification des droits
+					rights = t_rights_22.get(node.getId().toString());
 					if (rights.isRead()) { // On doit au moins avoir le droit de lecture
 						portfolioStructure.add(Pair.of(node, rights));
 					}
@@ -476,9 +519,9 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 	}
 
 	/**
-	 * Recupere les noeuds partages d'un portfolio. C'est separe car les noeuds ne
-	 * provenant pas d'un meme portfolio, on ne peut pas les selectionner rapidement
-	 * Autre possibilite serait de garder ce meme type de fonctionnement pour une
+	 * Récupère les noeuds partages d'un portfolio. C'est séparé car les noeuds ne
+	 * provenant pas d'un même portfolio, on ne peut pas les sélectionner rapidement
+	 * Autre possibilité serait de garder ce même type de fonctionnement pour une
 	 * selection par niveau d'un portfolio.<br>
 	 * TODO: A faire un 'benchmark' dessus
 	 * 
@@ -495,37 +538,37 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 
 		if (portfolioDao.hasSharedNodes(portfolioUuid)) {
 			List<Node> t_nodes = nodeDao.getSharedNodes(portfolioUuid);
-			Map<Integer, Set<UUID>> t_map_parentid = new HashMap<Integer, Set<UUID>>();
-			Set<UUID> t_set_parentid = new HashSet<UUID>();
+			Map<Integer, Set<String>> t_map_parentid = new HashMap<Integer, Set<String>>();
+			Set<String> t_set_parentid = new HashSet<String>();
 
 			for (Node t_node : t_nodes) {
-				t_set_parentid.add(t_node.getSharedNodeUuid());
+				t_set_parentid.add(t_node.getSharedNodeUuid().toString());
 			}
 
 			t_map_parentid.put(0, t_set_parentid);
 
-			/// On boucle, sera toujours <= e "nombre de noeud du portfolio"
+			/// Les tours de boucle seront toujours <= au nombre de noeud du portfolio.
 			int level = 0;
 			boolean added = true;
-			Set<UUID> t_struc_parentid_2 = null;
+			Set<String> t_struc_parentid_2 = null;
 			while (added && (cutoff == null ? true : level < cutoff)) {
-				t_struc_parentid_2 = new HashSet<UUID>();
+				t_struc_parentid_2 = new HashSet<String>();
 				for (Node t_node : t_nodes) {
-					for (UUID t_parent_node : t_map_parentid.get(level)) {
-						if (t_node.getPortfolio().getId().equals(UUID.fromString(portfolioUuid))
-								&& t_node.getParentNode().getId().equals(t_parent_node)) {
-							t_struc_parentid_2.add(t_node.getId());
+					for (String t_parent_node : t_map_parentid.get(level)) {
+						if (t_node.getPortfolio().getId().toString().equals(portfolioUuid)
+								&& t_node.getParentNode().getId().toString().equals(t_parent_node)) {
+							t_struc_parentid_2.add(t_node.getId().toString());
 							break;
 						}
 					}
 				}
 				t_map_parentid.put(level + 1, t_struc_parentid_2);
 				t_set_parentid.addAll(t_struc_parentid_2);
-				added = CollectionUtils.isNotEmpty(t_struc_parentid_2); // On s'arrete quand rien n'a ete ajoute
-				level = level + 1; // Prochaine etape
+				added = CollectionUtils.isNotEmpty(t_struc_parentid_2); // On s'arrete quand rien n'a été ajouté
+				level = level + 1; // Prochaine étape
 			}
 
-			List<Node> nodes = nodeDao.getNodes(t_set_parentid);
+			List<Node> nodes = nodeDao.getNodes(new ArrayList<>(t_set_parentid));
 			GroupRights rights = null;
 			for (Node node : nodes) {
 				rights = groupRightsDao.getRightsByIdAndUser(node.getId(), userId);
@@ -556,23 +599,26 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 
 	public String getPortfolioByCode(MimeType mimeType, String portfolioCode, Long userId, Long groupId,
 			String resources, long substid) throws DoesNotExistException, BusinessException, Exception {
-		UUID pid = portfolioDao.getPortfolioUuidFromNodeCode(portfolioCode);
+		Portfolio portfolio = portfolioDao.getPortfolioFromNodeCode(portfolioCode);
+		if (portfolio == null) {
+			throw new DoesNotExistException(Portfolio.class, portfolioCode);
+		}
+
 		boolean withResources = BooleanUtils.toBoolean(resources);
 		String result = "";
 
 		if (withResources) {
 			try {
-				return getPortfolio(mimeType, pid.toString(), userId, groupId, null, null, null, substid, null)
-						.toString();
+				return getPortfolio(mimeType, portfolio.getId().toString(), userId, groupId, null, null, null, substid,
+						null).toString();
 			} catch (MimeTypeParseException e) {
 				e.printStackTrace();
 			}
 		} else {
-			Portfolio p = portfolioDao.findById(pid);
-			result += DomUtils.getXmlAttributeOutput("id", p.getId().toString()) + " ";
-			result += DomUtils.getXmlAttributeOutput("root_node_id", p.getRootNode().getId().toString()) + " ";
+			result += DomUtils.getXmlAttributeOutput("id", portfolio.getId().toString()) + " ";
+			result += DomUtils.getXmlAttributeOutput("root_node_id", portfolio.getRootNode().toString()) + " ";
 			result += ">";
-			result += nodeManager.getNodeXmlOutput(p.getRootNode().getId().toString(), false, "nodeRes", userId,
+			result += nodeManager.getNodeXmlOutput(portfolio.getRootNode().toString(), false, "nodeRes", userId,
 					groupId, null, false);
 			result += "</portfolio>";
 
@@ -589,28 +635,10 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 			if (p != null) {
 				if (p.getModifUserId() == userId)
 					// Is the owner
-					reponse = new GroupRights(new GroupRightsId(), true, true, true, true, true);
+					reponse = new GroupRights(new GroupRightsId(new GroupRightInfo(), null), true, true, true, true,
+							true);
 				else // General case
-					reponse = nodeManager.getRights(userId, groupId, p.getRootNode().getId());
-			}
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
-		return reponse;
-	}
-
-	public GroupRights getRightsOnPortfolio(Long userId, Long groupId, UUID portfolioUuid) {
-		GroupRights reponse = new GroupRights();
-
-		try {
-			/// modif_user_id => current owner
-			Portfolio p = portfolioDao.getPortfolio(portfolioUuid);
-			if (p != null) {
-				if (p.getModifUserId() == userId)
-					// Is the owner
-					reponse = new GroupRights(new GroupRightsId(), true, true, true, true, true);
-				else // General case
-					reponse = nodeManager.getRights(userId, groupId, p.getRootNode().getId());
+					reponse = nodeManager.getRights(userId, groupId, p.getRootNode().getId().toString());
 			}
 		} catch (Exception ex) {
 			ex.printStackTrace();
@@ -629,11 +657,11 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		boolean hasRights = false;
 
 		if (userId != null && portfolioUuid != null) {
-			/// Evaluate ownership
+			// Évaluer l'appartenance
 			Long modif_user_id = portfolioDao.getOwner(portfolioUuid);
 			if (Objects.equals(modif_user_id, userId)) {
 				hasRights = true;
-			} else // Check further for other shared rights
+			} else // Vérifier les autres droits partagés
 			{
 				List<GroupUser> gu = groupUserDao.getByPortfolioAndUser(portfolioUuid, userId);
 				if (CollectionUtils.isNotEmpty(gu)) {
@@ -644,7 +672,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		return hasRights;
 	}
 
-	public void deletePortfolio(String portfolioUuid, Long userId, Long groupId) throws Exception {
+	public void removePortfolio(String portfolioUuid, Long userId, Long groupId) throws Exception {
 		boolean hasRights = false;
 
 		GroupRights rights = getRightsOnPortfolio(userId, groupId, portfolioUuid);
@@ -654,7 +682,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 
 		if (hasRights) {
 			// S'il y a quelque chose de particulier, on s'assure que tout soit bien nettoyé
-			// de façon separée
+			// de façon séparée
 			List<GroupRightInfo> griList = groupRightInfoDao.getByPortfolioID(portfolioUuid);
 			for (java.util.Iterator<GroupRightInfo> it = griList.iterator(); it.hasNext();) {
 				groupRightInfoDao.remove(it.next());
@@ -682,19 +710,19 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 				nodeDao.remove(it.next());
 			}
 
-			/// Portfolio
-			portfolioDao.removeById(portfolioUuid);
-
-			/// delete portfolio from Group
+			/// Supprimer le portfolio du groupe.
 			List<PortfolioGroupMembers> pgmList = portfolioGroupMembersDao.getByPortfolioID(portfolioUuid);
 			for (java.util.Iterator<PortfolioGroupMembers> it = pgmList.iterator(); it.hasNext();) {
 				portfolioGroupMembersDao.remove(it.next());
 			}
+
+			// Portfolio
+			portfolioDao.removeById(UUID.fromString(portfolioUuid));
 		}
 	}
 
-	public boolean isOwner(Long id, String portfolioUuid) {
-		return portfolioDao.isOwner(id, portfolioUuid);
+	public boolean isOwner(Long userId, String portfolioUuid) {
+		return portfolioDao.isOwner(userId, portfolioUuid);
 	}
 
 	public boolean changePortfolioOwner(String portfolioUuid, long newOwner) {
@@ -706,33 +734,34 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		if (!credentialDao.isAdmin(userId)) {
 			throw new GenericBusinessException("No admin right");
 		}
-		return portfolioDao.updatePortfolioConfiguration(portfolioUuid, portfolioActive);
+		return portfolioDao.changePortfolioConfiguration(portfolioUuid, portfolioActive);
 	}
 
-	public Object getPortfolios(MimeType outMimeType, long userId, long groupId, Boolean portfolioActive, long substid,
-			Boolean portfolioProject, String projectId, Boolean countOnly, String search) {
+	public List<Portfolio> getPortfolios(MimeType outMimeType, long userId, long groupId, Boolean portfolioActive,
+			long substid, Boolean portfolioProject, String projectId, Boolean countOnly, String search) {
 		return portfolioDao.getPortfolios(userId, substid, portfolioActive);
 	}
 
-	public boolean putPortfolio(MimeType inMimeType, MimeType outMimeType, String in, String portfolioUuid, Long userId,
-			Boolean portfolioActive, int groupId, UUID portfolioModelId) throws Exception {
+	public boolean rewritePortfolioContent(MimeType inMimeType, MimeType outMimeType, String xmlPortfolio,
+			String portfolioUuid, Long userId, Boolean portfolioActive) throws Exception {
 		StringBuffer outTrace = new StringBuffer();
+		String portfolioModelId = null;
 
 		Portfolio resPortfolio = portfolioDao.getPortfolio(portfolioUuid);
 		if (resPortfolio != null) {
-			// Le portfolio existe donc on regarde si modele ou pas
-			portfolioModelId = resPortfolio.getModelId();
-		} else {
-			resPortfolio = new Portfolio();
+			// Le portfolio existe donc on regarde si modèle ou pas
+			if (resPortfolio.getModelId() != null) {
+				portfolioModelId = resPortfolio.getModelId().toString();
+			}
 		}
 
-		if (PhpUtil.empty(userId) || !ValidateUtil.isUnsignedId(0)) {
+		if (PhpUtil.empty(userId) || !ValidateUtil.isUnsignedId(userId.intValue())) {
 			if (resPortfolio != null)
 				userId = resPortfolio.getCredential().getId();
 		}
 
-		if (in.length() > 0) {
-			Document doc = DomUtils.xmlString2Document(in, outTrace);
+		if (xmlPortfolio.length() > 0) {
+			Document doc = DomUtils.xmlString2Document(xmlPortfolio, outTrace);
 
 			org.w3c.dom.Node rootNode = (doc.getElementsByTagName("portfolio")).item(0);
 			if (rootNode == null) {
@@ -749,19 +778,34 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 					}
 				}
 
-				if (resPortfolio.getId() != null) {
-					portfolioDao.merge(resPortfolio);
+				if (resPortfolio != null) {
+					resPortfolio = portfolioDao.merge(resPortfolio);
 				} else {
-					portfolioDao.add(rootNodeUuid, null, userId, resPortfolio);
+					resPortfolio = portfolioDao.add(rootNodeUuid, null, userId, new Portfolio());
 				}
-
-				nodeManager.writeNode(rootNode, portfolioUuid, portfolioModelId, userId, 0, null, null, false, false,
+				String resPortfolioUuid = resPortfolio.getId().toString();
+				nodeManager.writeNode(rootNode, resPortfolioUuid, portfolioModelId, userId, 0, null, null, false, false,
 						true, null, false);
+				// On récupère le noeud root généré précédemment et on l'affecte au portfolio.
+				resPortfolio.setRootNode(nodeDao.getRootNodeByPortfolio(resPortfolioUuid));
+				resPortfolio = portfolioDao.merge(resPortfolio);
 			}
 		}
-
-		portfolioDao.updatePortfolioConfiguration(portfolioUuid, portfolioActive);
+		if (resPortfolio != null) {
+			portfolioDao.changePortfolioConfiguration(resPortfolio.getId().toString(), portfolioActive);
+		}
 		return true;
+	}
+
+	class right {
+		int rd = 0;
+		int wr = 0;
+		int dl = 0;
+		int sb = 0;
+		int ad = 0;
+		String types = "";
+		String rules = "";
+		String notify = "";
 	}
 
 	public String postPortfolioParserights(String portfolioUuid, Long userId) {
@@ -772,56 +816,10 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		boolean setPublic = false;
 
 		try {
-			/// temp class
-			class right {
-				int rd = 0;
-				int wr = 0;
-				int dl = 0;
-				int sb = 0;
-				int ad = 0;
-				String types = "";
-				String rules = "";
-				String notify = "";
-			}
-
-			class groupright {
-				right getGroup(String label) {
-					right r = rights.get(label.trim());
-					if (r == null) {
-						r = new right();
-						rights.put(label, r);
-					}
-					return r;
-				}
-
-				void setNotify(String roles) {
-					Iterator<right> iter = rights.values().iterator();
-					while (iter.hasNext()) {
-						right r = iter.next();
-						r.notify = roles.trim();
-					}
-				}
-
-				HashMap<String, right> rights = new HashMap<String, right>();
-			}
-
-			class resolver {
-				groupright getUuid(String uuid) {
-					groupright gr = resolve.get(uuid);
-					if (gr == null) {
-						gr = new groupright();
-						resolve.put(uuid, gr);
-					}
-					return gr;
-				};
-
-				HashMap<String, groupright> resolve = new HashMap<String, groupright>();
-				HashMap<String, Long> groups = new HashMap<String, Long>();
-			}
 
 			resolver resolve = new resolver();
 
-			// Selection des metadonnees
+			// Sélection des méta-données
 			List<Node> nodes = nodeDao.getNodes(portfolioUuid);
 			Iterator<Node> it = nodes.iterator();
 
@@ -971,7 +969,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 					}
 					org.w3c.dom.Node menuroles = attribMap.getNamedItem("menuroles");
 					if (menuroles != null) {
-						/// Pour les differents items du menu
+						/// Pour les différents items du menu
 						StringTokenizer menuline = new StringTokenizer(menuroles.getNodeValue(), ";");
 
 						while (menuline.hasMoreTokens()) {
@@ -1021,10 +1019,10 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 				}
 			}
 
-			/// On insere les donnees pre-compile
+			/// On insère les données pré-compile
 			Iterator<String> entries = resolve.groups.keySet().iterator();
 
-			// Cree les groupes, ils n'existent pas
+			// Crée les groupes, ils n'existent pas
 			GroupInfo gi = new GroupInfo();
 			GroupRightInfo gri = new GroupRightInfo();
 
@@ -1076,18 +1074,18 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 				}
 			}
 
-			/// Create base group
-			Long groupid = securityManager.createRole(portfolioUuid, "all", userId);
+			// Créer le groupe de base
+			Long groupid = securityManager.addRole(portfolioUuid, "all", userId);
 
-			/// Finalement on cree un role designer
-			groupid = securityManager.createRole(portfolioUuid, "designer", userId);
+			/// Finalement on crée un role designer
+			groupid = securityManager.addRole(portfolioUuid, "designer", userId);
 
 			groupUserDao.addUserInGroup(userId, groupid);
 
-			// Update time
+			// Maj. de la date
 			portfolioDao.updateTime(portfolioUuid);
 
-			// Set portfolio public if needed
+			// Rendre le portfolio public si nécessaire
 			if (setPublic)
 				groupManager.setPublicState(userId, portfolioUuid, setPublic);
 		} catch (Exception e) {
@@ -1097,26 +1095,26 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		return portfolioUuid;
 	}
 
-	public String addPortfolio(MimeType inMimeType, MimeType outMimeType, String in, long userId, long groupId,
-			String portfolioModelId, long substid, boolean parseRights, String projectName)
+	public String addPortfolio(MimeType inMimeType, MimeType outMimeType, String xmlPortfolio, long userId,
+			long groupId, String portfolioModelId, long substid, boolean parseRights, String projectName)
 			throws BusinessException, Exception {
 		if (!credentialDao.isAdmin(userId) && !credentialDao.isCreator(userId))
 			throw new GenericBusinessException("FORBIDDEN : No admin right");
 
 		StringBuffer outTrace = new StringBuffer();
 
-		// Si le modele est renseigne, on ignore le XML poste et on recupere le contenu
-		// du modele a la place
-		// FIXME Unused, we instanciate/copy a portfolio
+		// Si le modèle est renseigné, on ignore le XML poste et on récupère le contenu
+		// du modèle a la place
+		// FIXME Inutilisé, nous instancions / copions un portfolio
 		if (portfolioModelId != null)
-			in = getPortfolio(inMimeType, portfolioModelId, userId, groupId, null, null, null, substid, null)
+			xmlPortfolio = getPortfolio(inMimeType, portfolioModelId, userId, groupId, null, null, null, substid, null)
 					.toString();
 
-		Portfolio portfolio = new Portfolio();
-		if (in.length() > 0) {
-			Document doc = DomUtils.xmlString2Document(in, outTrace);
+		Portfolio portfolio = null;
+		if (xmlPortfolio.length() > 0) {
+			Document doc = DomUtils.xmlString2Document(xmlPortfolio, outTrace);
 
-			/// Check if portfolio code is already used
+			// Vérifier si le code est déjà utilisé par un portfolio.
 			XPath xPath = XPathFactory.newInstance().newXPath();
 			String filterRes = "//*[local-name()='asmRoot']/*[local-name()='asmResource']/*[local-name()='code']";
 			NodeList nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
@@ -1133,41 +1131,42 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 				}
 
 				// Simple query
-				if (nodeDao.isCodeExist(code, null))
+				if (nodeDao.isCodeExist(code, null)) {
 					throw new GenericBusinessException("CONFLICT : Existing code.");
-
+				}
 				nodelist.item(0).setTextContent(code);
 			}
 
 			org.w3c.dom.Node rootNode = (doc.getElementsByTagName("portfolio")).item(0);
-			if (rootNode == null)
+			if (rootNode == null) {
 				throw new Exception("Root Node (portfolio) not found !");
-			else {
+			} else {
 				rootNode = (doc.getElementsByTagName("asmRoot")).item(0);
 
 				String uuid = UUID.randomUUID().toString();
 
-				portfolioDao.add(uuid, null, userId, portfolio);
-				// On recupere le nouvel uuid généré
-				nodeManager.writeNode(rootNode, portfolio.getId().toString(), UUID.fromString(portfolioModelId), userId,
-						0, uuid, null, false, false, false, null, parseRights);
+				portfolio = portfolioDao.add(uuid, null, userId, new Portfolio());
+				nodeManager.writeNode(rootNode, portfolio.getId().toString(), portfolioModelId, userId, 0, uuid, null,
+						false, false, false, null, parseRights);
+				// On récupère le noeud root généré précédemment et on l'affecte au portfolio.
+				portfolio.setRootNode(nodeDao.getRootNodeByPortfolio(portfolio.getId().toString()));
 			}
 		}
 
-		/// If we instanciate, don't need the designer role
-		long groupid = securityManager.createRole(portfolio.getId().toString(), "all", userId);
-		/// Creer groupe 'designer', 'all' est mis avec ce qui est specifique dans le
-		/// xml recu
-		groupid = securityManager.createRole(portfolio.getId().toString(), "designer", userId);
-
-		/// Ajoute la personne dans ce groupe
-		groupUserDao.addUserInGroup(groupid, userId);
-
-		portfolio.setActive(BooleanUtils.toInteger(true));
+		portfolio.setActive(1);
 		if (StringUtils.isNotEmpty(portfolioModelId))
 			portfolio.setModelId(UUID.fromString(portfolioModelId));
 
-		portfolioDao.merge(portfolio);
+		portfolio = portfolioDao.merge(portfolio);
+
+		/// Si nous instancions, nous n'avons pas besoin du rôle de concepteur
+		long roleId = securityManager.addRole(portfolio.getId().toString(), "all", userId);
+		/// Créer groupe 'designer', 'all' est mis avec ce qui est spécifique dans le
+		/// XML reçu.
+		roleId = securityManager.addRole(portfolio.getId().toString(), "designer", userId);
+
+		/// Ajoute la personne dans ce groupe
+		groupUserDao.addUserInGroup(roleId, userId);
 
 		String result = "<portfolios>";
 		result += "<portfolio ";
@@ -1177,7 +1176,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		return result;
 	}
 
-	public String postPortfolioZip(MimeType mimeType, MimeType mimeType2, String path, String userName,
+	public String importZippedPortfolio(MimeType mimeType, MimeType mimeType2, String path, String userName,
 			InputStream inputStream, Long userId, Long groupId, String modelId, Long credentialSubstitutionId,
 			boolean parseRights, String projectName) throws BusinessException, FileNotFoundException, Exception {
 		if (!credentialDao.isAdmin(userId) && !credentialDao.isCreator(userId))
@@ -1205,7 +1204,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 			outsideDirectoryFile.mkdir();
 		}
 
-		// Creation du zip
+		// Création de l'archive au format zip.
 		String portfolioUuidPreliminaire = UUID.randomUUID().toString();
 		filename = outsideDir + "xml_" + portfolioUuidPreliminaire + ".zip";
 		FileOutputStream outZip = new FileOutputStream(filename);
@@ -1234,7 +1233,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		////// Lecture du fichier de portfolio
 		StringBuffer outTrace = new StringBuffer();
 		//// Importation du portfolio
-		// --- Read xml fileL ----
+		// --- Lecture fichier XML ----
 		///// Pour associer l'ancien uuid -> nouveau, pour les fichiers
 		Map<String, String> resolve = new HashMap<String, String>();
 		Portfolio portfolio = null;
@@ -1244,7 +1243,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 				String xmlFilepath = xmlFiles[i];
 				String xmlFilename = xmlFilepath.substring(xmlFilepath.lastIndexOf(File.separator));
 				if (xmlFilename.contains("_"))
-					continue; // Case when we add an xml in the portfolio
+					continue; // Case when we add an XML in the portfolio
 
 				BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(xmlFilepath), "UTF8"));
 				String line;
@@ -1306,15 +1305,17 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 						portfolioDao.add(uuid, null, userId, portfolio);
 						nodeManager.writeNode(rootNode, portfolio.getId().toString(), null, userId, 0, uuid, null,
 								false, false, false, resolve, parseRights);
+						// On récupère le noeud root généré précédemment et on l'affecte au portfolio.
+						portfolio.setRootNode(nodeDao.getRootNodeByPortfolio(portfolio.getId().toString()));
 					}
 
 					portfolio.setActive(1);
 					portfolioDao.merge(portfolio);
 
 					/// Create base group
-					Long groupid = securityManager.createRole(portfolio.getId().toString(), "all", userId);
-					/// Finalement on cree un rele designer
-					groupid = securityManager.createRole(portfolio.getId().toString(), "designer", userId);
+					Long groupid = securityManager.addRole(portfolio.getId().toString(), "all", userId);
+					/// Finalement on crée un rôle de designer
+					groupid = securityManager.addRole(portfolio.getId().toString(), "designer", userId);
 
 					/// Ajoute la personne dans ce groupe
 					groupUserDao.addUserInGroup(groupid, userId);
@@ -1382,8 +1383,8 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		return portfolio.getId().toString();
 	}
 
-	public Object postInstanciatePortfolio(MimeType mimeType, String portfolioId, String srccode, String tgtcode,
-			Long id, int groupId, boolean copyshared, String groupname, boolean setOwner) {
+	public Object instanciatePortfolio(MimeType mimeType, String portfolioId, String srccode, String tgtcode, Long id,
+			int groupId, boolean copyshared, String groupname, boolean setOwner) {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -1460,7 +1461,10 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 				TreeNode currTreeNode = new TreeNode();
 				currTreeNode.nodeContent = currNode.toString();
 				currTreeNode.nodeId = Integer.parseInt(pgStr);
-				PortfolioGroup parent = pg.getParent().getParent();
+				PortfolioGroup parent = null;
+				if (pg.getParent() != null) {
+					parent = pg.getParent().getParent();
+				}
 				resolve.put(Long.valueOf(currTreeNode.nodeId), currTreeNode);
 				if (parent != null && !PhpUtil.empty(parent.getId())) {
 					TreeNode parentTreeNode = resolve.get(parent.getId());
@@ -1488,9 +1492,9 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 	public String getPortfolioGroupListFromPortfolio(String portfolioUuid) {
 		List<PortfolioGroupMembers> pgmList = portfolioGroupMembersDao.getByPortfolioID(portfolioUuid);
 		final StringBuilder result = new StringBuilder();
-
+		result.append("<portfolio>");
 		for (PortfolioGroupMembers pgm : pgmList) {
-			if (pgm.getPortfolioGroup() != null && PhpUtil.empty(pgm.getPortfolioGroup().getId())) {
+			if (pgm.getPortfolioGroup() != null && !PhpUtil.empty(pgm.getPortfolioGroup().getId())) {
 				result.append("<group");
 				result.append(" id=\"");
 				result.append(pgm.getPortfolioGroup().getId());
@@ -1503,11 +1507,11 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		return result.toString();
 	}
 
-	public Long createPortfolioGroup(String groupname, String type, Long parentId, Long userId) {
+	public Long addPortfolioGroup(String groupname, String type, Long parentId, Long userId) {
 		Long groupid = -1L;
 		boolean isOK = true;
 		try {
-			// Check if parent exists
+			// Vérifier si le parent existe.
 			if (parentId != null && !portfolioGroupDao.exists(parentId, "GROUP")) {
 				isOK = false;
 			}
@@ -1532,8 +1536,8 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 
 	}
 
-	public String findRoleByPortfolio(MimeType mimeType, String role, String portfolioId, Long userId) {
-		GroupRightInfo gri = groupRightInfoDao.getByPortfolioAndLabel(portfolioId, role);
+	public String getRoleByPortfolio(MimeType mimeType, String role, String portfolioUuid, Long userId) {
+		GroupRightInfo gri = groupRightInfoDao.getByPortfolioAndLabel(portfolioUuid, role);
 		Long grid = null;
 		if (gri != null) {
 			grid = gri.getId();
@@ -1543,7 +1547,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		return "grid = " + grid;
 	}
 
-	public String findRolesByPortfolio(String portfolioUuid, Long userId) {
+	public String getRolesByPortfolio(String portfolioUuid, Long userId) {
 		GroupRights rights = getRightsOnPortfolio(userId, 0L, portfolioUuid);
 		if (!rights.isRead())
 			return null;
@@ -1586,8 +1590,8 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		return result;
 	}
 
-	public String addRoleInPortfolio(Long userId, String portfolio, String data) throws BusinessException {
-		if (!credentialDao.isAdmin(userId) && !portfolioDao.isOwner(userId, portfolio))
+	public String addRoleInPortfolio(Long userId, String portfolioUuid, String data) throws BusinessException {
+		if (!credentialDao.isAdmin(userId) && !portfolioDao.isOwner(userId, portfolioUuid))
 			throw new GenericBusinessException("FORBIDDEN 403 : No admin right");
 
 		String value = "erreur";
@@ -1603,7 +1607,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 			e.printStackTrace();
 		}
 
-		/// Probleme de parsage
+		/// Problème de parsage
 		if (document == null)
 			return value;
 
@@ -1619,13 +1623,13 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 
 			if (label == null)
 				return value;
-			/// Creation du groupe de droit
+			/// Création du groupe de droit
 
 			Long grid = 0L;
 			final GroupRightInfo gri = new GroupRightInfo();
 			gri.setOwner(userId);
 			gri.setLabel(label);
-			gri.setPortfolio(new Portfolio(UUID.fromString(portfolio)));
+			gri.setPortfolio(new Portfolio(UUID.fromString(portfolioUuid)));
 
 			try {
 				groupRightInfoDao.persist(gri);
@@ -1635,7 +1639,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 
 			labelNode.setAttribute("id", Long.toString(grid));
 
-			/// Recupere les donnees avec identifiant mis-a-jour
+			/// Récupère les données avec identifiant mis à jour
 			StringWriter stw = new StringWriter();
 			Transformer serializer = TransformerFactory.newInstance().newTransformer();
 			DOMSource source = new DOMSource(document);
@@ -1649,18 +1653,14 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		return value;
 	}
 
-	public boolean isOwner(Long userId, UUID pid) {
-		return portfolioDao.isOwner(userId, pid);
-	}
-
 	public String copyPortfolio(MimeType inMimeType, String portfolioUuid, String srcCode, String newCode, Long userId,
 			boolean setOwner) throws Exception {
 		Portfolio originalPortfolio = null;
 		String newPortfolioUuid = null;
 		try {
-			/// source code is OK ?
+			/// le code source est OK ?
 			if (srcCode != null) {
-				/// Find back portfolio from source code
+				// Retrouver le portfolio à partir du code source
 				originalPortfolio = portfolioDao.getPortfolioFromNodeCode(srcCode);
 				if (originalPortfolio != null)
 					// Portfolio uuid
@@ -1675,13 +1675,13 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 			/////////////////////////////
 			final Map<Node, Node> nodes = new HashMap<Node, Node>();
 
-			// Recupération des noeuds du portfolio a copier
+			// Récupération des noeuds du portfolio à copier.
 			final List<Node> originalNodeList = nodeDao.getNodes(portfolioUuid);
 			final List<Node> copiedNodeList = new ArrayList<Node>(originalNodeList.size());
-			Node copy = null;
-			Node rootNodeCopy = null;
+			Node copy = null, original = null, rootNodeCopy = null;
 			/// Copie des noeuds -- structure du portfolio
-			for (Node original : originalNodeList) {
+			for (Iterator<Node> it = originalNodeList.iterator(); it.hasNext();) {
+				original = it.next();
 				copy = new Node(original);
 				if (setOwner) {
 					copy.setModifUserId(userId);
@@ -1689,9 +1689,9 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 					copy.setModifUserId(1L); // FIXME hard-coded root userid
 				}
 
-				//////////////////////////////
+				////////////////////////////
 				/// Copie des ressources///
-				/////////////////////////////
+				///////////////////////////
 				if (copy.getResource() != null) {
 					if (setOwner) {
 						copy.getResource().setModifUserId(userId);
@@ -1701,7 +1701,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 					resourceTableDao.persist(copy.getResource());
 				}
 				if (copy.getResResource() != null) {
-					// Mise a jour du code dans le contenu du noeud
+					// Mise a jour du code dans le contenu du noeud.
 					if (StringUtils.equalsIgnoreCase(copy.getAsmType(), "asmRoot")) {
 						copy.getResResource().setContent(
 								StringUtils.replace(copy.getResResource().getContent(), copy.getCode(), newCode));
@@ -1723,7 +1723,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 					resourceTableDao.persist(copy.getContextResource());
 				}
 
-				// Mise a jour du code dans le code interne de la BD
+				// Mise à jour du code dans le code interne de la BD.
 				if (StringUtils.equalsIgnoreCase(copy.getAsmType(), "asmRoot")) {
 					copy.setCode(newCode);
 					rootNodeCopy = copy;
@@ -1734,7 +1734,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 				nodes.put(original, copy);
 			}
 
-			/// Ajout du portfolio dans la table
+			/// Ajout du portfolio en base.
 			Portfolio portfolioCopy = new Portfolio(originalPortfolio);
 			portfolioCopy.setRootNode(rootNodeCopy);
 			portfolioDao.persist(portfolioCopy);
@@ -1752,29 +1752,31 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 				if (key.getParentNode() != null) {
 					value.setParentNode(nodes.get(key.getParentNode()));
 				}
-				/// Mise a jour de la liste des enfants
-				/// L'ordre determine le rendu visuel final du xml
-				String[] children = StringUtils.split(key.getChildrenStr(), ",");
-				String[] childrenCopies = new String[children.length];
-				for (int i = 0; i < children.length; i++) {
-					searchedNode.setId(UUID.fromString(children[i]));
-					copy = nodes.get(searchedNode);
-					childrenCopies[i] = copy.getId().toString();
+				/// Mise à jour de la liste des enfants
+				/// L'ordre determine le rendu visuel final du XML.
+				if (key.getChildrenStr() != null) {
+					String[] children = StringUtils.split(key.getChildrenStr(), ",");
+					String[] childrenCopies = new String[children.length];
+					for (int i = 0; i < children.length; i++) {
+						searchedNode.setId(UUID.fromString(children[i]));
+						copy = nodes.get(searchedNode);
+						childrenCopies[i] = copy.getId().toString();
+					}
+					value.setChildrenStr(StringUtils.join(childrenCopies, ","));
 				}
-				value.setChildrenStr(StringUtils.join(childrenCopies, ","));
-				/// Liaison des noeuds copiés au nv portfolio
+				/// Liaison des noeuds copiés au nouveau portfolio.
 				value.setPortfolio(portfolioCopy);
 				nodeDao.merge(value);
 			}
 
-			/// Finalement on cree un role designer
-			Long groupid = securityManager.createRole(newPortfolioUuid, "designer", userId);
+			/// Finalement on crée un role designer
+			Long groupid = securityManager.addRole(newPortfolioUuid, "designer", userId);
 
 			/// Ajoute la personne dans ce groupe
 			groupUserDao.addUserInGroup(groupid, userId);
 
 			/// Force 'all' role creation
-			groupid = securityManager.createRole(newPortfolioUuid, "all", userId);
+			groupid = securityManager.addRole(newPortfolioUuid, "all", userId);
 
 			/// Check base portfolio's public state and act accordingly
 			if (portfolioDao.isPublic(portfolioUuid))
@@ -1786,4 +1788,116 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		return newPortfolioUuid;
 	}
 
+	public String getPortfolioUuidFromNode(String nodeUuid) {
+		UUID res = portfolioDao.getPortfolioUuidFromNode(nodeUuid);
+		return res != null ? res.toString() : null;
+	}
+
+	@Override
+	@Transactional(isolation = Isolation.DEFAULT, propagation = Propagation.REQUIRES_NEW)
+	public void transferPortfolioGroupMembersTable(Connection con, Map<String, String> portIds, Map<Long, Long> pgIds)
+			throws SQLException {
+
+		ResultSet res = portfolioGroupMembersDao.getMysqlPortfolioGroupMembers(con);
+		PortfolioGroupMembers pgm = new PortfolioGroupMembers();
+		try {
+			while (res.next()) {
+				pgm.setId(new PortfolioGroupMembersId(new PortfolioGroup(pgIds.get(res.getLong("pg"))),
+						new Portfolio(UUID.fromString(portIds.get(res.getString("portfolio_id"))))));
+				portfolioGroupMembersDao.merge(pgm);
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+
+	@Override
+	@Transactional(isolation = Isolation.DEFAULT, propagation = Propagation.REQUIRES_NEW)
+	public Map<String, String> transferPortfolioTable(Connection con, Map<Long, Long> userIds) throws SQLException {
+		ResultSet res_portfolio = portfolioDao.getMysqlPortfolios(con);
+		Portfolio p = null;
+		Map<String, String> portfoliosIds = new HashMap<String, String>();
+
+		try {
+			while (res_portfolio.next()) {
+				try {
+					p = new Portfolio();
+
+					if (res_portfolio.getLong("user_id") != 0) {
+						p.setCredential(credentialDao.findById(userIds.get(res_portfolio.getLong("user_id"))));
+					}
+					p.setModelId(UUID.fromString(res_portfolio.getString("model_id")));
+					p.setModifUserId(userIds.get(res_portfolio.getLong("modif_user_id")));
+					p.setModifDate(res_portfolio.getDate("modif_date"));
+					p.setActive(res_portfolio.getInt("active"));
+					portfolioDao.persist(p);
+					String rootNodeUuid = res_portfolio.getString("root_node_uuid");
+					if (StringUtils.isNotEmpty(rootNodeUuid)) {
+						p.setRootNode(new Node(UUID.fromString(rootNodeUuid)));
+					}
+					portfoliosIds.put(res_portfolio.getString("portfolio_id"), p.getId().toString());
+				} catch (DoesNotExistException e) {
+					e.printStackTrace();
+				} catch (Exception e) {
+					System.err.println(e.getMessage());
+				}
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return portfoliosIds;
+	}
+
+	@Override
+	@Transactional(isolation = Isolation.DEFAULT, propagation = Propagation.REQUIRES_NEW)
+	public Map<Long, Long> transferPortfolioGroupTable(Connection con) throws SQLException {
+		ResultSet res = portfolioGroupDao.findAll("portfolio_group", con);
+		PortfolioGroup pg = null;
+		Map<Long, Long> pgIds = new HashMap<Long, Long>();
+		while (res.next()) {
+			pg = new PortfolioGroup();
+			pg.setLabel(res.getString("label"));
+			pg.setType(res.getString("type"));
+//			
+			pg = portfolioGroupDao.merge(pg);
+			pgIds.put(res.getLong("pg"), pg.getId());
+		}
+		return pgIds;
+	}
+
+	@Override
+	@Transactional(isolation = Isolation.DEFAULT, propagation = Propagation.REQUIRES_NEW)
+	public void transferParentPortfolioGroup(Connection con, Map<Long, Long> pgIds) throws SQLException {
+		ResultSet res = portfolioGroupDao.findAll("portfolio_group", con);
+		PortfolioGroup pg = null;
+		try {
+			while (res.next()) {
+				try {
+					pg = portfolioGroupDao.findById(pgIds.get(res.getLong("pg")));
+					final long pg_parent = res.getLong("pg_parent");
+					if (pg_parent != 0) {
+						pg.setParent(portfolioGroupDao.findById(pgIds.get(pg_parent)));
+					}
+					portfolioGroupDao.merge(pg);
+				} catch (DoesNotExistException e) {
+					e.printStackTrace();
+				}
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+
+	@Override
+	@Transactional(isolation = Isolation.DEFAULT, propagation = Propagation.REQUIRES_NEW)
+	public void removePortfolios() {
+		portfolioDao.removeAll();
+	}
+
+	@Override
+	@Transactional(isolation = Isolation.DEFAULT, propagation = Propagation.REQUIRES_NEW)
+	public void removePortfolioGroups() {
+		portfolioGroupMembersDao.removeAll();
+		portfolioGroupDao.removeAll();
+	}
 }

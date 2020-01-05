@@ -1,9 +1,7 @@
 package eportfolium.com.karuta.consumer.impl.dao;
 // Generated 17 juin 2019 11:33:18 by Hibernate Tools 5.2.10.Final
 
-import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
-import javax.persistence.PersistenceContext;
 import javax.persistence.TypedQuery;
 
 import org.apache.commons.logging.Log;
@@ -24,15 +22,12 @@ public class CredentialGroupDaoImpl extends AbstractDaoImpl<CredentialGroup> imp
 
 	private static final Log log = LogFactory.getLog(CredentialGroupDaoImpl.class);
 
-	@PersistenceContext
-	private EntityManager em;
-
 	public CredentialGroupDaoImpl() {
 		super();
 		setCls(CredentialGroup.class);
 	}
 
-	public CredentialGroup getGroupByName(String name) {
+	public CredentialGroup getByName(String name) {
 		CredentialGroup cr = null;
 		String sql = "SELECT cg FROM CredentialGroup cg";
 		sql += " WHERE cg.label = :label";
@@ -46,12 +41,12 @@ public class CredentialGroupDaoImpl extends AbstractDaoImpl<CredentialGroup> imp
 		return cr;
 	}
 
-	public Boolean renameCredentialGroup(Long groupId, String newName) {
+	public Boolean rename(Long credentialGroupId, String newName) {
 		boolean isOK = true;
 
 		String sql = "SELECT cg FROM CredentialGroup cg WHERE cg.id = :groupId";
 		TypedQuery<CredentialGroup> q = em.createQuery(sql, CredentialGroup.class);
-		q.setParameter("groupId", groupId);
+		q.setParameter("groupId", credentialGroupId);
 		try {
 			CredentialGroup cg = q.getSingleResult();
 			cg.setLabel(newName);
@@ -65,7 +60,7 @@ public class CredentialGroupDaoImpl extends AbstractDaoImpl<CredentialGroup> imp
 		return isOK;
 	}
 
-	public Long createCredentialGroup(String name) throws Exception {
+	public Long add(String name) throws Exception {
 		try {
 			CredentialGroup cg = new CredentialGroup();
 			cg.setLabel(name);

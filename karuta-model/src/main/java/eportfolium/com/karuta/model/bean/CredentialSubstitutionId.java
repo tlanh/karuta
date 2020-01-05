@@ -91,5 +91,4 @@ public class CredentialSubstitutionId implements Serializable {
 			return false;
 		return true;
 	}
-
 }

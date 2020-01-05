@@ -22,7 +22,7 @@ import javax.persistence.Transient;
 public class PortfolioGroupMembers implements Serializable {
 
 	private static final long serialVersionUID = 7694077274860630934L;
-	
+
 	private PortfolioGroupMembersId id;
 
 	public PortfolioGroupMembers() {
@@ -40,7 +40,7 @@ public class PortfolioGroupMembers implements Serializable {
 	public void setId(PortfolioGroupMembersId id) {
 		this.id = id;
 	}
-	
+
 	@Transient
 	public PortfolioGroup getPortfolioGroup() {
 		return getId().getPortfolioGroup();

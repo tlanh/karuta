@@ -3,6 +3,9 @@ package eportfolium.com.karuta.business.impl;
 import java.io.ByteArrayInputStream;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -50,6 +53,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.MimeType;
 import org.springframework.util.MimeTypeUtils;
 import org.w3c.dom.Document;
@@ -66,7 +72,7 @@ import eportfolium.com.karuta.business.contract.NodeManager;
 import eportfolium.com.karuta.business.contract.PortfolioManager;
 import eportfolium.com.karuta.business.contract.ResourceManager;
 import eportfolium.com.karuta.business.contract.SecurityManager;
-import eportfolium.com.karuta.business.contract.UserManager;
+import eportfolium.com.karuta.consumer.contract.dao.AnnotationDao;
 import eportfolium.com.karuta.consumer.contract.dao.CredentialDao;
 import eportfolium.com.karuta.consumer.contract.dao.GroupInfoDao;
 import eportfolium.com.karuta.consumer.contract.dao.GroupRightInfoDao;
@@ -75,6 +81,8 @@ import eportfolium.com.karuta.consumer.contract.dao.NodeDao;
 import eportfolium.com.karuta.consumer.contract.dao.PortfolioDao;
 import eportfolium.com.karuta.consumer.contract.dao.ResourceTableDao;
 import eportfolium.com.karuta.consumer.util.DomUtils;
+import eportfolium.com.karuta.model.bean.Annotation;
+import eportfolium.com.karuta.model.bean.AnnotationId;
 import eportfolium.com.karuta.model.bean.GroupRightInfo;
 import eportfolium.com.karuta.model.bean.GroupRights;
 import eportfolium.com.karuta.model.bean.GroupRightsId;
@@ -89,18 +97,15 @@ import eportfolium.com.karuta.util.InMemoryCache;
 
 /**
  * @author mlengagne
- *
  */
 @Service
+@Transactional
 public class NodeManagerImpl extends BaseManager implements NodeManager {
 
 	static private final Logger log = LoggerFactory.getLogger(NodeManagerImpl.class);
 
 	@Autowired
 	private GroupManager groupManager;
-
-	@Autowired
-	private UserManager userManager;
 
 	@Autowired
 	private PortfolioManager portfolioManager;
@@ -135,13 +140,14 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 	@Autowired
 	private GroupUserDao groupUserDao;
 
-	private InMemoryCache<UUID, List<Node>> cachedNodes = new InMemoryCache<UUID, List<Node>>(600, 1500, 6);
+	@Autowired
+	private AnnotationDao annotationDao;
+
+	private InMemoryCache<String, List<Node>> cachedNodes = new InMemoryCache<String, List<Node>>(600, 1500, 6);
 
 	public String getNode(MimeType outMimeType, String nodeUuid, boolean withChildren, Long userId, Long groupId,
 			String label, Integer cutoff) throws DoesNotExistException, BusinessException, Exception {
-		long t_start = System.currentTimeMillis();
 		final GroupRights rights = getRights(userId, groupId, nodeUuid);
-		long t_nodeRight = System.currentTimeMillis();
 
 		if (!rights.isRead()) {
 			userId = credentialDao.getPublicUid();
@@ -151,12 +157,10 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		}
 
 		if (outMimeType.getSubtype().equals("xml")) {
-			List<Pair<Node, GroupRights>> nodes = null;
-			nodes = getNodePerLevel(nodeUuid, userId, rights.getGroupRightInfo().getId(), cutoff);
+			List<Pair<Node, GroupRights>> nodes = getNodePerLevel(nodeUuid, userId, rights.getGroupRightInfo().getId(),
+					cutoff);
 
-			long t_nodePerLevel = System.currentTimeMillis();
-
-			/// Preparation du XML que l'on va renvoyer
+			/// Préparation du XML que l'on va renvoyer
 			DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
 			DocumentBuilder documentBuilder = null;
 			Document document = null;
@@ -167,9 +171,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 			Map<String, Object[]> resolve = new HashMap<String, Object[]>();
 			/// Node -> parent
 			Map<String, t_tree> entries = new HashMap<String, t_tree>();
-			long t_initContruction = System.currentTimeMillis();
 			processQuery(nodes, resolve, entries, document, documentBuilder, rights.getGroupRightInfo().getLabel());
-			long t_processQuery = System.currentTimeMillis();
 
 			/// Reconstruct functional tree
 			t_tree root = entries.get(nodeUuid);
@@ -177,22 +179,6 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 			reconstructTree(out, root, entries);
 
 			String nodexml = out.toString();
-			long t_buildXML = System.currentTimeMillis();
-			long t_convertString = System.currentTimeMillis();
-
-			long d_right = t_nodeRight - t_start;
-			long d_queryNodes = t_nodePerLevel - t_nodeRight;
-			long d_initConstruct = t_initContruction - t_nodePerLevel;
-			long d_processQuery = t_processQuery - t_initContruction;
-			long d_buildXML = t_buildXML - t_processQuery;
-			long d_convertString = t_convertString - t_buildXML;
-
-			System.out.println("Query Rights: " + d_right);
-			System.out.println("Query Nodes: " + d_queryNodes);
-			System.out.println("Init build: " + d_initConstruct);
-			System.out.println("Parse Query: " + d_processQuery);
-			System.out.println("Build XML: " + d_buildXML);
-			System.out.println("Convert XML: " + d_convertString); //
 
 			return nodexml;
 		} else if (outMimeType.getSubtype().equals("json"))
@@ -202,24 +188,25 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		}
 	}
 
-	public String getParentNodes(String portfoliocode, String semtag, String semtag_parent, String code_parent)
-			throws Exception {
+	public String getChildNodes(String parentNodeCode, String parentSemtag, String childSemtag) throws Exception {
 		String result = "";
 		try {
-			Portfolio portfolio = portfolioDao.getPortfolioFromNodeCode(portfoliocode);
-			Node parentNode = nodeDao.getParentNode(portfolio.getId(), semtag_parent, portfoliocode);
+			Portfolio portfolio = portfolioDao.getPortfolioFromNodeCode(parentNodeCode);
+			Node parentNode = nodeDao.getNodeBySemtagAndCode(portfolio.getId().toString(), parentSemtag,
+					parentNodeCode);
 			if (parentNode != null) {
-				final List<Node> children = new ArrayList<Node>(parentNode.getChildren());
-				for (Node child : children) {
-					Node tmp = nodeDao.getNodeBySemanticTag(child.getId(), semtag);
+				final List<Node> children = nodeDao.getFirstLevelChildren(parentNode.getId().toString());
+				if (CollectionUtils.isNotEmpty(children)) {
 					result += "<nodes>";
-					if (tmp != null) {
-						result += "<node ";
-						result += DomUtils.getXmlAttributeOutput("id", tmp.getId().toString());
-						result += ">";
-						result += "</node>";
+					for (Node child : children) {
+						Node tmp = nodeDao.getNodeBySemanticTag(child.getId(), childSemtag);
+						if (tmp != null) {
+							result += "<node ";
+							result += DomUtils.getXmlAttributeOutput("id", tmp.getId().toString());
+							result += ">";
+							result += "</node>";
+						}
 					}
-
 					result += "</nodes>";
 				}
 			}
@@ -229,9 +216,10 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		return result;
 	}
 
-	public String writeNode(org.w3c.dom.Node node, String portfolioUuid, UUID portfolioModelId, Long userId, int ordrer,
-			String forcedUuid, String forcedUuidParent, boolean sharedResParent, boolean sharedNodeResParent,
-			boolean rewriteId, Map<String, String> resolve, boolean parseRights) throws BusinessException {
+	public String writeNode(org.w3c.dom.Node node, String portfolioUuid, String portfolioModelId, Long userId,
+			int ordrer, String forcedUuid, String forcedUuidParent, boolean sharedResParent,
+			boolean sharedNodeResParent, boolean rewriteId, Map<String, String> resolve, boolean parseRights)
+			throws BusinessException {
 
 		String nodeUuid = "";
 		String originUuid = null;
@@ -320,7 +308,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		try {
 			children = node.getChildNodes();
 			// On parcourt une premiere fois les enfants pour récupérer la liste à écrire en
-			// base
+			// base.
 			for (int i = 0; i < children.getLength(); i++) {
 				org.w3c.dom.Node child = children.item(i);
 
@@ -439,11 +427,8 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 						}
 
 						try {
-							if (metadataWadNode.getAttributes().getNamedItem("submitresroles") != null) // TODO
-																										// submitresroles
-																										// deprecated
-																										// fro
-																										// submitroles
+							if (metadataWadNode.getAttributes().getNamedItem("submitresroles") != null)
+							// TODO submitresroles deprecated fro submitroles
 							{
 								StringTokenizer tokens = new StringTokenizer(
 										metadataWadNode.getAttributes().getNamedItem("submitresroles").getNodeValue(),
@@ -507,13 +492,13 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 							if (notifyroles != null) {
 								/// Format pour l'instant: actionroles="sender:1,2;responsable:4"
 								StringTokenizer tokens = new StringTokenizer(notifyroles.getNodeValue(), " ");
-								String merge = "";
+								String notifyRoles = "";
 								if (tokens.hasMoreElements())
-									merge = tokens.nextElement().toString();
+									notifyRoles = tokens.nextElement().toString();
 								while (tokens.hasMoreElements())
-									merge += "," + tokens.nextElement().toString();
+									notifyRoles += "," + tokens.nextElement().toString();
 
-								groupManager.postNotifyRoles(userId, portfolioUuid, nodeUuid, merge);
+								groupManager.changeNotifyRoles(userId, portfolioUuid, nodeUuid, notifyRoles);
 							}
 						} catch (Exception ex) {
 						}
@@ -567,7 +552,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 
 					metadata = DomUtils.getNodeAttributesString(children.item(i));
 				}
-				// On verifie si l'enfant n'est pas un element de type code, label ou descr
+				// On vérifie si l'enfant n'est pas un element de type code, label ou descr
 				else if (children.item(i).getNodeName().equals("label")) {
 					label = DomUtils.getInnerXml(children.item(i));
 				} else if (children.item(i).getNodeName().equals("code")) {
@@ -608,7 +593,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 				throw new GenericBusinessException("Il manque la balise asmRoot !!");
 		}
 
-		// Si on instancie un portfolio e partir d'un modèle
+		// Si on instancie un portfolio à partir d'un modèle
 		// Alors on gère les share*
 		if (portfolioModelId != null) {
 			if (sharedNode) {
@@ -617,37 +602,33 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		}
 
 		if (nodeUuid != null && !node.getNodeName().equals("portfolio") && !node.getNodeName().equals("asmResource"))
-			nodeDao.create(nodeUuid, parentUuid, "", asmType, xsiType, sharedRes, sharedNode, sharedNodeRes,
+			nodeUuid = nodeDao.add(nodeUuid, parentUuid, "", asmType, xsiType, sharedRes, sharedNode, sharedNodeRes,
 					sharedResUuid, sharedNodeUuid, sharedNodeResUuid, metadata, metadataWad, metadataEpm, semtag,
 					semanticTag, label, code, descr, format, ordrer, userId, portfolioUuid);
 
 		// Si le parent a été force, cela veut dire qu'il faut mettre e jour les enfants
-		// du parent
-		// TODO
-		// MODIF : On le met e jour tout le temps car dans le cas d'un POST les uuid ne
-		// sont pas connus e l'avance
+		// du parent TODO
+		// MODIF : On le met à jour tout le temps car dans le cas d'un POST les uuid ne
+		// sont pas connus à l'avance
 		// if(forcedUuidParent!=null)
-
 		// Si le noeud est de type asmResource, on stocke le innerXML du noeud
 		if (node.getNodeName().equals("asmResource")) {
 			if (portfolioModelId != null) {
 				if (xsiType.equals("nodeRes") && sharedNodeResParent) {
 					sharedNodeResUuid = originUuid;
-					resourceTableDao.createResource(sharedNodeResUuid, parentUuid, xsiType, DomUtils.getInnerXml(node),
+					resourceTableDao.addResource(sharedNodeResUuid, parentUuid, xsiType, DomUtils.getInnerXml(node),
 							portfolioModelId.toString(), sharedNodeResParent, sharedResParent, userId);
 				} else if (!xsiType.equals("context") && !xsiType.equals("nodeRes") && sharedResParent) {
-
 					sharedResUuid = originUuid;
-					resourceTableDao.createResource(sharedResUuid, parentUuid, xsiType, DomUtils.getInnerXml(node),
+					resourceTableDao.addResource(sharedResUuid, parentUuid, xsiType, DomUtils.getInnerXml(node),
 							portfolioModelId.toString(), sharedNodeResParent, sharedResParent, userId);
 				} else {
-					resourceTableDao.createResource(nodeUuid, parentUuid, xsiType, DomUtils.getInnerXml(node),
+					resourceTableDao.addResource(nodeUuid, parentUuid, xsiType, DomUtils.getInnerXml(node),
 							portfolioModelId.toString(), sharedNodeResParent, sharedResParent, userId);
 				}
 			} else
-				resourceTableDao.createResource(nodeUuid, parentUuid, xsiType, DomUtils.getInnerXml(node), null,
+				resourceTableDao.addResource(nodeUuid, parentUuid, xsiType, DomUtils.getInnerXml(node), null,
 						sharedNodeResParent, sharedResParent, userId);
-
 		}
 
 		// Ensuite, on parcourt à nouveau les enfants pour continuer la récursivité.
@@ -746,8 +727,8 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		return result;
 	}
 
-	public StringBuffer getNodeXmlOutput(String nodeUuid, boolean withChildren, String withChildrenOfXsiType,
-			Long userId, Long groupId, String label, boolean checkSecurity) {
+	public String getNodeXmlOutput(String nodeUuid, boolean withChildren, String withChildrenOfXsiType, Long userId,
+			Long groupId, String label, boolean checkSecurity) {
 		StringBuffer result = new StringBuffer();
 
 		// Vérification de sécurité
@@ -756,9 +737,9 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 			if (!rights.isRead()) {
 				userId = credentialDao.getPublicUid();
 				/// Vérifie les droits avec le compte publique (dernière chance)
-				rights = groupRightsDao.getPublicRightsByUserId(UUID.fromString(nodeUuid), userId);
+				rights = groupRightsDao.getPublicRightsByUserId(nodeUuid, userId);
 				if (!rights.isRead())
-					return result;
+					return result.toString();
 			}
 		}
 
@@ -876,7 +857,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 			result.append("</" + resNode.getAsmType() + ">");
 		} catch (DoesNotExistException e) {
 		}
-		return result;
+		return result.toString();
 	}
 
 	//// Pourquoi on a converti les "en' en premier lieu?
@@ -973,17 +954,16 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		return nodeDao.isCodeExist(code, uuid);
 	}
 
-	public UUID getPortfolioIdFromNode(Long userId, String nodeUuid) throws DoesNotExistException, BusinessException {
+	public String getPortfolioIdFromNode(Long userId, String nodeUuid) throws DoesNotExistException, BusinessException {
 		// Admin, or if user has a right to read can fetch this information
 		if (!credentialDao.isAdmin(userId) && !hasRight(userId, 0L, nodeUuid, GroupRights.READ)) {
 			throw new GenericBusinessException("403 FORBIDDEN : No READ credential");
 		}
-
 		Node n = nodeDao.findById(UUID.fromString(nodeUuid));
-		return n.getPortfolio().getId();
+		return n.getPortfolio().getId().toString();
 	}
 
-	public String executeMacroOnNode(long userId, String nodeUuid, String macroName) {
+	public String executeMacroOnNode(long userId, String nodeUuid, String macroName) throws BusinessException {
 		String val = "erreur";
 
 		try {
@@ -1016,10 +996,10 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 			NamedNodeMap metaAttr = rootMeta.getAttributes();
 			long resetgroup = getRoleByNode(1L, nodeUuid, "resetter"); // Check for the possibility of resetter group
 			if ("reset".equals(macroName)
-					&& (securityManager.isAdmin(userId) || securityManager.isUserMemberOfRole(userId, resetgroup))) // Admin,
-																													// or
-																													// part
-																													// of
+					&& (securityManager.isAdmin(userId) || securityManager.userHasRole(userId, resetgroup))) // Admin,
+																												// or
+																												// part
+																												// of
 			// resetter group
 			{
 				/// if reset and admin
@@ -1061,7 +1041,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 				if (doUpdate) {
 					meta = DomUtils.getNodeAttributesString(rootMeta);
 					System.out.println("META: " + meta);
-					Node n = nodeDao.findById(UUID.fromString(nodeUuid));
+					Node n = nodeDao.findById(nodeUuid);
 					n.setMetadataWad(meta);
 					nodeDao.merge(n);
 				}
@@ -1077,7 +1057,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 					return "unchanged";
 
 				/// FIXME: This part might be deprecated in the near future
-				/// Verifie le showtoroles
+				/// Vérifie le showtoroles
 				org.w3c.dom.Node showtonode = metaAttr.getNamedItem("showtoroles");
 				String showto = "";
 				if (showtonode != null)
@@ -1103,7 +1083,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 				String timeFormat = dt.format(time);
 				rootMeta.setAttribute("submitteddate", timeFormat);
 				String updatedMeta = DomUtils.getNodeAttributesString(rootMeta);
-				Node n = nodeDao.findById(UUID.fromString(nodeUuid));
+				Node n = nodeDao.findById(nodeUuid);
 				n.setMetadataWad(updatedMeta);
 				nodeDao.merge(n);
 
@@ -1128,12 +1108,12 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 				String timeFormat = dt.format(time);
 				rootMeta.setAttribute("submitteddate", timeFormat);
 				String updatedMeta = DomUtils.getNodeAttributesString(rootMeta);
-				Node n = nodeDao.findById(UUID.fromString(nodeUuid));
+				Node n = nodeDao.findById(nodeUuid);
 				n.setMetadataWad(meta);
 				nodeDao.merge(n);
 			} else if ("submitQuizz".equals(macroName)) {
 
-				// Comparaison entre les reponses
+				// Comparaison entre les réponses
 				// node 1
 				Node n1 = nodeDao.getParentNode(nodeUuid, "quizz");
 				String uuidREP = n1.getId().toString();
@@ -1184,12 +1164,12 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 				// Récupération asmContext contenant l'action
 				final Node n3 = nodeDao.getParentNode(nodeUuid, "action");
 				final String[] children = StringUtils.split(n3.getChildrenStr(), ",");
-				final Set<UUID> childrenSet = new LinkedHashSet<UUID>(children.length);
+				final Set<String> childrenSet = new LinkedHashSet<String>(children.length);
 				for (String child : children) {
-					childrenSet.add(UUID.fromString(child));
+					childrenSet.add(child);
 				}
 
-				final List<Node> contextActionNode = nodeDao.getNodes(childrenSet);
+				final List<Node> contextActionNode = nodeDao.getNodes(new ArrayList<String>(childrenSet));
 				String contextActionNodeUuid = contextActionNode.isEmpty() ? null
 						: contextActionNode.get(0).getId().toString();
 
@@ -1229,7 +1209,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 				if (prctElv >= prctMini) {
 					executeAction(1L, nodeAction, action, role);
 
-					Node n = nodeDao.findById(UUID.fromString(nodeAction));
+					Node n = nodeDao.findById(nodeAction);
 					String metaA = "";
 					if (n != null)
 						metaA = n.getMetadataWad();
@@ -1270,14 +1250,14 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
 		documentBuilder = documentBuilderFactory.newDocumentBuilder();
 		for (Node child : children) {
-			String uuid = child.getId().toString();
+			UUID uuid = child.getId();
 			String meta = child.getMetadataWad();
 			String nodeString = "<?xml version='1.0' encoding='UTF-8' standalone='no'?><transfer " + meta + "/>";
 
-			Map<String, GroupRights> rolesMap = resolve.get(uuid);
+			Map<String, GroupRights> rolesMap = resolve.get(uuid.toString());
 			if (rolesMap == null) {
 				rolesMap = new HashMap<String, GroupRights>();
-				resolve.put(uuid, rolesMap);
+				resolve.put(uuid.toString(), rolesMap);
 			}
 
 			try {
@@ -1463,7 +1443,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 				attribNode.removeAttribute("submitted");
 				attribNode.removeAttribute("submitteddate");
 				String resetMeta = DomUtils.getNodeAttributesString(attribNode);
-				Node n = nodeDao.findById(UUID.fromString(uuid));
+				Node n = nodeDao.findById(uuid);
 				n.setMetadataWad(resetMeta);
 				n = nodeDao.merge(n);
 
@@ -1475,7 +1455,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 
 				while (rights.hasNext()) {
 					Entry<String, Map<String, GroupRights>> entry = rights.next();
-					uuid = entry.getKey();
+					uuid = UUID.fromString(entry.getKey());
 					Map<String, GroupRights> gr = entry.getValue();
 
 					Iterator<Entry<String, GroupRights>> rightiter = gr.entrySet().iterator();
@@ -1483,13 +1463,13 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 						Entry<String, GroupRights> rightElem = rightiter.next();
 						String group = rightElem.getKey();
 
-						GroupRights gr2 = groupRightsDao.getRightsByIdAndLabel(uuid, group);
+						GroupRights gr2 = groupRightsDao.getRightsByIdAndLabel(uuid.toString(), group);
 						if (gr2 != null)
 							gri = gr2.getGroupRightInfo();
 
 						GroupRights rightValue = rightElem.getValue();
 						grId.setGroupRightInfo(gri);
-						grId.setId(UUID.fromString(uuid));
+						grId.setId(uuid);
 						GroupRights toUpdate = groupRightsDao.findById(grId);
 
 						toUpdate.setRead(rightValue.isRead());
@@ -1513,22 +1493,22 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 			throw new GenericBusinessException("FORBIDDEN : No admin right");
 
 		// Check if role exists already
-		Long group = groupRightInfoDao.getIdByNodeAndLabel(nodeUuid, role);
+		Long groupId = groupRightInfoDao.getIdByNodeAndLabel(nodeUuid, role);
 
 		// If not, create it
-		if (group == null) {
+		if (groupId == null) {
 			Node n = nodeDao.findById(UUID.fromString(nodeUuid));
-			Long retval = groupRightInfoDao.add(n.getPortfolio(), role);
-			group = groupInfoDao.add(new GroupRightInfo(retval), 1L, role);
+			Long grid = groupRightInfoDao.add(n.getPortfolio(), role);
+			groupId = groupInfoDao.add(grid, 1L, role);
 		}
-		return group;
+		return groupId;
 	}
 
-	public String getNodeMetadataWad(MimeType mimeType, String nodeUuid, boolean b, Long userId, Long groupId,
-			String label) throws DoesNotExistException, BusinessException {
+	public String getNodeMetadataWad(MimeType mimeType, String nodeUuid, Long userId, Long groupId)
+			throws DoesNotExistException, BusinessException {
 		StringBuffer result = new StringBuffer();
 
-		// Verification de sécurité
+		// Vérification de sécurité
 		GroupRights rightsOnNode = getRights(userId, groupId, nodeUuid);
 		if (!rightsOnNode.isRead()) {
 			throw new GenericBusinessException("Vous n'avez pas les droits nécessaires.");
@@ -1547,7 +1527,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		return result.toString();
 	}
 
-	public Integer changeNode(MimeType inMimeType, String nodeUuid, String in, Long userId, Long groupId)
+	public Integer changeNode(MimeType inMimeType, String nodeUuid, String xmlNode, Long userId, Long groupId)
 			throws Exception {
 		String asmType = null;
 		String xsiType = null;
@@ -1565,20 +1545,13 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		boolean sharedNode = false;
 		boolean sharedNodeRes = false;
 
-		long t_start = System.currentTimeMillis();
-
 		if (!hasRight(userId, groupId, nodeUuid, GroupRights.WRITE))
 			throw new GenericBusinessException("403 Forbidden : no write credential ");
 
-		long t_rights = System.currentTimeMillis();
-
-		String inPars = DomUtils.cleanXMLData(in);
+		String inPars = DomUtils.cleanXMLData(xmlNode);
 		Document doc = DomUtils.xmlString2Document(inPars, new StringBuffer());
 		// Puis on le recrée
-		org.w3c.dom.Node node;
-		node = doc.getDocumentElement();
-
-		long t_parsexml = System.currentTimeMillis();
+		org.w3c.dom.Node node = doc.getDocumentElement();
 
 		if (node == null)
 			return null;
@@ -1606,16 +1579,13 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		}
 
 		// Si id défini, alors on écrit en base
-		// TODO Transactionnel noeud+enfant
-		NodeList children = null;
-
-		children = node.getChildNodes();
+		NodeList children = node.getChildNodes();
 		// On parcourt une premiere fois les enfants pour récupérer la liste à écrire en
 		// base
 		int j = 0;
 		for (int i = 0; i < children.getLength(); i++) {
 			if (!children.item(i).getNodeName().equals("#text")) {
-				// On verifie si l'enfant n'est pas un element de type code, label ou descr
+				// On vérifie si l'enfant n'est pas un element de type code, label ou descr.
 				if (children.item(i).getNodeName().equals("label")) {
 					label = DomUtils.getInnerXml(children.item(i));
 				} else if (children.item(i).getNodeName().equals("code")) {
@@ -1678,52 +1648,25 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 			}
 		}
 
-		long t_endparsing = System.currentTimeMillis();
-
 		// Si le noeud est de type asmResource, on stocke le innerXML du noeud
 		if (node.getNodeName().equals("asmResource")) {
 			resourceManager.changeResourceByXsiType(nodeUuid, xsiType, DomUtils.getInnerXml(node), userId);
 		}
 
-		long t_udpateRes = System.currentTimeMillis();
-
+		// TODO UpdateNode different selon creation de modèle ou instantiation copie
 		if (nodeChildrenUuid != null)
-			// TODO UpdateNode different selon creation de modèle ou instantiation copie
 			nodeDao.updateNode(nodeUuid);
 
-		long t_updateNodeChildren = System.currentTimeMillis();
-
 		portfolioDao.updateTimeByNode(nodeUuid);
-
-		long t_touchPortfolio = System.currentTimeMillis();
 
 		int retval = nodeDao.update(nodeUuid, asmType, xsiType, semtag, label, code, descr, format, metadata,
 				metadataWad, metadataEpm, sharedRes, sharedNode, sharedNodeRes, userId);
 
-		long t_udpateNode = System.currentTimeMillis();
-
-		long d_rights = t_rights - t_start;
-		long d_parsexml = t_parsexml - t_rights;
-		long d_parsenode = t_endparsing - t_parsexml;
-		long d_updRes = t_udpateRes - t_endparsing;
-		long d_updateOrder = t_updateNodeChildren - t_udpateRes;
-		long d_touchPort = t_touchPortfolio - t_updateNodeChildren;
-		long d_updatNode = t_udpateNode - t_touchPortfolio;
-
-		System.out.println("===== PUT Node =====");
-		System.out.println("Check rights: " + d_rights);
-		System.out.println("Parse XML: " + d_parsexml);
-		System.out.println("Parse nodes: " + d_parsenode);
-		System.out.println("Update Resource: " + d_updRes);
-		System.out.println("Update order: " + d_updateOrder);
-		System.out.println("Touch portfolio: " + d_touchPort);
-		System.out.println("Update node: " + d_updatNode); //
-
 		return retval;
 	}
 
-	public String changeNodeMetadataWad(MimeType mimeType, String nodeUuid, String xmlNode, Long userId, Long groupId)
-			throws Exception {
+	public String changeNodeMetadataWad(MimeType mimeType, String nodeUuid, String xmlMetawad, Long userId,
+			Long groupId) throws Exception {
 		String metadatawad = "";
 		String result = null;
 
@@ -1731,11 +1674,10 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 			throw new GenericBusinessException("403 FORBIDDEN : No WRITE credential");
 
 		// D'abord, on supprime les noeuds existants
-		xmlNode = DomUtils.cleanXMLData(xmlNode);
-		Document doc = DomUtils.xmlString2Document(xmlNode, new StringBuffer());
+		xmlMetawad = DomUtils.cleanXMLData(xmlMetawad);
+		Document doc = DomUtils.xmlString2Document(xmlMetawad, new StringBuffer());
 		// Puis on le recrée
-		org.w3c.dom.Node node;
-		node = doc.getDocumentElement();
+		org.w3c.dom.Node node = doc.getDocumentElement();
 
 		if (node.getNodeName().equals("metadata-wad")) {
 			metadatawad = DomUtils.getNodeAttributesString(node);// " attr1=\"wad1\" attr2=\"wad2\" ";
@@ -1749,24 +1691,113 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		return result;
 	}
 
-	public int deleteNode(String nodeUuid, Long id, long groupId) {
-		return 0;
+	public void removeNode(String nodeUuid, Long userId, long groupId) throws BusinessException {
+		final GroupRights rights = getRights(userId, groupId, nodeUuid);
+
+		if (!rights.isDelete())
+			if (!credentialDao.isAdmin(userId) && !credentialDao.isDesigner(userId, nodeUuid))
+				throw new GenericBusinessException("403 FORBIDDEN, No admin right");
+
+		UUID parentid = null;
+
+		/// Copy portfolio base info
+		final Node baseNodeToRemove = nodeDao.findById(UUID.fromString(nodeUuid));
+
+		/// Portfolio id, nécessaire pour plus tard !
+		final UUID portfolioId = baseNodeToRemove.getPortfolio().getId();
+		final List<Node> t_nodes = nodeDao.getNodesWithResources(portfolioId.toString());
+
+		/// Trouver un parent pour réorganiser les enfants restants.
+		if (baseNodeToRemove.getParentNode() != null)
+			parentid = baseNodeToRemove.getParentNode().getId();
+
+		final Set<Node> nodesToDelete = new LinkedHashSet<Node>();
+		final Set<ResourceTable> resourcesToDelete = new LinkedHashSet<ResourceTable>();
+		final Map<Integer, Set<String>> t_map_parentid = new HashMap<Integer, Set<String>>();
+
+		Set<Node> t_set_parent = new LinkedHashSet<Node>();
+		Set<String> t_set_parentid = new LinkedHashSet<String>();
+
+		// Initialisation
+		t_set_parentid.add(baseNodeToRemove.getId().toString());
+		t_map_parentid.put(0, t_set_parentid);
+
+		// On descend les noeuds
+		int level = 0;
+		boolean added = true;
+		while (added) {
+			t_set_parentid = new LinkedHashSet<String>();
+			t_set_parent = new LinkedHashSet<Node>();
+
+			for (Node t_node : t_nodes) {
+				for (String t_parent_id : t_map_parentid.get(level)) {
+					if (t_node.getParentNode() != null
+							&& t_node.getParentNode().getId().toString().equals(t_parent_id)) {
+						t_set_parentid.add(t_node.getId().toString());
+						t_set_parent.add(t_node);
+						break;
+					}
+				}
+			}
+			t_map_parentid.put(level + 1, t_set_parentid);
+			nodesToDelete.addAll(t_set_parent);
+			added = CollectionUtils.isNotEmpty(t_set_parentid); // On s'arrete quand rien n'a été ajouté
+			level = level + 1; // Prochaine étape
+		}
+
+		// On ajoute le noeud de base dans les noeuds à effacer
+		nodesToDelete.add(baseNodeToRemove);
+
+		// On liste les ressources à effacer
+		for (Node nodeToDelete : nodesToDelete) {
+			if (nodeToDelete.getResource() != null) {
+				resourcesToDelete.add(nodeToDelete.getResource());
+			}
+
+			if (nodeToDelete.getResResource() != null) {
+				resourcesToDelete.add(nodeToDelete.getResResource());
+
+			}
+			if (nodeToDelete.getContextResource() != null) {
+				resourcesToDelete.add(nodeToDelete.getContextResource());
+			}
+		}
+
+		/// Met à jour la dernière date de modification, commencez par le faire puisque
+		/// le noeud n'existera plus après.
+		portfolioDao.updateTimeByNode(nodeUuid);
+
+		// On efface les noeuds
+		for (Node node : nodesToDelete) {
+			nodeDao.remove(node);
+		}
+
+		// On efface les ressources
+		for (ResourceTable resourceTable : resourcesToDelete) {
+			resourceTableDao.remove(resourceTable);
+		}
+
+		if (parentid != null)
+			nodeDao.updateNode(parentid.toString());
+
+		System.out.println("deleteNode :" + nodeUuid);
 	}
 
 	public boolean changeParentNode(Long userid, String uuid, String uuidParent) throws BusinessException {
 		if (!credentialDao.isAdmin(userid) && !credentialDao.isDesigner(userid, uuid))
 			throw new GenericBusinessException("FORBIDDEN 403 : No admin right");
 
-		if (uuid.equals(uuidParent)) // Pour qu'un noeud ne s'ajoute pas lui-même comme noeud parent
+		// Pour qu'un noeud ne s'ajoute pas lui-même comme noeud parent
+		if (uuid.equals(uuidParent))
 			return false;
 
 		boolean status = false;
 		try {
 			Node n = nodeDao.findById(UUID.fromString(uuid));
 
-			String puuid = "";
+			UUID puuid = null;
 			if (n != null && n.getParentNode() != null) {
-				puuid = n.getParentNode().getId().toString();
+				puuid = n.getParentNode().getId();
 			}
 			Integer next = nodeDao.getNodeNextOrderChildren(uuidParent);
 			n.setParentNode(new Node(UUID.fromString(uuidParent)));
@@ -1775,7 +1806,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 
 			// Mettre à jour la liste d'enfants pour le noeud d'origine et le noeud de
 			// destination.
-			nodeDao.updateNode(puuid);
+			nodeDao.updateNode(puuid.toString());
 			nodeDao.updateNode(uuidParent);
 			portfolioDao.updateTimeByNode(uuid);
 			status = true;
@@ -1785,23 +1816,53 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		return status;
 	}
 
-	public Long moveNodeUp(Long id, String nodeId) throws BusinessException {
-		return nodeDao.postMoveNodeUp(id, nodeId);
+	public Long moveNodeUp(String nodeUuid) throws DoesNotExistException {
+		Long status = -1L;
+
+		Node n = nodeDao.findById(UUID.fromString(nodeUuid));
+		int order = -1;
+		UUID puuid = null;
+		if (n != null) {
+			order = n.getNodeOrder();
+			puuid = n.getParentNode().getId();
+		}
+
+		if (order == 0) {
+			status = -2L;
+		} else if (order > 0) {
+			final List<Node> nodes = nodeDao.getNodesByOrder(puuid.toString(), order);
+			/// Swap node order
+			for (Node node : nodes) {
+				if (node.getNodeOrder() == order) {
+					node.setNodeOrder(order - 1);
+				} else {
+					node.setNodeOrder(order);
+				}
+				nodeDao.merge(node);
+			}
+
+			// Mettre à jour la liste des enfants
+			nodeDao.updateNode(puuid.toString());
+
+			status = 0L;
+			portfolioDao.updateTimeByNode(nodeUuid);
+		}
+
+		return status;
 	}
 
-	public String changeNodeMetadataEpm(MimeType mimeType, String nodeUuid, String xmlNode, Long userId, long groupId)
-			throws Exception, BusinessException, DoesNotExistException {
+	public String changeNodeMetadataEpm(MimeType mimeType, String nodeUuid, String xmlMetadataEpm, Long userId,
+			long groupId) throws Exception, BusinessException, DoesNotExistException {
 		if (!hasRight(userId, groupId, nodeUuid, GroupRights.WRITE))
 			throw new GenericBusinessException("FORBIDDEN 403 : No WRITE credential ");
 
-		xmlNode = DomUtils.cleanXMLData(xmlNode);
-		Document doc = DomUtils.xmlString2Document(xmlNode, new StringBuffer());
-		org.w3c.dom.Node node;
-		node = doc.getDocumentElement();
+		xmlMetadataEpm = DomUtils.cleanXMLData(xmlMetadataEpm);
+		Document doc = DomUtils.xmlString2Document(xmlMetadataEpm, new StringBuffer());
+		org.w3c.dom.Node node = doc.getDocumentElement();
 
 		String metadataepm = "";
 		if (node.getNodeName().equals("metadata-epm")) {
-			metadataepm = DomUtils.getNodeAttributesString(node);// " attr1=\"wad1\" attr2=\"wad2\" ";
+			metadataepm = DomUtils.getNodeAttributesString(node);
 		}
 
 		Node n = nodeDao.findById(UUID.fromString(nodeUuid));
@@ -1831,8 +1892,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		Document doc = DomUtils.xmlString2Document(xmlNode, new StringBuffer());
 
 		// Puis on le recrée
-		org.w3c.dom.Node node;
-		node = doc.getDocumentElement();
+		org.w3c.dom.Node node = doc.getDocumentElement();
 
 		if (node.getNodeName().equals("metadata")) {
 
@@ -1887,10 +1947,9 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 			n.setSharedNodeRes(sharedNodeRes);
 			nodeDao.merge(n);
 			status = "editer";
-			portfolioDao.updateTime(portfolioUuid);
+			portfolioDao.updateTime(portfolioUuid.toString());
 		}
 		return status;
-
 	}
 
 	public String changeNodeContext(MimeType mimeType, String nodeUuid, String xmlNode, Long userId, Long groupId)
@@ -1901,8 +1960,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		xmlNode = DomUtils.cleanXMLData(xmlNode);
 		Document doc = DomUtils.xmlString2Document(xmlNode, new StringBuffer());
 		// Puis on le recrée
-		org.w3c.dom.Node node;
-		node = doc.getDocumentElement();
+		org.w3c.dom.Node node = doc.getDocumentElement();
 
 		if (node.getNodeName().equals("asmResource")) {
 			// Si le noeud est de type asmResource, on stocke le innerXML du noeud
@@ -1931,27 +1989,25 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		return "erreur";
 	}
 
-	public String addNode(MimeType inMimeType, String parentNodeUuid, String in, Long userId, Long groupId,
+	public String addNode(MimeType inMimeType, String parentNodeUuid, String xmlNode, Long userId, Long groupId,
 			boolean forcedUuid) throws Exception {
 
 		Integer nodeOrder = nodeDao.getNodeNextOrderChildren(parentNodeUuid);
 		Portfolio portfolio = portfolioDao.getPortfolioFromNode(parentNodeUuid);
 		String portfolioUuid = null;
-		UUID portfolioModelId = null;
+		String portfolioModelId = null;
 
 		if (portfolio != null) {
 			portfolioUuid = portfolio.getId().toString();
-			portfolioModelId = portfolio.getModelId();
+			portfolioModelId = portfolio.getModelId().toString();
 		}
 
 		// TODO getNodeRight postNode
-		String inPars = DomUtils.cleanXMLData(in);
+		String inPars = DomUtils.cleanXMLData(xmlNode);
 		Document doc = DomUtils.xmlString2Document(inPars, new StringBuffer());
 		// Puis on le recrée
-		org.w3c.dom.Node rootNode;
-		String nodeType = "";
-		rootNode = doc.getDocumentElement();
-		nodeType = rootNode.getNodeName();
+		org.w3c.dom.Node rootNode = doc.getDocumentElement();
+		String nodeType = rootNode.getNodeName();
 
 		String nodeUuid = writeNode(rootNode, portfolioUuid, portfolioModelId, userId, nodeOrder, null, parentNodeUuid,
 				false, false, forcedUuid, null, true);
@@ -1969,7 +2025,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 	public String getNodeWithXSL(MimeType mimeType, String nodeUuid, String xslFile, String parameters, Long userId,
 			Long groupId) throws DoesNotExistException, BusinessException, Exception {
 		String result = null;
-		/// Preparing parameters for future need, format:
+		/// Préparation des paramètres pour les besoins futurs, format:
 		/// "par1:par1val;par2:par2val;..."
 		String[] table = parameters.split(";");
 		int parSize = table.length;
@@ -1991,18 +2047,18 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		return result;
 	}
 
-	public String addNodeFromModelBySemanticTag(org.springframework.util.MimeType inMimeType, String parentNodeUuid,
-			String semanticTag, Long userId, Long groupId) throws Exception {
-		Portfolio portfolio = portfolioDao.getPortfolioFromNode(parentNodeUuid);
+	public String addNodeFromModelBySemanticTag(MimeType inMimeType, String nodeUuid, String semanticTag, Long userId,
+			Long groupId) throws Exception {
+		Portfolio portfolio = portfolioDao.getPortfolioFromNode(nodeUuid);
 
-		UUID portfolioModelUuid = null;
+		String portfolioModelUuid = null;
 		if (portfolio != null && portfolio.getModelId() != null) {
-			portfolioModelUuid = portfolio.getModelId();
+			portfolioModelUuid = portfolio.getModelId().toString();
 		}
 		String xml = getNodeBySemanticTag(inMimeType, portfolioModelUuid != null ? portfolioModelUuid.toString() : null,
 				semanticTag, userId, groupId).toString();
 
-		// C'est le noeud obtenu dans le modèle indiqué par la table de correspondance
+		// C'est le noeud obtenu dans le modèle indiqué par la table de correspondance.
 		UUID otherParentNodeUuid = nodeDao.getNodeUuidByPortfolioModelAndSemanticTag(portfolioModelUuid, semanticTag);
 
 		return addNode(inMimeType, otherParentNodeUuid.toString(), xml, userId, groupId, true);
@@ -2017,17 +2073,14 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 
 		XPath xPath = XPathFactory.newInstance().newXPath();
 		List<String> portfolio = new ArrayList<String>();
-//			String xpathRole = "//role";
 		String xpathRole = "//*[local-name()='role']";
 		XPathExpression findRole = xPath.compile(xpathRole);
-//			String xpathNodeFilter = "//xpath";
 		String xpathNodeFilter = "//*[local-name()='xpath']";
 		XPathExpression findXpath = xPath.compile(xpathNodeFilter);
 		String nodefilter = "";
 		NodeList roles = null;
 
-		/// Fetch portfolio(s)
-//			String portfolioNode = "//portfoliogroup";
+		/// Chercher le(s) portfolio(s)
 		String portfolioNode = "//*[local-name()='portfoliogroup']";
 		XPathExpression xpathFilter = null;
 		org.w3c.dom.Node portgroupnode = (org.w3c.dom.Node) xPath.compile(portfolioNode).evaluate(doc,
@@ -2038,8 +2091,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 			xpathFilter = xPath.compile(nodefilter);
 			roles = (NodeList) findRole.evaluate(portgroupnode, XPathConstants.NODESET);
 		} else {
-			// Or add the single one
-//				portfolioNode = "//portfolio[@uuid]";
+			// Ou ajoutez l'unique portfolio.
 			portfolioNode = "//*[local-name()='portfolio' and @*[local-name()='uuid']";
 			org.w3c.dom.Node portnode = (org.w3c.dom.Node) xPath.compile(portfolioNode).evaluate(doc,
 					XPathConstants.NODE);
@@ -2053,8 +2105,8 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 			}
 		}
 
-		List<String> nodes = new ArrayList<String>();
-		for (int i = 0; i < portfolio.size(); ++i) // For all portfolio
+		List<String> nodesIds = new ArrayList<String>();
+		for (int i = 0; i < portfolio.size(); ++i) // pour tous les portfolios.
 		{
 			String portfolioUuid = portfolio.get(i);
 			String portfolioStr = portfolioManager
@@ -2062,73 +2114,71 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 					.toString();
 			Document docPort = documentBuilder.parse(new ByteArrayInputStream(portfolioStr.getBytes("UTF-8")));
 
-			/// Fetch nodes inside those portfolios
+			// Récupérer des noeuds à l'intérieur de ces portfolios.
 			NodeList portNodes = (NodeList) xpathFilter.evaluate(docPort, XPathConstants.NODESET);
 			for (int j = 0; j < portNodes.getLength(); ++j) {
 				org.w3c.dom.Node node = portNodes.item(j);
 				String nodeuuid = node.getAttributes().getNamedItem("id").getNodeValue();
 
-				nodes.add(nodeuuid); // Keep those we have to change rights
+				nodesIds.add(nodeuuid); // Gardons ceux que nous devons changer de droits
 			}
 		}
 
-		/// Fetching single node
-		if (nodes.isEmpty()) {
+		// Récupération d'un seul noeud
+		if (nodesIds.isEmpty()) {
 //				String singleNode = "//node";
 			String singleNode = "//*[local-name()='node']";
 			org.w3c.dom.Node sNode = (org.w3c.dom.Node) xPath.compile(singleNode).evaluate(doc, XPathConstants.NODE);
 			String uuid = sNode.getAttributes().getNamedItem("uuid").getNodeValue();
-			nodes.add(uuid);
+			nodesIds.add(uuid);
 			roles = (NodeList) findRole.evaluate(sNode, XPathConstants.NODESET);
 		}
 
-		/// For all roles we have to change
+		/// Pour tous les rôles, nous devons changer
 		for (int i = 0; i < roles.getLength(); ++i) {
 			org.w3c.dom.Node rolenode = roles.item(i);
-			String rolename = rolenode.getAttributes().getNamedItem("name").getNodeValue();
+			String roleName = rolenode.getAttributes().getNamedItem("name").getNodeValue();
 			org.w3c.dom.Node right = rolenode.getFirstChild();
 
 			//
-			if ("user".equals(rolename)) {
+			if ("user".equals(roleName)) {
 				/// username as role
 			}
 
 			if ("#text".equals(right.getNodeName()))
 				right = right.getNextSibling();
 
-			if ("right".equals(right.getNodeName())) // Changing node rights
+			if ("right".equals(right.getNodeName())) // Modification des droits de noeud
 			{
 				NamedNodeMap rights = right.getAttributes();
-				GroupRights noderight = new GroupRights();
+				GroupRights rightsOnNode = new GroupRights();
 
 				String val = rights.getNamedItem("RD").getNodeValue();
 				if (val != null)
-					noderight.setRead(Boolean.parseBoolean(val));
+					rightsOnNode.setRead(Boolean.parseBoolean(val));
 				val = rights.getNamedItem("WR").getNodeValue();
 				if (val != null)
-					noderight.setWrite(Boolean.parseBoolean(val));
+					rightsOnNode.setWrite(Boolean.parseBoolean(val));
 				val = rights.getNamedItem("DL").getNodeValue();
 				if (val != null)
-					noderight.setDelete(Boolean.parseBoolean(val));
+					rightsOnNode.setDelete(Boolean.parseBoolean(val));
 				val = rights.getNamedItem("SB").getNodeValue();
 				if (val != null)
-					noderight.setSubmit(Boolean.parseBoolean(val));
+					rightsOnNode.setSubmit(Boolean.parseBoolean(val));
 
-				/// Apply modification for all nodes
-				for (int j = 0; j < nodes.size(); ++j) {
-					String nodeid = nodes.get(j);
-
-					changeRights(userId, nodeid, rolename, noderight);
+				/// Appliquer la modification pour tous les noeuds.
+				for (int j = 0; j < nodesIds.size(); ++j) {
+					changeRights(userId, nodesIds.get(j), roleName, rightsOnNode);
 				}
 			} else if ("action".equals(right.getNodeName())) // Using an action on node
 			{
-				/// Apply modification for all nodes
-				for (int j = 0; j < nodes.size(); ++j) {
-					String nodeid = nodes.get(j);
+				/// Appliquer la modification pour tous les noeuds.
+				for (int j = 0; j < nodesIds.size(); ++j) {
 
 					// TODO: check for reset keyword
-					// reset right
-					executeMacroOnNode(userId, nodeid, "reset");
+
+					// réinitialiser les droits.
+					executeMacroOnNode(userId, nodesIds.get(j), "reset");
 				}
 			}
 		}
@@ -2152,20 +2202,13 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		return "ok";
 	}
 
-	public void removeRights(long groupId, Long groupRightId, Long userId) throws BusinessException {
-		if (!credentialDao.isAdmin(userId))
-			throw new GenericBusinessException("403 FORBIDDEN : no admin right");
+	public String getNodes(MimeType mimeType, String rootNodeCode, String childSemtag, Long userId, Long groupId,
+			String parentSemtag, String parentNodeCode, Integer cutoff) throws BusinessException {
 
-		groupInfoDao.removeById(groupId);
-	}
+		String pid = portfolioDao.getPortfolioUuidFromNodeCode(rootNodeCode);
 
-	public String getNodes(MimeType mimeType, String portfoliocode, String semtag, Long userId, long groupId,
-			String parentSemtag, String parentCode, Integer cutoff) throws BusinessException {
-
-		UUID pid = portfolioDao.getPortfolioUuidFromNodeCode(portfoliocode);
-
-		if (pid == null || "".equals(pid.toString()))
-			throw new DoesNotExistException(Portfolio.class, "Not found by code " + portfoliocode);
+		if (StringUtils.isEmpty(pid))
+			throw new DoesNotExistException(Portfolio.class, "Not found with node code " + rootNodeCode);
 
 		GroupRights rights = portfolioManager.getRightsOnPortfolio(userId, groupId, pid);
 		if (!rights.isRead() && !credentialDao.isAdmin(userId) && !portfolioDao.isPublic(pid)
@@ -2178,53 +2221,50 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 			// Not null, not empty
 			// When we have a set, subset, and code of selected item
 			/// Searching nodes subset where semtag is under semtag_parent. First filtering
-			// is with code_parent
-			if (StringUtils.isNotEmpty(parentSemtag) && StringUtils.isNotEmpty(parentCode)) {
-				/// Init temp data table
-				List<Node> nodesByPortfolio = nodeDao.getNodes(pid);
+			// is with parentNodeCode
+			if (StringUtils.isNotEmpty(parentSemtag) && StringUtils.isNotEmpty(parentNodeCode)) {
+				List<Node> nodes = nodeDao.getNodes(pid);
 
-				/// Find parent tag
-				final Map<Integer, Set<Node>> parentNodesByLevel = new HashMap<Integer, Set<Node>>();
-				Set<Node> parentNodes = new HashSet<Node>();
+				/// Init temp set and hashmap
+				final Map<Integer, Set<Node>> t_nodesByLevel = new HashMap<Integer, Set<Node>>();
+				Set<Node> t_nodes = new LinkedHashSet<Node>();
 
 				int found;
-				for (Node nodeByPortfolio : nodesByPortfolio) {
-					if (StringUtils.equals(nodeByPortfolio.getCode(), parentCode)
-							&& (found = StringUtils.indexOf(nodeByPortfolio.getSemantictag(), parentSemtag)) != -1) {
-						parentNodes.add(nodeByPortfolio);
+				/// Find parent tag
+				for (Node node : nodes) {
+					if (StringUtils.equals(node.getCode(), parentNodeCode)
+							&& (found = StringUtils.indexOf(node.getSemantictag(), parentSemtag)) != -1) {
+						t_nodes.add(node);
+						break;
 					}
 				}
-				parentNodesByLevel.put(0, parentNodes);
+				t_nodesByLevel.put(0, t_nodes);
 
 				try {
 					int level = 0;
 					boolean added = true;
 
 					while (added && (cutoff == null ? true : level < cutoff)) {
-						parentNodes = new HashSet<Node>();
-						for (Node nodeByPortfolio : nodesByPortfolio) {
-							for (Node parentNodeByLevel : parentNodesByLevel.get(level)) {
-								if (nodeByPortfolio.getParentNode().getId().equals(parentNodeByLevel.getId())) {
-									parentNodes.add(nodeByPortfolio);
+						t_nodes = new HashSet<Node>();
+						for (Node node : nodes) {
+							for (Node t_node : t_nodesByLevel.get(level)) {
+								if (node.getParentNode() != null
+										&& t_node.getId().equals(node.getParentNode().getId())) {
+									t_nodes.add(node);
 									break;
 								}
 							}
 						}
-						parentNodesByLevel.put(level + 1, parentNodes);
-						added = CollectionUtils.isNotEmpty(parentNodes); // On s'arrete quand rien n'a ete ajoute
-						level = level + 1; // Prochaine etape
-					}
-
-					for (Set<Node> tmpSet : parentNodesByLevel.values()) {
-						parentNodes.addAll(tmpSet);
+						t_nodesByLevel.put(level + 1, t_nodes);
+						added = CollectionUtils.isNotEmpty(t_nodes); // On s'arrete quand rien n'a été ajouté.
+						level = level + 1; // Prochaine étape
 					}
 
 					Set<Node> semtagSet = new HashSet<Node>();
-					for (Node node : nodesByPortfolio) {
-						for (Node parentNode : parentNodes) {
-							if (node.getId().equals(parentNode.getId())
-									&& (found = StringUtils.indexOf(node.getSemantictag(), semtag)) != -1) {
-								semtagSet.add(node);
+					for (Set<Node> nodeSet : t_nodesByLevel.values()) {
+						for (Node t_node : nodeSet) {
+							if ((found = StringUtils.indexOf(t_node.getSemantictag(), childSemtag)) != -1) {
+								semtagSet.add(t_node);
 							}
 						}
 					}
@@ -2260,25 +2300,13 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 				Portfolio portfolio = portfolioDao.getPortfolio(pid);
 				if (portfolio != null) {
 					List<Node> nodes = null;
-
-					try {
-						nodes = nodeDao.getNodesBySemanticTag(pid.toString(), semtag);
-					} catch (Exception ex) {
-						ex.printStackTrace();
-						return null;
-					}
-
+					nodes = nodeDao.getNodesBySemanticTag(pid, childSemtag);
 					result += "<nodes>";
-
-					for (Node res1 : nodes) {
+					for (Node node : nodes) {
 						result += "<node ";
-						result += DomUtils.getXmlAttributeOutput("id", res1.getId().toString());
+						result += DomUtils.getXmlAttributeOutput("id", node.getId().toString());
 						result += ">";
-						if (StringUtils.equalsIgnoreCase(res1.getAsmType(), "asmContext")) {
-							result += resourceManager.getResource(res1.getId());
-						} else {
-							result += resourceManager.getResource(res1.getId());
-						}
+						result += resourceManager.getResource(node.getId());
 						result += "</node>";
 					}
 					result += "</nodes>";
@@ -2325,66 +2353,51 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 	private List<Pair<Node, GroupRights>> getNodePerLevel(String nodeUuid, Long userId, Long rrgId, Integer cutoff)
 			throws DoesNotExistException, Exception {
 
-		long t_start = System.currentTimeMillis();
-		long t_tempTable = System.currentTimeMillis();
-
 		Node n = nodeDao.findById(UUID.fromString(nodeUuid));
 
-		/// Portfolio id, needed later !
-		UUID portfolioid = n.getPortfolio().getId();
-		List<Node> t_nodes = nodeDao.getNodes(portfolioid);
-		long t_dataTable = System.currentTimeMillis();
+		/// Portfolio id, nécessaire plus tard !
+		String portfolioId = n.getPortfolio().getId().toString();
+		List<Node> t_nodes = nodeDao.getNodes(portfolioId);
 
 		/// Initialise la descente des noeuds, si il y a un partage on partira de le
-		/// sinon du noeud par defaut
+		/// sinon du noeud par défaut
 		/// FIXME: There will be something with shared_node_uuid
 
-		Map<Integer, Set<UUID>> t_map_parentid = new HashMap<Integer, Set<UUID>>();
-		Set<UUID> t_set_parentid = new HashSet<UUID>();
+		Map<Integer, Set<String>> t_map_parentid = new HashMap<Integer, Set<String>>();
+		Set<String> t_set_parentid = new LinkedHashSet<String>();
 
-		for (Node t_node : t_nodes) {
-			if (t_node.getId().toString().equals(nodeUuid)) {
-				t_set_parentid.add(t_node.getId());
-				break;
-			}
-		}
-
+		t_set_parentid.add(n.getId().toString());
 		t_map_parentid.put(0, t_set_parentid);
-		long t_initNode = System.currentTimeMillis();
 
 		/// On boucle, avec les shared_node si ils existent.
-		/// FIXME: Possiblite de boucle infini
+		/// FIXME: Possibilité de boucle infini
 		int level = 0;
 		boolean added = true;
 
-		long t_initLoop = System.currentTimeMillis();
-
-		Set<UUID> t_struc_parentid_2 = null;
+		Set<String> t_struc_parentid_2 = null;
 		while (added && (cutoff == null ? true : level < cutoff)) {
-			t_struc_parentid_2 = new HashSet<UUID>();
+			t_struc_parentid_2 = new HashSet<String>();
 			for (Node t_node : t_nodes) {
-				for (UUID t_parent_node : t_map_parentid.get(level)) {
-					if (t_node.getPortfolio().getId().equals(portfolioid)
-							&& t_node.getParentNode().getId().equals(t_parent_node)) {
-						t_struc_parentid_2.add(t_node.getId());
+				for (String t_parent_node : t_map_parentid.get(level)) {
+					if (t_node.getParentNode() != null
+							&& t_node.getParentNode().getId().toString().equals(t_parent_node)) {
+						t_struc_parentid_2.add(t_node.getId().toString());
 						break;
 					}
 				}
 			}
 			t_map_parentid.put(level + 1, t_struc_parentid_2);
 			t_set_parentid.addAll(t_struc_parentid_2);
-			added = CollectionUtils.isNotEmpty(t_struc_parentid_2); // On s'arrete quand rien n'a ete ajoute
-			level = level + 1; // Prochaine etape
+			added = CollectionUtils.isNotEmpty(t_struc_parentid_2); // On s'arrete quand rien n'a été ajouté
+			level = level + 1; // Prochaine étape
 		}
 
-		long t_endLoop = System.currentTimeMillis();
-
-		Map<UUID, GroupRights> t_rights_22 = new HashMap<UUID, GroupRights>();
+		Map<String, GroupRights> t_rights_22 = new HashMap<String, GroupRights>();
 		GroupRights gr = null;
 		if (credentialDao.isDesigner(userId, nodeUuid) || credentialDao.isAdmin(userId)) {
-			for (UUID t_node_parent : t_set_parentid) {
+			for (String t_node_parent : t_set_parentid) {
 				gr = new GroupRights();
-				gr.setId(new GroupRightsId(null, t_node_parent));
+				gr.setId(new GroupRightsId(null, UUID.fromString(t_node_parent)));
 				gr.setRead(true);
 				gr.setWrite(true);
 				gr.setDelete(true);
@@ -2394,9 +2407,9 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 			}
 		} else {
 			if (nodeDao.isPublic(nodeUuid)) {
-				for (UUID t_node_parent : t_set_parentid) {
+				for (String t_node_parent : t_set_parentid) {
 					gr = new GroupRights();
-					gr.setId(new GroupRightsId(null, t_node_parent));
+					gr.setId(new GroupRightsId(null, UUID.fromString(t_node_parent)));
 					gr.setRead(true);
 					gr.setWrite(false);
 					gr.setDelete(true);
@@ -2408,7 +2421,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 
 			// Aggregation des droits avec 'all', l'appartenance du groupe de l'utilisateur,
 			// et les droits propres a l'utilisateur
-			GroupRightInfo gri1 = groupRightInfoDao.getByPortfolioAndLabel(portfolioid, "all");
+			GroupRightInfo gri1 = groupRightInfoDao.getByPortfolioAndLabel(portfolioId, "all");
 			GroupUser gu = null;
 			Long grid3 = 0L;
 			gu = groupUserDao.getUniqueByUser(userId);
@@ -2419,65 +2432,45 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 				}
 			}
 
-			List<GroupRights> grList = groupRightsDao.getByPortfolioAndGridList(portfolioid, gri1.getId(), rrgId,
+			List<GroupRights> grList = groupRightsDao.getByPortfolioAndGridList(portfolioId, gri1.getId(), rrgId,
 					grid3);
-			for (UUID ts : t_set_parentid) {
+			for (String ts : t_set_parentid) {
 				for (GroupRights item : grList) {
-					if (item.getGroupRightsId().equals(ts)) {
-						if (t_rights_22.containsKey(item.getGroupRightsId())) {
-							GroupRights original = t_rights_22.get(item.getGroupRightsId());
+					if (item.getGroupRightsId().toString().equals(ts)) {
+						if (t_rights_22.containsKey(item.getGroupRightsId().toString())) {
+							GroupRights original = t_rights_22.get(item.getGroupRightsId().toString());
 							original.setRead(Boolean.logicalOr(item.isRead(), original.isRead()));
 							original.setWrite(Boolean.logicalOr(item.isWrite(), original.isWrite()));
 							original.setDelete(Boolean.logicalOr(item.isDelete(), original.isDelete()));
 							original.setSubmit(Boolean.logicalOr(item.isSubmit(), original.isSubmit()));
 							original.setAdd(Boolean.logicalOr(item.isAdd(), original.isAdd()));
 						} else {
-							t_rights_22.put(item.getGroupRightsId(), item);
+							t_rights_22.put(item.getGroupRightsId().toString(), item);
 						}
 					}
 				}
 			}
 		}
 
-		long t_allRights = System.currentTimeMillis();
-
-		List<Node> nodes = nodeDao.getNodes(t_set_parentid);
+		List<Node> nodes = nodeDao.getNodes(new ArrayList<>(t_set_parentid));
 		List<Pair<Node, GroupRights>> finalResults = new ArrayList<Pair<Node, GroupRights>>();
 
-		// Selectionne les donnees selon la filtration
+		// Sélectionne les données selon la filtration
 		for (Node node : nodes) {
-			if (t_rights_22.containsKey(node.getId())) { // Verification des droits
-				GroupRights rights = t_rights_22.get(node.getId());
+			if (t_rights_22.containsKey(node.getId().toString())) { // Verification des droits
+				GroupRights rights = t_rights_22.get(node.getId().toString());
 				if (rights.isRead()) { // On doit au moins avoir le droit de lecture
 					finalResults.add(Pair.of(node, rights));
 				}
 			}
 		}
 
-		long t_aggregate = System.currentTimeMillis();
-		long d_tempTable = t_tempTable - t_start;
-		long d_initData = t_dataTable - t_tempTable;
-		long d_initRecusion = t_initNode - t_dataTable;
-		long d_initLoop = t_initLoop - t_initNode;
-		long d_endLoop = t_endLoop - t_initLoop;
-		long d_fetchRights = t_allRights - t_endLoop;
-		long d_aggregateInfo = t_aggregate - t_allRights;
-
-		log.info("===== Get node per level ====");
-		log.info("Temp table creation: " + d_tempTable);
-		log.info("Init data: " + d_initData);
-		log.info("Init node recursion: " + d_initRecusion);
-		log.info("Init queries recursion: " + d_initLoop);
-		log.info("End loop: " + d_endLoop);
-		log.info("Add 'all' rights: " + d_fetchRights);
-		log.info("Aggregate info: " + d_aggregateInfo); //
-
 		return finalResults;
 
 	}
 
 	/**
-	 * Meme chose que postImportNode, mais on ne prend pas en compte le parsage des
+	 * Même chose que postImportNode, mais on ne prend pas en compte le parsage des
 	 * droits
 	 * 
 	 * @param mimeType
@@ -2500,10 +2493,10 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		String createdUuid = "erreur";
 
 		try {
-			UUID portfolioUUID = null;
+			String portfolioUUID = null;
 
 			if (srcuuid != null) {
-				// Check if user has right to read it
+				// Vérifier si l'utilisateur a le droit en lecture
 				if (!hasRight(userId, groupId, srcuuid, GroupRights.READ)) {
 					throw new GenericBusinessException("403 FORBIDDEN : no READ credential");
 				}
@@ -2529,7 +2522,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 				UUID portfolioUuid = nodeDao.getPortfolioIdFromNode(srcuuid);
 
 				// Récupération des noeuds du portfolio à copier depuis la base.
-				t_nodes = nodeDao.getNodes(portfolioUuid);
+				t_nodes = nodeDao.getNodes(portfolioUuid.toString());
 
 				baseUuid = srcuuid;
 			} else {
@@ -2567,17 +2560,17 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 			/// Contient les noeuds à copier.
 			final Set<Node> nodesToCopy = new LinkedHashSet<Node>();
 			/// Contient les uuid des noeuds à copier.
-			final Set<UUID> nodesUuidToCopy = new LinkedHashSet<UUID>();
+			final Set<String> nodesUuidToCopy = new LinkedHashSet<String>();
 
-			final Map<Integer, Set<UUID>> t_map_parentid = new HashMap<Integer, Set<UUID>>();
+			final Map<Integer, Set<String>> t_map_parentid = new HashMap<Integer, Set<String>>();
 
-			Set<UUID> t_set_parentid_2 = new LinkedHashSet<UUID>();
+			Set<String> t_set_parentid_2 = new LinkedHashSet<String>();
 			Set<Node> t_set_parent_2 = null;
 
 			for (Node t_node : t_nodes) {
 				if (t_node.getId().toString().equals(baseUuid)) {
 					t_node.setParentNode(destNode);
-					nodesUuidToCopy.add(t_node.getId());
+					nodesUuidToCopy.add(t_node.getId().toString());
 					nodesToCopy.add(t_node);
 					break;
 				}
@@ -2589,15 +2582,16 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 			int level = 0;
 			boolean added = true;
 
-			/// les tours de boucle -> toujours <= au nombre de noeud du portfolio.
+			/// les tours de boucle sont toujours <= au nombre de noeud du portfolio.
 			while (added) {
-				t_set_parentid_2 = new LinkedHashSet<UUID>();
+				t_set_parentid_2 = new LinkedHashSet<String>();
 				t_set_parent_2 = new LinkedHashSet<Node>();
 
 				for (Node t_node : t_nodes) {
-					for (UUID t_parent_id : t_map_parentid.get(level)) {
-						if (t_node.getParentNode().getId().equals(t_parent_id)) {
-							t_set_parentid_2.add(t_node.getId());
+					for (String t_parent_id : t_map_parentid.get(level)) {
+						if (t_node.getParentNode() != null
+								&& t_node.getParentNode().getId().toString().equals(t_parent_id)) {
+							t_set_parentid_2.add(t_node.getId().toString());
 							t_set_parent_2.add(t_node);
 							break;
 						}
@@ -2676,20 +2670,22 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 				tmp_entry = it.next();
 				tmp_original_node = tmp_entry.getKey();
 				tmp_copied_node = tmp_entry.getValue();
-				/// Assigner le nouveau parent
+				// Assigner le nouveau parent
 				if (tmp_original_node.getParentNode() != null) {
 					tmp_copied_node.setParentNode(nodes.get(tmp_original_node.getParentNode()));
 				}
-				/// Mise à jour de la liste des enfants
-				/// L'ordre détermine le rendu visuel final du xml
-				String[] children = StringUtils.split(tmp_original_node.getChildrenStr(), ",");
-				String[] childrenCopies = new String[children.length];
-				for (int i = 0; i < children.length; i++) {
-					searchedNode.setId(UUID.fromString(children[i]));
-					nodeCopy = nodes.get(searchedNode);
-					childrenCopies[i] = nodeCopy.getId().toString();
+				if (tmp_original_node.getChildrenStr() != null) {
+					// Mise à jour de la liste des enfants
+					// L'ordre détermine le rendu visuel final du XML
+					String[] children = StringUtils.split(tmp_original_node.getChildrenStr(), ",");
+					String[] childrenCopies = new String[children.length];
+					for (int i = 0; i < children.length; i++) {
+						searchedNode.setId(UUID.fromString(children[i]));
+						nodeCopy = nodes.get(searchedNode);
+						childrenCopies[i] = nodeCopy.getId().toString();
+					}
+					tmp_copied_node.setChildrenStr(StringUtils.join(childrenCopies, ","));
 				}
-				tmp_copied_node.setChildrenStr(StringUtils.join(childrenCopies, ","));
 				/// Lier le noeud copié au portfolio de destination
 				tmp_copied_node.setPortfolio(destPortfolio);
 				nodeDao.merge(tmp_copied_node);
@@ -2723,7 +2719,8 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 			nodeDao.merge(nodeCopy);
 
 			/// Ajout de l'enfant dans le noeud de destination
-			destNode.setChildrenStr(destNode.getChildrenStr() + "," + nodeCopy.getId().toString());
+			destNode.setChildrenStr((destNode.getChildrenStr() != null ? destNode.getChildrenStr() + "," : "")
+					+ nodeCopy.getId().toString());
 			nodeDao.merge(destNode);
 
 			Entry<ResourceTable, ResourceTable> tmp_res_entry = null;
@@ -2735,7 +2732,8 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 				tmp_res_entry = it.next();
 				tmp_original_resource = tmp_res_entry.getKey();
 				tmp_copied_resource = tmp_res_entry.getValue();
-				tmp_rights_list = groupRightsDao.getRightsByIdAndGroup(tmp_original_resource.getId(), groupId);
+				tmp_rights_list = groupRightsDao.getRightsByIdAndGroup(tmp_original_resource.getId().toString(),
+						groupId);
 				for (GroupRights tmp_rights : tmp_rights_list) {
 					tmp_groupRights = new GroupRights(tmp_rights);
 					tmp_groupRights.setGroupRightInfo(tmp_rights.getGroupRightInfo());
@@ -2754,21 +2752,21 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		return createdUuid;
 	}
 
-	private UUID checkCache(String code) throws Exception {
+	private String checkCache(String code) throws Exception {
 
-		UUID portfolioUuid = null;
+		String portfolioUuid = null;
 		boolean setCache = false;
 		Portfolio portfolio = portfolioDao.getPortfolioFromNodeCode(code);
 
 		// Le portfolio n'a pas été trouvé, pas besoin d'aller plus loin
 		if (portfolio != null) {
-			portfolioUuid = portfolio.getId();
-			/// Vérifier si nous n'avons pas déjà le portfolio en cache
+			portfolioUuid = portfolio.getId().toString();
+			// Vérifier si nous n'avons pas déjà le portfolio en cache
 			if (cachedNodes.get(portfolioUuid) != null) {
 				final List<Node> nodes = cachedNodes.get(portfolioUuid);
 				log.info("Portfolio présent dans le cache pour le code : " + code + " -> " + portfolioUuid);
 
-				/// Vérifier si le cache est toujours à jour.
+				// Vérifier si le cache est toujours à jour.
 				if (CollectionUtils.isEmpty(nodes) || portfolio.getModifDate() == null
 						|| !portfolio.getModifDate().equals(nodes.get(0).getModifDate())) {
 					// le cache est obsolète
@@ -2781,12 +2779,12 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 				setCache = true;
 			}
 
-			if (setCache) /// Le portfolio n'est pas/plus présent dans le cache, chargez-le
+			if (setCache) // Le portfolio n'est pas/plus présent dans le cache, chargez-le
 			{
 				log.info("Entrée manquante dans le cache pour le code: " + code);
 
-				/// Assignez la date du portfolio pour les noeuds en cache .. Utile pour
-				/// vérifier de la validité du cache.
+				// Assignez la date du portfolio pour les noeuds en cache .. Utile pour
+				// vérifier la validité du cache.
 				final List<Node> nodes = nodeDao.getNodes(portfolioUuid);
 				for (Node node : nodes) {
 					node.setModifDate(portfolio.getModifDate());
@@ -2811,7 +2809,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		String createdUuid = "erreur";
 
 		try {
-			UUID portfolioUUID = null;
+			String portfolioUUID = null;
 
 			if (srcuuid != null) {
 				// Vérifie si l'utilisateur a le droit d'y accéder.
@@ -2819,7 +2817,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 					throw new GenericBusinessException("403 FORBIDDEN : No READ credential");
 				}
 			} else {
-				/// Check/maj du cache
+				/// Vérification / mise à jour du cache
 				portfolioUUID = checkCache(code);
 
 				if (portfolioUUID == null) {
@@ -2840,7 +2838,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 				UUID portfolioUuid = nodeDao.getPortfolioIdFromNode(srcuuid);
 
 				// Récupération des noeuds du portfolio à copier depuis la base.
-				t_nodes = nodeDao.getNodes(portfolioUuid);
+				t_nodes = nodeDao.getNodes(portfolioUuid.toString());
 
 				baseUuid = srcuuid;
 			} else {
@@ -2878,17 +2876,17 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 			/// Contient les noeuds à copier.
 			final Set<Node> nodesToCopy = new LinkedHashSet<Node>();
 			/// Contient les uuid des noeuds à copier.
-			final Set<UUID> nodesUuidToCopy = new LinkedHashSet<UUID>();
+			final Set<String> nodesUuidToCopy = new LinkedHashSet<String>();
 
-			final Map<Integer, Set<UUID>> t_map_parentid = new HashMap<Integer, Set<UUID>>();
+			final Map<Integer, Set<String>> t_map_parentid = new HashMap<Integer, Set<String>>();
 
-			Set<UUID> t_set_parentid_2 = new LinkedHashSet<UUID>();
+			Set<String> t_set_parentid_2 = new LinkedHashSet<String>();
 			Set<Node> t_set_parent_2 = null;
 
 			for (Node t_node : t_nodes) {
 				if (t_node.getId().toString().equals(baseUuid)) {
 					t_node.setParentNode(destNode);
-					nodesUuidToCopy.add(t_node.getId());
+					nodesUuidToCopy.add(t_node.getId().toString());
 					nodesToCopy.add(t_node);
 					break;
 				}
@@ -2900,15 +2898,16 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 			int level = 0;
 			boolean added = true;
 
-			/// les tours de boucle : toujours <= au nombre de noeud du portfolio.
+			/// les tours de boucle sont toujours <= au nombre de noeud du portfolio.
 			while (added) {
-				t_set_parentid_2 = new LinkedHashSet<UUID>();
+				t_set_parentid_2 = new LinkedHashSet<String>();
 				t_set_parent_2 = new LinkedHashSet<Node>();
 
 				for (Node t_node : t_nodes) {
-					for (UUID t_parent_id : t_map_parentid.get(level)) {
-						if (t_node.getParentNode().getId().equals(t_parent_id)) {
-							t_set_parentid_2.add(t_node.getId());
+					for (String t_parent_id : t_map_parentid.get(level)) {
+						if (t_node.getParentNode() != null
+								&& t_node.getParentNode().getId().toString().equals(t_parent_id)) {
+							t_set_parentid_2.add(t_node.getId().toString());
 							t_set_parent_2.add(t_node);
 							break;
 						}
@@ -2984,17 +2983,19 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 				if (tmp_original_node.getParentNode() != null) {
 					tmp_copied_node.setParentNode(nodes.get(tmp_original_node.getParentNode()));
 				}
-				/// Mise à jour de la liste des enfants
-				/// L'ordre détermine le rendu visuel final du xml
-				String[] children = StringUtils.split(tmp_original_node.getChildrenStr(), ",");
-				String[] childrenCopies = new String[children.length];
-				for (int i = 0; i < children.length; i++) {
-					searchedNode.setId(UUID.fromString(children[i]));
-					nodeCopy = nodes.get(searchedNode);
-					childrenCopies[i] = nodeCopy.getId().toString();
+				// Mise à jour de la liste des enfants
+				// L'ordre détermine le rendu visuel final du XML
+				if (tmp_original_node.getChildrenStr() != null) {
+					String[] children = StringUtils.split(tmp_original_node.getChildrenStr(), ",");
+					String[] childrenCopies = new String[children.length];
+					for (int i = 0; i < children.length; i++) {
+						searchedNode.setId(UUID.fromString(children[i]));
+						nodeCopy = nodes.get(searchedNode);
+						childrenCopies[i] = nodeCopy.getId().toString();
+					}
+					tmp_copied_node.setChildrenStr(StringUtils.join(childrenCopies, ","));
 				}
-				tmp_copied_node.setChildrenStr(StringUtils.join(childrenCopies, ","));
-				/// Lier le noeud copié au portfolio de destination
+				// Lier le noeud copié au portfolio de destination
 				tmp_copied_node.setPortfolio(destPortfolio);
 				nodeDao.merge(tmp_copied_node);
 
@@ -3009,17 +3010,17 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 			nodeDao.merge(nodeCopy);
 
 			/// Ajout de l'enfant dans le noeud de destination
-			destNode.setChildrenStr(destNode.getChildrenStr() + "," + nodeCopy.getId().toString());
+			destNode.setChildrenStr((destNode.getChildrenStr() != null ? destNode.getChildrenStr() + "," : "")
+					+ nodeCopy.getId().toString());
 			nodeDao.merge(destNode);
 
 			//////////////////////////////////
 			/// Copie des droits des noeuds ///
 			/////////////////////////////////
-
 			// Login
 			final String login = credentialDao.getLoginById(userId);
 
-			/// Copier les rôles actuels pour faciliter le référencement.
+			/// Copier les rôles actuel @Override pour faciliter le référencement.
 			final UUID tmpPortfolioUuid = nodeDao.getPortfolioIdFromNode(destUuid);
 
 			// Récupération des rôles dans la BDD.
@@ -3059,14 +3060,14 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 					if (matcher.find()) {
 						meta = meta.replaceAll(onlyuser, login);
 
-						/// Remplacer les métadonnées par le nom d'utilisateur actuel
+						// Remplacer les métadonnées par le nom d'utilisateur actuel
 						copy.setMetadataWad(meta);
 						nodeDao.merge(copy);
 
-						/// S'assurer qu'un groupe d'utilisateurs spécifique existe en base et y ajouter
-						/// l'utilisateur.
+						// S'assurer qu'un groupe d'utilisateurs spécifique existe en base et y ajouter
+						// l'utilisateur.
 						long ngid = getRoleByNode(1L, destUuid, login);
-						userManager.addUserToGroup(1L, userId, ngid);
+						securityManager.addUserToGroup(1L, userId, ngid);
 
 						/// Ensure entry is there in temp table, just need a skeleton info
 						t_groupRightInfo = new GroupRightInfo();
@@ -3079,18 +3080,18 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 					String nodeString = "<?xml version='1.0' encoding='UTF-8' standalone='no'?><transfer " + meta
 							+ "></transfer>";
 					try {
-						/// S'assurer que nous pouvons le parser correctement
+						// S'assurer que nous pouvons le parser correctement
 						DocumentBuilder documentBuilder;
 						DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
 						documentBuilder = documentBuilderFactory.newDocumentBuilder();
 						InputSource is = new InputSource(new StringReader(nodeString));
 						Document doc = documentBuilder.parse(is); // Transformer en un autre fichier.
 
-						/// Process attributes
+						// Process attributes
 						Element attribNode = doc.getDocumentElement();
 						NamedNodeMap attribMap = attribNode.getAttributes();
 
-						/// FIXME: à améliorer pour faciliter le changement des droits
+						// FIXME: à améliorer pour faciliter le changement des droits
 						String nodeRole;
 						org.w3c.dom.Node att = attribMap.getNamedItem("access");
 						att = attribMap.getNamedItem("seenoderoles");
@@ -3315,7 +3316,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 									String[] roles = menurolename.split(" ");
 									for (int i = 0; i < roles.length; ++i) {
 										// Ensure roles exists
-										securityManager.createRole(portfolioUUID, roles[i], 1L);
+										securityManager.addRole(portfolioUUID, roles[i], 1L);
 									}
 								}
 							}
@@ -3337,12 +3338,12 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 						if (notifyroles != null) {
 							/// Format pour l'instant: actionroles="sender:1,2;responsable:4"
 							StringTokenizer tokens = new StringTokenizer(notifyroles.getNodeValue(), " ");
-							String merge = "";
+							String notifyRoles = "";
 							if (tokens.hasMoreElements())
-								merge = tokens.nextElement().toString();
+								notifyRoles = tokens.nextElement().toString();
 							while (tokens.hasMoreElements())
-								merge += "," + tokens.nextElement().toString();
-							groupManager.postNotifyRoles(userId, portfolioUuid, uuid.toString(), merge);
+								notifyRoles += "," + tokens.nextElement().toString();
+							groupManager.changeNotifyRoles(userId, portfolioUuid, uuid.toString(), notifyRoles);
 						}
 
 					} catch (Exception e) {
@@ -3356,7 +3357,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 				}
 			} /// Fin de la gestion des droits
 
-			// On récupère le uuid crée
+			// On récupère le UUID crée
 			searchedNode.setId(UUID.fromString(baseUuid));
 			createdUuid = nodes.get(searchedNode).getId().toString();
 		} catch (Exception e) {
@@ -3364,6 +3365,83 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		}
 		return createdUuid;
 
+	}
+
+	@Override
+	@Transactional(isolation = Isolation.DEFAULT, propagation = Propagation.REQUIRES_NEW)
+	public void transferAnnotationTable(Connection con, Map<String, String> nodesIds) throws SQLException {
+		Annotation annotation = null;
+		ResultSet res = annotationDao.findAll("annotation", con);
+		while (res.next()) {
+			annotation = new Annotation();
+			annotation.setId(new AnnotationId(nodesIds.get(res.getString("nodeid")), res.getInt("rank")));
+			annotation.setText(res.getString("text"));
+			annotation.setCDate(res.getDate("c_date"));
+			annotation.setAUser(res.getString("a_user"));
+			annotation.setWadIdentifier(res.getString("wad_identifier"));
+			annotationDao.merge(annotation);
+		}
+	}
+
+	@Override
+	@Transactional(isolation = Isolation.DEFAULT, propagation = Propagation.REQUIRES_NEW)
+	public void removeAnnotations() {
+		annotationDao.removeAll();
+	}
+
+	@Override
+	@Transactional(isolation = Isolation.DEFAULT, propagation = Propagation.REQUIRES_NEW)
+	public void removeNodes() {
+		nodeDao.removeAll();
+
+	}
+
+	@Override
+	@Transactional(isolation = Isolation.DEFAULT, propagation = Propagation.REQUIRES_NEW)
+	public Map<String, String> transferNodeTable(Connection con, Map<String, String> rtIds, Map<String, String> portIds,
+			Map<Long, Long> userIds) throws SQLException {
+		ResultSet res = nodeDao.getMysqlNodes(con);
+		Map<String, String> nodeIds = new HashMap<>();
+		Node node = null;
+		while (res.next()) {
+			try {
+				node = new Node();
+				node.setChildrenStr(res.getString("node_children_uuid"));
+				node.setNodeOrder(res.getInt("node_order"));
+				if (StringUtils.isNotEmpty(res.getString("node_parent_uuid"))) {
+					node.setParentNode(new Node(UUID.fromString(res.getString("node_parent_uuid"))));
+				}
+				node.setMetadata(res.getString("metadata"));
+				node.setMetadataWad(res.getString("metadata_wad"));
+				node.setMetadataWad(res.getString("metadata_epm"));
+				if (StringUtils.isNotEmpty(res.getString("res_node_uuid")))
+					node.setResource(resourceTableDao.findById(rtIds.get(res.getString("res_node_uuid"))));
+				if (StringUtils.isNotEmpty(res.getString("res_res_node_uuid")))
+					node.setResResource(resourceTableDao.findById(rtIds.get(res.getString("res_res_node_uuid"))));
+				if (StringUtils.isNotEmpty(res.getString("res_context_node_uuid")))
+					node.setContextResource(
+							resourceTableDao.findById(rtIds.get(res.getString("res_context_node_uuid"))));
+				node.setSharedRes(res.getBoolean("shared_res"));
+				node.setSharedNode(res.getBoolean("shared_node"));
+				node.setAsmType(res.getString("asm_type"));
+				node.setXsiType(res.getString("xsi_type"));
+				node.setSemtag(res.getString("semtag"));
+				node.setLabel(res.getString("label"));
+				node.setCode(res.getString("code"));
+				node.setDescr(res.getString("descr"));
+				node.setFormat(res.getString("format"));
+				node.setModifUserId(userIds.get(res.getLong("modif_user_id")));
+				node.setModifDate(res.getDate("modif_date"));
+				if (StringUtils.isNotEmpty(res.getString("portfolio_id"))) {
+					node.setPortfolio(portfolioDao.findById(portIds.get(res.getString("portfolio_id"))));
+				}
+				node = nodeDao.merge(node);
+				nodeIds.put(res.getString("node_uuid"), node.getId().toString());
+			} catch (DoesNotExistException e) {
+				System.err.println("NodeManagerImpl.transferNodeTable()");
+			}
+		}
+		return nodeIds;
 	}
 
 }

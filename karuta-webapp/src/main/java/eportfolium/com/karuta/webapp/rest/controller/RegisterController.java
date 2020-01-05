@@ -57,7 +57,7 @@ public class RegisterController {
 		}
 
 		if (StringUtils.isNotEmpty(username)) {
-			boolean isRegistered = securityManager.createUser(username, mail, true, 1L);
+			boolean isRegistered = securityManager.addUser(username, mail, true, 1L);
 			if (isRegistered) {
 				logger.debug("Account creation successful");
 				hasChanged = true;
@@ -75,4 +75,5 @@ public class RegisterController {
 		}
 		return response;
 	}
+
 }

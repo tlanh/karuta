@@ -1,8 +1,9 @@
 package eportfolium.com.karuta.business.contract;
 
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import javax.xml.parsers.ParserConfigurationException;
 
@@ -18,19 +19,14 @@ public interface NodeManager {
 	String getNode(MimeType outMimeType, String nodeUuid, boolean withChildren, Long userId, Long groupId, String label,
 			Integer cutoff) throws DoesNotExistException, BusinessException, Exception;
 
-	String getParentNodes(String portfoliocode, String semtag, String semtag_parent, String code_parent)
-			throws Exception;
-
-	GroupRights getRights(Long userId, Long groupId, UUID nodeUuid);
+	String getChildNodes(String parentNodeCode, String parentSemtag, String semtag) throws Exception;
 
 	GroupRights getRights(Long userId, Long groupId, String nodeUuid);
-
-	void removeRights(long groupId, Long groupRightId, Long id) throws BusinessException;
 
 	void resetRights(List<Node> children) throws ParserConfigurationException;
 
 	/**
-	 * /** <node uuid=""> <role name=""> <right RD="" WR="" DL="" />
+	 * <node uuid=""> <role name=""> <right RD="" WR="" DL="" />
 	 * <action>reset</action> </role> </node> ====== <portfolio uuid="">
 	 * <xpath>XPATH</xpath> <role name=""> <right RD="" WR="" DL="" />
 	 * <action>reset</action> </role> </portfolio> ====== <portfoliogroup name="">
@@ -49,9 +45,9 @@ public interface NodeManager {
 
 	String changeRights(Long userId, String nodeUuid, String role, GroupRights rights) throws BusinessException;
 
-	UUID getPortfolioIdFromNode(Long userId, String nodeUuid) throws DoesNotExistException, BusinessException;
+	String getPortfolioIdFromNode(Long userId, String nodeUuid) throws DoesNotExistException, BusinessException;
 
-	StringBuffer getNodeXmlOutput(String nodeUuid, boolean withChildren, String withChildrenOfXsiType, Long userId,
+	String getNodeXmlOutput(String nodeUuid, boolean withChildren, String withChildrenOfXsiType, Long userId,
 			Long groupId, String label, boolean checkSecurity);
 
 	String getNodeBySemanticTag(MimeType textXml, String portfolioUuid, String semantictag, Long userId, Long groupId)
@@ -80,34 +76,35 @@ public interface NodeManager {
 	 * @return
 	 * @throws BusinessException
 	 */
-	String writeNode(org.w3c.dom.Node node, String portfolioUuid, UUID portfolioModelId, Long userId, int ordrer,
+	String writeNode(org.w3c.dom.Node node, String portfolioUuid, String portfolioModelId, Long userId, int ordrer,
 			String forcedUuid, String forcedUuidParent, boolean sharedResParent, boolean sharedNodeResParent,
 			boolean rewriteId, Map<String, String> resolve, boolean parseRights) throws BusinessException;
 
 	boolean isCodeExist(String code, String uuid);
 
-	String executeMacroOnNode(long userId, String nodeUuid, String macroName);
+	String executeMacroOnNode(long userId, String nodeUuid, String macroName) throws BusinessException;
 
-	String getNodeMetadataWad(MimeType mimeType, String nodeUuid, boolean b, Long userId, Long groupId, String label)
+	String getNodeMetadataWad(MimeType mimeType, String nodeUuid, Long userId, Long groupId)
 			throws DoesNotExistException, BusinessException;
 
-	Integer changeNode(MimeType inMimeType, String nodeUuid, String in, Long userId, Long groupId) throws Exception;
+	Integer changeNode(MimeType inMimeType, String nodeUuid, String xmlNode, Long userId, Long groupId)
+			throws Exception;
 
-	int deleteNode(String nodeUuid, Long id, long groupId);
+	void removeNode(String nodeUuid, Long userId, long groupId) throws BusinessException;
 
 	long getRoleByNode(Long userId, String nodeUuid, String role) throws BusinessException;
 
-	String changeNodeMetadataWad(MimeType mimeType, String nodeUuid, String xmlNode, Long userId, Long groupId)
+	String changeNodeMetadataWad(MimeType mimeType, String nodeUuid, String xmlMetawad, Long userId, Long groupId)
 			throws Exception;
 
 	boolean changeParentNode(Long userid, String uuid, String uuidParent) throws BusinessException;
 
-	Long moveNodeUp(Long id, String nodeId) throws BusinessException;
+	Long moveNodeUp(String nodeUuid) throws BusinessException;
 
-	String addNodeFromModelBySemanticTag(MimeType inMimeType, String parentNodeUuid, String semanticTag, Long userId,
+	String addNodeFromModelBySemanticTag(MimeType inMimeType, String nodeUuid, String semanticTag, Long userId,
 			Long groupId) throws Exception;
 
-	String changeNodeMetadataEpm(MimeType mimeType, String nodeUuid, String xmlNode, Long id, long groupId)
+	String changeNodeMetadataEpm(MimeType mimeType, String nodeUuid, String xmlMetadataEpm, Long id, long groupId)
 			throws Exception;
 
 	String changeNodeMetadata(MimeType mimeType, String nodeUuid, String xmlNode, Long id, long groupId)
@@ -119,14 +116,14 @@ public interface NodeManager {
 	String changeNodeResource(MimeType mimeType, String nodeUuid, String xmlNode, Long id, Long groupId)
 			throws BusinessException, Exception;
 
-	String addNode(MimeType inMimeType, String parentNodeUuid, String in, Long userId, Long groupId, boolean forcedUuid)
-			throws Exception;
+	String addNode(MimeType inMimeType, String parentNodeUuid, String xmlNode, Long userId, Long groupId,
+			boolean forcedUuid) throws Exception;
 
 	String getNodeWithXSL(MimeType textXml, String nodeUuid, String xslFile, String parameters, Long id, Long groupId)
 			throws BusinessException, Exception;
 
-	String getNodes(MimeType mimeType, String portfoliocode, String semtag, Long id, long groupId, String semtag_parent,
-			String code_parent, Integer cutoff) throws BusinessException;
+	String getNodes(MimeType mimeType, String rootNodeCode, String childSemtag, Long userId, Long groupId,
+			String parentSemtag, String parentNodeCode, Integer cutoff) throws BusinessException;
 
 	String executeAction(Long userId, String nodeUuid, String action, String role);
 
@@ -135,5 +132,14 @@ public interface NodeManager {
 
 	String importNode(MimeType mimeType, String parentId, String semtag, String code, String srcuuid, Long id,
 			long groupId) throws BusinessException, Exception;
+
+	void transferAnnotationTable(Connection con, Map<String, String> nodesIds) throws SQLException;
+
+	void removeAnnotations();
+
+	void removeNodes();
+
+	Map<String, String> transferNodeTable(Connection con, Map<String, String> rtIds, Map<String, String> portIds,
+			Map<Long, Long> userIds) throws SQLException;
 
 }

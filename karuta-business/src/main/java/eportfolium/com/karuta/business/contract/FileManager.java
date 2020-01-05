@@ -3,6 +3,8 @@ package eportfolium.com.karuta.business.contract;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.SQLException;
 
 public interface FileManager {
 
@@ -17,5 +19,9 @@ public interface FileManager {
 	String[] findFiles(String directoryPath, String id);
 
 	String unzip(String zipFile, String destinationFolder) throws FileNotFoundException, IOException;
+
+	void transferDataTable(Connection con) throws SQLException;
+
+	void removeData();
 
 }

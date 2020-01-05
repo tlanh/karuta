@@ -1,6 +1,8 @@
 package eportfolium.com.karuta.consumer.contract.dao;
 
 import java.io.Serializable;
+import java.sql.Connection;
+import java.sql.ResultSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -18,73 +20,47 @@ public interface PortfolioDao {
 
 	void removeById(Serializable id) throws DoesNotExistException;
 
+	List<Portfolio> findAll();
+
 	Portfolio merge(Portfolio detachedInstance);
 
 	Portfolio findById(Serializable id) throws DoesNotExistException;
-
-	Portfolio getPortfolio(UUID portfolioUuid);
 
 	Portfolio getPortfolio(String portfolioUuid);
 
 	List<Portfolio> getPortfolios(Long userId, Long substid, Boolean portfolioActive);
 
-	Portfolio getPortfolioFromNodeCode(String portfolioCode);
+	Portfolio getPortfolioFromNodeCode(String nodeCode);
 
-	UUID getPortfolioUuidFromNodeCode(String portfolioCode);
-
-	UUID getPortfolioModelUuid(UUID portfolioUuid);
+	String getPortfolioUuidFromNodeCode(String nodeCode);
 
 	UUID getPortfolioModelUuid(String portfolioUuid);
 
 	Long getPortfolioUserId(String portfolioUuid);
 
-	Node getPortfolioRootNode(UUID portfolioUuid);
-
 	Node getPortfolioRootNode(String portfolioUuid);
-
-	Portfolio getPortfolioFromNode(UUID nodeUuid);
 
 	Portfolio getPortfolioFromNode(String nodeUuid);
 
 	UUID getPortfolioUuidFromNode(String nodeUuid);
 
-	UUID getPortfolioUuidFromNode(UUID nodeUuid);
-
-//	String getPortfolioShared(int user, int userId) throws SQLException;
-
 	List<Map<String, Object>> getPortfolioShared(Long userId);
 
 	Long getOwner(String portfolioId);
 
-	Long getOwner(UUID portfolioId);
-
 	boolean isOwner(Long userId, String portfolioUuid);
-
-	boolean isOwner(Long userId, UUID portfolioUuid);
 
 	boolean changePortfolioOwner(String portfolioUuid, Long ownerId);
 
-	boolean changePortfolioOwner(UUID portfolioUuid, Long ownerId);
-
-	Portfolio add(String rootNodeUuid, UUID modelId, Long userId, Portfolio porfolio) throws BusinessException;
+	Portfolio add(String rootNodeUuid, String modelId, Long userId, Portfolio porfolio) throws BusinessException;
 
 	boolean isPublic(String portfolioUuid);
 
-	boolean isPublic(UUID portfolioUuid);
-
-	Portfolio updatePortfolioConfiguration(String portfolioUuid, Boolean portfolioActive);
-
-	Portfolio updatePortfolioConfiguration(UUID portfolioUuid, Boolean portfolioActive);
-
-	int updatePortfolioModelId(UUID portfolioUuid, UUID portfolioModelId);
-
-	int updatePortfolioModelId(UUID portfolioUuid, String portfolioModelId);
+	Portfolio changePortfolioConfiguration(String portfolioUuid, Boolean portfolioActive);
 
 	int updatePortfolioModelId(String portfolioUuid, String portfolioModelId);
 
 	void updateTime(String portfolioUuid) throws DoesNotExistException;
-
-	void updateTime(UUID portfolioUuid) throws DoesNotExistException;
 
 	boolean updateTimeByNode(String nodeUuid);
 
@@ -97,13 +73,10 @@ public interface PortfolioDao {
 	 */
 	boolean hasSharedNodes(String portfolioUuid);
 
-	/**
-	 * 
-	 * Check if there's shared node in this portfolio
-	 * 
-	 * @param portfolioUuid
-	 * @return
-	 */
-	boolean hasSharedNodes(UUID portfolioUuid);
+	ResultSet getMysqlPortfolios(Connection con);
+
+	ResultSet getMysqlPortfolioGroupMembers(Connection con);
+
+	void removeAll();
 
 }

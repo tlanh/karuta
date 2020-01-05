@@ -1,10 +1,19 @@
 package eportfolium.com.karuta.business.impl;
 
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.MimeType;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
@@ -21,6 +30,8 @@ import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.model.exception.DoesNotExistException;
 import eportfolium.com.karuta.model.exception.GenericBusinessException;
 
+@Service
+@Transactional
 public class ResourceManagerImpl extends BaseManager implements ResourceManager {
 
 	@Autowired
@@ -39,7 +50,7 @@ public class ResourceManagerImpl extends BaseManager implements ResourceManager 
 			throw new GenericBusinessException("403 FORBIDDEN : No READ credential");
 		}
 
-		ResourceTable rt = resourceTableDao.getResourceByNodeParentUuid(nodeParentUuid);
+		ResourceTable rt = resourceTableDao.getResourceByParentNodeUuid(nodeParentUuid);
 
 		String result = "<asmResource id=\"" + rt.getId().toString() + "\" contextid=\"" + nodeParentUuid + "\"  >"
 				+ rt.getXsiType() + "</asmResource>";
@@ -124,20 +135,19 @@ public class ResourceManagerImpl extends BaseManager implements ResourceManager 
 		return returnValue;
 	}
 
-	public Integer changeResource(MimeType inMimeType, String nodeParentUuid, String in, Long userId, Long groupId)
-			throws BusinessException, Exception {
-
-		in = DomUtils.filterXmlResource(in);
+	public Integer changeResource(MimeType inMimeType, String nodeParentUuid, String xmlResource, Long userId,
+			Long groupId) throws BusinessException, Exception {
 
 		int retVal = -1;
-		ResourceTable data = resourceTableDao.getResourceByNodeParentUuid(nodeParentUuid);
-		String nodeUuid = data.getId().toString();
 
-		Document doc = DomUtils.xmlString2Document(in, new StringBuffer());
+		xmlResource = DomUtils.filterXmlResource(xmlResource);
+
+		ResourceTable rt = resourceTableDao.getResourceByParentNodeUuid(nodeParentUuid);
+		String nodeUuid = rt.getId().toString();
+
+		Document doc = DomUtils.xmlString2Document(xmlResource, new StringBuffer());
 		// Puis on le recrée
-		org.w3c.dom.Node node;
-
-		node = (doc.getElementsByTagName("asmResource")).item(0);
+		org.w3c.dom.Node node = (doc.getElementsByTagName("asmResource")).item(0);
 
 		if (!hasRight(userId, groupId, nodeParentUuid, GroupRights.WRITE))
 			throw new GenericBusinessException("403 FORBIDDEN : No WRITE credential");
@@ -165,12 +175,12 @@ public class ResourceManagerImpl extends BaseManager implements ResourceManager 
 		return "";
 	}
 
-	public void deleteResource(String resourceUuid, Long userId, Long groupId)
+	public void removeResource(String resourceUuid, Long userId, Long groupId)
 			throws DoesNotExistException, BusinessException {
 		if (!credentialDao.isAdmin(userId))
 			throw new GenericBusinessException("403 FORBIDDEN : No admin right");
 
-		if (getRights(userId, groupId, resourceUuid).isDelete()) {
+		if (hasRight(userId, groupId, resourceUuid, GroupRights.DELETE)) {
 			resourceTableDao.removeById(UUID.fromString(resourceUuid));
 		}
 	}
@@ -207,6 +217,40 @@ public class ResourceManagerImpl extends BaseManager implements ResourceManager 
 			resourceTableDao.updateResource(nodeUuid, content, userId);
 		}
 
+	}
+
+	@Override
+	@Transactional(isolation = Isolation.DEFAULT, propagation = Propagation.REQUIRES_NEW)
+	public Map<String, String> transferResourceTable(Connection con, Map<Long, Long> userIds) throws SQLException {
+		ResultSet res = resourceTableDao.getMysqlResources(con);
+		ResourceTable rt = null;
+		Map<String, String> resourceIds = new HashMap<String, String>();
+
+		try {
+			while (res.next()) {
+				rt = new ResourceTable();
+				rt.setXsiType(res.getString("xsi_type"));
+				rt.setContent(res.getString("content"));
+				try {
+					rt.setCredential(credentialDao.findById(userIds.get(res.getLong("user_id"))));
+				} catch (DoesNotExistException e) {
+					e.printStackTrace();
+				}
+				rt.setModifUserId(userIds.get(res.getLong("modif_user_id")));
+				rt.setModifDate(res.getDate("modif_date"));
+				rt = resourceTableDao.merge(rt);
+				resourceIds.put(res.getString("node_uuid"), rt.getId().toString());
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return resourceIds;
+	}
+
+	@Override
+	@Transactional(isolation = Isolation.DEFAULT, propagation = Propagation.REQUIRES_NEW)
+	public void removeResources() {
+		resourceTableDao.removeAll();
 	}
 
 }

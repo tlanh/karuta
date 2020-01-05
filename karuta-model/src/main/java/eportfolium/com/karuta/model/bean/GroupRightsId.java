@@ -17,9 +17,9 @@ public class GroupRightsId implements Serializable {
 	private static final long serialVersionUID = 7042573400581202433L;
 
 	private GroupRightInfo groupRightInfo;
+
 	// Association with Node entity ?
 	private UUID id;
-	
 
 	public GroupRightsId() {
 	}
@@ -38,7 +38,7 @@ public class GroupRightsId implements Serializable {
 		this.groupRightInfo = groupRightInfo;
 	}
 
-	@Column(name = "id", nullable = false)
+	@Column(name = "id", nullable = false, columnDefinition = "BINARY(16)")
 	public UUID getId() {
 		return this.id;
 	}

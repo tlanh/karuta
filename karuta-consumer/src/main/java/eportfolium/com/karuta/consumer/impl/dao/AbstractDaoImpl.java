@@ -1,6 +1,11 @@
 package eportfolium.com.karuta.consumer.impl.dao;
 
 import java.io.Serializable;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.Iterator;
 import java.util.List;
 
 import javax.persistence.EntityManager;
@@ -19,10 +24,22 @@ public abstract class AbstractDaoImpl<T extends Serializable> {
 	private Class<T> cls;
 
 	@PersistenceContext
-	private EntityManager entityManager;
+	protected EntityManager em;
 
 	public final void setCls(final Class<T> classToSet) {
 		this.cls = classToSet;
+	}
+
+	@SuppressWarnings("unchecked")
+	public List<T> findAll() {
+		return em.createQuery("from " + cls.getName()).getResultList();
+	}
+
+	public void removeAll() {
+		List<T> l = findAll();
+		for (Iterator<T> it = l.iterator(); it.hasNext();) {
+			em.remove(it.next());
+		}
 	}
 
 	/**
@@ -41,7 +58,7 @@ public abstract class AbstractDaoImpl<T extends Serializable> {
 		}
 
 		try {
-			T obj = entityManager.find(cls, id);
+			T obj = em.find(cls, id);
 
 			if (obj == null) {
 				throw new DoesNotExistException(cls, id);
@@ -59,11 +76,6 @@ public abstract class AbstractDaoImpl<T extends Serializable> {
 		}
 	}
 
-	@SuppressWarnings("unchecked")
-	public List<T> findAll() {
-		return entityManager.createQuery("from " + cls.getName()).getResultList();
-	}
-
 	/**
 	 * Méthode de création
 	 * 
@@ -73,7 +85,7 @@ public abstract class AbstractDaoImpl<T extends Serializable> {
 	public void persist(final T entity) {
 		log.debug("persisting " + cls.getName() + " instance");
 		try {
-			entityManager.persist(entity);
+			em.persist(entity);
 			log.debug("persist successful");
 		} catch (RuntimeException re) {
 			log.error("persist failed", re);
@@ -92,7 +104,7 @@ public abstract class AbstractDaoImpl<T extends Serializable> {
 	public T merge(final T entity) {
 		log.debug("merging " + cls.getName() + " instance");
 		try {
-			T result = entityManager.merge(entity);
+			T result = em.merge(entity);
 			log.debug("merge successful");
 			return result;
 		} catch (RuntimeException re) {
@@ -110,7 +122,7 @@ public abstract class AbstractDaoImpl<T extends Serializable> {
 	public void remove(final T entity) {
 		log.debug("removing " + cls.getName() + "  instance");
 		try {
-			entityManager.remove(entity);
+			em.remove(entity);
 			log.debug("remove successful");
 		} catch (RuntimeException re) {
 			log.error("remove failed", re);
@@ -128,6 +140,21 @@ public abstract class AbstractDaoImpl<T extends Serializable> {
 		T entity;
 		entity = findById(id);
 		remove(entity);
+	}
+
+	public ResultSet findAll(String table, Connection con) {
+		StringBuffer buf = new StringBuffer();
+		ResultSet rs = null;
+		try {
+			Statement stmt = con.createStatement();
+			buf.append("SELECT * FROM " + table);
+			stmt.execute(buf.toString());
+			rs = stmt.getResultSet();
+
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return rs;
 	}
 
 }

@@ -1,13 +1,11 @@
 package eportfolium.com.karuta.consumer.contract.dao;
 
 import java.io.Serializable;
-import java.sql.SQLException;
+import java.sql.Connection;
+import java.sql.ResultSet;
 import java.util.List;
-import java.util.UUID;
 
 import eportfolium.com.karuta.model.bean.Credential;
-import eportfolium.com.karuta.model.bean.CredentialGroupMembers;
-import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.model.exception.DoesNotExistException;
 
 /**
@@ -17,7 +15,13 @@ import eportfolium.com.karuta.model.exception.DoesNotExistException;
  *         </p>
  *
  */
+/**
+ * @author mlengagne
+ *
+ */
 public interface CredentialDao {
+
+	List<Credential> findAll();
 
 	void persist(Credential transientInstance);
 
@@ -92,17 +96,17 @@ public interface CredentialDao {
 	 */
 	Credential getByEmail(String email, String passwd);
 
-	List<CredentialGroupMembers> getUsersByUserGroup(Long userGroupId);
-
 	Credential getUser(Long userId);
+
+	List<Credential> getUsers(String username, String firstname, String lastname);
 
 	Credential getActiveByUserId(Long userID);
 
 	String getUserUid(String login);
 
-	Long getUserId(String username);
+	Long getUserId(String userLogin);
 
-	Long getUserId(String username, String email);
+	Long getUserId(String userLogin, String email);
 
 	Long getPublicUid();
 
@@ -110,48 +114,30 @@ public interface CredentialDao {
 
 	int updateCredentialToken(Long userId, String token);
 
-	boolean isAdmin(String uid);
-
-	boolean isAdmin(Long uid);
-
-	boolean isDesigner(Long userId, String nodeId);
-
-	boolean isDesigner(Long userId, UUID nodeId);
+	boolean isAdmin(Long userId);
 
 	boolean isCreator(Long userId);
-	
-	boolean isUserMemberOfRole(Long userId, Long roleId);
-	
+
+	boolean userHasRole(Long userId, Long roleId);
+
 	String getEmailByLogin(String login);
 
 	String getLoginById(Long userId);
-	
-	// ----------------------------------------------------------------------
 
-	String[] postCredentialFromXml(Integer userId, String username, String password, String substitute)
-			throws BusinessException;
+	/**
+	 * Requête permettant de récupérer toutes les informations dans la table
+	 * credential pour un utilisateur particulier.
+	 * 
+	 * @param userId id de l'utilisateur.
+	 * @return
+	 */
+	Credential getUserInfos(Long userId);
 
-	String getUserUidByTokenAndLogin(String login, String token) throws Exception;
+	ResultSet getMysqlUsers(Connection con, String username, String firstname, String lastname);
 
-	int deleteCredential(int userId);
+	ResultSet findAll(String table, Connection con);
 
-	List<Credential> getUsers(Long userId, String username, String firstname, String lastname);
+	void removeAll();
 
-	String getListUsers(Long userId, String username, String firstname, String lastname);
-
-	Credential getInfUser(Long userId);
-
-	String getUserGroupByPortfolio(String portfolioUuid, int userId);
-
-	Object putUser(int userId, String oAuthToken, String oAuthSecret) throws Exception;
-
-	Object postUser(String xmluser, int userId) throws SQLException, Exception;
-
-	Object deleteUser(int userid, int userId1);
-
-	int deleteUsers(Integer userId, Integer userid2);
-
-
-	
-
+	boolean isDesigner(Long userId, String nodeId);
 }

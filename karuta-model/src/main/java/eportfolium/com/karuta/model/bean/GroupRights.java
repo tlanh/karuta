@@ -6,12 +6,11 @@ import java.util.UUID;
 
 import javax.persistence.AssociationOverride;
 import javax.persistence.AssociationOverrides;
-import javax.persistence.AttributeOverride;
-import javax.persistence.AttributeOverrides;
 import javax.persistence.Column;
 import javax.persistence.EmbeddedId;
 import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
+import javax.persistence.Lob;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
@@ -79,19 +78,36 @@ public class GroupRights implements Serializable {
 
 	public GroupRights(GroupRights rights) {
 		this.id = new GroupRightsId();
-		this.read = rights.read;
-		this.write = rights.write;
-		this.delete = rights.delete;
-		this.submit = rights.submit;
-		this.add = rights.add;
-		this.typesId = rights.typesId;
-		this.rulesId = rights.rulesId;
+		this.read = rights.isRead();
+		this.write = rights.isWrite();
+		this.delete = rights.isDelete();
+		this.submit = rights.isSubmit();
+		this.add = rights.isAdd();
+		this.typesId = rights.getTypesId();
+		this.rulesId = rights.getRulesId();
 	}
 
 	@EmbeddedId
-	@AttributeOverrides({ @AttributeOverride(name = "id", column = @Column(name = "id", nullable = false)) })
 	public GroupRightsId getId() {
 		return this.id;
+	}
+
+	@Transient
+	public GroupRightInfo getGroupRightInfo() {
+		return getId().getGroupRightInfo();
+	}
+
+	public void setGroupRightInfo(GroupRightInfo groupRightInfo) {
+		getId().setGroupRightInfo(groupRightInfo);
+	}
+
+	@Transient
+	public UUID getGroupRightsId() {
+		return getId().getId();
+	}
+
+	public void setGroupRightsId(UUID id) {
+		getId().setId(id);
 	}
 
 	public void setId(GroupRightsId id) {
@@ -143,7 +159,8 @@ public class GroupRights implements Serializable {
 		this.add = add;
 	}
 
-	@Column(name = "types_id", length = 65535)
+	@Lob
+	@Column(name = "types_id")
 	public String getTypesId() {
 		return this.typesId;
 	}
@@ -152,7 +169,8 @@ public class GroupRights implements Serializable {
 		this.typesId = typesId;
 	}
 
-	@Column(name = "rules_id", length = 65535)
+	@Lob
+	@Column(name = "rules_id")
 	public String getRulesId() {
 		return this.rulesId;
 	}
@@ -161,31 +179,14 @@ public class GroupRights implements Serializable {
 		this.rulesId = rulesId;
 	}
 
-	@Column(name = "notify_roles", length = 65535)
+	@Lob
+	@Column(name = "notify_roles")
 	public String getNotifyRoles() {
 		return this.notifyRoles;
 	}
 
 	public void setNotifyRoles(String notifyRoles) {
 		this.notifyRoles = notifyRoles;
-	}
-
-	@Transient
-	public GroupRightInfo getGroupRightInfo() {
-		return getId().getGroupRightInfo();
-	}
-
-	public void setGroupRightInfo(GroupRightInfo groupRightInfo) {
-		getId().setGroupRightInfo(groupRightInfo);
-	}
-
-	@Transient
-	public UUID getGroupRightsId() {
-		return getId().getId();
-	}
-
-	public void setGroupRightsId(UUID id) {
-		getId().setId(id);
 	}
 
 	@Override

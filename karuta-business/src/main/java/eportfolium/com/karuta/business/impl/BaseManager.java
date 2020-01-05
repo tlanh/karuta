@@ -20,7 +20,9 @@ import org.xml.sax.SAXException;
 import eportfolium.com.karuta.consumer.contract.dao.CredentialDao;
 import eportfolium.com.karuta.consumer.contract.dao.GroupRightsDao;
 import eportfolium.com.karuta.consumer.contract.dao.NodeDao;
+import eportfolium.com.karuta.model.bean.GroupRightInfo;
 import eportfolium.com.karuta.model.bean.GroupRights;
+import eportfolium.com.karuta.model.bean.GroupRightsId;
 import eportfolium.com.karuta.model.bean.Node;
 import eportfolium.com.karuta.model.bean.ResourceTable;
 import eportfolium.com.karuta.util.PhpUtil;
@@ -47,24 +49,15 @@ public abstract class BaseManager {
 	 * test pour l'affichage des différentes méthodes de Node
 	 */
 	public GroupRights getRights(Long userId, Long groupId, String nodeUuid) {
-		return getRights(userId, groupId, UUID.fromString(nodeUuid));
-	}
 
-	/**
-	 * test pour l'affichage des différentes méthodes de Node
-	 */
-	public GroupRights getRights(Long userId, Long groupId, UUID nodeUuid) {
-
-		// Par defaut accès à rien
-		GroupRights rights = new GroupRights();
+		GroupRights rights = null;
 
 		if (credentialDao.isAdmin(userId)) {
-			rights = new GroupRights(true, true, true, true);
+			rights = new GroupRights(new GroupRightsId(new GroupRightInfo(), null), true, true, true, true, false);
 		} else if (credentialDao.isDesigner(userId, nodeUuid)) /// Droits via le partage totale (obsolete) ou si c'est
 		{
-			rights = new GroupRights(true, true, true, true);
+			rights = new GroupRights(new GroupRightsId(new GroupRightInfo(), null), true, true, true, true, false);
 		} else {
-
 			if (PhpUtil.empty(groupId)) {
 				rights = groupRightsDao.getRightsByIdAndUser(nodeUuid, userId);
 			}
@@ -73,13 +66,18 @@ public abstract class BaseManager {
 			rights = groupRightsDao.getSpecificRightsForUser(nodeUuid, userId);
 			rights = groupRightsDao.getPublicRightsByGroupId(nodeUuid, groupId);
 
-		} // fin else
+		}
 
-		/// Public rights (last chance for rights)
+		// Si null alors par défaut défaut accès à rien
+		if (rights == null) {
+			rights = new GroupRights();
+			rights.setId(new GroupRightsId(new GroupRightInfo(), null));
+		}
+
+		// Dernière chance pour les droits avec les droits publics.
 		if (nodeDao.isPublic(nodeUuid)) {
 			rights.setRead(true);
 		}
-
 		return rights;
 	}
 
@@ -100,18 +98,6 @@ public abstract class BaseManager {
 	protected void processQuery(List<Pair<Node, GroupRights>> nodes, Map<String, Object[]> resolve,
 			Map<String, t_tree> entries, Document document, DocumentBuilder documentBuilder, String role)
 			throws UnsupportedEncodingException, DOMException, SQLException, SAXException, IOException {
-		long t_01 = 0;
-		long t_02 = 0;
-		long t_03 = 0;
-		long t_04 = 0;
-		long t_05 = 0;
-		long t_06 = 0;
-
-		long totalConstruct = 0;
-		long totalAggregate = 0;
-		long totalParse = 0;
-		long totalAdopt = 0;
-		long totalReconstruct = 0;
 
 		StringBuilder data = new StringBuilder(256);
 		Node node = null;
@@ -123,10 +109,12 @@ public abstract class BaseManager {
 				gr = pair.getRight();
 
 				data.setLength(0);
-				t_01 = System.currentTimeMillis();
-				UUID nodeUuid = node.getId();
-				if (nodeUuid == null)
+				final UUID nodeUuidObj = node.getId();
+				String nodeUuid = null;
+				if (nodeUuidObj == null)
 					continue; // Cas où on a des droits sur plus de noeuds qui ne sont pas dans le portfolio
+				else
+					nodeUuid = nodeUuidObj.toString();
 
 				String childsId = node.getChildrenStr();
 
@@ -137,7 +125,7 @@ public abstract class BaseManager {
 				data.append(" ");
 
 				String xsi_type = node.getXsiType();
-				if (null == xsi_type)
+				if (xsi_type == null)
 					xsi_type = "";
 
 				String readRight = gr.isRead() ? "Y" : "N";
@@ -242,15 +230,15 @@ public abstract class BaseManager {
 					}
 				}
 
-				ResourceTable res_node_uuid = node.getResource();
-				if (res_node_uuid != null && res_node_uuid.getId().toString().length() > 0) {
-					String nodeContent = res_node_uuid.getContent();
-					Date resModifdate = res_node_uuid.getModifDate();
+				ResourceTable res_node = node.getResource();
+				if (res_node != null && res_node.getId().toString().length() > 0) {
+					String nodeContent = res_node.getContent();
+					Date resModifdate = res_node.getModifDate();
 					if (nodeContent != null) {
 						data.append("<asmResource contextid=\"");
 						data.append(nodeUuid);
 						data.append("\" id=\"");
-						data.append(res_node_uuid);
+						data.append(res_node.getId().toString());
 						data.append("\" last_modif=\"");
 						data.append(resModifdate);
 						data.append("\" xsi_type=\"");
@@ -261,11 +249,7 @@ public abstract class BaseManager {
 					}
 				}
 
-				t_02 = System.currentTimeMillis();
-
 				String snode = data.toString();
-
-				t_03 = System.currentTimeMillis();
 
 				/// Prepare data to reconstruct tree
 				t_tree entry = new t_tree();
@@ -278,29 +262,9 @@ public abstract class BaseManager {
 				}
 				entries.put(nodeUuid.toString(), entry);
 
-				t_06 = System.currentTimeMillis();
-
-				totalConstruct += t_02 - t_01;
-				totalAggregate += t_03 - t_02;
-				totalParse += t_04 - t_03;
-				totalAdopt += t_05 - t_04;
-				totalReconstruct += t_06 - t_05; //
-
-				System.out.println("======= Loop =======");
-				System.out.println("Retrieve data: " + (t_02 - t_01));
-				System.out.println("Aggregate data: " + (t_03 - t_02));
-				System.out.println("Parse as XML: " + (t_04 - t_03));
-				System.out.println("Adopt XML: " + (t_05 - t_04));
-				System.out.println("Store for reconstruction: " + (t_06 - t_05)); //
 			}
 		}
 
-		System.out.println("======= Total =======");
-		System.out.println("Construct: " + totalConstruct);
-		System.out.println("Aggregate: " + totalAggregate);
-		System.out.println("Parsing: " + totalParse);
-		System.out.println("Adopt: " + totalAdopt);
-		System.out.println("Reconstruction: " + totalReconstruct); //
 	}
 
 	protected void reconstructTree(StringBuilder data, t_tree node, Map<String, t_tree> entries) {
@@ -309,7 +273,6 @@ public abstract class BaseManager {
 
 		String[] childsId = node.childString.split(",");
 		data.append(node.data);
-//		String data = node.data;
 
 		for (int i = 0; i < childsId.length; ++i) {
 			String cid = childsId[i];

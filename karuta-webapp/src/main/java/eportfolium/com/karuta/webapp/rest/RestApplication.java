@@ -6,6 +6,7 @@ import java.util.logging.Logger;
 import javax.ws.rs.ApplicationPath;
 
 import org.glassfish.jersey.logging.LoggingFeature;
+import org.glassfish.jersey.media.multipart.MultiPartFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 
 /**
@@ -14,7 +15,7 @@ import org.glassfish.jersey.server.ResourceConfig;
  * @author mlengagne
  *
  */
-@ApplicationPath("/")
+@ApplicationPath("/api")
 public class RestApplication extends ResourceConfig {
 
 	/**
@@ -22,6 +23,7 @@ public class RestApplication extends ResourceConfig {
 	 */
 	public RestApplication() {
 		packages("eportfolium.com.karuta.webapp.rest");
+		register(MultiPartFeature.class);
 		register(new LoggingFeature(Logger.getLogger(LoggingFeature.DEFAULT_LOGGER_NAME), Level.INFO,
 				LoggingFeature.Verbosity.PAYLOAD_ANY, 10000));
 	}

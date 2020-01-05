@@ -1,13 +1,16 @@
 package eportfolium.com.karuta.consumer.impl.dao;
 // Generated 17 juin 2019 11:33:18 by Hibernate Tools 5.2.10.Final
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
-import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
-import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 
@@ -34,9 +37,6 @@ import eportfolium.com.karuta.util.PhpUtil;
 @Repository
 public class GroupRightInfoDaoImpl extends AbstractDaoImpl<GroupRightInfo> implements GroupRightInfoDao {
 
-	@PersistenceContext
-	private EntityManager em;
-
 	@Autowired
 	private GroupInfoDao groupInfoDao;
 
@@ -52,7 +52,7 @@ public class GroupRightInfoDaoImpl extends AbstractDaoImpl<GroupRightInfo> imple
 	}
 
 	/**
-	 * Verifie si le role existe pour ce portfolio
+	 * Vérifie si le role existe pour ce portfolio
 	 *
 	 */
 	public GroupRightInfo getByPortfolioAndLabel(String portfolioUuid, String label) {
@@ -60,7 +60,7 @@ public class GroupRightInfoDaoImpl extends AbstractDaoImpl<GroupRightInfo> imple
 	}
 
 	/**
-	 * Verifie si le role existe pour ce portfolio
+	 * Vérifie si le role existe pour ce portfolio
 	 *
 	 */
 	public GroupRightInfo getByPortfolioAndLabel(UUID portfolioUuid, String label) {
@@ -75,7 +75,6 @@ public class GroupRightInfoDaoImpl extends AbstractDaoImpl<GroupRightInfo> imple
 		try {
 			gri = q.getSingleResult();
 		} catch (NoResultException e) {
-			e.printStackTrace();
 		}
 		return gri;
 	}
@@ -101,14 +100,14 @@ public class GroupRightInfoDaoImpl extends AbstractDaoImpl<GroupRightInfo> imple
 	}
 
 	/**
-	 * Les roles reliés à un portfolio
+	 * Les rôles reliés à un portfolio
 	 */
 	public List<GroupRightInfo> getByPortfolioID(String portfolioUuid) {
 		return getByPortfolioID(UUID.fromString(portfolioUuid));
 	}
 
 	/**
-	 * Les roles reliés à un portfolio
+	 * Les rôles reliés à un portfolio
 	 */
 	public List<GroupRightInfo> getByPortfolioID(UUID portfolioUuid) {
 		String sql = "SELECT gri FROM GroupRightInfo gri";
@@ -137,16 +136,11 @@ public class GroupRightInfoDaoImpl extends AbstractDaoImpl<GroupRightInfo> imple
 
 	@Override
 	public Long add(String portfolioUuid, String role) {
-		return add(UUID.fromString(portfolioUuid), role);
-	}
-
-	@Override
-	public Long add(UUID portfolioUuid, String role) {
 		Long result = 0L;
 		GroupRightInfo gri = new GroupRightInfo();
 		gri.setOwner(1);
 		gri.setLabel(role);
-		gri.setPortfolio(new Portfolio(portfolioUuid));
+		gri.setPortfolio(new Portfolio(UUID.fromString(portfolioUuid)));
 		try {
 			persist(gri);
 			result = gri.getId();
@@ -174,7 +168,7 @@ public class GroupRightInfoDaoImpl extends AbstractDaoImpl<GroupRightInfo> imple
 	/**
 	 * Check if role already exists
 	 */
-	public Long getIdByNodeAndLabel(String nodeUuid, String role) {
+	public Long getIdByNodeAndLabel(String nodeUuid, String label) {
 		Long res = null;
 		String sql = "SELECT gri.id FROM GroupRightInfo gri, Node n";
 		sql += " INNER JOIN gri.portfolio p1";
@@ -185,8 +179,8 @@ public class GroupRightInfoDaoImpl extends AbstractDaoImpl<GroupRightInfo> imple
 		sql += " AND gri.label = :label";
 
 		TypedQuery<Long> q = em.createQuery(sql, Long.class);
-		q.setParameter("nodeUuid", nodeUuid);
-		q.setParameter("role", role);
+		q.setParameter("nodeUuid", UUID.fromString(nodeUuid));
+		q.setParameter("label", label);
 		try {
 			res = q.getSingleResult();
 		} catch (NoResultException e) {
@@ -318,6 +312,45 @@ public class GroupRightInfoDaoImpl extends AbstractDaoImpl<GroupRightInfo> imple
 		TypedQuery<GroupRightInfo> query = em.createQuery(sql, GroupRightInfo.class);
 		query.setParameter("userId", userId);
 		return query.getResultList();
+	}
+
+	/// Fetch roles to be notified
+	@SuppressWarnings("unchecked")
+	@Override
+	public Map<String, Object> getRolesToBeNotified(Long groupId, Long userId, String uuid) {
+		Map<String, Object> res = null;
+		String sql = "SELECT new map(portfolio.id as portfolioUUID, gr.notifyRoles AS notifyRoles) FROM GroupUser gu";
+		sql += " INNER JOIN gu.id.groupInfo gi WITH gi.id = :groupId ";
+		sql += " INNER JOIN gi.groupRightInfo gri";
+		sql += " INNER JOIN gri.portfolio portfolio";
+		sql += " INNER JOIN gri.groupRights gr WITH gr.id.id = :uuid";
+		sql += " WHERE gu.id.credential.id = :userId";
+		try {
+			Query query = em.createQuery(sql);
+			query.setParameter("groupId", groupId);
+			query.setParameter("uuid", UUID.fromString(uuid));
+			query.setParameter("userId", userId);
+			res = (Map<String, Object>) query.getSingleResult();
+		} catch (NoResultException e) {
+			// TODO: handle exception
+		}
+		return res;
+	}
+
+	@Override
+	public ResultSet getMysqlGroupRightsInfos(Connection con) throws SQLException {
+		PreparedStatement st;
+		String sql;
+
+		try {
+			// On récupère d'abord les informations dans la table structures
+			sql = "SELECT grid, owner, label, bin2uuid(portfolio_id) as portfolio_id, change_rights FROM group_right_info";
+			st = con.prepareStatement(sql);
+			return st.executeQuery();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
 	}
 
 }

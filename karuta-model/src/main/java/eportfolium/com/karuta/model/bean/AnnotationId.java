@@ -2,7 +2,6 @@ package eportfolium.com.karuta.model.bean;
 // Generated 13 juin 2019 19:14:13 by Hibernate Tools 5.2.10.Final
 
 import java.io.Serializable;
-import java.util.Arrays;
 
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
@@ -14,23 +13,23 @@ import javax.persistence.Embeddable;
 public class AnnotationId implements Serializable {
 
 	private static final long serialVersionUID = 6961270590302840044L;
-	private byte[] nodeid;
+	private String nodeid;
 	private int rank;
 
 	public AnnotationId() {
 	}
 
-	public AnnotationId(byte[] nodeid, int rank) {
+	public AnnotationId(String nodeid, int rank) {
 		this.nodeid = nodeid;
 		this.rank = rank;
 	}
 
-	@Column(name = "nodeid", nullable = false)
-	public byte[] getNodeid() {
+	@Column(name = "nodeid", nullable = false, length = 128)
+	public String getNodeid() {
 		return this.nodeid;
 	}
 
-	public void setNodeid(byte[] nodeid) {
+	public void setNodeid(String nodeid) {
 		this.nodeid = nodeid;
 	}
 
@@ -43,26 +42,32 @@ public class AnnotationId implements Serializable {
 		this.rank = rank;
 	}
 
-	public boolean equals(Object other) {
-		if ((this == other))
-			return true;
-		if ((other == null))
-			return false;
-		if (!(other instanceof AnnotationId))
-			return false;
-		AnnotationId castOther = (AnnotationId) other;
-
-		return ((this.getNodeid() == castOther.getNodeid()) || (this.getNodeid() != null
-				&& castOther.getNodeid() != null && Arrays.equals(this.getNodeid(), castOther.getNodeid())))
-				&& (this.getRank() == castOther.getRank());
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((nodeid == null) ? 0 : nodeid.hashCode());
+		result = prime * result + rank;
+		return result;
 	}
 
-	public int hashCode() {
-		int result = 17;
-
-		result = 37 * result + (getNodeid() == null ? 0 : Arrays.hashCode(this.getNodeid()));
-		result = 37 * result + this.getRank();
-		return result;
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		AnnotationId other = (AnnotationId) obj;
+		if (nodeid == null) {
+			if (other.nodeid != null)
+				return false;
+		} else if (!nodeid.equals(other.nodeid))
+			return false;
+		if (rank != other.rank)
+			return false;
+		return true;
 	}
 
 }

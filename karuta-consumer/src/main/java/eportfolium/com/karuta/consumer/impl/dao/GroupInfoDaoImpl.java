@@ -1,12 +1,14 @@
 package eportfolium.com.karuta.consumer.impl.dao;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
-import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
-import javax.persistence.PersistenceContext;
 import javax.persistence.TypedQuery;
 
 import org.springframework.stereotype.Repository;
@@ -24,52 +26,53 @@ import eportfolium.com.karuta.model.bean.GroupRightInfo;
 @Repository
 public class GroupInfoDaoImpl extends AbstractDaoImpl<GroupInfo> implements GroupInfoDao {
 
-	@PersistenceContext
-	private EntityManager em;
-
 	public GroupInfoDaoImpl() {
 		super();
 		setCls(GroupInfo.class);
 	}
 
-	public GroupInfo getGroupByName(String label) {
-		String sql;
-		GroupInfo res = null;
-
-		sql = "SELECT gi FROM GroupInfo gi";
+	public List<GroupInfo> getGroups(String label, Long owner) {
+		String sql = "SELECT gi FROM GroupInfo gi";
 		sql += " WHERE label = :label";
+		sql += " AND owner = :owner";
 		TypedQuery<GroupInfo> q = em.createQuery(sql, GroupInfo.class);
 		q.setParameter("label", label);
-		try {
-			res = q.getSingleResult();
-		} catch (NoResultException ex) {
-			ex.printStackTrace();
-		}
-
-		return res;
+		q.setParameter("owner", owner);
+		return q.getResultList();
 	}
 
-	public boolean exists(GroupRightInfo gri, long owner, String label) {
-		String sql;
-		boolean exists = false;
+	@Override
+	public List<GroupInfo> getGroups(Long owner) {
+		String sql = "SELECT gi FROM GroupInfo gi";
+		sql += " WHERE owner = :owner";
+		TypedQuery<GroupInfo> q = em.createQuery(sql, GroupInfo.class);
+		q.setParameter("owner", owner);
+		return q.getResultList();
+	}
 
-		sql = "SELECT gi FROM GroupInfo gi";
+	public boolean exists(String label) {
+		String sql = "SELECT gi FROM GroupInfo gi";
 		sql += " WHERE gi.label = :label";
 		TypedQuery<GroupInfo> q = em.createQuery(sql, GroupInfo.class);
 		q.setParameter("label", label);
-		try {
-			q.getSingleResult();
-			exists = true;
-		} catch (NoResultException ex) {
-			ex.printStackTrace();
-		}
-		return exists;
-
+		return !q.getResultList().isEmpty();
 	}
 
-	public Long add(GroupRightInfo gri, long owner, String label) {
+	@Override
+	public boolean exists(String label, Long owner) {
+		String sql = "SELECT gi FROM GroupInfo gi";
+		sql += " WHERE gi.label = :label";
+		sql += " AND gi.owner = :owner";
+		TypedQuery<GroupInfo> q = em.createQuery(sql, GroupInfo.class);
+		q.setParameter("label", label);
+		q.setParameter("owner", owner);
+		return !q.getResultList().isEmpty();
+	}
+
+	@Override
+	public Long add(Long grid, long owner, String label) {
 		GroupInfo gi = new GroupInfo();
-		gi.setGroupRightInfo(gri);
+		gi.setGroupRightInfo(new GroupRightInfo(grid));
 		gi.setOwner(owner);
 		gi.setLabel(label);
 		persist(gi);
@@ -96,7 +99,7 @@ public class GroupInfoDaoImpl extends AbstractDaoImpl<GroupInfo> implements Grou
 	}
 
 	/**
-	 * Recupere une instance de group_info associé à un grid.
+	 * Récupère une instance de group_info associé à un grid.
 	 */
 	public GroupInfo getGroupByGrid(Long grid) {
 		String sql;
@@ -123,6 +126,22 @@ public class GroupInfoDaoImpl extends AbstractDaoImpl<GroupInfo> implements Grou
 			query.setParameter("portUuid", UUID.fromString(portfolioUuid));
 			return query.getResultList();
 		} catch (NoResultException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	@Override
+	public ResultSet getMysqlGroupRightsInfos(Connection con) throws SQLException {
+		PreparedStatement st;
+		String sql;
+
+		try {
+			// On récupère d'abord les informations dans la table structures
+			sql = "SELECT grid, owner, label, bin2uuid(portfolio_id) as portfolio_id, change_rights FROM group_right_info";
+			st = con.prepareStatement(sql);
+			return st.executeQuery();
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		return null;

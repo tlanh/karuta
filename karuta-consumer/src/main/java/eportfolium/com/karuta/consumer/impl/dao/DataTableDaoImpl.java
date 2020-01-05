@@ -1,8 +1,5 @@
 package eportfolium.com.karuta.consumer.impl.dao;
 
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
-
 import org.springframework.stereotype.Repository;
 
 import eportfolium.com.karuta.consumer.contract.dao.DataTableDao;
@@ -16,9 +13,6 @@ import eportfolium.com.karuta.model.bean.DataTable;
  */
 @Repository
 public class DataTableDaoImpl extends AbstractDaoImpl<DataTable> implements DataTableDao {
-
-	@PersistenceContext
-	private EntityManager entityManager;
 
 	public DataTableDaoImpl() {
 		super();

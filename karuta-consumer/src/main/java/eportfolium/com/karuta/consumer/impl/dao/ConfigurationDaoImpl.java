@@ -7,17 +7,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.NonUniqueResultException;
-import javax.persistence.PersistenceContext;
-import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 
-import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
 import org.apache.commons.lang3.math.NumberUtils;
+import org.springframework.stereotype.Repository;
 
 import eportfolium.com.karuta.consumer.contract.dao.ConfigurationDao;
 import eportfolium.com.karuta.model.bean.Configuration;
@@ -30,30 +27,29 @@ import eportfolium.com.karuta.util.ValidateUtil;
  * 
  * @author Hibernate Tools
  */
+@Repository
 public class ConfigurationDaoImpl extends AbstractDaoImpl<Configuration> implements ConfigurationDao {
-
-	@PersistenceContext
-	private EntityManager em;
 
 	/** @var array Configuration cache */
 	protected Map<String, Map<Integer, Map<String, Map<Object, Object>>>> _cache = new HashMap<>();
 
 	protected Map<String, String> types = new HashMap<>();
 
+	public ConfigurationDaoImpl() {
+		super();
+		setCls(Configuration.class);
+	}
+
 	/**
 	 * Load all configuration data
 	 */
-	@SuppressWarnings("unchecked")
 	public void loadConfiguration() {
 		_cache.put(this.getClass().getSimpleName(), new HashMap<Integer, Map<String, Map<Object, Object>>>());
-		String sql = "SELECT new map(c.name AS name, c.value AS value)";
-		sql += " FROM Configuration c";
-		Query q = em.createQuery(sql);
-		List<Map<String, Object>> result = q.getResultList();
+		List<Configuration> result = findAll();
 		Map<String, Map<Object, Object>> langContent = null;
-		for (Map<String, Object> row : result) {
-			int lang = 0;
-			types.put(MapUtils.getString(row, "name"), "normal");
+		int lang = 0;
+		for (Configuration row : result) {
+			types.put(row.getName(), "normal");
 			if (!_cache.get(this.getClass().getSimpleName()).containsKey(lang)) {
 				langContent = new HashMap<>();
 				langContent.put("global", new HashMap<>());
@@ -62,8 +58,7 @@ public class ConfigurationDaoImpl extends AbstractDaoImpl<Configuration> impleme
 				_cache.get(this.getClass().getSimpleName()).put(lang, langContent);
 			}
 
-			_cache.get(this.getClass().getSimpleName()).get(lang).get("global").put(row.get("name"),
-					MapUtils.getString(row, "value"));
+			_cache.get(this.getClass().getSimpleName()).get(lang).get("global").put(row.getName(), row.getValue());
 		}
 	}
 
@@ -194,7 +189,7 @@ public class ConfigurationDaoImpl extends AbstractDaoImpl<Configuration> impleme
 			}
 			// If key does not exists, create it
 			else {
-				Integer configID = getIdByName(key);
+				Long configID = getIdByName(key);
 				if (PhpUtil.empty(configID)) {
 					Configuration c = new Configuration();
 					c.setName(key);
@@ -245,16 +240,14 @@ public class ConfigurationDaoImpl extends AbstractDaoImpl<Configuration> impleme
 	 * Return ID a configuration key
 	 *
 	 * @param string key
-	 * @param int    id_shop_group
-	 * @param int    id_shop
-	 * @return int Configuration key ID
+	 * @return long Configuration key ID
 	 */
-	public Integer getIdByName(String key) {
+	public Long getIdByName(String key) {
 
-		Integer result = null;
+		Long result = null;
 		String sql = "SELECT id FROM Configuration c";
 		sql += " WHERE c.name = :key";
-		TypedQuery<Integer> q = em.createQuery(sql, Integer.class);
+		TypedQuery<Long> q = em.createQuery(sql, Long.class);
 		q.setParameter("key", key);
 		try {
 			result = q.getSingleResult();

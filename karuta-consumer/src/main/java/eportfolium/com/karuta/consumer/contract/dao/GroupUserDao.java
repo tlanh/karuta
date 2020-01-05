@@ -1,6 +1,8 @@
 package eportfolium.com.karuta.consumer.contract.dao;
 
 import java.io.Serializable;
+import java.sql.Connection;
+import java.sql.ResultSet;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,11 +26,9 @@ public interface GroupUserDao {
 
 	List<GroupUser> getByUser(final Long userId);
 
-	boolean isUserInGroup(String userId, String groupId);
+	boolean isUserInGroup(Long userId, Long groupId);
 
 	boolean isUserMemberOfGroup(Long userId, Long groupId);
-
-	boolean postGroupsUsers(int user, int userId, int groupId);
 
 	List<GroupUser> getByPortfolio(String portfolioUuid);
 
@@ -69,6 +69,8 @@ public interface GroupUserDao {
 
 	GroupUser getByUserAndRole(Long userId, Long rrgid);
 
+	List<GroupUser> getByRole(Long rrgid);
+
 	void removeByUserAndRole(Long userId, Long rrgId) throws BusinessException;
 
 	void removeByPortfolio(String portId) throws Exception;
@@ -76,5 +78,9 @@ public interface GroupUserDao {
 	void deleteByPortfolio2(UUID portId) throws Exception;
 
 	GroupUser getUniqueByUser(Long userId) throws Exception;
+
+	ResultSet findAll(String table, Connection con);
+
+	void removeAll();
 
 }

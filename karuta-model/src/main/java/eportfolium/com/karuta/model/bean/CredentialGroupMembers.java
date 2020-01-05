@@ -40,14 +40,14 @@ public class CredentialGroupMembers implements Serializable {
 	public void setId(CredentialGroupMembersId id) {
 		this.id = id;
 	}
-	
+
 	@Transient
 	public CredentialGroup getCredentialGroup() {
 		return getId().getCredentialGroup();
 	}
 
 	public void setCredentialGroup(CredentialGroup cg) {
-		getId().setCredentialGroup(cg);
+		this.getId().setCredentialGroup(cg);
 	}
 
 	@Transient

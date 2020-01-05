@@ -1,6 +1,9 @@
 package eportfolium.com.karuta.consumer.impl.dao;
 // Generated 17 juin 2019 11:33:18 by Hibernate Tools 5.2.10.Final
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -11,9 +14,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
-import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 
@@ -45,9 +46,6 @@ public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements Port
 
 	private static final Log log = LogFactory.getLog(PortfolioDaoImpl.class);
 
-	@PersistenceContext
-	private EntityManager em;
-
 	@Autowired
 	private CredentialDao credentialDao;
 
@@ -59,13 +57,13 @@ public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements Port
 		setCls(Portfolio.class);
 	}
 
-	public Portfolio getPortfolio(UUID portfolioUuid) {
+	public Portfolio getPortfolio(String portfolioUuid) {
 		Portfolio result = null;
 		try {
 			String sql = "SELECT p FROM Portfolio p";
 			sql += " WHERE p.id = :portfolioID ";
 			TypedQuery<Portfolio> q = em.createQuery(sql, Portfolio.class);
-			q.setParameter("portfolioID", portfolioUuid);
+			q.setParameter("portfolioID", UUID.fromString(portfolioUuid));
 			result = q.getSingleResult();
 		} catch (Exception ex) {
 			ex.printStackTrace();
@@ -73,17 +71,13 @@ public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements Port
 		return result;
 	}
 
-	public Portfolio getPortfolio(String portfolioUuid) {
-		return getPortfolio(UUID.fromString(portfolioUuid));
-	}
-
-	public Node getPortfolioRootNode(UUID portfolioUuid) {
+	public Node getPortfolioRootNode(String portfolioUuid) {
 		Node root_node = null;
 		String hql = "SELECT rn FROM Portfolio p";
-		hql += " LEFT JOIN FETCH p.rootNode as rn";
+		hql += " LEFT JOIN p.rootNode as rn";
 		hql += " WHERE p.id = :portfolioID ";
 		TypedQuery<Node> q = em.createQuery(hql, Node.class);
-		q.setParameter("portfolioID", portfolioUuid);
+		q.setParameter("portfolioID", UUID.fromString(portfolioUuid));
 		try {
 			root_node = q.getSingleResult();
 		} catch (NoResultException e) {
@@ -92,22 +86,14 @@ public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements Port
 		return root_node;
 	}
 
-	public Node getPortfolioRootNode(String portfolioUuid) {
-		return getPortfolioRootNode(UUID.fromString(portfolioUuid));
-	}
-
 	public Portfolio getPortfolioFromNode(String nodeUuid) {
-		return getPortfolioFromNode(UUID.fromString(nodeUuid));
-	}
-
-	public Portfolio getPortfolioFromNode(UUID nodeUuid) {
 		Portfolio res = null;
 
 		String sql = "SELECT p FROM Node n";
 		sql += " INNER JOIN n.portfolio p";
 		sql += " WHERE n.id = :nodeUuid";
 		TypedQuery<Portfolio> q = em.createQuery(sql, Portfolio.class);
-		q.setParameter("nodeUuid", nodeUuid);
+		q.setParameter("nodeUuid", UUID.fromString(nodeUuid));
 		try {
 			res = q.getSingleResult();
 		} catch (NoResultException e) {
@@ -141,8 +127,9 @@ public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements Port
 		sql += " INNER JOIN gu.id.groupInfo gi";
 		sql += " INNER JOIN gi.groupRightInfo gri";
 		sql += " INNER JOIN gri.portfolio p";
-		sql += " AND gu.id.credential.id = :userId";
+		sql += " WHERE gu.id.credential.id = :userId";
 		Query q = em.createQuery(sql);
+		q.setParameter("userId", userId);
 		List<Map<String, Object>> result = q.getResultList();
 		return result;
 	}
@@ -156,14 +143,14 @@ public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements Port
 
 		// Ordering by code. A bit hackish but it work as intended
 		// Si on est admin, on récupère la liste complete
-		if (credentialDao.isAdmin(String.valueOf(userId))) {
-			sql = "SELECT p FROM portfolio p";
+		if (userId != null && credentialDao.isAdmin(userId)) {
+			sql = "SELECT p FROM Portfolio p";
 			sql += " INNER JOIN p.rootNode n";
-			sql += " INNER JOIN n.resResourceTable r";
+			sql += " INNER JOIN n.resResource r";
 			if (portfolioActive)
-				sql += " AND p.active = 1 ";
+				sql += " WHERE p.active = 1";
 			else
-				sql += " AND p.active = 0 ";
+				sql += " WHERE p.active = 0";
 
 			sql += " ORDER BY r.content";
 
@@ -171,7 +158,7 @@ public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements Port
 			return q.getResultList();
 		}
 
-		if (credentialDao.isAdmin(String.valueOf(substId))) {
+		if (credentialDao.isAdmin(substId)) {
 			// If root wants to debug user UI
 			substId = 0L;
 		}
@@ -180,9 +167,9 @@ public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements Port
 		// Récupération des portfolios :
 
 		// Étape 1 : ceux qui appartiennent à l'utilisateur
-		sql = "SELECT p FROM portfolio p";
+		sql = "SELECT p FROM Portfolio p";
 		sql += " INNER JOIN FETCH p.rootNnode n";
-		sql += " INNER JOIN FETCH n.resResourceTable r";
+		sql += " INNER JOIN FETCH n.resResource r";
 		sql += " WHERE p.modifUserId = :modifUserId";
 		if (portfolioActive)
 			sql += " AND p.active = 1 ";
@@ -195,9 +182,9 @@ public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements Port
 
 		// Étape 2 : Ceux qu'il peut modifier, sur lesquels l'utilisateur a reçu des
 		// droits spécifiques.
-		sql = " SELECT p FROM portfolio p";
+		sql = " SELECT p FROM Portfolio p";
 		sql += " INNER JOIN FETCH p.rootNnode n";
-		sql += " INNER JOIN FETCH n.resResourceTable r";
+		sql += " INNER JOIN FETCH n.resResource r";
 		sql += " INNER JOIN p.credential cr";
 		sql += " INNER JOIN cr.groups gu";
 //			sql = " SELECT gu FROM GroupUser gu";
@@ -235,21 +222,21 @@ public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements Port
 		return new ArrayList<Portfolio>(portfolios);
 	}
 
-	public UUID getPortfolioUuidFromNodeCode(String portfolioCode) {
-		Portfolio p = getPortfolioFromNodeCode(portfolioCode);
-		return p != null ? p.getId() : null;
+	public String getPortfolioUuidFromNodeCode(String nodeCode) {
+		Portfolio p = getPortfolioFromNodeCode(nodeCode);
+		return p != null ? p.getId().toString() : null;
 	}
 
-	public Portfolio getPortfolioFromNodeCode(String portfolioCode) {
+	public Portfolio getPortfolioFromNodeCode(String nodeCode) {
 		Portfolio res = null;
 
 		String sql = "SELECT p FROM Node n";
 		sql += " INNER JOIN n.portfolio p WITH p.active = 1";
 		sql += " WHERE n.asmType = 'asmRoot'";
-		sql += " AND n.code = :code";
+		sql += " AND n.code = :nodeCode";
 
 		TypedQuery<Portfolio> q = em.createQuery(sql, Portfolio.class);
-		q.setParameter("portfolioCode", portfolioCode);
+		q.setParameter("nodeCode", nodeCode);
 		try {
 			res = q.getSingleResult();
 		} catch (NoResultException ex) {
@@ -272,15 +259,15 @@ public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements Port
 		return res;
 	}
 
-	public int updatePortfolioModelId(UUID portfolioUuid, UUID portfolioModelId) {
+	public int updatePortfolioModelId(String portfolioUuid, String portfolioModelId) {
 		int result = 0;
 		String sql = "SELECT p FROM Portfolio p";
 		sql += " WHERE p.id = :portfolioUuid";
 		TypedQuery<Portfolio> q = em.createQuery(sql, Portfolio.class);
-		q.setParameter("portfolioUuid", portfolioUuid);
+		q.setParameter("portfolioUuid", UUID.fromString(portfolioUuid));
 		try {
 			Portfolio p = q.getSingleResult();
-			p.setModelId(portfolioModelId);
+			p.setModelId(UUID.fromString(portfolioModelId));
 			merge(p);
 		} catch (Exception ex) {
 			result = 1;
@@ -289,24 +276,12 @@ public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements Port
 		return result;
 	}
 
-	public int updatePortfolioModelId(UUID portfolioUuid, String portfolioModelId) {
-		return updatePortfolioModelId(portfolioUuid, UUID.fromString(portfolioModelId));
-	}
-
-	public int updatePortfolioModelId(String portfolioUuid, String portfolioModelId) {
-		return updatePortfolioModelId(UUID.fromString(portfolioUuid), UUID.fromString(portfolioModelId));
-	}
-
 	public UUID getPortfolioModelUuid(String portfolioUuid) {
-		return getPortfolioModelUuid(UUID.fromString(portfolioUuid));
-	}
-
-	public UUID getPortfolioModelUuid(UUID portfolioUuid) {
 		UUID modelID = null;
 		String sql = "SELECT p.modelId FROM Portfolio p";
 		sql += " WHERE p.id = :portfolioUuid";
 		TypedQuery<UUID> q = em.createQuery(sql, UUID.class);
-		q.setParameter("portfolioUuid", portfolioUuid);
+		q.setParameter("portfolioUuid", UUID.fromString(portfolioUuid));
 		try {
 			modelID = q.getSingleResult();
 		} catch (Exception e) {
@@ -315,15 +290,11 @@ public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements Port
 	}
 
 	public Long getOwner(String portfolioId) {
-		return getOwner(UUID.fromString(portfolioId));
-	}
-
-	public Long getOwner(UUID portfolioId) {
 		Long result = null;
 		String query = "SELECT p.modifUserId FROM Portfolio p";
 		query += " WHERE p.id = :id";
 		TypedQuery<Long> q = em.createQuery(query, Long.class);
-		q.setParameter("id", portfolioId);
+		q.setParameter("id", UUID.fromString(portfolioId));
 		try {
 			result = q.getSingleResult();
 		} catch (NoResultException e) {
@@ -332,10 +303,6 @@ public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements Port
 	}
 
 	public boolean isOwner(Long userId, String portfolioUuid) {
-		return isOwner(userId, UUID.fromString(portfolioUuid));
-	}
-
-	public boolean isOwner(Long userId, UUID portfolioUuid) {
 		boolean result = false;
 		if (!PhpUtil.empty(userId)) {
 			String sql = "SELECT n.modifUserId FROM Node n";
@@ -344,7 +311,7 @@ public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements Port
 			sql += " AND p.id = :portfolioUuid";
 			Query query = em.createQuery(sql);
 			query.setParameter("userId", userId);
-			query.setParameter("portfolioUuid", portfolioUuid);
+			query.setParameter("portfolioUuid", UUID.fromString(portfolioUuid));
 			try {
 				query.getSingleResult();
 				result = true;
@@ -355,10 +322,6 @@ public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements Port
 		return result;
 	}
 
-	public boolean changePortfolioOwner(String portfolioUuid, Long ownerId) {
-		return changePortfolioOwner(UUID.fromString(portfolioUuid), ownerId);
-	}
-
 	/**
 	 * Change portfolio owner
 	 * 
@@ -367,21 +330,20 @@ public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements Port
 	 * @return
 	 * @throws Exception
 	 */
-	public boolean changePortfolioOwner(UUID portfolioUuid, Long ownerId) {
+	public boolean changePortfolioOwner(String portfolioUuid, Long ownerId) {
 		boolean retval = false;
 
 		try {
 			String sql = "SELECT p FROM Portfolio p";
-			sql += " INNER JOIN FETCH p.rootNode";
 			sql += " WHERE p.id = :portfolioUuid";
 			TypedQuery<Portfolio> query2 = em.createQuery(sql, Portfolio.class);
-			query2.setParameter("portfolioUuid", portfolioUuid);
+			query2.setParameter("portfolioUuid", UUID.fromString(portfolioUuid));
 			Portfolio p = query2.getSingleResult();
 			p.setModifUserId(ownerId);
-			Node n = p.getRootNode();
-			n.setModifUserId(ownerId);
-			nodeDao.merge(n);
+			Node rootNode = nodeDao.findById(p.getRootNode().getId());
+			rootNode.setModifUserId(ownerId);
 			merge(p);
+			nodeDao.merge(rootNode);
 			retval = true;
 		} catch (Exception ex) {
 			ex.printStackTrace();
@@ -389,10 +351,10 @@ public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements Port
 		return retval;
 	}
 
-	public Portfolio updatePortfolioConfiguration(UUID portfolioUuid, Boolean portfolioActive) {
+	public Portfolio changePortfolioConfiguration(String portfolioUuid, Boolean portfolioActive) {
 		Portfolio result = null;
 		try {
-			Portfolio p = findById(portfolioUuid);
+			Portfolio p = findById(UUID.fromString(portfolioUuid));
 			p.setActive(BooleanUtils.toInteger(portfolioActive));
 			result = merge(p);
 		} catch (Exception ex) {
@@ -401,12 +363,9 @@ public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements Port
 		return result;
 	}
 
-	public Portfolio updatePortfolioConfiguration(String portfolioUuid, Boolean portfolioActive) {
-		return updatePortfolioConfiguration(UUID.fromString(portfolioUuid), portfolioActive);
-	}
-
 	@Override
-	public Portfolio add(String rootNodeUuid, UUID modelId, Long userId, Portfolio porfolio) throws BusinessException {
+	public Portfolio add(String rootNodeUuid, String modelId, Long userId, Portfolio porfolio)
+			throws BusinessException {
 		if (porfolio.getRootNode() != null) {
 			throw new IllegalArgumentException();
 		}
@@ -414,14 +373,22 @@ public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements Port
 			throw new IllegalArgumentException();
 		}
 
-		porfolio.setModelId(modelId);
-		Node rootNode = nodeDao.findById(UUID.fromString(rootNodeUuid));
+		if (modelId != null) {
+			porfolio.setModelId(UUID.fromString(modelId));
+		}
+
+		Node rootNode = null;
+		try {
+			rootNode = nodeDao.findById(UUID.fromString(rootNodeUuid));
+		} catch (Exception e) {
+		}
 		Credential credential = credentialDao.findById(userId);
 
 		return add(rootNode, credential, porfolio);
 	}
 
-	private Portfolio add(Node rootNode, Credential credential, Portfolio portfolio) throws BusinessException {
+	private Portfolio add(final Node rootNode, final Credential credential, final Portfolio portfolio)
+			throws BusinessException {
 		if (portfolio.getRootNode() != null) {
 			throw new IllegalArgumentException();
 		}
@@ -429,24 +396,24 @@ public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements Port
 			throw new IllegalArgumentException();
 		}
 
-		Node n = nodeDao.merge(rootNode);
-		Credential cr = credentialDao.merge(credential);
-
-		// Si l'id est différent, cela signifie que le noeud n’existait pas. la
-		// sauvegarde ne doit pas en créer un nouveau.
-		if (!n.getId().equals(rootNode.getId())) {
-			throw new DoesNotExistException(Node.class, rootNode.getId());
+		if (rootNode != null) {
+			Node n = nodeDao.merge(rootNode);
+			// Si l'id est différent, cela signifie que le noeud n’existait pas. la
+			// sauvegarde ne doit pas en créer un nouveau.
+			if (!n.getId().equals(rootNode.getId())) {
+				throw new DoesNotExistException(Node.class, rootNode.getId());
+			}
+			n.addPortfolio(portfolio);
 		}
 
+		Credential cr = credentialDao.merge(credential);
 		// Si l'id est différent, cela signifie que l'utilisateur n’existait pas, la
 		// sauvegarde ne doit pas en créer un nouveau.
 		if (!cr.getId().equals(credential.getId())) {
 			throw new DoesNotExistException(Credential.class, credential.getId());
 		}
-
-		n.addPortfolio(portfolio);
 		cr.addPortfolio(portfolio);
-
+		portfolio.setModifUserId(cr.getId());
 		persist(portfolio);
 		return portfolio;
 	}
@@ -454,7 +421,7 @@ public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements Port
 	/**
 	 * Check if base portfolio is public
 	 */
-	public boolean isPublic(UUID portfolioUuid) {
+	public boolean isPublic(String portfolioUuid) {
 		boolean val = false;
 		String sql = "SELECT p FROM Portfolio p";
 		sql += " INNER JOIN p.groupRightInfo gri WITH gri.label='all'";
@@ -463,27 +430,18 @@ public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements Port
 		sql += " INNER JOIN gu.id.credential c WITH c.login='sys_public'";
 		sql += " WHERE p.id = :portfolioUuid";
 		Query q = em.createQuery(sql);
-		q.setParameter("portfolioUuid", portfolioUuid);
+		q.setParameter("portfolioUuid", UUID.fromString(portfolioUuid));
 		try {
 			q.getSingleResult();
 			val = true;
 		} catch (Exception e) {
-			e.printStackTrace();
 		}
 		return val;
 	}
 
-	public boolean isPublic(String portfolioUuid) {
-		return isPublic(UUID.fromString(portfolioUuid));
-	}
-
 	public void updateTime(String portfolioUuid) throws DoesNotExistException {
-		updateTime(UUID.fromString(portfolioUuid));
-	}
-
-	public void updateTime(UUID portfolioUuid) throws DoesNotExistException {
-		Portfolio p = findById(portfolioUuid);
-		Date now = JavaTimeUtil.toJavaDate(LocalDateTime.now(JavaTimeUtil.date_default_timezone));
+		Portfolio p = findById(UUID.fromString(portfolioUuid));
+		Date now = JavaTimeUtil.toJavaDate(LocalDateTime.now());
 		p.setModifDate(now);
 		merge(p);
 	}
@@ -494,7 +452,7 @@ public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements Port
 			if (nodeUuid != null) {
 				Node n = nodeDao.findById(UUID.fromString(nodeUuid));
 				Portfolio p = n.getPortfolio();
-				Date now = JavaTimeUtil.toJavaDate(LocalDateTime.now(JavaTimeUtil.date_default_timezone));
+				Date now = JavaTimeUtil.toJavaDate(LocalDateTime.now());
 				p.setModifDate(now);
 				merge(p);
 				hasChanged = true;
@@ -507,9 +465,9 @@ public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements Port
 	/**
 	 * Check if there are shared nodes in this portfolio.
 	 */
-	public boolean hasSharedNodes(UUID portfolioUuid) {
+	public boolean hasSharedNodes(String portfolioUuid) {
 		boolean result = false;
-		List<Node> nodes = nodeDao.getSharedNodes(portfolioUuid);
+		final List<Node> nodes = nodeDao.getSharedNodes(portfolioUuid);
 		for (Node n : nodes) {
 			UUID sharedNode = n.getSharedNodeUuid();
 			if (sharedNode != null) {
@@ -520,11 +478,38 @@ public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements Port
 		return result;
 	}
 
-	/**
-	 * Check if there are shared nodes in this portfolio.
-	 */
-	public boolean hasSharedNodes(String portfolioUuid) {
-		return hasSharedNodes(UUID.fromString(portfolioUuid));
+	/*************************************************************************************************************/
+	@Override
+	public ResultSet getMysqlPortfolios(Connection con) {
+		PreparedStatement st;
+		String sql;
+		try {
+			sql = "SELECT bin2uuid(p.portfolio_id) AS portfolio_id, bin2uuid(p.root_node_uuid) AS root_node_uuid, p.user_id,";
+			sql += " bin2uuid(p.model_id) as model_id, p.modif_user_id, p.modif_date, p.active";
+			sql += " FROM portfolio p";
+			st = con.prepareStatement(sql);
+			return st.executeQuery();
+		} catch (Exception ex) {
+			ex.printStackTrace();
+			return null;
+		}
+	}
+
+	@Override
+	public ResultSet getMysqlPortfolioGroupMembers(Connection con) {
+		PreparedStatement st;
+		String sql;
+		try {
+			// On récupère d'abord les informations dans la table structures
+			sql = "SELECT pg, bin2uuid(pgm.portfolio_id) AS portfolio_id FROM portfolio_group_members pgm";
+			st = con.prepareStatement(sql);
+
+			return st.executeQuery();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		return null;
 	}
 
 }

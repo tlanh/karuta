@@ -2,12 +2,9 @@ package eportfolium.com.karuta.webapp.rest.resource;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.UUID;
 
-import javax.activation.MimeType;
 import javax.servlet.ServletConfig;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -42,14 +39,15 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import eportfolium.com.karuta.business.contract.NodeManager;
-import eportfolium.com.karuta.model.bean.Credential;
 import eportfolium.com.karuta.model.bean.GroupRights;
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.model.exception.DoesNotExistException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
+import eportfolium.com.karuta.webapp.eventbus.KEvent;
 import eportfolium.com.karuta.webapp.rest.provider.mapper.exception.RestWebApplicationException;
 import eportfolium.com.karuta.webapp.util.javaUtils;
 
+@Path("/nodes")
 public class NodeResource extends AbstractResource {
 
 	@Autowired
@@ -73,7 +71,7 @@ public class NodeResource extends AbstractResource {
 	 * @param cutoff
 	 * @return nodes in the ASM format
 	 */
-	@Path("/nodes/node/{node-id}")
+	@Path("/node/{node-id}")
 	@GET
 	@Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
 	@Consumes(MediaType.APPLICATION_XML)
@@ -85,12 +83,12 @@ public class NodeResource extends AbstractResource {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		Credential ui = checkCredential(httpServletRequest, user, token, null);
+		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
 		try {
 
 			String returnValue = nodeManager
-					.getNode(MimeTypeUtils.TEXT_XML, nodeUuid, false, ui.getId(), groupId, null, cutoff).toString();
+					.getNode(MimeTypeUtils.TEXT_XML, nodeUuid, false, ui.userId, groupId, null, cutoff).toString();
 			if (returnValue.length() != 0) {
 				if (accept.equals(MediaType.APPLICATION_JSON))
 					returnValue = XML.toJSONObject(returnValue).toString();
@@ -125,7 +123,7 @@ public class NodeResource extends AbstractResource {
 	 * @param cutoff
 	 * @return nodes in the ASM format
 	 */
-	@Path("/nodes/node/{node-id}/children")
+	@Path("/node/{node-id}/children")
 	@GET
 	@Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
 	@Consumes(MediaType.APPLICATION_XML)
@@ -137,11 +135,11 @@ public class NodeResource extends AbstractResource {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		Credential ui = checkCredential(httpServletRequest, user, token, null);
+		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
 		try {
 			String returnValue = nodeManager
-					.getNode(MimeTypeUtils.TEXT_XML, nodeUuid, true, ui.getId(), groupId, null, cutoff).toString();
+					.getNode(MimeTypeUtils.TEXT_XML, nodeUuid, true, ui.userId, groupId, null, cutoff).toString();
 			if (returnValue.length() != 0) {
 				if (accept.equals(MediaType.APPLICATION_JSON)) {
 					returnValue = XML.toJSONObject(returnValue).toString();
@@ -175,7 +173,7 @@ public class NodeResource extends AbstractResource {
 	 * @param userId
 	 * @return <metadata-wad/>
 	 */
-	@Path("/nodes/node/{nodeid}/metadatawad")
+	@Path("/node/{nodeid}/metadatawad")
 	@GET
 	@Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
 	@Consumes(MediaType.APPLICATION_XML)
@@ -187,12 +185,12 @@ public class NodeResource extends AbstractResource {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		Credential ui = checkCredential(httpServletRequest, user, token, null);
+		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
 		try {
 
-			String returnValue = nodeManager
-					.getNodeMetadataWad(MimeTypeUtils.TEXT_XML, nodeUuid, true, ui.getId(), groupId, null).toString();
+			String returnValue = nodeManager.getNodeMetadataWad(MimeTypeUtils.TEXT_XML, nodeUuid, ui.userId, groupId)
+					.toString();
 			if (returnValue.length() != 0) {
 				if (accept.equals(MediaType.APPLICATION_JSON))
 					returnValue = XML.toJSONObject(returnValue).toString();
@@ -210,11 +208,21 @@ public class NodeResource extends AbstractResource {
 	}
 
 	/**
-	 * Fetch rights per role for a node GET /rest/api/nodes/node/{node-id}/rights
-	 * parameters: return: <node uuid=""> <role name=""> <right RD="" WR="" DL="" />
-	 * </role> </node>
-	 **/
-	@Path("/nodes/node/{node-id}/rights")
+	 * Fetch rights per role for a node. <br>
+	 * GET /rest/api/nodes/node/{node-id}/rights
+	 * 
+	 * @param user
+	 * @param token
+	 * @param groupId
+	 * @param nodeUuid
+	 * @param sc
+	 * @param httpServletRequest
+	 * @param accept
+	 * @param userId
+	 * @return <node uuid=""> <role name=""> <right RD="" WR="" DL="" /> </role>
+	 *         </node>
+	 */
+	@Path("/node/{node-id}/rights")
 	@GET
 	@Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
 	@Consumes(MediaType.APPLICATION_XML)
@@ -226,11 +234,11 @@ public class NodeResource extends AbstractResource {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		Credential ui = checkCredential(httpServletRequest, user, token, null);
+		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
 		try {
 
-			GroupRights gr = nodeManager.getRights(ui.getId(), groupId, nodeUuid);
+			GroupRights gr = nodeManager.getRights(ui.userId, groupId, nodeUuid);
 			String returnValue = null;
 			if (gr != null) {
 				if (accept.equals(MediaType.APPLICATION_JSON))
@@ -252,7 +260,7 @@ public class NodeResource extends AbstractResource {
 	}
 
 	/**
-	 * Fetch portfolio id from a given node id <br>
+	 * Fetch portfolio id from a given node id. <br>
 	 * GET /rest/api/nodes/node/{node-id}/portfolioid
 	 * 
 	 * @param user
@@ -263,7 +271,7 @@ public class NodeResource extends AbstractResource {
 	 * @param accept
 	 * @return portfolioid
 	 */
-	@Path("/nodes/node/{node-id}/portfolioid")
+	@Path("/node/{node-id}/portfolioid")
 	@GET
 	@Produces(MediaType.TEXT_PLAIN)
 	public String getNodePortfolioId(@CookieParam("user") String user, @CookieParam("credential") String token,
@@ -272,9 +280,9 @@ public class NodeResource extends AbstractResource {
 		if (!isUUID(nodeUuid)) {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
-		Credential ui = checkCredential(httpServletRequest, user, token, null);
+		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		try {
-			return nodeManager.getPortfolioIdFromNode(ui.getId(), nodeUuid).toString();
+			return nodeManager.getPortfolioIdFromNode(ui.userId, nodeUuid).toString();
 		} catch (DoesNotExistException ex) {
 			throw new RestWebApplicationException(Status.NOT_FOUND,
 					"Error, this shouldn't happen. No Portfolio related to node : '" + nodeUuid + "' was found");
@@ -289,13 +297,22 @@ public class NodeResource extends AbstractResource {
 	}
 
 	/**
-	 * Change nodes right POST /rest/api/nodes/node/{node-id}/rights parameters:
-	 * content: <node uuid=""> <role name=""> <right RD="" WR="" DL="" /> </role>
-	 * </node>
+	 * Change nodes rights. <br>
+	 * POST /rest/api/nodes/node/{node-id}/rights
 	 *
-	 * return:
-	 **/
-	@Path("/nodes/node/{node-id}/rights")
+	 * @param xmlNode            <node uuid=""> <role name="">
+	 *                           <right RD="" WR="" DL="" /> </role> </node>
+	 * @param user
+	 * @param token
+	 * @param groupId
+	 * @param nodeUuid
+	 * @param sc
+	 * @param httpServletRequest
+	 * @param accept
+	 * @param userId
+	 * @return
+	 */
+	@Path("/node/{node-id}/rights")
 	@POST
 	@Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
 	@Consumes(MediaType.APPLICATION_XML)
@@ -308,7 +325,7 @@ public class NodeResource extends AbstractResource {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		Credential ui = checkCredential(httpServletRequest, user, token, null);
+		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
 		try {
 			DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
@@ -316,12 +333,11 @@ public class NodeResource extends AbstractResource {
 			Document doc = documentBuilder.parse(new ByteArrayInputStream(xmlNode.getBytes("UTF-8")));
 
 			XPath xPath = XPathFactory.newInstance().newXPath();
-//			String xpathRole = "//role";
 			String xpathRole = "//*[local-name()='role']";
 			XPathExpression findRole = xPath.compile(xpathRole);
 			NodeList roles = (NodeList) findRole.evaluate(doc, XPathConstants.NODESET);
 
-			/// For all roles we have to change
+			// Pour tous les rôles que nous devons modifier.
 			for (int i = 0; i < roles.getLength(); ++i) {
 				Node rolenode = roles.item(i);
 				String roleName = rolenode.getAttributes().getNamedItem("name").getNodeValue();
@@ -329,13 +345,13 @@ public class NodeResource extends AbstractResource {
 
 				//
 				if ("user".equals(roleName)) {
-					/// username as role
+					/// on utilise le nom utilisateur comme rôle
 				}
 
 				if ("#text".equals(right.getNodeName()))
 					right = right.getNextSibling();
 
-				if ("right".equals(right.getNodeName())) // Changing node rights
+				if ("right".equals(right.getNodeName())) // Modification des droits du noeud.
 				{
 					NamedNodeMap rights = right.getAttributes();
 
@@ -354,12 +370,12 @@ public class NodeResource extends AbstractResource {
 					if (val != null)
 						nodeRights.setSubmit("Y".equals(val) ? true : false);
 
-					// change rights
-					nodeManager.changeRights(ui.getId(), nodeUuid, roleName, nodeRights);
+					// Executer le changement de droits.
+					nodeManager.changeRights(ui.userId, nodeUuid, roleName, nodeRights);
 				} else if ("action".equals(right.getNodeName())) // Using an action on node
 				{
-					// reset rights
-					nodeManager.executeMacroOnNode(ui.getId(), nodeUuid, "reset");
+					// réinitialiser les droits
+					nodeManager.executeMacroOnNode(ui.userId, nodeUuid, "reset");
 				}
 			}
 			logger.info("Change rights " + Status.OK.getStatusCode());
@@ -390,7 +406,7 @@ public class NodeResource extends AbstractResource {
 	 * @param accept
 	 * @return node in ASM format
 	 */
-	@Path("/nodes/firstbysemantictag/{portfolio-uuid}/{semantictag}")
+	@Path("/firstbysemantictag/{portfolio-uuid}/{semantictag}")
 	@GET
 	@Produces({ MediaType.APPLICATION_XML })
 	@Consumes(MediaType.APPLICATION_XML)
@@ -402,11 +418,11 @@ public class NodeResource extends AbstractResource {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		Credential ui = checkCredential(httpServletRequest, user, token, null);
+		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
 		try {
 			return nodeManager
-					.getNodeBySemanticTag(MimeTypeUtils.TEXT_XML, portfolioUuid, semantictag, ui.getId(), groupId)
+					.getNodeBySemanticTag(MimeTypeUtils.TEXT_XML, portfolioUuid, semantictag, ui.userId, groupId)
 					.toString();
 		} catch (DoesNotExistException ex) {
 			throw new RestWebApplicationException(Status.NOT_FOUND, "no node found for tag :" + semantictag);
@@ -420,7 +436,7 @@ public class NodeResource extends AbstractResource {
 	}
 
 	/**
-	 * Get multiple semantic tag nodes inside specified portfolio <br>
+	 * Get multiple semantic tag nodes inside specified portfolio. <br>
 	 * GET /rest/api/nodes/nodes/bysemantictag/{portfolio-uuid}/{semantictag}
 	 * 
 	 * @param user
@@ -433,7 +449,7 @@ public class NodeResource extends AbstractResource {
 	 * @param accept
 	 * @return nodes in ASM format
 	 */
-	@Path("/nodes/bysemantictag/{portfolio-uuid}/{semantictag}")
+	@Path("/bysemantictag/{portfolio-uuid}/{semantictag}")
 	@GET
 	@Produces({ MediaType.APPLICATION_XML })
 	@Consumes(MediaType.APPLICATION_XML)
@@ -445,11 +461,11 @@ public class NodeResource extends AbstractResource {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		Credential ui = checkCredential(httpServletRequest, user, token, null);
+		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
 		try {
 			return nodeManager
-					.getNodesBySemanticTag(MimeTypeUtils.TEXT_XML, ui.getId(), groupId, portfolioUuid, semantictag)
+					.getNodesBySemanticTag(MimeTypeUtils.TEXT_XML, ui.userId, groupId, portfolioUuid, semantictag)
 					.toString();
 		} catch (BusinessException ex) {
 			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
@@ -474,7 +490,7 @@ public class NodeResource extends AbstractResource {
 	 * @param userId
 	 * @return
 	 */
-	@Path("/nodes/node/{node-id}")
+	@Path("/node/{node-id}")
 	@PUT
 	@Produces(MediaType.APPLICATION_XML)
 	public String putNode(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token,
@@ -484,9 +500,9 @@ public class NodeResource extends AbstractResource {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		Credential ui = checkCredential(httpServletRequest, user, token, null);
+		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		try {
-			String returnValue = nodeManager.changeNode(MimeTypeUtils.TEXT_XML, nodeUuid, xmlNode, ui.getId(), groupId)
+			String returnValue = nodeManager.changeNode(MimeTypeUtils.TEXT_XML, nodeUuid, xmlNode, ui.userId, groupId)
 					.toString();
 			return returnValue;
 		} catch (DoesNotExistException ex) {
@@ -501,10 +517,20 @@ public class NodeResource extends AbstractResource {
 	}
 
 	/**
-	 * Rewrite node metadata PUT /rest/api/nodes/node/{node-id}/metadata parameters:
-	 * return:
-	 **/
-	@Path("/nodes/node/{nodeid}/metadata")
+	 * Rewrite node metadata. <br>
+	 * PUT /rest/api/nodes/node/{node-id}/metadata
+	 * 
+	 * @param xmlNode
+	 * @param user
+	 * @param token
+	 * @param groupId
+	 * @param info
+	 * @param nodeUuid
+	 * @param sc
+	 * @param httpServletRequest
+	 * @return
+	 */
+	@Path("/node/{nodeid}/metadata")
 	@PUT
 	@Produces(MediaType.APPLICATION_XML)
 	public String putNodeMetadata(String xmlNode, @CookieParam("user") String user,
@@ -515,7 +541,7 @@ public class NodeResource extends AbstractResource {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		Credential ui = checkCredential(httpServletRequest, user, token, null);
+		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
 		Date time = new Date();
 		SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
@@ -528,14 +554,14 @@ public class NodeResource extends AbstractResource {
 
 		try {
 			String returnValue = nodeManager
-					.changeNodeMetadata(MimeTypeUtils.TEXT_XML, nodeUuid, xmlNode, ui.getId(), groupId).toString();
-			logger.info(String.format(logformat, "OK", nodeUuid, "metadata", ui.getId(), timeFormat,
+					.changeNodeMetadata(MimeTypeUtils.TEXT_XML, nodeUuid, xmlNode, ui.userId, groupId).toString();
+			logger.info(String.format(logformat, "OK", nodeUuid, "metadata", ui.userId, timeFormat,
 					httpServletRequest.getRemoteAddr(), xmlNode));
 			return returnValue;
 		} catch (DoesNotExistException ex) {
 			throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
 		} catch (BusinessException ex) {
-			logger.error(String.format(logformat, "ERR", nodeUuid, "metadata", ui.getId(), timeFormat,
+			logger.error(String.format(logformat, "ERR", nodeUuid, "metadata", ui.userId, timeFormat,
 					httpServletRequest.getRemoteAddr(), xmlNode));
 			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
 		} catch (Exception ex) {
@@ -559,7 +585,7 @@ public class NodeResource extends AbstractResource {
 	 * @param httpServletRequest
 	 * @return
 	 */
-	@Path("/nodes/node/{nodeid}/metadatawad")
+	@Path("/node/{nodeid}/metadatawad")
 	@PUT
 	@Produces(MediaType.APPLICATION_XML)
 	public String putNodeMetadataWad(String xmlNode, @CookieParam("user") String user,
@@ -570,7 +596,7 @@ public class NodeResource extends AbstractResource {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		Credential ui = checkCredential(httpServletRequest, user, token, null);
+		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
 		Date time = new Date();
 		SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
@@ -583,14 +609,14 @@ public class NodeResource extends AbstractResource {
 
 		try {
 			String returnValue = nodeManager
-					.changeNodeMetadataWad(MimeTypeUtils.TEXT_XML, nodeUuid, xmlNode, ui.getId(), groupId).toString();
-			logger.info(String.format(logformat, "OK", nodeUuid, "metadatawad", ui.getId(), timeFormat,
+					.changeNodeMetadataWad(MimeTypeUtils.TEXT_XML, nodeUuid, xmlNode, ui.userId, groupId).toString();
+			logger.info(String.format(logformat, "OK", nodeUuid, "metadatawad", ui.userId, timeFormat,
 					httpServletRequest.getRemoteAddr(), xmlNode));
 			return returnValue;
 		} catch (DoesNotExistException ex) {
 			throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
 		} catch (BusinessException ex) {
-			logger.error(String.format(logformat, "ERR", nodeUuid, "metadatawad", ui.getId(), timeFormat,
+			logger.error(String.format(logformat, "ERR", nodeUuid, "metadatawad", ui.userId, timeFormat,
 					httpServletRequest.getRemoteAddr(), xmlNode));
 			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
 		} catch (Exception ex) {
@@ -612,7 +638,7 @@ public class NodeResource extends AbstractResource {
 	 * @param httpServletRequest
 	 * @return
 	 */
-	@Path("/nodes/node/{nodeid}/metadataepm")
+	@Path("/node/{nodeid}/metadataepm")
 	@PUT
 	@Produces(MediaType.APPLICATION_XML)
 	public String putNodeMetadataEpm(String xmlNode, @PathParam("nodeid") String nodeUuid,
@@ -622,7 +648,7 @@ public class NodeResource extends AbstractResource {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		Credential ui = checkCredential(httpServletRequest, null, null, null);
+		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
 
 		Date time = new Date();
 		SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
@@ -635,14 +661,14 @@ public class NodeResource extends AbstractResource {
 
 		try {
 			String returnValue = nodeManager
-					.changeNodeMetadataEpm(MimeTypeUtils.TEXT_XML, nodeUuid, xmlNode, ui.getId(), groupId).toString();
-			logger.info(String.format(logformat, "OK", nodeUuid, "metadataepm", ui.getId(), timeFormat,
+					.changeNodeMetadataEpm(MimeTypeUtils.TEXT_XML, nodeUuid, xmlNode, ui.userId, groupId).toString();
+			logger.info(String.format(logformat, "OK", nodeUuid, "metadataepm", ui.userId, timeFormat,
 					httpServletRequest.getRemoteAddr(), xmlNode));
 			return returnValue;
 		} catch (DoesNotExistException ex) {
 			throw new RestWebApplicationException(Status.NOT_FOUND, "Node " + nodeUuid + " not found");
 		} catch (BusinessException ex) {
-			logger.error(String.format(logformat, "ERR", nodeUuid, "metadataepm", ui.getId(), timeFormat,
+			logger.error(String.format(logformat, "ERR", nodeUuid, "metadataepm", ui.userId, timeFormat,
 					httpServletRequest.getRemoteAddr(), xmlNode));
 			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
 		} catch (Exception ex) {
@@ -653,7 +679,7 @@ public class NodeResource extends AbstractResource {
 	}
 
 	/**
-	 * Rewrite node nodecontext <br>
+	 * Rewrite node nodecontext. <br>
 	 * PUT /rest/api/nodes/node/{node-id}/nodecontext parameters: return:
 	 **/
 	/**
@@ -667,7 +693,7 @@ public class NodeResource extends AbstractResource {
 	 * @param httpServletRequest
 	 * @return
 	 */
-	@Path("/nodes/node/{nodeid}/nodecontext")
+	@Path("/node/{nodeid}/nodecontext")
 	@PUT
 	@Produces(MediaType.APPLICATION_XML)
 	public String putNodeNodeContext(String xmlNode, @CookieParam("user") String user,
@@ -678,7 +704,7 @@ public class NodeResource extends AbstractResource {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		Credential ui = checkCredential(httpServletRequest, user, token, null);
+		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
 		Date time = new Date();
 		SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
@@ -690,14 +716,13 @@ public class NodeResource extends AbstractResource {
 			logformat = logFormat;
 
 		try {
-
 			String returnValue = nodeManager
-					.changeNodeContext(MimeTypeUtils.TEXT_XML, nodeUuid, xmlNode, ui.getId(), groupId).toString();
-			logger.info(String.format(logformat, "OK", nodeUuid, "nodecontext", ui.getId(), timeFormat,
+					.changeNodeContext(MimeTypeUtils.TEXT_XML, nodeUuid, xmlNode, ui.userId, groupId).toString();
+			logger.info(String.format(logformat, "OK", nodeUuid, "nodecontext", ui.userId, timeFormat,
 					httpServletRequest.getRemoteAddr(), xmlNode));
 			return returnValue;
 		} catch (BusinessException ex) {
-			logger.error(String.format(logformat, "ERR", nodeUuid, "nodecontext", ui.getId(), timeFormat,
+			logger.error(String.format(logformat, "ERR", nodeUuid, "nodecontext", ui.userId, timeFormat,
 					httpServletRequest.getRemoteAddr(), xmlNode));
 			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
 		} catch (Exception ex) {
@@ -708,7 +733,7 @@ public class NodeResource extends AbstractResource {
 	}
 
 	/**
-	 * Rewrite node resource <br>
+	 * Rewrite node resource. <br>
 	 * PUT /rest/api/nodes/node/{node-id}/noderesource
 	 * 
 	 * @param xmlNode
@@ -721,7 +746,7 @@ public class NodeResource extends AbstractResource {
 	 * @param httpServletRequest
 	 * @return
 	 */
-	@Path("/nodes/node/{nodeid}/noderesource")
+	@Path("/node/{nodeid}/noderesource")
 	@PUT
 	@Produces(MediaType.APPLICATION_XML)
 	public String putNodeNodeResource(String xmlNode, @CookieParam("user") String user,
@@ -732,7 +757,7 @@ public class NodeResource extends AbstractResource {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		Credential ui = checkCredential(httpServletRequest, user, token, null);
+		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
 		Date time = new Date();
 		SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
@@ -745,12 +770,12 @@ public class NodeResource extends AbstractResource {
 
 		try {
 			String returnValue = nodeManager
-					.changeNodeResource(MimeTypeUtils.TEXT_XML, nodeUuid, xmlNode, ui.getId(), groupId).toString();
-			logger.info(String.format(logformat, "OK", nodeUuid, "noderesource", ui.getId(), timeFormat,
+					.changeNodeResource(MimeTypeUtils.TEXT_XML, nodeUuid, xmlNode, ui.userId, groupId).toString();
+			logger.info(String.format(logformat, "OK", nodeUuid, "noderesource", ui.userId, timeFormat,
 					httpServletRequest.getRemoteAddr(), xmlNode));
 			return returnValue;
 		} catch (BusinessException ex) {
-			logger.error(String.format(logformat, "ERR", nodeUuid, "noderesource", ui.getId(), timeFormat,
+			logger.error(String.format(logformat, "ERR", nodeUuid, "noderesource", ui.userId, timeFormat,
 					httpServletRequest.getRemoteAddr(), xmlNode));
 			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
 		} catch (Exception ex) {
@@ -775,7 +800,7 @@ public class NodeResource extends AbstractResource {
 	 * @param srcuuid
 	 * @return
 	 */
-	@Path("/nodes/node/import/{dest-id}")
+	@Path("/node/import/{dest-id}")
 	@POST
 	public String postImportNode(String xmlNode, @CookieParam("user") String user,
 			@CookieParam("credential") String token, @QueryParam("group") long groupId,
@@ -783,13 +808,13 @@ public class NodeResource extends AbstractResource {
 			@Context HttpServletRequest httpServletRequest, @QueryParam("srcetag") String semtag,
 			@QueryParam("srcecode") String code, @QueryParam("uuid") String srcuuid) {
 
-		Credential ui = checkCredential(httpServletRequest, user, token, null);
+		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
-		if (ui.getId() == 0)
+		if (ui.userId == 0)
 			throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'êtes pas connecté");
 
 		try {
-			return nodeManager.importNode(MimeTypeUtils.TEXT_XML, parentId, semtag, code, srcuuid, ui.getId(), groupId)
+			return nodeManager.importNode(MimeTypeUtils.TEXT_XML, parentId, semtag, code, srcuuid, ui.userId, groupId)
 					.toString();
 		} catch (BusinessException ex) {
 			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
@@ -815,7 +840,7 @@ public class NodeResource extends AbstractResource {
 	 * @param srcuuid
 	 * @return
 	 */
-	@Path("/nodes/node/copy/{dest-id}")
+	@Path("/node/copy/{dest-id}")
 	@POST
 	public String postCopyNode(String xmlNode, @CookieParam("user") String user,
 			@CookieParam("credential") String token, @QueryParam("group") long groupId,
@@ -823,13 +848,13 @@ public class NodeResource extends AbstractResource {
 			@Context HttpServletRequest httpServletRequest, @QueryParam("srcetag") String semtag,
 			@QueryParam("srcecode") String code, @QueryParam("uuid") String srcuuid) {
 
-		Credential ui = checkCredential(httpServletRequest, user, token, null);
+		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
-		if (ui.getId() == 0)
+		if (ui.userId == 0)
 			throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'êtes pas connecté");
 
 		try {
-			return nodeManager.copyNode(MimeTypeUtils.TEXT_XML, parentId, semtag, code, srcuuid, ui.getId(), groupId)
+			return nodeManager.copyNode(MimeTypeUtils.TEXT_XML, parentId, semtag, code, srcuuid, ui.userId, groupId)
 					.toString();
 		} catch (BusinessException ex) {
 			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
@@ -858,7 +883,6 @@ public class NodeResource extends AbstractResource {
 	 * @param cutoff
 	 * @return
 	 */
-	@Path("/nodes")
 	@GET
 	@Produces({ MediaType.APPLICATION_XML })
 	@Consumes(MediaType.APPLICATION_XML)
@@ -867,10 +891,10 @@ public class NodeResource extends AbstractResource {
 			@Context HttpServletRequest httpServletRequest, @QueryParam("portfoliocode") String portfoliocode,
 			@QueryParam("semtag") String semtag, @QueryParam("semtag_parent") String semtag_parent,
 			@QueryParam("code_parent") String code_parent, @QueryParam("level") Integer cutoff) {
-		Credential ui = checkCredential(httpServletRequest, user, token, null);
+		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
 		try {
-			return nodeManager.getNodes(MimeTypeUtils.TEXT_XML, portfoliocode, semtag, ui.getId(), groupId,
+			return nodeManager.getNodes(MimeTypeUtils.TEXT_XML, portfoliocode, semtag, ui.userId, groupId,
 					semtag_parent, code_parent, cutoff).toString();
 		} catch (DoesNotExistException ex) {
 			throw new RestWebApplicationException(Status.NOT_FOUND, "Portfolio inexistant");
@@ -884,7 +908,7 @@ public class NodeResource extends AbstractResource {
 	}
 
 	/**
-	 * Insert XML in a node. Moslty used by admin, other people use the import/copy
+	 * Insert XML in a node. Mostly used by admin, other people use the import/copy
 	 * node <br>
 	 * POST /rest/api/nodes/node/{parent-id}
 	 * 
@@ -899,7 +923,7 @@ public class NodeResource extends AbstractResource {
 	 * @param groupId
 	 * @return
 	 */
-	@Path("/nodes/node/{parent-id}")
+	@Path("/node/{parent-id}")
 	@POST
 	@Consumes(MediaType.APPLICATION_XML)
 	@Produces(MediaType.APPLICATION_XML)
@@ -911,25 +935,25 @@ public class NodeResource extends AbstractResource {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		Credential ui = checkCredential(httpServletRequest, user, token, null);
+		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
 		KEvent event = new KEvent();
-		event.requestType = KEvent.RequestType.POST;
 		event.eventType = KEvent.EventType.NODE;
+		event.requestType = KEvent.RequestType.POST;
 		event.uuid = parentId;
 		event.inputData = xmlNode;
 
 		try {
 
-			if (ui.getId() == 0) {
+			if (ui.userId == 0) {
 				return Response.status(403).entity("Not logged in").build();
 			} else {
 				String returnValue = nodeManager
-						.addNode(MimeTypeUtils.TEXT_XML, parentId, xmlNode, ui.getId(), groupId, false).toString();
+						.addNode(MimeTypeUtils.TEXT_XML, parentId, xmlNode, ui.userId, groupId, false).toString();
 				Response response;
 				event.status = 200;
 				response = Response.status(event.status).entity(returnValue).type(event.mediaType).build();
-				eventbus.processEvent(event);
+				// eventbus.processEvent(event); ???
 				return response;
 			}
 		} catch (BusinessException ex) {
@@ -941,7 +965,8 @@ public class NodeResource extends AbstractResource {
 	}
 
 	/**
-	 * Move a node up between siblings POST /rest/api/nodes/node/{node-id}/moveup
+	 * Move a node up between siblings. <br>
+	 * POST /rest/api/nodes/node/{node-id}/moveup
 	 * 
 	 * @param xmlNode
 	 * @param nodeId
@@ -949,7 +974,7 @@ public class NodeResource extends AbstractResource {
 	 * @param httpServletRequest
 	 * @return
 	 */
-	@Path("/nodes/node/{node-id}/moveup")
+	@Path("/node/{node-id}/moveup")
 	@POST
 	@Consumes(MediaType.APPLICATION_XML)
 	@Produces(MediaType.APPLICATION_XML)
@@ -958,20 +983,15 @@ public class NodeResource extends AbstractResource {
 		if (!isUUID(nodeId)) {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
-		Credential ui = checkCredential(httpServletRequest, null, null, null);
-		/*
-		 * KEvent event = new KEvent(); event.requestType = KEvent.RequestType.POST;
-		 * event.eventType = KEvent.EventType.NODE; event.uuid = parentId;
-		 * event.inputData = xmlNode; //
-		 */
-		Response response;
+		UserInfo ui = checkCredential(httpServletRequest, null, null, null);
+		Response response = null;
 
 		try {
 			if (nodeId == null) {
 				response = Response.status(400).entity("Missing uuid").build();
 			} else {
 
-				Long returnValue = nodeManager.moveNodeUp(ui.getId(), nodeId);
+				Long returnValue = nodeManager.moveNodeUp(nodeId);
 
 				if (returnValue == -1L) {
 					response = Response.status(404).entity("Non-existing node").build();
@@ -992,10 +1012,17 @@ public class NodeResource extends AbstractResource {
 	}
 
 	/**
-	 * Move a node to another parent POST
-	 * /rest/api/nodes/node/{node-id}/parentof/{parent-id} parameters: return:
-	 **/
-	@Path("/nodes/node/{node-id}/parentof/{parent-id}")
+	 * Move a node to another parent. <br>
+	 * POST /rest/api/nodes/node/{node-id}/parentof/{parent-id}
+	 * 
+	 * @param xmlNode
+	 * @param nodeId
+	 * @param parentId
+	 * @param sc
+	 * @param httpServletRequest
+	 * @return
+	 */
+	@Path("/node/{node-id}/parentof/{parent-id}")
 	@POST
 	@Consumes(MediaType.APPLICATION_XML)
 	@Produces(MediaType.APPLICATION_XML)
@@ -1006,9 +1033,9 @@ public class NodeResource extends AbstractResource {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		Credential ui = checkCredential(httpServletRequest, null, null, null); // FIXME
+		UserInfo ui = checkCredential(httpServletRequest, null, null, null); // FIXME
 		try {
-			boolean returnValue = nodeManager.changeParentNode(ui.getId(), nodeId, parentId);
+			boolean returnValue = nodeManager.changeParentNode(ui.userId, nodeId, parentId);
 			Response response;
 			if (returnValue == false) {
 				response = Response.status(409).entity("Cannot move").build();
@@ -1040,7 +1067,7 @@ public class NodeResource extends AbstractResource {
 	 * @param userId
 	 * @return
 	 */
-	@Path("/nodes/node/{node-id}/action/{action-name}")
+	@Path("/node/{node-id}/action/{action-name}")
 	@POST
 	@Consumes(MediaType.APPLICATION_XML)
 	@Produces(MediaType.APPLICATION_XML)
@@ -1052,11 +1079,11 @@ public class NodeResource extends AbstractResource {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		Credential ui = checkCredential(httpServletRequest, user, token, null); // FIXME
+		UserInfo ui = checkCredential(httpServletRequest, user, token, null); // FIXME
 
 		try {
 
-			String returnValue = nodeManager.executeMacroOnNode(ui.getId(), nodeId, macro);
+			String returnValue = nodeManager.executeMacroOnNode(ui.userId, nodeId, macro);
 			if (returnValue == "erreur") {
 				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
 			}
@@ -1083,7 +1110,7 @@ public class NodeResource extends AbstractResource {
 	 * @param userId
 	 * @return
 	 */
-	@Path("/nodes/node/{node-uuid}")
+	@Path("/node/{node-uuid}")
 	@DELETE
 	@Produces(MediaType.APPLICATION_XML)
 	public String deleteNode(@CookieParam("user") String user, @CookieParam("credential") String token,
@@ -1092,15 +1119,12 @@ public class NodeResource extends AbstractResource {
 		if (!isUUID(nodeUuid)) {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
-		Credential ui = checkCredential(httpServletRequest, user, token, null);
+		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		try {
-			int nbDeletedNodes = nodeManager.deleteNode(nodeUuid, ui.getId(), groupId);
-			if (nbDeletedNodes == 0) {
-				throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
-			}
+			nodeManager.removeNode(nodeUuid, ui.userId, groupId);
 			return "";
-		} catch (RestWebApplicationException ex) {
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+		} catch (BusinessException ex) {
+			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
 		} catch (Exception ex) {
 			ex.printStackTrace();
 			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
@@ -1108,11 +1132,25 @@ public class NodeResource extends AbstractResource {
 	}
 
 	/**
-	 * Fetch node content GET /rest/api/nodes/{node-id}
+	 * Fetch node content. <br>
+	 * GET /rest/api/nodes/{node-id}
 	 * 
+	 * @param user
+	 * @param token
+	 * @param groupId
+	 * @param nodeUuid
+	 * @param xslFile
+	 * @param sc
+	 * @param httpServletRequest
+	 * @param accept
+	 * @param userId
+	 * @param lang
+	 * @param p1
+	 * @param p2
+	 * @param p3
 	 * @return
-	 **/
-	@Path("/nodes/{node-id}")
+	 */
+	@Path("/{node-id}")
 	@GET
 	@Consumes(MediaType.APPLICATION_XML)
 	public String getNodeWithXSL(@CookieParam("user") String user, @CookieParam("credential") String token,
@@ -1125,7 +1163,7 @@ public class NodeResource extends AbstractResource {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
 
-		Credential ui = new Credential();
+		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
 		try {
 			// When we need more parameters, arrange this with format
@@ -1139,7 +1177,7 @@ public class NodeResource extends AbstractResource {
 			ppath = ppath.substring(0, ppath.lastIndexOf(File.separator, ppath.length() - 2) + 1);
 			xslFile = ppath + xslFile;
 			String returnValue = nodeManager
-					.getNodeWithXSL(MimeTypeUtils.TEXT_XML, nodeUuid, xslFile, parameters, ui.getId(), groupId)
+					.getNodeWithXSL(MimeTypeUtils.TEXT_XML, nodeUuid, xslFile, parameters, ui.userId, groupId)
 					.toString();
 			if (returnValue.length() != 0) {
 				if (MediaType.APPLICATION_JSON.equals(accept))
@@ -1165,9 +1203,19 @@ public class NodeResource extends AbstractResource {
 	/**
 	 *
 	 * POST /rest/api/nodes/{node-id}/frommodelbysemantictag/{semantic-tag}
-	 * parameters: return:
-	 **/
-	@Path("/nodes/{node-id}/frommodelbysemantictag/{semantic-tag}")
+	 * 
+	 * @param xmlNode
+	 * @param user
+	 * @param token
+	 * @param groupId
+	 * @param nodeUuid
+	 * @param semantictag
+	 * @param sc
+	 * @param httpServletRequest
+	 * @param userId
+	 * @return
+	 */
+	@Path("/{node-id}/frommodelbysemantictag/{semantic-tag}")
 	@POST
 	@Consumes(MediaType.APPLICATION_XML)
 	@Produces(MediaType.APPLICATION_XML)
@@ -1179,131 +1227,15 @@ public class NodeResource extends AbstractResource {
 		if (!isUUID(nodeUuid)) {
 			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
 		}
-		Credential cr = checkCredential(httpServletRequest, user, token, null);
+		UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 		try {
 			String returnValue = nodeManager
-					.addNodeFromModelBySemanticTag(MimeTypeUtils.TEXT_XML, nodeUuid, semantictag, cr.getId(), groupId)
+					.addNodeFromModelBySemanticTag(MimeTypeUtils.TEXT_XML, nodeUuid, semantictag, ui.userId, groupId)
 					.toString();
 			return returnValue;
 		} catch (BusinessException ex) {
 			throw new RestWebApplicationException(Status.FORBIDDEN,
 					"Vous n'avez pas les droits d'acces " + ex.getMessage());
-		} catch (Exception ex) {
-			ex.printStackTrace();
-			logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		}
-	}
-
-	/**
-	 * Change rights POST /rest/api/rights
-	 * 
-	 * @param xmlNode
-	 * @param sc
-	 * @param httpServletRequest
-	 * @return
-	 */
-	@Path("/rights")
-	@POST
-	@Produces(MediaType.APPLICATION_XML)
-	public String postChangeRights(String xmlNode, @Context ServletConfig sc,
-			@Context HttpServletRequest httpServletRequest) {
-
-		Credential ui = checkCredential(httpServletRequest, null, null, null);
-		String returnValue = "";
-
-		try {
-			nodeManager.changeRights(xmlNode, ui.getId(), ui.getCredentialSubstitution().getCredentialSubstitutionId(),
-					"");
-			if (returnValue == "faux") {
-				throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
-			}
-			return returnValue;
-		} catch (RestWebApplicationException ex) {
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
-		} catch (Exception ex) {
-			ex.printStackTrace();
-			logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		}
-	}
-
-	/********************************************************/
-	/**
-	 * ## ## ### ### ##### ### ### ### ## ## ## ## ## ## ## ## ## # ## ## ## ## ##
-	 * ## ## ## ## ## ####### ## ##### ## ## ## ## ## ## ## ## ## ## ## ## ## ## ##
-	 * ## ## ## ## ## ## ## ## ## ## ### ## ## ### /** Partie utilisation des
-	 * macro-commandes et gestion
-	 **/
-	/********************************************************/
-
-	/**
-	 * Executing pre-defined macro command on a node POST
-	 * /rest/api/action/{uuid}/{macro-name} parameters: return:
-	 **/
-	@Path("/action/{uuid}/{macro-name}")
-	@POST
-	@Consumes(MediaType.APPLICATION_XML + "," + MediaType.TEXT_PLAIN)
-	@Produces(MediaType.TEXT_PLAIN)
-	public String postMacro(String xmlNode, @CookieParam("user") String user, @CookieParam("credential") String token,
-			@CookieParam("group") String group, @PathParam("uuid") String uuid,
-			@PathParam("macro-name") String macroName, @Context ServletConfig sc,
-			@Context HttpServletRequest httpServletRequest) {
-		if (!isUUID(uuid)) {
-			throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
-		}
-
-		Credential ui = checkCredential(httpServletRequest, user, token, group);
-
-		String returnValue = "";
-		try {
-			// On execute l'action sur le noeud uuid
-			if (uuid != null && macroName != null) {
-				returnValue = nodeManager.executeMacroOnNode(ui.getId(), uuid, macroName);
-				if (returnValue == "faux") {
-					throw new RestWebApplicationException(Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
-				}
-			}
-			// Erreur de requete
-			else {
-				returnValue = "";
-			}
-			return returnValue;
-		} catch (RestWebApplicationException ex) {
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
-		} catch (Exception ex) {
-			ex.printStackTrace();
-			logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-			throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
-		}
-	}
-
-	/**
-	 * Delete a right definition for a node. <br>
-	 * DELETE /rest/api/groupRights
-	 * 
-	 * @param user
-	 * @param token
-	 * @param groupId
-	 * @param sc
-	 * @param httpServletRequest
-	 * @param groupRightId
-	 * @return
-	 */
-	@Path("/groupRights")
-	@DELETE
-	@Produces(MediaType.APPLICATION_XML)
-	public String deleteGroupRights(@CookieParam("user") String user, @CookieParam("credential") String token,
-			@QueryParam("group") long groupId, @Context ServletConfig sc,
-			@Context HttpServletRequest httpServletRequest, @QueryParam("groupRightId") Long groupRightId) {
-		Credential ui = checkCredential(httpServletRequest, user, token, null);
-		try {
-			nodeManager.removeRights(groupId, groupRightId, ui.getId());
-			return "supprimé";
-		} catch (DoesNotExistException ex) {
-			throw new RestWebApplicationException(Status.NOT_FOUND, "Resource  not found");
-		} catch (BusinessException ex) {
-			throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
 		} catch (Exception ex) {
 			ex.printStackTrace();
 			logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));

@@ -1,11 +1,8 @@
 package eportfolium.com.karuta.consumer.impl.dao;
-// Generated 17 juin 2019 11:33:18 by Hibernate Tools 5.2.10.Final
 
 import java.util.List;
 
-import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
-import javax.persistence.PersistenceContext;
 import javax.persistence.TypedQuery;
 
 import org.springframework.stereotype.Repository;
@@ -25,19 +22,9 @@ import eportfolium.com.karuta.util.ValidateUtil;
 @Repository
 public class PortfolioGroupDaoImpl extends AbstractDaoImpl<PortfolioGroup> implements PortfolioGroupDao {
 
-	@PersistenceContext
-	private EntityManager em;
-
-//	private static final Log log = LogFactory.getLog(PortfolioGroupDaoImpl.class);
-
 	public PortfolioGroupDaoImpl() {
 		super();
 		setCls(PortfolioGroup.class);
-	}
-
-	public int postPortfolioGroup(String groupname, String type, Integer parent, int userId) {
-		// TODO Auto-generated method stub
-		return 0;
 	}
 
 	public PortfolioGroup getPortfolioGroupFromLabel(String groupLabel) {
@@ -45,7 +32,7 @@ public class PortfolioGroupDaoImpl extends AbstractDaoImpl<PortfolioGroup> imple
 		String sql = "SELECT pg FROM PortfolioGroup pg";
 		sql += " WHERE pg.label = :label";
 		TypedQuery<PortfolioGroup> q = em.createQuery(sql, PortfolioGroup.class);
-		q.setParameter(1, groupLabel);
+		q.setParameter("label", groupLabel);
 		try {
 			group = q.getSingleResult();
 		} catch (NoResultException e) {
@@ -79,36 +66,18 @@ public class PortfolioGroupDaoImpl extends AbstractDaoImpl<PortfolioGroup> imple
 		return exists;
 	}
 
-	public String getPortfolioGroupListFromPortfolio(String portfolioid, int userId) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public String getPortfolioGroupList(int userId) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public List<Portfolio> getPortfolioByPortfolioGroup(Long portfolioGroupId) {
+	public List<Portfolio> getPortfoliosByPortfolioGroup(Long portfolioGroupId) {
 		if (PhpUtil.empty(portfolioGroupId) || !ValidateUtil.isUnsignedId(portfolioGroupId.intValue())) {
 			throw new IllegalArgumentException();
 		}
+		
 		String sql = "SELECT p FROM PortfolioGroupMembers pgm";
-		sql += " LEFT JOIN FETCH pgm.id.portfolio p";
-		sql += " WHERE id.portfolioGroup.id = :portfolioGroupId";
-		TypedQuery<Portfolio> q = em.createQuery(sql, Portfolio.class);
+		sql += " LEFT JOIN pgm.id.portfolio p";
+		sql += " WHERE pgm.id.portfolioGroup.id = :portfolioGroupId";
+
+		final TypedQuery<Portfolio> q = em.createQuery(sql, Portfolio.class);
 		q.setParameter("portfolioGroupId", portfolioGroupId);
 		return q.getResultList();
-	}
-
-	public String deletePortfolioGroups(int portfolioGroupId, int userId) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	public String deletePortfolioFromPortfolioGroups(String uuid, int portfolioGroupId, int userId) {
-		// TODO Auto-generated method stub
-		return null;
 	}
 
 }

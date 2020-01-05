@@ -1,7 +1,8 @@
 package eportfolium.com.karuta.consumer.contract.dao;
 
 import java.io.Serializable;
-import java.util.Collection;
+import java.sql.Connection;
+import java.sql.ResultSet;
 import java.util.List;
 import java.util.UUID;
 
@@ -20,17 +21,11 @@ public interface NodeDao {
 
 	Integer getNodeOrderByNodeUuid(String nodeUuid);
 
-	Integer getNodeOrderByNodeUuid(UUID nodeUuid);
-
 	UUID getPortfolioIdFromNode(String nodeUuid);
 
-	Node getParentNode(UUID portfolioUuid, String semtag_parent, String code_parent) throws Exception;
+	Node getNodeBySemtagAndCode(String portfolioUuid, String semtag, String code) throws Exception;
 
 	Node getParentNodeByNodeUuid(String nodeUuid);
-
-	Node getParentNodeByNodeUuid(UUID nodeUuid);
-
-	UUID getParentNodeUuidByNodeUuid(UUID nodeUuid);
 
 	UUID getParentNodeUuidByNodeUuid(String nodeUuid);
 
@@ -42,8 +37,6 @@ public interface NodeDao {
 
 	List<Node> getNodesBySemanticTag(String portfolioUuid, String semantictag);
 
-	List<Node> getNodes(UUID portfolioUuid);
-
 	List<Node> getNodes(String portfolioUuid);
 
 	/**
@@ -54,13 +47,7 @@ public interface NodeDao {
 	 */
 	List<Node> getSharedNodes(String portfolioUuid);
 
-	List<Node> getSharedNodes(UUID portfolioUuid);
-
-	List<Node> getNodesWithResources(UUID portfolioUuid);
-
 	List<Node> getNodesWithResources(String portfolioUuid);
-
-	List<Node> getNodes(Collection<UUID> nodeIds);
 
 	/**
 	 * From node, check if portfolio has user 'sys_public' in group 'all' <br>
@@ -109,9 +96,10 @@ public interface NodeDao {
 	 * @param order
 	 * @param modifUserId
 	 * @param portfolioUuid
-	 * @return
+	 * 
+	 * @return nodeUuid
 	 */
-	int create(String nodeUuid, String nodeParentUuid, String nodeChildrenUuid, String asmType, String xsiType,
+	String add(String nodeUuid, String nodeParentUuid, String nodeChildrenUuid, String asmType, String xsiType,
 			boolean sharedRes, boolean sharedNode, boolean sharedNodeRes, String sharedResUuid, String sharedNodeUuid,
 			String sharedNodeResUuid, String metadata, String metadataWad, String metadataEpm, String semtag,
 			String semanticTag, String label, String code, String descr, String format, int order, Long modifUserId,
@@ -135,15 +123,6 @@ public interface NodeDao {
 	 */
 	boolean isCodeExist(String code, String nodeuuid);
 
-	/**
-	 * Same code allowed with nodes in different portfolio, and not root node
-	 * 
-	 * @param code
-	 * @param nodeuuid
-	 * @return
-	 */
-	boolean isCodeExist(char[] code, UUID nodeuuid);
-
 	int updateNode(String nodeUuid);
 
 	String getMetadataWad(String nodeUuid);
@@ -153,7 +132,7 @@ public interface NodeDao {
 	List<Node> getFirstLevelChildren(String parentNodeUuid);
 
 	/**
-	 * Pour retrouver les enfants du noeud et affecter les droits
+	 * Pour retrouver les enfants du noeud et affecter les droits.
 	 * 
 	 * @param nodeUuid
 	 * @return
@@ -161,16 +140,30 @@ public interface NodeDao {
 	 */
 	List<Node> getChildren(String nodeUuid) throws DoesNotExistException;
 
-	String getNodeUuidBySemtag(String string, String nodeUuid) throws DoesNotExistException;
+	String getNodeUuidBySemtag(String semtag, String nodeUuid) throws DoesNotExistException;
 
 	Node getParentNode(String parentUuid, String semantictag);
 
-	Node getParentNode(UUID parentUuid, String semantictag);
-
 	Integer getNodeNextOrderChildren(String nodeUuid);
 
-	UUID getNodeUuidByPortfolioModelAndSemanticTag(UUID portfolioModelId, String semanticTag);
+	UUID getNodeUuidByPortfolioModelAndSemanticTag(String portfolioModelId, String semanticTag);
 
-	Long postMoveNodeUp(Long userid, String uuid) throws DoesNotExistException;
+	List<Node> getNodesByOrder(String nodeUuid, int order);
+
+	List<Node> getNodes(List<String> nodeIds);
+
+	Node getRootNodeByPortfolio(String portfolioUuid);
+
+	void removeAll();
+
+	ResultSet getMysqlNodes(Connection con);
+
+	ResultSet getMysqlChildrenNodes(Connection con, String parentNodeUuid);
+
+	ResultSet getMysqlRootNodes(Connection con);
+
+	ResultSet getMysqlRootNode(Connection con, String portfolioUuid);
+
+	ResultSet getMysqlNode(Connection c, String nodeUuid);
 
 }

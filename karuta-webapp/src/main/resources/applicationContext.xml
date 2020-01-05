@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns="http://www.springframework.org/schema/beans"
+	xsi:schemaLocation="
+        http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/mvc
+        http://www.springframework.org/schema/mvc/spring-mvc.xsd">
+
+	<!-- Scanne les packages pour trouver les beans qui se déclarent (@Named...) -->
+	<context:component-scan
+		base-package="eportfolium.com.karuta.webapp, eportfolium.com.karuta.business, eportfolium.com.karuta.consumer" />
+
+	<!-- Prend en compte la configuration des injections (@Inject...) -->
+	<context:annotation-config />
+	<mvc:annotation-driven />
+
+	<!--Common beans -->
+	<bean
+		class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<property name="prefix" value="/WEB-INF/pages/" />
+		<property name="suffix" value=".jsp" />
+	</bean>
+
+	<import resource="applicationContext-persistence.xml" />
+
+	<bean id="freeMarkerConfigurationFactory"
+		class="org.springframework.ui.freemarker.FreeMarkerConfigurationFactoryBean">
+		<property name="templateLoaderPath"
+			value="classpath:/META-INF/assets/core/mails/" />
+		<property name="preferFileSystemAccess" value="false" />
+	</bean>
+</beans>

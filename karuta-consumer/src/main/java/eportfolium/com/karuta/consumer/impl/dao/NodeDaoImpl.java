@@ -1,9 +1,11 @@
 package eportfolium.com.karuta.consumer.impl.dao;
 // Generated 17 juin 2019 11:33:18 by Hibernate Tools 5.2.10.Final
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -11,24 +13,19 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.NonUniqueResultException;
-import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import eportfolium.com.karuta.consumer.contract.dao.NodeDao;
-import eportfolium.com.karuta.consumer.contract.dao.PortfolioDao;
 import eportfolium.com.karuta.model.bean.Node;
 import eportfolium.com.karuta.model.bean.Portfolio;
 import eportfolium.com.karuta.model.exception.DoesNotExistException;
-import eportfolium.com.karuta.util.PhpUtil;
 
 /**
  * Home object implementation for domain model class Node.
@@ -39,25 +36,37 @@ import eportfolium.com.karuta.util.PhpUtil;
 @Repository
 public class NodeDaoImpl extends AbstractDaoImpl<Node> implements NodeDao {
 
-	@PersistenceContext
-	private EntityManager entityManager;
-
-	@Autowired
-	private PortfolioDao portfolioDao;
-
 	public NodeDaoImpl() {
 		super();
 		setCls(Node.class);
 
 	}
 
+	@Override
+	public Node getRootNodeByPortfolio(String portfolioUuid) {
+		Node res = null;
+
+		String sql = "SELECT n FROM Node n";
+		sql += " INNER JOIN n.portfolio p WITH p.id = :portfolioUuid";
+		sql += " WHERE n.asmType = 'asmRoot'";
+
+		TypedQuery<Node> q = em.createQuery(sql, Node.class);
+		q.setParameter("portfolioUuid", UUID.fromString(portfolioUuid));
+		try {
+			res = q.getSingleResult();
+		} catch (NoResultException ex) {
+			ex.printStackTrace();
+		}
+		return res;
+	}
+
 	public UUID getPortfolioIdFromNode(String nodeUuid) {
 		UUID result = null;
 		String hql = "SELECT p.id FROM Node n";
-		hql += " LEFT JOIN FETCH n.portfolio p";
-		hql = " WHERE n.id = :nodeUUID";
+		hql += " LEFT JOIN n.portfolio p";
+		hql += " WHERE n.id = :nodeUUID";
 
-		TypedQuery<UUID> q = entityManager.createQuery(hql, UUID.class);
+		TypedQuery<UUID> q = em.createQuery(hql, UUID.class);
 		q.setParameter("nodeUUID", UUID.fromString(nodeUuid));
 		try {
 			result = q.getSingleResult();
@@ -68,16 +77,15 @@ public class NodeDaoImpl extends AbstractDaoImpl<Node> implements NodeDao {
 
 	public Node getNodeBySemanticTag(UUID nodeUuid, String semantictag) {
 		Node n = null;
-		String sql = "SELECT n FROM Node";
+		String sql = "SELECT n FROM Node n";
 		sql += " WHERE n.semantictag = :semantictag";
 		sql += " AND n.id = :id";
-		TypedQuery<Node> q = entityManager.createQuery(sql, Node.class);
+		TypedQuery<Node> q = em.createQuery(sql, Node.class);
 		q.setParameter("semantictag", semantictag);
 		q.setParameter("id", nodeUuid);
 		try {
 			n = q.getSingleResult();
 		} catch (NoResultException e) {
-			e.printStackTrace();
 		}
 		return n;
 	}
@@ -92,7 +100,7 @@ public class NodeDaoImpl extends AbstractDaoImpl<Node> implements NodeDao {
 		sql += " INNER JOIN n.portfolio p WITH p.id = :portfolioUuid";
 		sql += " WHERE n.semantictag LIKE :semantictag";
 		sql += " ORDER BY n.code, n.nodeOrder";
-		TypedQuery<Node> q = entityManager.createQuery(sql, Node.class);
+		TypedQuery<Node> q = em.createQuery(sql, Node.class);
 		q.setParameter("portfolioUuid", portfolioUuid);
 		q.setParameter("semantictag", regexSemantictag);
 		return q.getResultList();
@@ -103,16 +111,12 @@ public class NodeDaoImpl extends AbstractDaoImpl<Node> implements NodeDao {
 	}
 
 	public Integer getNodeOrderByNodeUuid(String nodeUuid) {
-		return getNodeOrderByNodeUuid(UUID.fromString(nodeUuid));
-	}
-
-	public Integer getNodeOrderByNodeUuid(UUID nodeUuid) {
 		Integer res = null;
 		try {
 			String sql = "SELECT n.nodeOrder FROM Node n";
 			sql += " WHERE n.id = :nodeUuid";
-			TypedQuery<Integer> q = entityManager.createQuery(sql, Integer.class);
-			q.setParameter("nodeUuid", nodeUuid);
+			TypedQuery<Integer> q = em.createQuery(sql, Integer.class);
+			q.setParameter("nodeUuid", UUID.fromString(nodeUuid));
 			res = q.getSingleResult();
 		} catch (NoResultException e) {
 			e.printStackTrace();
@@ -121,18 +125,20 @@ public class NodeDaoImpl extends AbstractDaoImpl<Node> implements NodeDao {
 
 	}
 
-	public int create(String nodeUuid, String nodeParentUuid, String nodeChildrenUuid, String asmType, String xsiType,
+	public String add(String nodeUuid, String nodeParentUuid, String nodeChildrenUuid, String asmType, String xsiType,
 			boolean sharedRes, boolean sharedNode, boolean sharedNodeRes, String sharedResUuid, String sharedNodeUuid,
 			String sharedNodeResUuid, String metadata, String metadataWad, String metadataEpm, String semtag,
 			String semanticTag, String label, String code, String descr, String format, int order, Long modifUserId,
 			String portfolioUuid) {
-		Node node = new Node();
+		Node node = null;
 		try {
 			node = findById(UUID.fromString(nodeUuid));
 		} catch (Exception ex) {
-
+			node = new Node();
 		}
-		node.setParentNode(new Node(UUID.fromString(nodeParentUuid)));
+		if (nodeParentUuid != null) {
+			node.setParentNode(new Node(UUID.fromString(nodeParentUuid)));
+		}
 		if (nodeChildrenUuid != null) {
 			node.setChildrenStr(nodeChildrenUuid);
 		}
@@ -142,9 +148,12 @@ public class NodeDaoImpl extends AbstractDaoImpl<Node> implements NodeDao {
 		node.setSharedRes(sharedRes);
 		node.setSharedNode(sharedNode);
 		node.setSharedNodeRes(sharedNodeRes);
-		node.setSharedResUuid(UUID.fromString(sharedResUuid));
-		node.setSharedNodeUuid(UUID.fromString(sharedNodeUuid));
-		node.setSharedNodeResUuid(UUID.fromString(sharedNodeResUuid));
+		if (sharedResUuid != null)
+			node.setSharedResUuid(UUID.fromString(sharedResUuid));
+		if (sharedNodeUuid != null)
+			node.setSharedNodeUuid(UUID.fromString(sharedNodeUuid));
+		if (sharedNodeResUuid != null)
+			node.setSharedNodeResUuid(UUID.fromString(sharedNodeResUuid));
 		node.setMetadata(metadata);
 		node.setMetadataWad(metadataWad);
 		node.setMetadataEpm(metadataEpm);
@@ -155,14 +164,14 @@ public class NodeDaoImpl extends AbstractDaoImpl<Node> implements NodeDao {
 		node.setDescr(descr);
 		node.setFormat(format);
 		node.setModifUserId(modifUserId);
-		node.setPortfolio(new Portfolio(UUID.fromString(portfolioUuid)));
+		if (portfolioUuid != null)
+			node.setPortfolio(new Portfolio(UUID.fromString(portfolioUuid)));
 		try {
-			merge(node);
+			node = merge(node);
 		} catch (Exception ex) {
 			ex.printStackTrace();
-			return 1;
 		}
-		return 0;
+		return node.getId().toString();
 	}
 
 	public int update(String nodeUuid, String asmType, String xsiType, String semantictag, String label, String code,
@@ -220,104 +229,103 @@ public class NodeDaoImpl extends AbstractDaoImpl<Node> implements NodeDao {
 		return result;
 	}
 
-	public Node getParentNode(UUID portfolioUuid, String semtag_parent, String code_parent) throws Exception {
+	public Node getNodeBySemtagAndCode(String portfolioUuid, String semtag, String code) throws Exception {
 		Node node = null;
 		String sql = "SELECT n FROM Node n";
-		sql += " WHERE n.portfolio.id = :Uuid";
+		sql += " WHERE n.portfolio.id = :uuid";
 		sql += " AND n.metadata LIKE :metadata ";
-		sql += " AND n.code = :code";
-		TypedQuery<Node> q = entityManager.createQuery(sql, Node.class);
-		q.setParameter("Uuid", portfolioUuid);
-		q.setParameter("metadata", "%semantictag=%" + semtag_parent + "%");
-		q.setParameter("code", code_parent);
+		if (StringUtils.isNotEmpty(code)) {
+			sql += " AND n.code = :code";
+		}
+		TypedQuery<Node> q = em.createQuery(sql, Node.class);
+		q.setParameter("uuid", UUID.fromString(portfolioUuid));
+		q.setParameter("metadata", "%semantictag=%" + semtag + "%");
+		if (StringUtils.isNotEmpty(code)) {
+			q.setParameter("code", code);
+		}
 		try {
 			node = q.getSingleResult();
 		} catch (NoResultException e) {
-			e.printStackTrace();
 		}
 		return node;
 	}
 
 	public Node getParentNode(String parentUuid, String semantictag) {
-		return getParentNode(UUID.fromString(parentUuid), semantictag);
-	}
-
-	public Node getParentNode(UUID parentUuid, String semantictag) {
 		Node node = null;
 		String sql = "SELECT n FROM Node n";
 		sql += " AND n.semantictag LIKE :semantictag";
 		sql += " AND n.parent.id = :parentUuid";
-		TypedQuery<Node> q = entityManager.createQuery(sql, Node.class);
-		q.setParameter("parentUuid", parentUuid);
+		TypedQuery<Node> q = em.createQuery(sql, Node.class);
+		q.setParameter("parentUuid", UUID.fromString(parentUuid));
 		q.setParameter("semantictag", "%" + semantictag + "%");
 		try {
 			node = q.getSingleResult();
 		} catch (NoResultException e) {
-			e.printStackTrace();
 		}
 		return node;
 	}
 
 	public Node getParentNodeByNodeUuid(String nodeUuid) {
-		return getParentNodeByNodeUuid(UUID.fromString(nodeUuid));
-	}
-
-	public Node getParentNodeByNodeUuid(UUID nodeUuid) {
 		Node result = null;
 		String sql = "SELECT pn FROM Node n";
-		sql += " INNER JOIN FETCH n.parentNode pn";
+		sql += " INNER JOIN n.parentNode pn";
 		sql += " WHERE n.id = :nodeUuid";
-		TypedQuery<Node> q = entityManager.createQuery(sql, Node.class);
-		q.setParameter("nodeUuid", nodeUuid);
+		TypedQuery<Node> q = em.createQuery(sql, Node.class);
+		q.setParameter("nodeUuid", UUID.fromString(nodeUuid));
 		try {
 			result = q.getSingleResult();
 		} catch (NoResultException ex) {
-			ex.printStackTrace();
 		}
 		return result;
 	}
 
-	public UUID getParentNodeUuidByNodeUuid(UUID nodeUuid) {
+	public UUID getParentNodeUuidByNodeUuid(String nodeUuid) {
 		Node res = getParentNodeByNodeUuid(nodeUuid);
 		return res != null ? res.getId() : null;
 	}
 
-	public UUID getParentNodeUuidByNodeUuid(String nodeUuid) {
-		return getParentNodeUuidByNodeUuid(UUID.fromString(nodeUuid));
-	}
-
-	public List<Node> getNodes(String portfolioUuid) {
-		return getNodes(UUID.fromString(portfolioUuid));
-	}
-
-	public List<Node> getNodesWithResources(UUID portfolioUuid) {
+	public List<Node> getNodesWithResources(String portfolioUuid) {
 		String sql = "SELECT n FROM Node n";
-		// Recuperation des ressources
+		// Récupération des ressources
 		sql += " LEFT JOIN FETCH n.resource r1";
 		sql += " LEFT JOIN FETCH n.resResource r2";
 		sql += " LEFT JOIN FETCH n.contextResource r3";
 		sql += " WHERE n.portfolio.id = :portfolioUuid";
-		TypedQuery<Node> q = entityManager.createQuery(sql, Node.class);
-		q.setParameter("portfolioUuid", portfolioUuid);
+		TypedQuery<Node> q = em.createQuery(sql, Node.class);
+		q.setParameter("portfolioUuid", UUID.fromString(portfolioUuid));
 		return q.getResultList();
 	}
 
-	public List<Node> getNodesWithResources(String portfolioUuid) {
-		return getNodesWithResources(UUID.fromString(portfolioUuid));
+	public List<Node> getNodes(String portfolioUuid) {
+		String sql = "SELECT n FROM Node n";
+		sql += " INNER JOIN n.portfolio p WITH p.id = :portfolioUuid";
+		sql += " LEFT JOIN FETCH n.parentNode";
+		TypedQuery<Node> q = em.createQuery(sql, Node.class);
+		q.setParameter("portfolioUuid", UUID.fromString(portfolioUuid));
+		return q.getResultList();
 	}
 
-	public List<Node> getNodes(UUID portfolioUuid) {
-		return entityManager.createQuery("SELECT n FROM Node n WHERE n.portfolio.id = :portfolioUuid", Node.class)
-				.setParameter("portfolioUuid", portfolioUuid).getResultList();
-	}
-
-	public List<Node> getNodes(Collection<UUID> nodeIds) {
-		String sql = "SELECT n FROM node n"; // Going back to original table,
+	@Override
+	public List<Node> getNodes(List<String> nodeIds) {
+		String sql = "SELECT n FROM Node n"; // Going back to original table,
 		sql += " LEFT JOIN FETCH n.resource r1";// Récupération des données
 		sql += " LEFT JOIN FETCH n.resResource r2"; // Récupération des données
 		sql += " LEFT JOIN FETCH n.contextResource r3"; // Récupération des données
-		sql += " WHERE n.id IN (" + PhpUtil.implode(",", nodeIds) + ")"; // Selon notre filtrage, prendre les noeuds
-		TypedQuery<Node> q = entityManager.createQuery(sql, Node.class);
+		sql += " WHERE n.id IN (";
+		for (int i = 0; i < nodeIds.size(); i++) {
+			if (i == nodeIds.size() - 1) {
+				sql += "?" + i;
+			} else {
+				sql += "?" + i + ",";
+			}
+		}
+		sql += ")";
+
+		// Selon notre filtrage, prendre les noeuds
+		TypedQuery<Node> q = em.createQuery(sql, Node.class);
+		for (int i = 0; i < nodeIds.size(); i++) {
+			q.setParameter(i, UUID.fromString(nodeIds.get(i)));
+		}
 		return q.getResultList();
 	}
 
@@ -331,13 +339,13 @@ public class NodeDaoImpl extends AbstractDaoImpl<Node> implements NodeDao {
 			sql += " INNER JOIN gi.groupUser gu";
 			sql += " INNER JOIN gu.id.credential c WITH c.login='sys_public'";
 			sql += " WHERE n.id = :nodeUuid";
-			Query q = entityManager.createQuery(sql);
+			Query q = em.createQuery(sql);
 			q.setParameter("nodeUuid", nodeUuid);
 			try {
 				q.getSingleResult();
 				val = true;
 			} catch (Exception e) {
-				e.printStackTrace();
+//				e.printStackTrace();
 			}
 		}
 		return val;
@@ -350,24 +358,23 @@ public class NodeDaoImpl extends AbstractDaoImpl<Node> implements NodeDao {
 	/**
 	 * Check if same code allowed with nodes in different portfolio, and not root
 	 * node
-	 *
-	 *
 	 */
-	public boolean isCodeExist(char[] code, UUID nodeuuid) {
+	@Override
+	public boolean isCodeExist(String code, String nodeuuid) {
 		boolean response = false;
-		String sql = "SELECT p.id FROM Node n";
-		sql += " INNER JOIN n.portfolio p";
-		sql += " WHERE n.asmType = :asmType";
-		sql += " AND n.code = :code";
+		String sql = "SELECT p.id FROM Node n1";
+		sql += " INNER JOIN n1.portfolio p";
+		sql += " WHERE n1.asmType = :asmType";
+		sql += " AND n1.code = :code";
 		if (nodeuuid != null) {
-			sql += " AND n.id != :nodeuuid";
-			sql += " AND p.id = (SELECT n.portfolio.id FROM Node n WHERE n.id = :nodeuuid)";
+			sql += " AND n1.id != :nodeuuid";
+			sql += " AND p.id = (SELECT n2.portfolio.id FROM Node n2 WHERE n2.id = :nodeuuid)";
 		}
-		TypedQuery<UUID> q = entityManager.createQuery(sql, UUID.class);
+		TypedQuery<UUID> q = em.createQuery(sql, UUID.class);
 		q.setParameter("asmType", "asmRoot");
 		q.setParameter("code", code);
 		if (nodeuuid != null) {
-			q.setParameter("nodeuuid", nodeuuid);
+			q.setParameter("nodeuuid", UUID.fromString(nodeuuid));
 		}
 		try {
 			q.getSingleResult();
@@ -380,23 +387,14 @@ public class NodeDaoImpl extends AbstractDaoImpl<Node> implements NodeDao {
 		return response;
 	}
 
-	/**
-	 * Check if same code allowed with nodes in different portfolio, and not root
-	 * node
-	 *
-	 */
-	public boolean isCodeExist(String code, String nodeuuid) {
-		return isCodeExist(code.toCharArray(), UUID.fromString(nodeuuid));
-	}
-
 	public List<Node> getFirstLevelChildren(String parentNodeUuid) {
 		String sql = new String();
 		sql += "SELECT n FROM Node n";
 		sql += " WHERE n.parentNode.id = :nodeUuid";
 		sql += " ORDER by n.nodeOrder ASC";
 
-		TypedQuery<Node> q = entityManager.createQuery(sql, Node.class);
-		q.setParameter("nodeUuid", parentNodeUuid);
+		TypedQuery<Node> q = em.createQuery(sql, Node.class);
+		q.setParameter("nodeUuid", UUID.fromString(parentNodeUuid));
 		List<Node> l = q.getResultList();
 		return l;
 	}
@@ -421,10 +419,10 @@ public class NodeDaoImpl extends AbstractDaoImpl<Node> implements NodeDao {
 
 			String sql = "SELECT COALESCE(n.sharedNodeUuid, n.id) AS value FROM Node n";
 			sql += " INNER JOIN n.parentNode pNode WITH pNode.id = :nodeUuid";
-			sql += " GROUP BY pNode.id";
+//			sql += " GROUP BY pNode.id";
 			sql += " ORDER BY n.nodeOrder";
 
-			TypedQuery<UUID> q = entityManager.createQuery(sql, UUID.class);
+			TypedQuery<UUID> q = em.createQuery(sql, UUID.class);
 			q.setParameter("nodeUuid", UUID.fromString(nodeUuid));
 			List<UUID> uuids = q.getResultList();
 			List<String> uuidsStr = new ArrayList<>(uuids.size());
@@ -455,7 +453,7 @@ public class NodeDaoImpl extends AbstractDaoImpl<Node> implements NodeDao {
 		String metadata = null;
 		String sql = "SELECT n.metadataWad FROM Node n";
 		sql += " WHERE n.id = :nodeUuid";
-		TypedQuery<String> q = entityManager.createQuery(sql, String.class);
+		TypedQuery<String> q = em.createQuery(sql, String.class);
 		q.setParameter("nodeUuid", nodeUuid);
 		try {
 			metadata = q.getSingleResult();
@@ -468,10 +466,8 @@ public class NodeDaoImpl extends AbstractDaoImpl<Node> implements NodeDao {
 	 * Pour retrouver les enfants du noeud et affecter les droits
 	 */
 	public List<Node> getChildren(String nodeUuid) throws DoesNotExistException {
-
 		final Map<Integer, List<Node>> children = new HashMap<Integer, List<Node>>();
 		final Map<Integer, List<String>> childrenIds = new HashMap<Integer, List<String>>();
-
 		final Node n = findById(UUID.fromString(nodeUuid));
 
 		int level = 0;
@@ -485,10 +481,22 @@ public class NodeDaoImpl extends AbstractDaoImpl<Node> implements NodeDao {
 
 		/// On boucle pour récupérer les noeuds par niveau.
 		while (added != 0) {
+			final List<String> pieces = childrenIds.get(level);
 			sql = "SELECT n FROM Node n";
-			sql += " WHERE n.parentNode.id IN (" + PhpUtil.implode(",", childrenIds.get(level)) + ")";
+			sql += " WHERE n.parentNode.id IN (";
+			for (int i = 0; i < pieces.size(); i++) {
+				if (i == pieces.size() - 1) {
+					sql += "?" + i;
+				} else {
+					sql += "?" + i + ",";
+				}
+			}
+			sql += " )";
 			sql += " ORDER by n.nodeOrder ASC";
-			q = entityManager.createQuery(sql, Node.class);
+			q = em.createQuery(sql, Node.class);
+			for (int i = 0; i < pieces.size(); i++) {
+				q.setParameter(i, UUID.fromString(pieces.get(i)));
+			}
 			List<Node> nodes = q.getResultList();
 			if (CollectionUtils.isNotEmpty(nodes)) {
 				level = level + 1; // on descend d'un niveau.
@@ -514,7 +522,7 @@ public class NodeDaoImpl extends AbstractDaoImpl<Node> implements NodeDao {
 		Node n = null;
 		String sql = "SELECT n FROM Node n";
 		sql += " WHERE n.semantictag LIKE \"" + semtag + "\"";
-		TypedQuery<Node> q = entityManager.createQuery(sql, Node.class);
+		TypedQuery<Node> q = em.createQuery(sql, Node.class);
 		List<Node> tmpList = q.getResultList();
 		if (CollectionUtils.isNotEmpty(tmpList)) {
 			n = tmpList.get(0);
@@ -540,11 +548,24 @@ public class NodeDaoImpl extends AbstractDaoImpl<Node> implements NodeDao {
 
 		// On boucle pour récupérer les noeuds par niveau.
 		while (added != 0) {
+			List<String> inClause = childrenIds.get(level);
 			sql = "SELECT n FROM Node n";
-			sql += " WHERE n.parentNode.id IN (" + PhpUtil.implode(",", childrenIds.get(level)) + ")";
+			sql += " WHERE n.parentNode.id IN ( ";
+			for (int i = 0; i < inClause.size(); i++) {
+				if (i == inClause.size() - 1) {
+					sql += "?" + i;
+				} else {
+					sql += "?" + i + ",";
+				}
+			}
+			sql += " )";
 			sql += " ORDER by n.nodeOrder ASC";
-			q = entityManager.createQuery(sql, Node.class);
+			q = em.createQuery(sql, Node.class);
+			for (int i = 0; i < inClause.size(); i++) {
+				q.setParameter(i, UUID.fromString(inClause.get(i)));
+			}
 			List<Node> nodes = q.getResultList();
+
 			if (CollectionUtils.isNotEmpty(nodes)) {
 				level = level + 1; // on descend d'un niveau.
 				children.put(level, nodes);
@@ -577,63 +598,23 @@ public class NodeDaoImpl extends AbstractDaoImpl<Node> implements NodeDao {
 		String sql = "SELECT COUNT(n) FROM Node n";
 		sql += " WHERE n.parentNode.id  = :parentNodeUuid";
 		sql += " GROUP BY n.parentNode.id";
-		TypedQuery<Number> q = entityManager.createQuery(sql, Number.class);
+		TypedQuery<Number> q = em.createQuery(sql, Number.class);
 		q.setParameter("parentNodeUuid", UUID.fromString(nodeUuid));
 		try {
 			res = q.getSingleResult().intValue();
-		} catch (Exception ex) {
+		} catch (NoResultException ex) {
 		}
 		return res;
 	}
 
-	public Long postMoveNodeUp(Long userid, String uuid) throws DoesNotExistException {
-		Long status = -1L;
-
-		Node n = findById(UUID.fromString(uuid));
-		int order = -1;
-		Node puuid = null;
-		if (n != null) {
-			order = n.getNodeOrder();
-			puuid = n.getParentNode();
-		}
-
-		if (order == 0) {
-			status = -2L;
-		} else if (order > 0) {
-			/// Swap node order
-			String sql = "SELECT n FROM Node n";
-			sql += " WHERE n.nodeOrder IN (" + (order - 1) + "," + order + ")";
-			sql += " AND n.parentNode.id = :nodeUuid";
-			TypedQuery<Node> q = entityManager.createQuery(sql, Node.class);
-			q.setParameter("nodeUuid", puuid.getId());
-			List<Node> nodes = q.getResultList();
-			for (Node node : nodes) {
-				if (node.getNodeOrder() == order) {
-					node.setNodeOrder(order - 1);
-				} else {
-					node.setNodeOrder(order);
-				}
-				merge(node);
-			}
-
-			/// Update children list
-			updateNode(puuid.getId().toString());
-
-			status = 0L;
-			portfolioDao.updateTimeByNode(uuid);
-		}
-
-		return status;
-	}
-
-	public UUID getNodeUuidByPortfolioModelAndSemanticTag(UUID portfolioModelId, String semanticTag) {
+	public UUID getNodeUuidByPortfolioModelAndSemanticTag(String portfolioModelId, String semanticTag) {
 		UUID res = null;
 		String sql = "SELECT n.id FROM Node n";
 		sql += " INNER JOIN n.portfolio p WITH p.modelId = :modelId";
-		sql += " WHERE n.semanticTag = :semanticTag";
-		TypedQuery<UUID> query = entityManager.createQuery(sql, UUID.class);
-		query.setParameter("modelId", portfolioModelId);
-		query.setParameter("semanticTag", semanticTag);
+		sql += " WHERE n.semantictag = :semantictag";
+		TypedQuery<UUID> query = em.createQuery(sql, UUID.class);
+		query.setParameter("modelId", UUID.fromString(portfolioModelId));
+		query.setParameter("semantictag", semanticTag);
 		try {
 			res = query.getSingleResult();
 		} catch (NoResultException ex) {
@@ -645,20 +626,112 @@ public class NodeDaoImpl extends AbstractDaoImpl<Node> implements NodeDao {
 	/**
 	 * Récupère les noeuds partagés dans un portfolio.
 	 */
-	public List<Node> getSharedNodes(UUID portfolioUuid) {
-		String sql = "SELECT n FROM node n";
+	public List<Node> getSharedNodes(String portfolioUuid) {
+		String sql = "SELECT n FROM Node n";
 		sql += " WHERE n.portfolio.id = :portfolioUuid";
 		sql += " AND n.sharedNode = TRUE";
-		TypedQuery<Node> q = entityManager.createQuery(sql, Node.class);
-		q.setParameter("portfolioUuid", portfolioUuid);
+		TypedQuery<Node> q = em.createQuery(sql, Node.class);
+		q.setParameter("portfolioUuid", UUID.fromString(portfolioUuid));
 		return q.getResultList();
 	}
 
-	/**
-	 * Récupère les noeuds partagés dans un portfolio.
-	 */
-	public List<Node> getSharedNodes(String portfolioUuid) {
-		return getSharedNodes(UUID.fromString(portfolioUuid));
+	public List<Node> getNodesByOrder(String nodeUuid, int order) {
+		String sql = "SELECT n FROM Node n";
+		sql += " WHERE n.nodeOrder IN (" + (order - 1) + "," + order + ")";
+		sql += " AND n.parentNode.id = :nodeUuid";
+		TypedQuery<Node> q = em.createQuery(sql, Node.class);
+		q.setParameter("nodeUuid", UUID.fromString(nodeUuid));
+		return q.getResultList();
+	}
+
+	@Override
+	public ResultSet getMysqlNodes(Connection con) {
+		PreparedStatement st;
+		String sql;
+		try {
+			sql = "SELECT bin2uuid(node_uuid) as node_uuid, bin2uuid(node_parent_uuid) as node_parent_uuid, node_children_uuid as node_children_uuid,";
+			sql += " node_order, metadata, metadata_wad, metadata_epm, bin2uuid(res_node_uuid) as res_node_uuid, bin2uuid(res_res_node_uuid) as res_res_node_uuid,";
+			sql += " bin2uuid(res_context_node_uuid) as res_context_node_uuid, shared_res, shared_node, asm_type, xsi_type, semtag, label, code, descr, format, modif_user_id, modif_date, bin2uuid(portfolio_id) as portfolio_id";
+			sql += " FROM node";
+			st = con.prepareStatement(sql);
+			return st.executeQuery();
+		} catch (Exception ex) {
+			ex.printStackTrace();
+			return null;
+		}
+	}
+
+	@Override
+	public ResultSet getMysqlChildrenNodes(Connection con, String parentNodeUuid) {
+		PreparedStatement st;
+		String sql;
+		try {
+			sql = "SELECT bin2uuid(node_uuid) as node_uuid, bin2uuid(node_parent_uuid) as node_parent_uuid, node_children_uuid as node_children_uuid,";
+			sql += " node_order, metadata, metadata_wad, metadata_epm, bin2uuid(res_node_uuid) as res_node_uuid, bin2uuid(res_res_node_uuid) as res_res_node_uuid,";
+			sql += " bin2uuid(res_context_node_uuid) as res_context_node_uuid, shared_res, shared_node, asm_type, xsi_type, semtag, label, code, descr, format, modif_user_id, modif_date, bin2uuid(portfolio_id) as portfolio_id";
+			sql += " FROM node";
+			sql += " WHERE node_parent_uuid = uuid2bin(?)";
+			st = con.prepareStatement(sql);
+			st.setString(1, parentNodeUuid);
+			return st.executeQuery();
+		} catch (Exception ex) {
+			ex.printStackTrace();
+			return null;
+		}
+	}
+
+	@Override
+	public ResultSet getMysqlRootNodes(Connection con) {
+		PreparedStatement st;
+		String sql;
+		try {
+			sql = "SELECT bin2uuid(node_uuid) as node_uuid, bin2uuid(node_parent_uuid) as node_parent_uuid, node_children_uuid as node_children_uuid,";
+			sql += " node_order, metadata, metadata_wad, metadata_epm, bin2uuid(res_node_uuid) as res_node_uuid, bin2uuid(res_res_node_uuid) as res_res_node_uuid,";
+			sql += " bin2uuid(res_context_node_uuid) as res_context_node_uuid, shared_res, shared_node, asm_type, xsi_type, semtag, label, code, descr, format, modif_user_id, modif_date, bin2uuid(portfolio_id) as portfolio_id";
+			sql += " FROM node";
+			sql += " WHERE node_parent_uuid IS NULL";
+			st = con.prepareStatement(sql);
+			return st.executeQuery();
+		} catch (Exception ex) {
+			ex.printStackTrace();
+			return null;
+		}
+	}
+
+	@Override
+	public ResultSet getMysqlRootNode(Connection con, String portfolioUuid) {
+		PreparedStatement st;
+		String sql;
+		try {
+			sql = "SELECT bin2uuid(node_uuid) as node_uuid, bin2uuid(node_parent_uuid) as node_parent_uuid, node_children_uuid as node_children_uuid,";
+			sql += " node_order, metadata, metadata_wad, metadata_epm, bin2uuid(res_node_uuid) as res_node_uuid, bin2uuid(res_res_node_uuid) as res_res_node_uuid,";
+			sql += " bin2uuid(res_context_node_uuid) as res_context_node_uuid, shared_res, shared_node, asm_type, xsi_type, semtag, label, code, descr, format, modif_user_id, modif_date, bin2uuid(portfolio_id) as portfolio_id";
+			sql += " FROM node";
+			sql += " WHERE portfolio_id = uuid2bin(?)";
+			st = con.prepareStatement(sql);
+			st.setString(1, portfolioUuid);
+			return st.executeQuery();
+		} catch (Exception ex) {
+			ex.printStackTrace();
+			return null;
+		}
+	}
+
+	@Override
+	public ResultSet getMysqlNode(Connection c, String nodeUuid) {
+		PreparedStatement st;
+		String sql;
+
+		try {
+			sql = "SELECT bin2uuid(node_uuid) as node_uuid, bin2uuid(node_parent_uuid) as node_parent_uuid,  node_children_uuid as node_children_uuid, node_order, metadata, metadata_wad, metadata_epm, bin2uuid(res_node_uuid) as res_node_uuid,  bin2uuid(res_res_node_uuid) as res_res_node_uuid,  bin2uuid(res_context_node_uuid) as res_context_node_uuid, shared_res, shared_node, asm_type, xsi_type, semtag, label, code, descr, format, modif_user_id, modif_date,  bin2uuid(portfolio_id) as portfolio_id FROM node WHERE node_uuid = uuid2bin(?) ";
+			st = c.prepareStatement(sql);
+			st.setString(1, nodeUuid);
+
+			return st.executeQuery();
+		} catch (Exception ex) {
+			ex.printStackTrace();
+			return null;
+		}
 	}
 
 }

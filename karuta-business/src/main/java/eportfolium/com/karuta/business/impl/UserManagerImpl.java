@@ -1,9 +1,18 @@
 package eportfolium.com.karuta.business.impl;
 
 import java.io.StringWriter;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Set;
+import java.util.UUID;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -13,14 +22,20 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.MapUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
 import eportfolium.com.karuta.business.contract.UserManager;
 import eportfolium.com.karuta.consumer.contract.dao.CredentialDao;
 import eportfolium.com.karuta.consumer.contract.dao.CredentialGroupMembersDao;
+import eportfolium.com.karuta.consumer.contract.dao.CredentialSubstitutionDao;
 import eportfolium.com.karuta.consumer.contract.dao.GroupRightInfoDao;
 import eportfolium.com.karuta.consumer.contract.dao.GroupUserDao;
 import eportfolium.com.karuta.consumer.util.DomUtils;
@@ -29,15 +44,14 @@ import eportfolium.com.karuta.model.bean.CredentialGroup;
 import eportfolium.com.karuta.model.bean.CredentialGroupMembers;
 import eportfolium.com.karuta.model.bean.CredentialGroupMembersId;
 import eportfolium.com.karuta.model.bean.CredentialSubstitution;
-import eportfolium.com.karuta.model.bean.GroupInfo;
+import eportfolium.com.karuta.model.bean.CredentialSubstitutionId;
 import eportfolium.com.karuta.model.bean.GroupRightInfo;
 import eportfolium.com.karuta.model.bean.GroupUser;
-import eportfolium.com.karuta.model.bean.GroupUserId;
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.model.exception.DoesNotExistException;
-import eportfolium.com.karuta.model.exception.GenericBusinessException;
 
 @Service
+@Transactional
 public class UserManagerImpl implements UserManager {
 
 	@Autowired
@@ -52,8 +66,11 @@ public class UserManagerImpl implements UserManager {
 	@Autowired
 	private GroupRightInfoDao groupRightInfoDao;
 
+	@Autowired
+	private CredentialSubstitutionDao credentialSubstitutionDao;
+
 	public String getUsers(Long userId, String username, String firstname, String lastname) {
-		List<Credential> res = credentialDao.getUsers(userId, username, firstname, lastname);
+		List<Credential> res = credentialDao.getUsers(username, firstname, lastname);
 		Iterator<Credential> it = res.iterator();
 
 		String result = "<users>";
@@ -61,9 +78,9 @@ public class UserManagerImpl implements UserManager {
 		long curUser = 0;
 		while (it.hasNext()) {
 			current = it.next();
-			long userid = current.getId();
-			if (curUser != userid) {
-				curUser = userid;
+			Long tmpUserId = current.getId();
+			if (curUser != tmpUserId) {
+				curUser = tmpUserId;
 				String subs = null;
 				final CredentialSubstitution credentialSubstitution = current.getCredentialSubstitution();
 				if (credentialSubstitution != null && credentialSubstitution.getId() != null)
@@ -74,7 +91,7 @@ public class UserManagerImpl implements UserManager {
 					subs = "0";
 
 				result += "<user ";
-				result += DomUtils.getXmlAttributeOutput("id", String.valueOf(userId)) + " ";
+				result += DomUtils.getXmlAttributeOutput("id", String.valueOf(tmpUserId)) + " ";
 				result += ">";
 				result += DomUtils.getXmlElementOutput("label", current.getLogin());
 				result += DomUtils.getXmlElementOutput("display_firstname", current.getDisplayFirstname());
@@ -93,7 +110,7 @@ public class UserManagerImpl implements UserManager {
 	}
 
 	public String getUserList(Long userId, String username, String firstname, String lastname) {
-		List<Credential> users = credentialDao.getUsers(userId, username, firstname, lastname);
+		List<Credential> users = credentialDao.getUsers(username, firstname, lastname);
 
 		StringBuilder result = new StringBuilder();
 		result.append("<users>");
@@ -114,7 +131,7 @@ public class UserManagerImpl implements UserManager {
 					subs = "0";
 
 				result.append("<user id=\"");
-				result.append(current.getId());
+				result.append(userid.toString());
 				result.append("\"><username>");
 				result.append(current.getLogin());
 				result.append("</username><firstname>");
@@ -144,9 +161,9 @@ public class UserManagerImpl implements UserManager {
 
 	}
 
-	public String getUsersByUserGroup(Long userGroupId) {
+	public String getUsersByCredentialGroup(Long userGroupId) {
 		String result = "<group id=\"" + userGroupId + "\"><users>";
-		final List<CredentialGroupMembers> userGroupList = credentialDao.getUsersByUserGroup(userGroupId);
+		final List<CredentialGroupMembers> userGroupList = credentialGroupMembersDao.getByGroup(userGroupId);
 		final Iterator<CredentialGroupMembers> it = userGroupList.iterator();
 		while (it.hasNext()) {
 			result += "<user ";
@@ -156,42 +173,6 @@ public class UserManagerImpl implements UserManager {
 		}
 		result += "</users></group>";
 		return result;
-	}
-
-	public boolean addUserInGroups(Long userId, List<Long> credentialGroupIds) {
-		boolean added = true;
-		CredentialGroupMembers cgm = null;
-		try {
-			for (Long credentialGroupId : credentialGroupIds) {
-				cgm = new CredentialGroupMembers(
-						new CredentialGroupMembersId(new CredentialGroup(credentialGroupId), new Credential(userId)));
-				credentialGroupMembersDao.persist(cgm);
-			}
-		} catch (Exception e) {
-			added = false;
-		}
-		return added;
-	}
-
-	public boolean addUserToGroup(Long user, Long userId, Long groupId) throws BusinessException {
-		if (!credentialDao.isAdmin(String.valueOf(user)))
-			throw new GenericBusinessException("No admin right");
-
-		GroupUser gu = new GroupUser();
-		GroupUserId guID = new GroupUserId(new GroupInfo(groupId), new Credential(userId));
-		try {
-			gu = groupUserDao.findById(guID);
-		} catch (DoesNotExistException e) {
-			gu.setId(guID);
-		}
-
-		try {
-			groupUserDao.merge(gu);
-		} catch (Exception ex) {
-			ex.printStackTrace();
-			return false;
-		}
-		return true;
 	}
 
 	public String getUserGroupByPortfolio(String portfolioUuid, Long userId) {
@@ -249,17 +230,17 @@ public class UserManagerImpl implements UserManager {
 		return result;
 	}
 
-	public String getInfUser(Long userId) throws BusinessException {
+	public String getUserInfos(Long userId) throws DoesNotExistException {
 		String result = "";
 
-		Credential cr = credentialDao.getInfUser(userId);
+		Credential cr = credentialDao.getUserInfos(userId);
 		if (cr != null) {
-			// traitement de la reponse, renvoie des donnees sous forme d'un xml
-			String subs = String.valueOf(cr.getId());
-			if (subs != null)
+			// traitement de la réponse, renvoie les données sous forme d'un XML.
+			String subs = "0";
+			boolean canSubstitute = cr.getCredentialSubstitution() != null;
+			if (canSubstitute) {
 				subs = "1";
-			else
-				subs = "0";
+			}
 
 			result += "<user ";
 			result += DomUtils.getXmlAttributeOutput("id", String.valueOf(cr.getId())) + " ";
@@ -276,18 +257,17 @@ public class UserManagerImpl implements UserManager {
 			result += "</user>";
 
 		} else {
-			throw new GenericBusinessException("User " + userId + " not found");
+			throw new DoesNotExistException(Credential.class, userId);
 		}
 
 		return result;
 	}
 
-	public Long getUserId(String username) {
-		return credentialDao.getUserId(username);
+	public Long getUserId(String userLogin) {
+		return credentialDao.getUserId(userLogin);
 	}
 
 	public String getUserRolesByUserId(Long userId) {
-
 		List<GroupUser> groups = groupUserDao.getByUser(userId);
 		GroupUser group = null;
 		Iterator<GroupUser> it = groups.iterator();
@@ -296,7 +276,7 @@ public class UserManagerImpl implements UserManager {
 		result += "<profile>";
 		while (it.hasNext()) {
 			group = it.next();
-			result += "<group";
+			result += "<group ";
 			result += DomUtils.getXmlAttributeOutput("id", group.getGroupInfo().getId().toString()) + " ";
 			result += ">";
 			result += DomUtils.getXmlElementOutput("label", group.getGroupInfo().getLabel());
@@ -306,7 +286,6 @@ public class UserManagerImpl implements UserManager {
 
 		result += "</profile>";
 		result += "</profiles>";
-
 		return result;
 	}
 
@@ -314,16 +293,12 @@ public class UserManagerImpl implements UserManager {
 		return credentialDao.getPublicUid();
 	}
 
-	public String getEmailByLogin(String username) {
-		return credentialDao.getEmailByLogin(username);
+	public String getEmailByLogin(String userLogin) {
+		return credentialDao.getEmailByLogin(userLogin);
 	}
 
-	public Long getUserId(String username, String email) {
-		return credentialDao.getUserId(username, email);
-	}
-
-	public Boolean deleteUsersFromUserGroups(Long userId, Long groupId) {
-		return credentialGroupMembersDao.deleteUsersFromUserGroups(userId, groupId);
+	public Long getUserId(String userLogin, String email) {
+		return credentialDao.getUserId(userLogin, email);
 	}
 
 	public String getRoleList(String portfolio, Long userId, String role) throws BusinessException {
@@ -357,7 +332,7 @@ public class UserManagerImpl implements UserManager {
 			Element root = document.createElement("rolerightsgroups");
 			document.appendChild(root);
 
-			if (bypass) // WAD6 demande un format specifique pour ce type de requete (...)
+			if (bypass) // WAD6 demande un format spécifique pour ce type de requête (...)
 			{
 				if (CollectionUtils.isNotEmpty(griList)) {
 					Long id = griList.get(0).getId();
@@ -472,12 +447,13 @@ public class UserManagerImpl implements UserManager {
 		return stw.toString();
 	}
 
-	public String findUserRole(Long userId, Long rrgid) {
+	public String findUserRole(Long rrgid) {
 
 		try {
-			GroupUser gu = groupUserDao.getByUserAndRole(rrgid, userId);
+			List<GroupUser> guList = groupUserDao.getByRole(rrgid);
+			GroupUser gu = null;
 
-			/// Time to create data
+			// Il est temps de créer des données
 			DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
 			DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
 			Document document = documentBuilder.newDocument();
@@ -487,8 +463,10 @@ public class UserManagerImpl implements UserManager {
 			document.appendChild(root);
 
 			Element usersNode = null;
-			if (gu != null) //
+			Iterator<GroupUser> it = guList.iterator();
+			if (it.hasNext()) //
 			{
+				gu = it.next();
 				GroupRightInfo gri = gu.getGroupInfo().getGroupRightInfo();
 
 				String label = gri.getLabel();
@@ -507,42 +485,46 @@ public class UserManagerImpl implements UserManager {
 			} else
 				return "";
 
-//			do {
-			Credential cr = gu.getCredential();
+			do {
+				Credential cr = gu.getCredential();
+				Long id = cr.getId();
+				if (id == null) // Bonnes chances que ce soit vide
+					continue;
 
-			Long id = cr.getId();
-//				if (id == null) // Bonne chances que ce soit vide
-//					continue;
+				Element userNode = document.createElement("user");
+				userNode.setAttribute("id", id.toString());
+				usersNode.appendChild(userNode);
 
-			Element userNode = document.createElement("user");
-			userNode.setAttribute("id", id.toString());
-			usersNode.appendChild(userNode);
+				String login = cr.getLogin();
+				Element usernameNode = document.createElement("username");
+				userNode.appendChild(usernameNode);
+				if (login != null)
+					usernameNode.appendChild(document.createTextNode(login));
 
-			String login = cr.getLogin();
-			Element usernameNode = document.createElement("username");
-			userNode.appendChild(usernameNode);
-			if (login != null)
-				usernameNode.appendChild(document.createTextNode(login));
+				String firstname = cr.getDisplayFirstname();
+				Element fnNode = document.createElement("firstname");
+				userNode.appendChild(fnNode);
+				if (firstname != null)
+					fnNode.appendChild(document.createTextNode(firstname));
 
-			String firstname = cr.getDisplayFirstname();
-			Element fnNode = document.createElement("firstname");
-			userNode.appendChild(fnNode);
-			if (firstname != null)
-				fnNode.appendChild(document.createTextNode(firstname));
+				String lastname = cr.getDisplayLastname();
+				Element lnNode = document.createElement("lastname");
+				userNode.appendChild(lnNode);
+				if (lastname != null)
+					lnNode.appendChild(document.createTextNode(lastname));
 
-			String lastname = cr.getDisplayLastname();
-			Element lnNode = document.createElement("lastname");
-			userNode.appendChild(lnNode);
-			if (lastname != null)
-				lnNode.appendChild(document.createTextNode(lastname));
+				String email = cr.getEmail();
+				Element eNode = document.createElement("email");
+				userNode.appendChild(eNode);
+				if (email != null)
+					eNode.appendChild(document.createTextNode(email));
 
-			String email = cr.getEmail();
-			Element eNode = document.createElement("email");
-			userNode.appendChild(eNode);
-			if (email != null)
-				eNode.appendChild(document.createTextNode(email));
-
-//			} while (res.next());
+				try {
+					gu = it.next();
+				} catch (NoSuchElementException e) {
+					break;
+				}
+			} while (true);
 
 			StringWriter stw = new StringWriter();
 			Transformer serializer = TransformerFactory.newInstance().newTransformer();
@@ -553,8 +535,139 @@ public class UserManagerImpl implements UserManager {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-
 		return "";
+	}
+
+	public Set<String[]> getNotificationUserList(Long userId, Long groupId, String uuid) {
+		Set<String[]> retval = new HashSet<String[]>();
+
+		try {
+			String roles = "";
+			UUID portfolio = null;
+
+			Map<String, Object> rolesToBeNotified = groupRightInfoDao.getRolesToBeNotified(groupId, userId, uuid);
+			if (rolesToBeNotified != null) {
+				portfolio = (UUID) rolesToBeNotified.get("portfolioUUID");
+				roles = MapUtils.getString(rolesToBeNotified, "notifyRoles");
+			}
+
+			if (StringUtils.isEmpty(roles))
+				return retval;
+
+			String[] roleArray = roles.split(",");
+			Set<String> roleSet = new HashSet<String>(Arrays.asList(roleArray));
+
+			/// Fetch all users/role associated with this portfolio.
+			List<GroupRightInfo> griList = groupRightInfoDao.getByPortfolioID(portfolio);
+
+			/// Filter those we don't care
+			String label = null, login = null, lastname = null;
+			for (GroupRightInfo gri : griList) {
+				if (gri.getGroupInfo() != null) {
+					Set<GroupUser> guSet = gri.getGroupInfo().getGroupUser();
+					if (CollectionUtils.isNotEmpty(guSet)) {
+						label = gri.getGroupInfo().getLabel();
+						for (GroupUser gu : guSet) {
+							login = gu.getCredential().getLogin();
+							lastname = gu.getCredential().getDisplayLastname();
+							if (roleSet.contains(label)) {
+								String val[] = { login, lastname };
+								retval.add(val);
+							}
+						}
+					}
+				}
+			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+		return retval;
+	}
+
+	public Credential getUser(Long userId) throws DoesNotExistException {
+		return credentialDao.findById(userId);
+	}
+
+	@Override
+	@Transactional(isolation = Isolation.DEFAULT, propagation = Propagation.REQUIRES_NEW)
+	public Map<Long, Long> transferCredentialTable(Connection con) {
+
+		Map<Long, Long> userIds = new HashMap<Long, Long>();
+		ResultSet res = credentialDao.getMysqlUsers(con, null, null, null);
+		Credential cr = null;
+		try {
+			long curUser = 0L;
+			while (res.next()) {
+				cr = new Credential();
+				long userid = res.getLong("userid");
+				if (curUser != userid) {
+					curUser = userid;
+					int canSubstitute = 0;
+					String subs = res.getString("id");
+					if (subs != null)
+						canSubstitute = 1;
+
+					cr.setLogin(res.getString("login"));
+					cr.setDisplayFirstname(res.getString("display_firstname"));
+					cr.setDisplayLastname(res.getString("display_lastname"));
+					cr.setIsAdmin(res.getInt("is_admin"));
+					cr.setIsDesigner(res.getInt("is_designer"));
+					cr.setEmail(res.getString("email"));
+					cr.setActive(res.getInt("active"));
+					cr.setCanSubstitute(canSubstitute);
+					// cr.setCredentialSubstitution(new CredentialSubstitution(new ));
+					cr.setOther(res.getString("other"));
+					credentialDao.persist(cr);
+					userIds.put(userid, cr.getId());
+				}
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return userIds;
+
+	}
+
+	@Transactional(isolation = Isolation.DEFAULT, propagation = Propagation.REQUIRES_NEW)
+	@Override
+	public void transferCredentialSubstitutionTable(Connection con, Map<Long, Long> userIds) throws SQLException {
+		ResultSet res = credentialSubstitutionDao.findAll("credential_substitution", con);
+		CredentialSubstitution cs = null;
+		Credential cr = null;
+		while (res.next()) {
+			try {
+				final Long crId = userIds.get(res.getLong("userid"));
+				cr = credentialDao.findById(crId);
+				cs = new CredentialSubstitution();
+				// userid id type
+				cs.setId(new CredentialSubstitutionId(new Credential(crId), res.getLong("id"), res.getString("type")));
+				credentialSubstitutionDao.persist(cs);
+				cr.setCredentialSubstitution(cs);
+				cr = credentialDao.merge(cr);
+			} catch (DoesNotExistException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+	@Transactional(isolation = Isolation.DEFAULT, propagation = Propagation.REQUIRES_NEW)
+	public void transferCredentialGroupMembersTable(Connection con, Map<Long, Long> userIds, Map<Long, Long> cgIds)
+			throws SQLException {
+		ResultSet res = credentialGroupMembersDao.findAll("credential_group_members", con);
+		CredentialGroupMembers cgm = null;
+		while (res.next()) {
+			cgm = new CredentialGroupMembers(
+					new CredentialGroupMembersId(new CredentialGroup(cgIds.get(res.getLong("cg"))),
+							new Credential(userIds.get(res.getLong("userid")))));
+			credentialGroupMembersDao.merge(cgm);
+		}
+	}
+
+	@Transactional(isolation = Isolation.DEFAULT, propagation = Propagation.REQUIRES_NEW)
+	public void removeUsers() {
+		credentialSubstitutionDao.removeAll();
+		credentialGroupMembersDao.removeAll();
+		credentialDao.removeAll();
 	}
 
 }

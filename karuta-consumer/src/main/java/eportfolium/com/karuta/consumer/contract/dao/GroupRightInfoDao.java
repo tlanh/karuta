@@ -1,7 +1,11 @@
 package eportfolium.com.karuta.consumer.contract.dao;
 
 import java.io.Serializable;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import eportfolium.com.karuta.model.bean.GroupRightInfo;
@@ -63,7 +67,7 @@ public interface GroupRightInfoDao {
 	GroupRightInfo getByPortfolioAndLabel(UUID portfolioUuid, String label);
 
 	/**
-	 * Verifie si le role existe
+	 * Vérifie si le role existe
 	 * 
 	 * @param grid
 	 * @return
@@ -74,14 +78,14 @@ public interface GroupRightInfoDao {
 
 	List<GroupRightInfo> getDefaultByPortfolio(String portfolioUuid);
 
-	Long getIdByNodeAndLabel(String nodeUuid, String role);
+	Long getIdByNodeAndLabel(String nodeUuid, String label);
 
 	List<Long> getByNodeAndLabel(UUID nodeUuid, List<String> labels);
 
 	List<Long> getByNodeAndLabel(String nodeUuid, List<String> labels);
 
 	/**
-	 * Cree le role pour ce portfolio
+	 * Crée le role pour ce portfolio.
 	 * 
 	 * @param portfolio
 	 * @param role
@@ -90,23 +94,13 @@ public interface GroupRightInfoDao {
 	Long add(Portfolio portfolio, String role);
 
 	/**
-	 * Cree le role pour ce portfolio
+	 * Crée le role pour ce portfolio.
 	 * 
 	 * @param portfolioUuid
 	 * @param role
 	 * @return
 	 */
 	Long add(String portfolioUuid, String role);
-	
-	/**
-	 * Cree le role pour ce portfolio
-	 * 
-	 * @param portfolioUuid
-	 * @param role
-	 * @return
-	 */
-	Long add(UUID portfolioUuid, String role);
-	
 
 	void removeById(Long groupRightInfoId) throws Exception;
 
@@ -154,6 +148,10 @@ public interface GroupRightInfoDao {
 	 */
 	List<GroupRightInfo> getByNode(UUID nodeUuid);
 
-	
+	Map<String, Object> getRolesToBeNotified(Long groupId, Long userId, String uuid);
+
+	ResultSet getMysqlGroupRightsInfos(Connection con) throws SQLException;
+
+	void removeAll();
 
 }

@@ -1,6 +1,8 @@
 package eportfolium.com.karuta.consumer.contract.dao;
 
 import java.io.Serializable;
+import java.sql.Connection;
+import java.sql.ResultSet;
 import java.util.List;
 
 import eportfolium.com.karuta.model.bean.CredentialGroupMembers;
@@ -16,36 +18,23 @@ public interface CredentialGroupMembersDao {
 
 	CredentialGroupMembers findById(Serializable id) throws DoesNotExistException;
 
-	boolean isUserMemberOfGroup(int userId, int groupId);
+	/**
+	 * Remove a user from a user group,
+	 * 
+	 * @param userId
+	 * @param cgId
+	 * @return
+	 */
+	Boolean deleteUserFromGroup(Long userId, Long cgId);
 
-	String getRoleUser(int userId, int userid2);
+	List<CredentialGroupMembers> getByGroup(Long cgId);
 
-	List<CredentialGroupMembers> getUserGroupList(Long userId);
+	List<CredentialGroupMembers> getByUser(Long userId);
 
-	int getGroupByGroupLabel(String groupLabel, int userId);
+	ResultSet findAll(String table, Connection con);
 
-	List<CredentialGroupMembers> getGroupByUser(Long userId);
+	List<CredentialGroupMembers> findAll();
 
-	String getUsersByUserGroup(int userGroupId, int userId);
-
-	String getGroupsByRole(int userId, String portfolioUuid, String role);
-
-	String getGroupsPortfolio(String portfolioUuid, int userId);
-
-	Integer getRoleByNode(int userId, String nodeUuid, String role);
-
-	Boolean putUserGroupLabel(Integer user, int siteGroupId, String label);
-
-	Integer putUserGroup(String siteGroupId, String userId);
-
-	Boolean putUserInUserGroup(int user, int siteGroupId, int currentUid);
-
-	Object postGroup(String xmlgroup, int userId) throws Exception;
-
-	boolean postGroupsUsers(int user, int userId, int groupId);
-
-	int postUserGroup(String label, int userid);
-
-	Boolean deleteUsersFromUserGroups(Long userId, Long usersgroupId);
+	void removeAll();
 
 }

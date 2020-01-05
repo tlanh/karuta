@@ -1,6 +1,9 @@
 package eportfolium.com.karuta.consumer.contract.dao;
 
 import java.io.Serializable;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.UUID;
 
@@ -25,7 +28,7 @@ public interface ResourceTableDao {
 
 	ResourceTable getResourceByXsiType(String resUuid, String xsiType);
 
-	ResourceTable getResourceByNodeParentUuid(String nodeParentUuid) throws DoesNotExistException;
+	ResourceTable getResourceByParentNodeUuid(String parentNodeUuid) throws DoesNotExistException;
 
 	ResourceTable getResourceOfResourceByNodeUuid(String nodeUuid);
 
@@ -33,7 +36,7 @@ public interface ResourceTableDao {
 
 	String getResNodeContentByNodeUuid(String nodeUuid);
 
-	ResourceTable getResourceByNodeParentUuid(UUID nodeParentUuid) throws DoesNotExistException;
+	ResourceTable getResourceByNodeParentUuid(UUID parentNodeUuid) throws DoesNotExistException;
 
 	List<ResourceTable> getResourcesByPortfolioUUID(String portfolioUuid);
 
@@ -43,11 +46,7 @@ public interface ResourceTableDao {
 
 	int updateResource(String uuid, String xsiType, String content, Long userId);
 
-	Object deleteResource(String resourceUuid, Long userId, Long groupId) throws Exception;
-
-	UUID getResourceNodeUuidByParentNodeUuid(String nodeParentUuid) throws DoesNotExistException;
-
-	UUID getResourceNodeUuidByParentNodeUuid(UUID nodeParentUuid) throws DoesNotExistException;
+	UUID getResourceUuidByParentNodeUuid(String parentNodeUuid) throws DoesNotExistException;
 
 	int updateResource(UUID nodeUuid, String content, Long userId);
 
@@ -61,7 +60,14 @@ public interface ResourceTableDao {
 
 	int updateContextResource(String nodeUuid, String content, Long userId);
 
-	int createResource(String uuid, String parentUuid, String xsiType, String content, String portfolioModelId,
+	int addResource(String uuid, String parentUuid, String xsiType, String content, String portfolioModelId,
 			boolean sharedNodeRes, boolean sharedRes, Long userId);
 
+	/********************************************************************************************************************/
+	
+	ResultSet getMysqlResources(Connection con) throws SQLException;
+
+	ResultSet findAll(String table, Connection con);
+
+	void removeAll();
 }

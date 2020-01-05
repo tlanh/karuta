@@ -1,5 +1,8 @@
 package eportfolium.com.karuta.business.contract;
 
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.util.MimeType;
@@ -23,8 +26,12 @@ public interface ResourceManager {
 	String addResource(MimeType inMimeType, String nodeParentUuid, String in, Long userId, Long groupId)
 			throws BusinessException, Exception;
 
-	void deleteResource(String resourceUuid, Long userId, Long groupId) throws DoesNotExistException, BusinessException;
+	void removeResource(String resourceUuid, Long userId, Long groupId) throws DoesNotExistException, BusinessException;
 
 	void changeResourceByXsiType(String nodeUuid, String xsiType, String content, Long userId) throws Exception;
+
+	Map<String, String> transferResourceTable(Connection con, Map<Long, Long> userIds) throws SQLException;
+
+	void removeResources();
 
 }

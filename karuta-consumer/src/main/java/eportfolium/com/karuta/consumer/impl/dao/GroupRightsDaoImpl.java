@@ -1,19 +1,19 @@
 package eportfolium.com.karuta.consumer.impl.dao;
 // Generated 17 juin 2019 11:33:18 by Hibernate Tools 5.2.10.Final
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.UUID;
 
-import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
-import javax.persistence.PersistenceContext;
 import javax.persistence.TypedQuery;
 
 import org.apache.commons.collections4.CollectionUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
-import eportfolium.com.karuta.consumer.contract.dao.GroupRightInfoDao;
 import eportfolium.com.karuta.consumer.contract.dao.GroupRightsDao;
 import eportfolium.com.karuta.model.bean.GroupRightInfo;
 import eportfolium.com.karuta.model.bean.GroupRights;
@@ -29,12 +29,6 @@ import eportfolium.com.karuta.util.PhpUtil;
  */
 @Repository
 public class GroupRightsDaoImpl extends AbstractDaoImpl<GroupRights> implements GroupRightsDao {
-
-	@PersistenceContext
-	private EntityManager em;
-
-	@Autowired
-	private GroupRightInfoDao groupRightInfoDao;
 
 	public GroupRightsDaoImpl() {
 		super();
@@ -61,7 +55,7 @@ public class GroupRightsDaoImpl extends AbstractDaoImpl<GroupRights> implements 
 
 	/**
 	 * Regarde si l'utilisateur à un droit sur le noeud en fonction du groupe donné
-	 * en parametre.
+	 * en paramètre.
 	 * 
 	 * @param uuid
 	 * @param userId
@@ -74,7 +68,7 @@ public class GroupRightsDaoImpl extends AbstractDaoImpl<GroupRights> implements 
 
 	/**
 	 * Regarde si l'utilisateur à un droit sur le noeud en fonction du groupe donné
-	 * en parametre.
+	 * en paramètre.
 	 * 
 	 * @param nodeUuid
 	 * @param userId
@@ -101,23 +95,23 @@ public class GroupRightsDaoImpl extends AbstractDaoImpl<GroupRights> implements 
 	}
 
 	@Override
-	public List<GroupRights> getRightsByIdAndGroup(UUID uuid, Long groupId) {
+	public List<GroupRights> getRightsByIdAndGroup(String uuid, Long groupId) {
 		String sql = "SELECT gr FROM GroupRights gr";
 		sql += " INNER JOIN FETCH gr.id.groupRightInfo gri";
-		sql += " INNER JOIN FETCH gri.groupInfo gi WITH gi.id = :groupId";
+		sql += " INNER JOIN gri.groupInfo gi WITH gi.id = :groupId";
 		sql += " WHERE gr.id.id = :uuid";
 		TypedQuery<GroupRights> q = em.createQuery(sql, GroupRights.class);
-		q.setParameter("uuid", uuid);
+		q.setParameter("uuid", UUID.fromString(uuid));
 		q.setParameter("groupId", groupId);
 		return q.getResultList();
 	}
 
 	/**
-	 * On recupere d'abord les informations dans la table structure
+	 * On récupère d'abord les informations dans la table structure
 	 */
 	public List<GroupRights> getRightsByGroupId(Long groupId) {
 		String sql = "SELECT gr FROM GroupRights gr";
-		sql += " INNER JOIN gr.groupRightInfo gri";
+		sql += " INNER JOIN gr.id.groupRightInfo gri";
 		sql += " INNER JOIN gri.groupInfo gi";
 		sql += " WHERE gi.id = :groupId";
 		TypedQuery<GroupRights> q = em.createQuery(sql, GroupRights.class);
@@ -254,7 +248,7 @@ public class GroupRightsDaoImpl extends AbstractDaoImpl<GroupRights> implements 
 
 		GroupRights res = null;
 		String sql = "SELECT gr FROM GroupRights gr";
-		sql += " INNER JOIN FETCH gr.id.groupRightInfo gri WITH gri.label = :label";
+		sql += " INNER JOIN gr.id.groupRightInfo gri WITH gri.label = :label";
 		sql += " WHERE gr.id.id = :uuid";
 		TypedQuery<GroupRights> q = em.createQuery(sql, GroupRights.class);
 		q.setParameter("uuid", uuid);
@@ -305,7 +299,7 @@ public class GroupRightsDaoImpl extends AbstractDaoImpl<GroupRights> implements 
 	public GroupRights getRightsByGrid(UUID uuid, Long grid) {
 		GroupRights res = null;
 		String sql = "SELECT gr FROM GroupRights gr";
-		sql += " INNER JOIN FETCH gr.id.groupRightInfo gri WITH gri.id = :grid";
+		sql += " INNER JOIN gr.id.groupRightInfo gri WITH gri.id = :grid";
 		sql += " WHERE gr.id.id = :uuid";
 
 		TypedQuery<GroupRights> q = em.createQuery(sql, GroupRights.class);
@@ -323,15 +317,20 @@ public class GroupRightsDaoImpl extends AbstractDaoImpl<GroupRights> implements 
 	}
 
 	public List<GroupRights> getRightsByPortfolio(UUID uuid, UUID portfolioUuid) {
-		List<GroupRightInfo> pa_implode = groupRightInfoDao.getByPortfolioID(portfolioUuid);
+		String sql = "SELECT gri.id FROM GroupRightInfo gri";
+		sql += " WHERE gri.portfolio.id = :portfolioUuid";
 
-		String sql = "SELECT gr FROM GroupRights gr";
+		TypedQuery<Long> q1 = em.createQuery(sql, Long.class);
+		q1.setParameter("portfolioUuid", portfolioUuid);
+		List<Long> pa_implode = q1.getResultList();
+
+		sql = "SELECT gr FROM GroupRights gr";
 		sql += " WHERE gr.id.id = :uuid";
 		sql += " AND gr.id.groupRightInfo.id IN (" + PhpUtil.implode(",", pa_implode) + ")";
 
-		TypedQuery<GroupRights> q = em.createQuery(sql, GroupRights.class);
-		q.setParameter("uuid", uuid);
-		return q.getResultList();
+		TypedQuery<GroupRights> q2 = em.createQuery(sql, GroupRights.class);
+		q2.setParameter("uuid", uuid);
+		return q2.getResultList();
 	}
 
 	/**
@@ -393,13 +392,24 @@ public class GroupRightsDaoImpl extends AbstractDaoImpl<GroupRights> implements 
 	 * @param macroName
 	 */
 	public void updateNodeRights(UUID nodeUuid, List<String> labels, String macroName) {
-		List<Long> griList = groupRightInfoDao.getByNodeAndLabel(nodeUuid, labels);
-		String sql = "SELECT gr FROM GroupRights gr";
+		String sql = "SELECT gri.id FROM GroupRightInfo gri, Node n";
+		sql += " INNER JOIN gri.portfolio p1";
+		sql += " INNER JOIN n.portfolio p2";
+		sql += " INNER JOIN gri.groupInfo gi";
+		sql += " WHERE p1.id = p2.id";
+		sql += " AND n.id = :nodeUuid";
+		sql += " AND gri.label IN (" + PhpUtil.implode(",", labels) + ")";
+
+		TypedQuery<Long> q1 = em.createQuery(sql, Long.class);
+		q1.setParameter("nodeUuid", nodeUuid);
+		List<Long> griList = q1.getResultList();
+
+		sql = "SELECT gr FROM GroupRights gr";
 		sql += " WHERE gr.id.id = :uuid";
 		sql += " AND gr.id.groupRightInfo.id IN (" + PhpUtil.implode(",", griList) + ")";
-		TypedQuery<GroupRights> q = em.createQuery(sql, GroupRights.class);
-		q.setParameter("uuid", nodeUuid);
-		List<GroupRights> grList = q.getResultList();
+		TypedQuery<GroupRights> q2 = em.createQuery(sql, GroupRights.class);
+		q2.setParameter("uuid", nodeUuid);
+		List<GroupRights> grList = q2.getResultList();
 		for (GroupRights gr : grList) {
 			if ("hide".equals(macroName)) {
 				gr.setRead(false);
@@ -417,13 +427,25 @@ public class GroupRightsDaoImpl extends AbstractDaoImpl<GroupRights> implements 
 	 * @param labels
 	 */
 	public void updateNodeRights(UUID nodeUuid, List<String> labels) {
-		List<Long> griList = groupRightInfoDao.getByNodeAndLabel(nodeUuid, labels);
-		String sql = "SELECT gr FROM GroupRights gr";
+
+		String sql = "SELECT gri.id FROM GroupRightInfo gri, Node n";
+		sql += " INNER JOIN gri.portfolio p1";
+		sql += " INNER JOIN n.portfolio p2";
+		sql += " INNER JOIN gri.groupInfo gi";
+		sql += " WHERE p1.id = p2.id";
+		sql += " AND n.id = :nodeUuid";
+		sql += " AND gri.label IN (" + PhpUtil.implode(",", labels) + ")";
+
+		TypedQuery<Long> q1 = em.createQuery(sql, Long.class);
+		q1.setParameter("nodeUuid", nodeUuid);
+		List<Long> griList = q1.getResultList();
+
+		sql = "SELECT gr FROM GroupRights gr";
 		sql += " WHERE gr.id.id = :uuid";
-		sql += " AND gr.id.groupRightInfo.id IN (" + PhpUtil.implode(",", griList) + ")";
-		TypedQuery<GroupRights> q = em.createQuery(sql, GroupRights.class);
-		q.setParameter("uuid", nodeUuid);
-		List<GroupRights> grList = q.getResultList();
+		sql += " AND gr.id.groupRightInfo.id IN ( " + PhpUtil.implode(",", griList) + " )";
+		TypedQuery<GroupRights> q2 = em.createQuery(sql, GroupRights.class);
+		q2.setParameter("uuid", nodeUuid);
+		List<GroupRights> grList = q2.getResultList();
 		for (GroupRights gr : grList) {
 			gr.setRead(true);
 			merge(gr);
@@ -526,7 +548,7 @@ public class GroupRightsDaoImpl extends AbstractDaoImpl<GroupRights> implements 
 	}
 
 	@Override
-	public List<GroupRights> getByPortfolioAndGridList(UUID portfolioUuid, Long grid1, Long grid2, Long grid3) {
+	public List<GroupRights> getByPortfolioAndGridList(String portfolioUuid, Long grid1, Long grid2, Long grid3) {
 		String sql = "SELECT gr FROM GroupRights gr";
 		sql += " INNER JOIN FETCH gr.id.groupRightInfo gri";
 		sql += " WHERE gri.portfolio.id = :portfolioId";
@@ -535,7 +557,7 @@ public class GroupRightsDaoImpl extends AbstractDaoImpl<GroupRights> implements 
 		sql += " OR gri.id = :grid3)";
 
 		TypedQuery<GroupRights> q = em.createQuery(sql, GroupRights.class);
-		q.setParameter("portfolioId", portfolioUuid);
+		q.setParameter("portfolioId", UUID.fromString(portfolioUuid));
 		q.setParameter("grid1", grid1);
 		q.setParameter("grid2", grid2);
 		q.setParameter("grid3", grid3);
@@ -564,6 +586,23 @@ public class GroupRightsDaoImpl extends AbstractDaoImpl<GroupRights> implements 
 		q.setParameter("groupId", groupId);
 		q.setParameter("userLogin", userLogin);
 		return q.getResultList();
+	}
+
+	@Override
+	public ResultSet getMysqlGroupRights(Connection con) throws SQLException {
+		PreparedStatement st;
+		String sql;
+
+		try {
+			// On récupère d'abord les informations dans la table structures
+			sql = "SELECT bin2uuid(id) as id,RD,WR,DL,SB,AD,types_id,grid,rules_id,notify_roles FROM group_rights gr";
+			st = con.prepareStatement(sql);
+
+			return st.executeQuery();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
 	}
 
 }

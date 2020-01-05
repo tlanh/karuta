@@ -1,14 +1,23 @@
 package eportfolium.com.karuta.business.impl;
 
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
@@ -16,6 +25,7 @@ import eportfolium.com.karuta.business.contract.GroupManager;
 import eportfolium.com.karuta.consumer.contract.dao.CredentialDao;
 import eportfolium.com.karuta.consumer.contract.dao.CredentialGroupDao;
 import eportfolium.com.karuta.consumer.contract.dao.CredentialGroupMembersDao;
+import eportfolium.com.karuta.consumer.contract.dao.GroupGroupDao;
 import eportfolium.com.karuta.consumer.contract.dao.GroupInfoDao;
 import eportfolium.com.karuta.consumer.contract.dao.GroupRightInfoDao;
 import eportfolium.com.karuta.consumer.contract.dao.GroupRightsDao;
@@ -26,6 +36,8 @@ import eportfolium.com.karuta.consumer.util.DomUtils;
 import eportfolium.com.karuta.model.bean.Credential;
 import eportfolium.com.karuta.model.bean.CredentialGroup;
 import eportfolium.com.karuta.model.bean.CredentialGroupMembers;
+import eportfolium.com.karuta.model.bean.GroupGroup;
+import eportfolium.com.karuta.model.bean.GroupGroupId;
 import eportfolium.com.karuta.model.bean.GroupInfo;
 import eportfolium.com.karuta.model.bean.GroupRightInfo;
 import eportfolium.com.karuta.model.bean.GroupRights;
@@ -39,6 +51,7 @@ import eportfolium.com.karuta.model.exception.DoesNotExistException;
 import eportfolium.com.karuta.model.exception.GenericBusinessException;
 
 @Service
+@Transactional
 public class GroupManagerImpl implements GroupManager {
 
 	@Autowired
@@ -68,6 +81,9 @@ public class GroupManagerImpl implements GroupManager {
 	@Autowired
 	private CredentialGroupDao credentialGroupDao;
 
+	@Autowired
+	private GroupGroupDao groupGroupDao;
+
 	public String addGroup(String name) {
 		Long retval = 0L;
 		try {
@@ -89,8 +105,8 @@ public class GroupManagerImpl implements GroupManager {
 		return String.valueOf(retval);
 	}
 
-	public String getGroupByUser(Long userId) {
-		List<CredentialGroupMembers> cgmList = credentialGroupMembersDao.getGroupByUser(userId);
+	public String getCredentialGroupByUser(Long userId) {
+		List<CredentialGroupMembers> cgmList = credentialGroupMembersDao.getByUser(userId);
 		Iterator<CredentialGroupMembers> it = cgmList.iterator();
 		String result = "<groups>";
 		CredentialGroupMembers cgm = null;
@@ -106,17 +122,13 @@ public class GroupManagerImpl implements GroupManager {
 		return result;
 	}
 
-	public String getGroupsByUser(Long id) {
-		return null;
-	}
-
-	public boolean postNotifyRoles(Long userId, String portfolioId, String uuid, String notify)
+	public boolean changeNotifyRoles(Long userId, String portfolioUuid, String nodeUuid, String notify)
 			throws GenericBusinessException {
 
 		boolean ret = false;
 		if (!credentialDao.isAdmin(userId))
 			throw new GenericBusinessException("No admin right");
-		List<GroupRights> grList = groupRightsDao.getRightsByPortfolio(uuid, portfolioId);
+		List<GroupRights> grList = groupRightsDao.getRightsByPortfolio(nodeUuid, portfolioUuid);
 
 		try {
 			GroupRights gr = null;
@@ -133,13 +145,13 @@ public class GroupManagerImpl implements GroupManager {
 		return ret;
 	}
 
-	public boolean postNotifyRoles(Long userId, UUID portfolioId, UUID uuid, String notify)
+	public boolean changeNotifyRoles(Long userId, UUID portfolioUuid, UUID nodeUuid, String notify)
 			throws GenericBusinessException {
 
 		boolean ret = false;
 		if (!credentialDao.isAdmin(userId))
 			throw new GenericBusinessException("No admin right");
-		List<GroupRights> grList = groupRightsDao.getRightsByPortfolio(uuid, portfolioId);
+		List<GroupRights> grList = groupRightsDao.getRightsByPortfolio(nodeUuid, portfolioUuid);
 
 		try {
 			GroupRights gr = null;
@@ -188,8 +200,8 @@ public class GroupManagerImpl implements GroupManager {
 				while (it.hasNext()) {
 					current = it.next();
 					gr = new GroupRights();
-					gr.setGroupRightInfo(gri);
 					gr.setId(new GroupRightsId());
+					gr.setGroupRightInfo(gri);
 					gr.setGroupRightsId(current.getId());
 					groupRightsDao.persist(gr);
 				}
@@ -205,7 +217,7 @@ public class GroupManagerImpl implements GroupManager {
 			GroupUserId id = new GroupUserId();
 			id.setGroupInfo(new GroupInfo(gid));
 			id.setCredential(new Credential(publicUid));
-			if (isPublic) // Insere ou retire 'sys_public' dans le groupe 'all' du portfolio
+			if (isPublic) // Insère ou retire 'sys_public' dans le groupe 'all' du portfolio
 			{
 				GroupUser gu = null;
 				try {
@@ -240,24 +252,6 @@ public class GroupManagerImpl implements GroupManager {
 		return result;
 	}
 
-	public String getUserGroupList() {
-		String result = "<groups>";
-		List<CredentialGroup> res = credentialGroupDao.findAll();
-		Iterator<CredentialGroup> it = res.iterator();
-		CredentialGroup currentCredential;
-		while (it.hasNext()) {
-			currentCredential = it.next();
-			result += "<group ";
-			result += DomUtils.getXmlAttributeOutput("id", String.valueOf(currentCredential.getId()) + " ");
-			result += ">";
-			result += DomUtils.getXmlElementOutput("label", currentCredential.getLabel());
-			result += "</group>";
-		}
-		result += "</groups>";
-
-		return result;
-	}
-
 	public String getUserGroups(Long userId) throws Exception {
 		List<GroupUser> res = groupUserDao.getByUser(userId);
 		GroupUser current = null;
@@ -281,35 +275,7 @@ public class GroupManagerImpl implements GroupManager {
 		return result;
 	}
 
-	public Long addUserGroup(String groupName) throws Exception {
-		return credentialGroupDao.createCredentialGroup(groupName);
-	}
-
-	public boolean renameUserGroup(Long groupId, String newName) {
-		return credentialGroupDao.renameCredentialGroup(groupId, newName);
-	}
-
-	public CredentialGroup getGroupByName(String name) {
-		return credentialGroupDao.getGroupByName(name);
-	}
-
-	public Boolean deleteUsersGroups(Long userGroupId) {
-		Boolean isOK = Boolean.TRUE;
-		try {
-			final List<CredentialGroupMembers> userGroupList = credentialDao.getUsersByUserGroup(userGroupId);
-			final Iterator<CredentialGroupMembers> it = userGroupList.iterator();
-			while (it.hasNext()) {
-				credentialGroupMembersDao.remove(it.next());
-			}
-			credentialGroupDao.removeById(userGroupId);
-		} catch (Exception e) {
-			e.printStackTrace();
-			isOK = Boolean.FALSE;
-		}
-		return isOK;
-	}
-
-	public String addUserGroup(String in, Long userId) throws Exception {
+	public String addUserGroup(String xmlGroup, Long userId) throws Exception {
 		if (!credentialDao.isAdmin(userId))
 			throw new GenericBusinessException("403 FORBIDDEN, No admin right");
 
@@ -319,7 +285,7 @@ public class GroupManagerImpl implements GroupManager {
 		String label = null;
 
 		// On récupère le body
-		Document doc = DomUtils.xmlString2Document(in, new StringBuffer());
+		Document doc = DomUtils.xmlString2Document(xmlGroup, new StringBuffer());
 		Element etu = doc.getDocumentElement();
 
 		// On vérifie le bon format
@@ -359,39 +325,39 @@ public class GroupManagerImpl implements GroupManager {
 		if (grid == null)
 			return "";
 
-		// On ajoute le groupe dans la base de données
-		groupInfoDao.add(new GroupRightInfo(grid), owner, label);
+		// On ajoute le groupe en base de données
+		groupInfoDao.add(grid, owner, label);
 
 		// On renvoie le body pour qu'il soit stocke dans le log
 		result = "<group ";
 		result += DomUtils.getXmlAttributeOutputInt("grid", grid.intValue()) + " ";
 		result += DomUtils.getXmlAttributeOutputInt("owner", owner.intValue()) + " ";
-		result += DomUtils.getXmlAttributeOutput("label", label) + " ";
+		result += DomUtils.getXmlAttributeOutput("label", label);
 		result += ">";
 		result += "</group>";
 		return result;
 	}
 
-	public void changeUserGroup(Long groupRightId, Long groupId, Long userId) throws BusinessException {
+	public void changeUserGroup(Long grid, Long groupId, Long userId) throws BusinessException {
 		if (!credentialDao.isAdmin(userId))
 			throw new GenericBusinessException("403 FORBIDDEN : No admin right");
 
 		GroupInfo gi = groupInfoDao.findById(groupId);
-		gi.setGroupRightInfo(new GroupRightInfo(groupRightId));
+		gi.setGroupRightInfo(new GroupRightInfo(grid));
 		gi = groupInfoDao.merge(gi);
 	}
 
 	/**
-	 * Ajout des droits du portfolio dans group_right_info, group_rights
+	 * Ajout des droits du portfolio dans GroupRightInfo et GroupRights
 	 * 
 	 * @param label
 	 * @param uuid
-	 * @param droit
+	 * @param right
 	 * @param portfolioUuid
 	 * @param userId
 	 * @return
 	 */
-	public boolean addGroupRights(String label, String nodeUuid, String droit, String portfolioUuid, Long userId) {
+	public boolean addGroupRights(String label, String nodeUuid, String right, String portfolioUuid, Long userId) {
 		List<GroupUser> res = null;
 		GroupRights res2 = null;
 		GroupRightInfo gri = null;
@@ -404,32 +370,31 @@ public class GroupManagerImpl implements GroupManager {
 		Long grid = -1L;
 		boolean reponse = true;
 
-		if (GroupRights.READ.equals(droit)) {
+		if (GroupRights.READ.equalsIgnoreCase(right)) {
 			RD = 1;
-		} else if (GroupRights.WRITE.equals(droit)) {
+		} else if (GroupRights.WRITE.equalsIgnoreCase(right)) {
 			WR = 1;
-		} else if (GroupRights.DELETE.equals(droit)) {
+		} else if (GroupRights.DELETE.equalsIgnoreCase(right)) {
 			DL = 1;
-		} else if (GroupRights.SUBMIT.equals(droit)) {
+		} else if (GroupRights.SUBMIT.equalsIgnoreCase(right)) {
 			SB = 1;
-		} else if (GroupRights.ADD.equals(droit)) {
+		} else if (GroupRights.ADD.equalsIgnoreCase(right)) {
 			AD = 1;
 		}
 
 		try {
 
-			if (StringUtils.isNotBlank(label) && droit != null) {
-				// Si le nom de group est 'user'. Le remplacer par le role de l'utilisateur
+			if (StringUtils.isNotBlank(label) && right != null) {
+				// Si le nom de group est 'user'. Le remplacer par le rôle de l'utilisateur
 				// (voir pour juste le nom plus tard)
 				if ("user".equals(label)) {
 					res = groupUserDao.getByPortfolioAndUser(portfolioUuid, userId);
 
-				} else if (!"".equals(portfolioUuid)) /// Role et portfolio
+				} else if (!"".equals(portfolioUuid)) /// Rôle et portfolio
 				{
 					gri = groupRightInfoDao.getByPortfolioAndLabel(portfolioUuid, label);
 					if (gri == null) // Groupe non-existant
 					{
-
 						gri = new GroupRightInfo();
 						gri.setOwner(userId);
 						gri.setLabel(label);
@@ -437,7 +402,7 @@ public class GroupManagerImpl implements GroupManager {
 						gri.setPortfolio(new Portfolio(UUID.fromString(portfolioUuid)));
 						groupRightInfoDao.persist(gri);
 
-						/// Cree une copie dans group_info, le temps de re-organiser tout ca
+						/// Crée une copie dans group_info, le temps de re-organiser tout ça.
 						GroupInfo gi = new GroupInfo();
 						gi.setId(grid);
 						gi.setOwner(userId);
@@ -465,29 +430,28 @@ public class GroupManagerImpl implements GroupManager {
 					res2 = groupRightsDao.getRightsByGrid(nodeUuid, grid);
 
 					//// FIXME Pas de noeud existant. Il me semble qu'il y a un UPDATE OR INSERT
-					//// dans
-					// MySQL. A verifier et arranger au besoin.
+					//// dans MySQL. A verifier et arranger au besoin.
 					if (res2 == null) {
 						res2 = new GroupRights();
 						res2.setId(new GroupRightsId());
 						res2.setGroupRightInfo(groupRightInfoDao.findById(grid));
 						res2.setGroupRightsId(UUID.fromString(nodeUuid));
 					}
-					if (GroupRights.READ.equals(droit)) {
+					if (GroupRights.READ.equalsIgnoreCase(right)) {
 						res2.setRead(BooleanUtils.toBoolean(RD));
-					} else if (GroupRights.WRITE.equals(droit)) {
+					} else if (GroupRights.WRITE.equalsIgnoreCase(right)) {
 						res2.setWrite(BooleanUtils.toBoolean(WR));
-					} else if (GroupRights.DELETE.equals(droit)) {
+					} else if (GroupRights.DELETE.equalsIgnoreCase(right)) {
 						res2.setDelete(BooleanUtils.toBoolean(DL));
-					} else if (GroupRights.SUBMIT.equals(droit)) {
+					} else if (GroupRights.SUBMIT.equalsIgnoreCase(right)) {
 						//// FIXME: ajoute le rules_id prÃ©-cannÃ© pour certaine valeurs
 						res2.setSubmit(BooleanUtils.toBoolean(SB));
-					} else if (GroupRights.ADD.equals(droit)) {
+					} else if (GroupRights.ADD.equalsIgnoreCase(right)) {
 						res2.setAdd(BooleanUtils.toBoolean(AD));
 					} else {
 						// Le droit d'executer des actions.
 						// FIXME Pas propre, à changer plus tard.
-						res2.setRulesId(droit);
+						res2.setRulesId(right);
 					}
 					groupRightsDao.merge(res2);
 				}
@@ -509,7 +473,8 @@ public class GroupManagerImpl implements GroupManager {
 		String result = "<groupRights>";
 		for (GroupRights res : resList) {
 			result += "<groupRight ";
-			result += DomUtils.getXmlAttributeOutput("gid", res.getId().toString()) + " ";
+			result += DomUtils.getXmlAttributeOutput("gid", res.getGroupRightInfo().getGroupInfo().getId().toString())
+					+ " ";
 			result += DomUtils.getXmlAttributeOutput("templateId", res.getGroupRightInfo().getId().toString()) + " ";
 			result += ">";
 
@@ -539,8 +504,6 @@ public class GroupManagerImpl implements GroupManager {
 			} else {
 				result += DomUtils.getXmlAttributeOutput("submit", "False") + " ";
 			}
-			// result += DomUtils.getXmlAttributeOutput("type", res.getString("t.label"))+"
-			// ";
 			result += DomUtils.getXmlAttributeOutput("typeId", res.getTypesId()) + " ";
 			if (WR == res.isWrite()) {
 				result += DomUtils.getXmlAttributeOutput("write", "True") + " ";
@@ -553,6 +516,190 @@ public class GroupManagerImpl implements GroupManager {
 		}
 		result += "</groupRights>";
 		return result;
+	}
+
+	public void removeRights(long groupId, Long userId) throws BusinessException {
+		if (!credentialDao.isAdmin(userId))
+			throw new GenericBusinessException("403 FORBIDDEN : no admin right");
+
+		groupInfoDao.removeById(groupId);
+	}
+
+	/*******************************************************
+	 * Fcts. pour groupes utilisateurs
+	 *******************************************************/
+	public String getCredentialGroupList() {
+		String result = "<groups>";
+		List<CredentialGroup> res = credentialGroupDao.findAll();
+		Iterator<CredentialGroup> it = res.iterator();
+		CredentialGroup currentCredential;
+		while (it.hasNext()) {
+			currentCredential = it.next();
+			result += "<group ";
+			result += DomUtils.getXmlAttributeOutput("id", String.valueOf(currentCredential.getId()) + " ");
+			result += ">";
+			result += DomUtils.getXmlElementOutput("label", currentCredential.getLabel());
+			result += "</group>";
+		}
+		result += "</groups>";
+
+		return result;
+	}
+
+	public Long addCredentialGroup(String credentialGroupName) throws Exception {
+		return credentialGroupDao.add(credentialGroupName);
+	}
+
+	public boolean renameCredentialGroup(Long credentialGroupId, String newName) {
+		return credentialGroupDao.rename(credentialGroupId, newName);
+	}
+
+	public CredentialGroup getCredentialGroupByName(String name) {
+		return credentialGroupDao.getByName(name);
+	}
+
+	public Boolean removeCredentialGroup(Long credentialGroupId) {
+		Boolean isOK = Boolean.TRUE;
+		try {
+			final List<CredentialGroupMembers> userGroupList = credentialGroupMembersDao.getByGroup(credentialGroupId);
+			final Iterator<CredentialGroupMembers> it = userGroupList.iterator();
+			while (it.hasNext()) {
+				credentialGroupMembersDao.remove(it.next());
+			}
+			credentialGroupDao.removeById(credentialGroupId);
+		} catch (Exception e) {
+			e.printStackTrace();
+			isOK = Boolean.FALSE;
+		}
+		return isOK;
+	}
+
+	/*******************************************************
+	 * Fcts. pour migration de base de données
+	 *******************************************************/
+	@Transactional(isolation = Isolation.DEFAULT, propagation = Propagation.REQUIRES_NEW)
+	public Map<Long, Long> transferGroupRightInfoTable(Connection con, Map<String, String> portIds)
+			throws SQLException {
+		ResultSet res = groupInfoDao.getMysqlGroupRightsInfos(con);
+		Map<Long, Long> groupRightIds = new HashMap<Long, Long>();
+		GroupRightInfo gri = null;
+		while (res.next()) {
+			try {
+				gri = new GroupRightInfo();
+				gri.setOwner(res.getLong("owner"));
+				gri.setLabel(res.getString("label"));
+				if (StringUtils.isNotEmpty(res.getString("portfolio_id")))
+					gri.setPortfolio(portfolioDao.findById(MapUtils.getString(portIds, res.getString("portfolio_id"))));
+				gri.setChangeRights(res.getBoolean("change_rights"));
+				gri = groupRightInfoDao.merge(gri);
+				groupRightIds.put(res.getLong("grid"), gri.getId());
+			} catch (DoesNotExistException e) {
+				System.err.println("GroupManagerImpl.transferGroupRightInfoTable()" + " portfolio not found :"
+						+ res.getString("portfolio_id"));
+			}
+		}
+		return groupRightIds;
+	}
+
+	@Transactional(isolation = Isolation.DEFAULT, propagation = Propagation.REQUIRES_NEW)
+	public Map<Long, Long> transferGroupInfoTable(Connection con, Map<Long, Long> griIds) throws SQLException {
+		ResultSet res = groupInfoDao.findAll("group_info", con);
+		GroupInfo gi = null;
+		final Map<Long, Long> groupInfoIds = new HashMap<Long, Long>();
+
+		while (res.next()) {
+			try {
+				gi = new GroupInfo();
+				gi.setId(res.getLong("gid"));
+				long grid = res.getLong("grid");
+				if (grid != 0) {
+					gi.setGroupRightInfo(groupRightInfoDao.findById(MapUtils.getLong(griIds, grid)));
+				}
+				gi.setOwner(res.getLong("owner"));
+				gi.setLabel(res.getString("label"));
+				gi = groupInfoDao.merge(gi);
+				groupInfoIds.put(grid, gi.getId());
+			} catch (DoesNotExistException e) {
+				System.err.println("GroupManagerImpl.transferGroupInfoTable()" + " GroupRightInfo not found :"
+						+ res.getLong("grid"));
+			}
+		}
+		return groupInfoIds;
+	}
+
+	@Transactional(isolation = Isolation.DEFAULT, propagation = Propagation.REQUIRES_NEW)
+	public void transferGroupGroupTable(Connection con, Map<Long, Long> giIds) throws SQLException {
+		ResultSet res = groupGroupDao.findAll("group_group", con);
+		GroupGroup gg = null;
+		while (res.next()) {
+			GroupGroupId ggId = new GroupGroupId(new GroupInfo(giIds.get(res.getLong("gid"))),
+					new GroupInfo(giIds.get(res.getLong("child_gid"))));
+			gg = new GroupGroup(ggId);
+			groupGroupDao.persist(gg);
+		}
+	}
+
+	@Transactional(isolation = Isolation.DEFAULT, propagation = Propagation.REQUIRES_NEW)
+	public Map<Long, Long> transferCredentialGroupTable(Connection con) throws SQLException {
+		ResultSet res = credentialGroupDao.findAll("credential_group", con);
+		CredentialGroup cg = null;
+		Map<Long, Long> cgIds = new HashMap<Long, Long>();
+		while (res.next()) {
+			cg = new CredentialGroup();
+			cg.setLabel(res.getString("label"));
+			cg = credentialGroupDao.merge(cg);
+			cgIds.put(res.getLong("cg"), cg.getId());
+		}
+		return cgIds;
+	}
+
+	@Transactional(isolation = Isolation.DEFAULT, propagation = Propagation.REQUIRES_NEW)
+	public void transferGroupRightsTable(Connection con, Map<Long, Long> griIds) throws SQLException {
+		ResultSet res = groupRightsDao.getMysqlGroupRights(con);
+		GroupRights gr = null;
+		GroupRightsId grId = null;
+		try {
+			while (res.next()) {
+				gr = new GroupRights();
+				grId = new GroupRightsId(new GroupRightInfo(griIds.get(res.getLong("grid"))),
+						UUID.fromString(res.getString("id")));
+				gr.setId(grId);
+				gr.setRead(res.getBoolean("RD"));
+				gr.setWrite(res.getBoolean("WR"));
+				gr.setDelete(res.getBoolean("DL"));
+				gr.setSubmit(res.getBoolean("SB"));
+				gr.setAdd(res.getBoolean("AD"));
+				gr.setTypesId(res.getString("types_id"));
+				gr.setRulesId(res.getString("rules_id"));
+				gr.setNotifyRoles(res.getString("notify_roles"));
+				groupRightsDao.persist(gr);
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+
+	@Transactional(isolation = Isolation.DEFAULT, propagation = Propagation.REQUIRES_NEW)
+	public void transferGroupUserTable(Connection con, Map<Long, Long> giIds, Map<Long, Long> userIds)
+			throws SQLException {
+		ResultSet res = groupUserDao.findAll("group_user", con);
+		// gid, grid, owner, label
+		GroupUser gu = null;
+		while (res.next()) {
+			gu = new GroupUser(new GroupUserId(new GroupInfo(giIds.get(res.getLong("gid"))),
+					new Credential(userIds.get(res.getLong("userid")))));
+			groupUserDao.persist(gu);
+		}
+	}
+
+	@Override
+	@Transactional(isolation = Isolation.DEFAULT, propagation = Propagation.REQUIRES_NEW)
+	public void removeGroups() {
+		groupGroupDao.removeAll();
+		groupUserDao.removeAll();
+		groupRightInfoDao.removeAll();
+		credentialGroupDao.removeAll();
+		groupInfoDao.removeAll();
 	}
 
 }

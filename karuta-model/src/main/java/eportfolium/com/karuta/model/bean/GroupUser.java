@@ -26,6 +26,7 @@ import javax.persistence.Transient;
 public class GroupUser implements Serializable {
 
 	private static final long serialVersionUID = -1516598438094285942L;
+
 	private GroupUserId id;
 
 	public GroupUser() {

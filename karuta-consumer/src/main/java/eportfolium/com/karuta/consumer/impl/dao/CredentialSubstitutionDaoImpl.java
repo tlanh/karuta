@@ -1,9 +1,7 @@
 package eportfolium.com.karuta.consumer.impl.dao;
 // Generated 17 juin 2019 11:33:18 by Hibernate Tools 5.2.10.Final
 
-import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
-import javax.persistence.PersistenceContext;
 import javax.persistence.TypedQuery;
 
 import org.springframework.stereotype.Repository;
@@ -22,9 +20,6 @@ import eportfolium.com.karuta.model.exception.DoesNotExistException;
 public class CredentialSubstitutionDaoImpl extends AbstractDaoImpl<CredentialSubstitution>
 		implements CredentialSubstitutionDao {
 
-	@PersistenceContext
-	private EntityManager entityManager;
-
 	public CredentialSubstitutionDaoImpl() {
 		super();
 		setCls(CredentialSubstitution.class);
@@ -40,7 +35,7 @@ public class CredentialSubstitutionDaoImpl extends AbstractDaoImpl<CredentialSub
 		sql += " WHERE cs.id.credential.id = :userId";
 		sql += " AND cs.id.id = :id";
 		sql += " AND cs.id.type = :type";
-		TypedQuery<CredentialSubstitution> q = entityManager.createQuery(sql, CredentialSubstitution.class);
+		TypedQuery<CredentialSubstitution> q = em.createQuery(sql, CredentialSubstitution.class);
 		q.setParameter("userid", userId);
 		q.setParameter("id", csId);
 		q.setParameter("type", "USER");
@@ -63,7 +58,7 @@ public class CredentialSubstitutionDaoImpl extends AbstractDaoImpl<CredentialSub
 		sql += " AND c.login = :login";
 		sql += " AND cr.id = :userId";
 		sql += " AND cs.type = 'USER' "; // As specific user
-		TypedQuery<Long> q = entityManager.createQuery(sql, Long.class);
+		TypedQuery<Long> q = em.createQuery(sql, Long.class);
 		q.setParameter("login", login);
 		q.setParameter("userId", userId);
 		try {
@@ -81,7 +76,7 @@ public class CredentialSubstitutionDaoImpl extends AbstractDaoImpl<CredentialSub
 		sql += " AND c.login = :login";
 		sql += " AND cs.id.credential.id = :userId";
 		sql += " AND cs.type = 'GROUP'";
-		TypedQuery<Long> q = entityManager.createQuery(sql, Long.class);
+		TypedQuery<Long> q = em.createQuery(sql, Long.class);
 		q.setParameter("login", login);
 		q.setParameter("userId", userId);
 		try {

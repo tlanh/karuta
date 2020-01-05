@@ -1,25 +1,19 @@
 package eportfolium.com.karuta.consumer.impl.dao;
 // Generated 17 juin 2019 11:33:18 by Hibernate Tools 5.2.10.Final
 
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 
-import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
-import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
-import eportfolium.com.karuta.consumer.contract.dao.GroupRightInfoDao;
 import eportfolium.com.karuta.consumer.contract.dao.GroupUserDao;
 import eportfolium.com.karuta.model.bean.Credential;
 import eportfolium.com.karuta.model.bean.GroupInfo;
-import eportfolium.com.karuta.model.bean.GroupRightInfo;
 import eportfolium.com.karuta.model.bean.GroupUser;
 import eportfolium.com.karuta.model.bean.GroupUserId;
 import eportfolium.com.karuta.model.exception.BusinessException;
@@ -35,24 +29,9 @@ import eportfolium.com.karuta.util.Tools;
 @Repository
 public class GroupUserDaoImpl extends AbstractDaoImpl<GroupUser> implements GroupUserDao {
 
-	@PersistenceContext
-	private EntityManager em;
-
-	@Autowired
-	private GroupRightInfoDao groupRightInfoDao;
-
 	public GroupUserDaoImpl() {
 		super();
 		setCls(GroupUser.class);
-	}
-
-	public List<GroupUser> findAll() {
-		String sql = "SELECT gu FROM GroupUser gu";
-		sql += " INNER JOIN FETCH gu.id.credential cr";
-		sql += " INNER JOIN FETCH gu.id.groupInfo gi";
-		sql += " ORDER BY gi.label ASC ";
-		TypedQuery<GroupUser> q = em.createQuery(sql, GroupUser.class);
-		return q.getResultList();
 	}
 
 	public List<GroupUser> getByUser(final Long userId) {
@@ -64,13 +43,13 @@ public class GroupUserDaoImpl extends AbstractDaoImpl<GroupUser> implements Grou
 		sql += " INNER JOIN FETCH gu.id.credential cr";
 		sql += " INNER JOIN FETCH gu.id.groupInfo gi";
 		sql += " INNER JOIN FETCH gi.groupRightInfo gri";
-		sql += "  WHERE cr.id = :userId ";
+		sql += " WHERE cr.id = :userId ";
 		TypedQuery<GroupUser> q = em.createQuery(sql, GroupUser.class);
 		q.setParameter("userId", userId);
 		return q.getResultList();
 	}
 
-	public boolean isUserInGroup(final String userId, final String groupId) {
+	public boolean isUserInGroup(final Long userId, final Long groupId) {
 		String sql;
 		boolean retval = false;
 
@@ -104,11 +83,6 @@ public class GroupUserDaoImpl extends AbstractDaoImpl<GroupUser> implements Grou
 			e.printStackTrace();
 		}
 		return status;
-	}
-
-	public boolean postGroupsUsers(int user, int userId, int groupId) {
-		// TODO Auto-generated method stub
-		return false;
 	}
 
 	public List<GroupUser> getByPortfolio(String portfolioUuid) {
@@ -184,17 +158,18 @@ public class GroupUserDaoImpl extends AbstractDaoImpl<GroupUser> implements Grou
 	}
 
 	public void deleteByPortfolio2(UUID portId) throws Exception {
-		List<GroupRightInfo> griList = groupRightInfoDao.getByPortfolioID(portId);
-		List<Long> gidList = new ArrayList<Long>(griList.size());
-		for (GroupRightInfo gri : griList) {
-			gidList.add(gri.getGroupInfo().getId());
-		}
+		String sql = "SELECT gi.id FROM GroupRightInfo gri";
+		sql += " INNER JOIN gri.groupInfo gi";
+		sql += " WHERE gri.portfolio.id = :portfolioUuid";
+		TypedQuery<Long> q1 = em.createQuery(sql, Long.class);
+		q1.setParameter("portfolioUuid", portId);
+		List<Long> gidList = q1.getResultList();
 
-		String sql = "SELECT gu FROM GroupUser gu";
+		sql = "SELECT gu FROM GroupUser gu";
 		sql += " WHERE gu.id.groupInfo.id IN (" + PhpUtil.implode(",", gidList) + ")";
 
-		TypedQuery<GroupUser> query = em.createQuery(sql, GroupUser.class);
-		List<GroupUser> guList = query.getResultList();
+		TypedQuery<GroupUser> q2 = em.createQuery(sql, GroupUser.class);
+		List<GroupUser> guList = q2.getResultList();
 
 		for (Iterator<GroupUser> it = guList.iterator(); it.hasNext();) {
 			remove(it.next());
@@ -236,6 +211,19 @@ public class GroupUserDaoImpl extends AbstractDaoImpl<GroupUser> implements Grou
 		} catch (NoResultException e) {
 		}
 		return res;
+	}
+
+	@Override
+	public List<GroupUser> getByRole(Long rrgid) {
+		String sql = "SELECT gu FROM GroupUser gu";
+		sql += " INNER JOIN FETCH gu.id.credential cr";
+		sql += " INNER JOIN FETCH gu.id.groupInfo gi";
+		sql += " INNER JOIN FETCH gi.groupRightInfo gri";
+		sql += " WHERE gri.id = :grid";
+		TypedQuery<GroupUser> q = em.createQuery(sql, GroupUser.class);
+		q.setParameter("grid", rrgid);
+		List<GroupUser> resList = q.getResultList();
+		return resList;
 	}
 
 	@Override

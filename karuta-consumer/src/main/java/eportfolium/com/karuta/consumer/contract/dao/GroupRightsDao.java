@@ -1,6 +1,9 @@
 package eportfolium.com.karuta.consumer.contract.dao;
 
 import java.io.Serializable;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.UUID;
 
@@ -29,16 +32,35 @@ public interface GroupRightsDao {
 	 */
 	List<GroupRights> findAll();
 
+	void removeAll();
 
 	GroupRights findById(Serializable id) throws DoesNotExistException;
 
+	/**
+	 * Récupère la liste des droits sur le noeud donné en paramètre.
+	 * 
+	 * @param uuid
+	 * @return
+	 */
 	List<GroupRights> getRightsById(String uuid);
 
+	/**
+	 * Récupère la liste des droits sur le noeud donné en paramètre.
+	 * 
+	 * @param uuid
+	 * @return
+	 */
 	List<GroupRights> getRightsById(UUID uuid);
 
+	/**
+	 * On récupère d'abord les informations dans la table structure
+	 * 
+	 * @param groupId
+	 * @return
+	 */
 	List<GroupRights> getRightsByGroupId(Long groupId);
 
-	List<GroupRights> getRightsByIdAndGroup(UUID id, Long groupId);
+	List<GroupRights> getRightsByIdAndGroup(String uuid, Long groupId);
 
 	GroupRights getPublicRightsByGroupId(String uuid, Long groupId);
 
@@ -60,7 +82,7 @@ public interface GroupRightsDao {
 	 * Regarde si l'utilisateur à un droit sur ce noeud dans l'un des groupes du
 	 * portfolio. <br>
 	 * 
-	 * Pas de sélection de groupe donc le noeud pourrait etre référencé dans
+	 * Pas de sélection de groupe donc le noeud pourrait être référencé dans
 	 * plusieurs groupes. On retourne le premier de la liste.
 	 * 
 	 * @param uuid
@@ -73,7 +95,7 @@ public interface GroupRightsDao {
 	 * Regarde si l'utilisateur à un droit sur ce noeud dans l'un des groupes du
 	 * portfolio. <br>
 	 * 
-	 * Pas de sélection de groupe donc le noeud pourrait etre référencé dans
+	 * Pas de sélection de groupe donc le noeud pourrait être référencé dans
 	 * plusieurs groupes. On retourne le premier de la liste.
 	 * 
 	 * @param uuid
@@ -82,25 +104,19 @@ public interface GroupRightsDao {
 	 */
 	GroupRights getRightsByIdAndUser(UUID uuid, Long userId);
 
-	GroupRights getRightsByUserAndGroup(UUID uuid, Long userId, Long groupId);
-
 	GroupRights getRightsByUserAndGroup(String uuid, Long userId, Long groupId);
 
 	GroupRights getSpecificRightsForUser(String uuid, Long userId);
-
-	GroupRights getSpecificRightsForUser(UUID uuid, Long userId);
-
-	GroupRights getRightsByIdAndLabel(UUID uuid, String label);
 
 	GroupRights getRightsByIdAndLabel(String uuid, String label);
 
 	void removeById(UUID groupRightsId) throws Exception;
 
-	List<GroupRights> getByPortfolioAndGridList(UUID portfolioUuid, Long grid1, Long grid2, Long grid3);
+	List<GroupRights> getByPortfolioAndGridList(String portfolioUuid, Long grid1, Long grid2, Long grid3);
 
 	/**
 	 * Récupère les droits donnés par le portfolio à 'tout le monde' et les droits
-	 * donnés specifiquement à un utilisateur
+	 * donnés spécifiquement à un utilisateur
 	 * 
 	 * @param portfolioUuid
 	 * @param userLogin
@@ -123,5 +139,7 @@ public interface GroupRightsDao {
 
 	boolean updateNodesRights(List<Node> nodes, Long grid);
 
+	ResultSet findAll(String table, Connection con);
 
+	ResultSet getMysqlGroupRights(Connection con) throws SQLException;
 }

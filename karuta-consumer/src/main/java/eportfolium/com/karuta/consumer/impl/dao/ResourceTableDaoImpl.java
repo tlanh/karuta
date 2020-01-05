@@ -1,14 +1,16 @@
 package eportfolium.com.karuta.consumer.impl.dao;
 // Generated 17 juin 2019 11:33:18 by Hibernate Tools 5.2.10.Final
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
-import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
-import javax.persistence.PersistenceContext;
 import javax.persistence.TypedQuery;
 
 import org.apache.commons.logging.Log;
@@ -33,9 +35,6 @@ import eportfolium.com.karuta.util.JavaTimeUtil;
 @Repository
 public class ResourceTableDaoImpl extends AbstractDaoImpl<ResourceTable> implements ResourceTableDao {
 
-	@PersistenceContext
-	private EntityManager entityManager;
-
 	@Autowired
 	private NodeDao nodeDao;
 
@@ -51,7 +50,7 @@ public class ResourceTableDaoImpl extends AbstractDaoImpl<ResourceTable> impleme
 		// On récupère d'abord les informations dans la table structures
 		String sql = "FROM ResourceTable r";
 		sql += " WHERE r.id = :resourceID ";
-		TypedQuery<ResourceTable> q = entityManager.createQuery(sql, ResourceTable.class);
+		TypedQuery<ResourceTable> q = em.createQuery(sql, ResourceTable.class);
 		q.setParameter("resourceID", UUID.fromString(resUuid));
 		try {
 			result = q.getSingleResult();
@@ -67,7 +66,7 @@ public class ResourceTableDaoImpl extends AbstractDaoImpl<ResourceTable> impleme
 		String sql = "SELECT r FROM ResourceTable r";
 		sql += " WHERE r.xsiType LIKE :xsiType";
 		sql += " AND r.id = :resourceID ";
-		TypedQuery<ResourceTable> q = entityManager.createQuery(sql, ResourceTable.class);
+		TypedQuery<ResourceTable> q = em.createQuery(sql, ResourceTable.class);
 		q.setParameter("xsiType", xsiType);
 		q.setParameter("resourceID", resUuid);
 		try {
@@ -82,34 +81,27 @@ public class ResourceTableDaoImpl extends AbstractDaoImpl<ResourceTable> impleme
 		return getResourceByXsiType(UUID.fromString(resUuid), xsiType);
 	}
 
-	public UUID getResourceNodeUuidByParentNodeUuid(String nodeParentUuid) throws DoesNotExistException {
-		return getResourceByNodeParentUuid(nodeParentUuid).getId();
+	public UUID getResourceUuidByParentNodeUuid(String parentNodeUuid) throws DoesNotExistException {
+		return getResourceByParentNodeUuid(parentNodeUuid).getId();
 	}
 
-	public UUID getResourceNodeUuidByParentNodeUuid(UUID nodeParentUuid) throws DoesNotExistException {
-		return getResourceByNodeParentUuid(nodeParentUuid).getId();
+	public ResourceTable getResourceByParentNodeUuid(String parentNodeUuid) throws DoesNotExistException {
+		return getResourceByNodeParentUuid(UUID.fromString(parentNodeUuid));
 	}
 
-	public ResourceTable getResourceByNodeParentUuid(String nodeParentUuid) throws DoesNotExistException {
-		return getResourceByNodeParentUuid(UUID.fromString(nodeParentUuid));
-	}
-
-	public ResourceTable getResourceByNodeParentUuid(UUID nodeParentUuid) throws DoesNotExistException {
-		String sql;
+	public ResourceTable getResourceByNodeParentUuid(UUID parentNodeUuid) throws DoesNotExistException {
 		ResourceTable res = null;
-
 		// On récupère d'abord les informations dans la table structures
-		sql = "SELECT r FROM ResourceTable r";
+		String sql = "SELECT r FROM ResourceTable r";
 		sql += " INNER JOIN r.node n WITH n.id = :parentNodeID";
-		TypedQuery<ResourceTable> q = entityManager.createQuery(sql, ResourceTable.class);
-		q.setParameter("parentNodeID", nodeParentUuid);
+		TypedQuery<ResourceTable> q = em.createQuery(sql, ResourceTable.class);
+		q.setParameter("parentNodeID", parentNodeUuid);
 		try {
 			res = q.getSingleResult();
 		} catch (NoResultException e) {
-			throw new DoesNotExistException(ResourceTable.class, nodeParentUuid);
+			throw new DoesNotExistException(ResourceTable.class, parentNodeUuid);
 		}
 		return res;
-
 	}
 
 	/**
@@ -154,7 +146,7 @@ public class ResourceTableDaoImpl extends AbstractDaoImpl<ResourceTable> impleme
 		ResourceTable result = null;
 		String sql = " SELECT r FROM ResourceTable r";
 		sql += " INNER JOIN r.resNode resNode WITH resNode.id = :nodeUuid";
-		TypedQuery<ResourceTable> q = entityManager.createQuery(sql, ResourceTable.class);
+		TypedQuery<ResourceTable> q = em.createQuery(sql, ResourceTable.class);
 		q.setParameter("nodeUuid", nodeUuid);
 		try {
 			result = q.getSingleResult();
@@ -171,7 +163,7 @@ public class ResourceTableDaoImpl extends AbstractDaoImpl<ResourceTable> impleme
 		ResourceTable result = null;
 		String sql = " SELECT r FROM ResourceTable r";
 		sql += " INNER JOIN r.contextNode contextNode WITH contextNode.id = :nodeUuid";
-		TypedQuery<ResourceTable> q = entityManager.createQuery(sql, ResourceTable.class);
+		TypedQuery<ResourceTable> q = em.createQuery(sql, ResourceTable.class);
 		q.setParameter("nodeUuid", nodeUuid);
 		try {
 			result = q.getSingleResult();
@@ -188,7 +180,7 @@ public class ResourceTableDaoImpl extends AbstractDaoImpl<ResourceTable> impleme
 		ResourceTable resourceTable = null;
 		String sql = "SELECT r FROM ResourceTable r";
 		sql += " INNER JOIN r.node n WITH n.id = :nodeUuid";
-		TypedQuery<ResourceTable> q = entityManager.createQuery(sql, ResourceTable.class);
+		TypedQuery<ResourceTable> q = em.createQuery(sql, ResourceTable.class);
 		q.setParameter("nodeUuid", nodeUuid);
 		try {
 			resourceTable = q.getSingleResult();
@@ -207,7 +199,7 @@ public class ResourceTableDaoImpl extends AbstractDaoImpl<ResourceTable> impleme
 		// On récupère d'abord les informations dans la table structures
 		String sql = "SELECT r FROM ResourceTable r";
 		sql += " INNER JOIN r.node n WITH n.portfolio.id = :portfolioUuid";
-		TypedQuery<ResourceTable> q = entityManager.createQuery(sql, ResourceTable.class);
+		TypedQuery<ResourceTable> q = em.createQuery(sql, ResourceTable.class);
 		q.setParameter("portfolioUuid", UUID.fromString(portfolioUuid));
 		List<ResourceTable> results = q.getResultList();
 		return results;
@@ -216,7 +208,7 @@ public class ResourceTableDaoImpl extends AbstractDaoImpl<ResourceTable> impleme
 	public List<ResourceTable> getResourcesOfResourceByPortfolioUUID(String portfolioUuid) {
 		String sql = "SELECT r FROM ResourceTable r";
 		sql += " INNER JOIN r.resNode n WITH n.portfolio.id = :portfolioUuid";
-		TypedQuery<ResourceTable> q = entityManager.createQuery(sql, ResourceTable.class);
+		TypedQuery<ResourceTable> q = em.createQuery(sql, ResourceTable.class);
 		q.setParameter("portfolioUuid", UUID.fromString(portfolioUuid));
 		return q.getResultList();
 	}
@@ -224,14 +216,9 @@ public class ResourceTableDaoImpl extends AbstractDaoImpl<ResourceTable> impleme
 	public List<ResourceTable> getContextResourcesByPortfolioUUID(String portfolioUuid) {
 		String sql = "SELECT r FROM ResourceTable r";
 		sql += " INNER JOIN r.contextNode n WITH n.portfolio.id = :portfolioUuid";
-		TypedQuery<ResourceTable> q = entityManager.createQuery(sql, ResourceTable.class);
+		TypedQuery<ResourceTable> q = em.createQuery(sql, ResourceTable.class);
 		q.setParameter("portfolioUuid", UUID.fromString(portfolioUuid));
 		return q.getResultList();
-	}
-
-	public Object deleteResource(String resourceUuid, Long userId, Long groupId) throws Exception {
-		// TODO Auto-generated method stub
-		return null;
 	}
 
 	public int updateResource(String nodeUuid, String content, Long userId) {
@@ -242,7 +229,7 @@ public class ResourceTableDaoImpl extends AbstractDaoImpl<ResourceTable> impleme
 		int result = 0;
 		String sql = " SELECT rt FROM ResourceTable rt";
 		sql += " INNER JOIN rt.node n WITH n.id = :nodeUuid";
-		TypedQuery<ResourceTable> q = entityManager.createQuery(sql, ResourceTable.class);
+		TypedQuery<ResourceTable> q = em.createQuery(sql, ResourceTable.class);
 		q.setParameter("nodeUuid", nodeUuid);
 		try {
 			ResourceTable rt = q.getSingleResult();
@@ -294,7 +281,7 @@ public class ResourceTableDaoImpl extends AbstractDaoImpl<ResourceTable> impleme
 		return result;
 	}
 
-	public int createResource(String uuid, String parentUuid, String xsiType, String content, String portfolioModelId,
+	public int addResource(String uuid, String parentUuid, String xsiType, String content, String portfolioModelId,
 			boolean sharedNodeRes, boolean sharedRes, Long userId) {
 
 		int status = 0;
@@ -320,30 +307,31 @@ public class ResourceTableDaoImpl extends AbstractDaoImpl<ResourceTable> impleme
 			merge(rt);
 		}
 
-		// Ensuite on met à jour les id ressource au niveau du noeud parent.
 		String sql = "SELECT n FROM Node n";
 		sql += " WHERE n.id = :nodeUuid";
-		TypedQuery<Node> q = entityManager.createQuery(sql, Node.class);
-		q.setParameter("nodeUuid", uuidObj);
-		try {
-			Node n = q.getSingleResult();
+		final TypedQuery<Node> q = em.createQuery(sql, Node.class);
+		q.setParameter("nodeUuid", parentUuidObj);
 
+		try {
+			final Node n = q.getSingleResult();
+
+			// Ensuite on met à jour les id ressource au niveau du noeud parent
 			if (xsiType.equals("nodeRes")) {
+				n.setResResource(new ResourceTable(uuidObj));
 				if (sharedNodeRes && portfolioModelId != null) {
-					n.setResResource(new ResourceTable(uuidObj));
+					n.setSharedNodeResUuid(uuidObj);
 				} else {
-					n.setResResource(null);
+					n.setSharedNodeResUuid(null);
 				}
-				n.setSharedNodeResUuid(parentUuidObj);
 			} else if (xsiType.equals("context")) {
-				n.setContextResource(new ResourceTable(parentUuidObj));
+				n.setContextResource(new ResourceTable(uuidObj));
 			} else {
-				if (sharedNodeRes && portfolioModelId != null) {
-					n.setResource(new ResourceTable(uuidObj));
+				n.setResource(new ResourceTable(uuidObj));
+				if (sharedRes && portfolioModelId != null) {
+					n.setSharedResUuid(uuidObj);
 				} else {
-					n.setResource(null);
+					n.setSharedResUuid(null);
 				}
-				n.setSharedResUuid(parentUuidObj);
 			}
 			nodeDao.merge(n);
 		} catch (Exception ex) {
@@ -352,4 +340,23 @@ public class ResourceTableDaoImpl extends AbstractDaoImpl<ResourceTable> impleme
 		}
 		return status;
 	}
+
+	/*****************************************************************************************************************/
+
+	@Override
+	public ResultSet getMysqlResources(Connection con) throws SQLException {
+		PreparedStatement st;
+		String sql;
+		try {
+			// On récupère d'abord les informations dans la table structures
+			sql = "SELECT bin2uuid(node_uuid) AS node_uuid, xsi_type, content, user_id, modif_user_id, modif_date FROM resource_table";
+			st = con.prepareStatement(sql);
+			return st.executeQuery();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		return null;
+	}
+
 }
