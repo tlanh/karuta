@@ -686,34 +686,40 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 			List<GroupRightInfo> griList = groupRightInfoDao.getByPortfolioID(portfolioUuid);
 			for (java.util.Iterator<GroupRightInfo> it = griList.iterator(); it.hasNext();) {
 				groupRightInfoDao.remove(it.next());
+				it.remove();
 			}
 
 			/// Resources
 			List<ResourceTable> rtList = resourceTableDao.getResourcesByPortfolioUUID(portfolioUuid);
 			for (java.util.Iterator<ResourceTable> it = rtList.iterator(); it.hasNext();) {
 				resourceTableDao.remove(it.next());
+				it.remove();
 			}
 
 			rtList = resourceTableDao.getContextResourcesByPortfolioUUID(portfolioUuid);
 			for (java.util.Iterator<ResourceTable> it = rtList.iterator(); it.hasNext();) {
 				resourceTableDao.remove(it.next());
+				it.remove();
 			}
 
 			rtList = resourceTableDao.getResourcesOfResourceByPortfolioUUID(portfolioUuid);
 			for (java.util.Iterator<ResourceTable> it = rtList.iterator(); it.hasNext();) {
 				resourceTableDao.remove(it.next());
+				it.remove();
 			}
 
 			/// Nodes
 			List<Node> nodes = nodeDao.getNodes(portfolioUuid);
 			for (java.util.Iterator<Node> it = nodes.iterator(); it.hasNext();) {
 				nodeDao.remove(it.next());
+				it.remove();
 			}
 
 			/// Supprimer le portfolio du groupe.
 			List<PortfolioGroupMembers> pgmList = portfolioGroupMembersDao.getByPortfolioID(portfolioUuid);
 			for (java.util.Iterator<PortfolioGroupMembers> it = pgmList.iterator(); it.hasNext();) {
 				portfolioGroupMembersDao.remove(it.next());
+				it.remove();
 			}
 
 			// Portfolio

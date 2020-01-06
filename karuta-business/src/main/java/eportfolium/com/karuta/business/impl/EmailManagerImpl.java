@@ -71,40 +71,8 @@ public class EmailManagerImpl implements EmailManager {
 
 	private static Map<String, String> createMap() {
 		Map<String, String> myMap = new HashMap<String, String>();
-		myMap.put("Your guest account has been transformed into a customer account",
-				"Votre compte invité a été transformé en compte client");
-		myMap.put("Your guest account has been transformed into a customer account",
-				"Votre compte invité a été transformé en compte client");
-		myMap.put("The virtual product that you bought is available for download",
-				"Le produit  que vous avez acheté est prêt à être téléchargé");
-		myMap.put("New voucher for your order %s", "Nouveau bon de réduction pour votre commande %s");
-		myMap.put("Order confirmation", "Confirmation de commande");
-		myMap.put("Estimate confirmation", "Demande de devis client");
-		myMap.put("Log: You have a new alert from your shop",
-				"Log : Vous avez un nouveau message d\'alerte dans votre boutique");
-		myMap.put("Fwd: Customer message", "TR: Message d\'un client");
-		myMap.put("An answer to your message is available #ct%1$s #tc%2$s",
-				"Une réponse à votre message est disponible #ct%1$s #tc%2$s");
 		myMap.put("Your new password", "Votre nouveau mot de passe");
-		myMap.put("Package in transit", "Livraison en cours");
-		myMap.put("New message regarding your order", "Nouveau message concernant votre commande");
-		myMap.put("New credit slip regarding your order", "Nouvel avoir concernant votre commande");
-		myMap.put("New voucher for your order #%s", "Nouveau bon de réduction pour votre commande %s");
-		myMap.put("Process the payment of your order", "Régler votre commande");
-		myMap.put("Your order return status has changed", "L\'état de votre retour produit a été modifié");
 		myMap.put("Welcome!", "Bienvenue !");
-		myMap.put("Your message has been correctly sent #ct%1$s #tc%2$s",
-				"Votre message a été correctement envoyé #ct%1$s #tc%2$s");
-		myMap.put("Your message has been correctly sent", "Votre message a bien été envoyé");
-		myMap.put("Message from contact form", "Message depuis le formulaire de contact");
-		myMap.put("Message from a customer", "Message d\'un client");
-		myMap.put("Password query confirmation", "Confirmation de demande de mot de passe");
-		myMap.put("Newsletter voucher", "Bon de réduction newsletter");
-		myMap.put("Newsletter confirmation", "Confirmation newsletter");
-		myMap.put("Email verification", "E-mail de vérification");
-		myMap.put("Your wishlist\'s link", "Lien vers votre liste d\'envies");
-		myMap.put("Message from %1$s %2$s", "Message de %1$s %2$s");
-		myMap.put("%1$s sent you a link to %2$s", "%1$s vous a envoyé un lien vers %2$s");
 		return myMap;
 	}
 

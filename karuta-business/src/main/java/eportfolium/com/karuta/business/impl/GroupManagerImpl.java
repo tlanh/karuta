@@ -404,7 +404,7 @@ public class GroupManagerImpl implements GroupManager {
 
 						/// Crée une copie dans group_info, le temps de re-organiser tout ça.
 						GroupInfo gi = new GroupInfo();
-						gi.setId(grid);
+						gi.setGroupRightInfo(gri);
 						gi.setOwner(userId);
 						gi.setLabel(label);
 						groupInfoDao.persist(gi);

@@ -5,11 +5,10 @@
 <hibernate-configuration>
 	<session-factory>
 		<property name="hibernate.connection.driver_class">com.mysql.cj.jdbc.Driver</property>
-		<property name="hibernate.connection.url">jdbc:mysql://localhost:3306/karutaBackend?useUnicode=true&amp;useEncoding=true&amp;characterEncoding=UTF-8&amp;serverTimezone=UTC</property>
+		<property name="hibernate.connection.url">jdbc:mysql://localhost:3306/karuta-backend?useUnicode=true&amp;useEncoding=true&amp;characterEncoding=UTF-8&amp;serverTimezone=UTC</property>
 		<property name="hibernate.connection.password">karuta_password</property>
 		<property name="hibernate.connection.username">karuta</property>
 		<property name="hibernate.dialect">org.hibernate.dialect.MySQLDialect</property>
 		<property name="hibernate.current_session_context_class">thread</property>
-		<!-- <property name="hibernate.default_schema">karutabackend</property> -->
 	</session-factory>
 </hibernate-configuration>

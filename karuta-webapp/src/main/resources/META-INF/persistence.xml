@@ -27,7 +27,7 @@
 			<property name="javax.persistence.jdbc.driver"
 				value="com.mysql.cj.jdbc.Driver" />
 			<property name="javax.persistence.jdbc.url"
-				value="jdbc:mysql://localhost:3306/karutaBackend?autoReconnect=true&amp;transformedBitIsBoolean=true&amp;characterEncoding=utf-8&amp;serverTimezone=UTC&amp;zeroDateTimeBehavior=convertToNull" />
+				value="jdbc:mysql://localhost:3306/karuta-backend?autoReconnect=true&amp;transformedBitIsBoolean=true&amp;characterEncoding=utf-8&amp;serverTimezone=UTC&amp;zeroDateTimeBehavior=convertToNull" />
 			<property name="javax.persistence.jdbc.user" value="karuta" />
 			<property name="javax.persistence.jdbc.password"
 				value="karuta_password" />
@@ -40,7 +40,7 @@
 			<property name="hibernate.use_sql_comments" value="false" />
 			<property name="hibernate.ejb.naming_strategy"
 				value="org.hibernate.cfg.DefaultNamingStrategy" />
-			<property name="hibernate.hbm2ddl.auto" value="create-drop" />
+<!-- 			<property name="hibernate.hbm2ddl.auto" value="create-drop" /> -->
 		</properties>
 	</persistence-unit>
 </persistence>

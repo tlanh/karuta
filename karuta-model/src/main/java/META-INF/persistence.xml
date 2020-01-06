@@ -15,7 +15,7 @@
 			<property name="hibernate.default_schema"
 				value="karutabackend" />
 			<property name="javax.persistence.jdbc.url"
-				value="jdbc:mysql://localhost:3306/karutabackend?autoReconnect=true&amp;transformedBitIsBoolean=true&amp;characterEncoding=utf-8&amp;serverTimezone=UTC&amp;zeroDateTimeBehavior=convertToNull" />
+				value="jdbc:mysql://localhost:3306/karuta-backend?autoReconnect=true&amp;transformedBitIsBoolean=true&amp;characterEncoding=utf-8&amp;serverTimezone=UTC&amp;zeroDateTimeBehavior=convertToNull" />
 			<property name="javax.persistence.jdbc.user"
 				value="karutabackend" />
 			<property name="javax.persistence.jdbc.password"
