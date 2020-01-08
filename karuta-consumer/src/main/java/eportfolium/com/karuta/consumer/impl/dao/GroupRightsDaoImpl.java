@@ -12,6 +12,7 @@ import javax.persistence.NoResultException;
 import javax.persistence.TypedQuery;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Repository;
 
 import eportfolium.com.karuta.consumer.contract.dao.GroupRightsDao;
@@ -392,6 +393,13 @@ public class GroupRightsDaoImpl extends AbstractDaoImpl<GroupRights> implements 
 	 * @param macroName
 	 */
 	public void updateNodeRights(UUID nodeUuid, List<String> labels, String macroName) {
+		if (CollectionUtils.isNotEmpty(labels)) {
+			for (int i = 0; i < labels.size(); i++) {
+				labels.set(i, StringUtils.prependIfMissing(labels.get(i), "'", "\""));
+				labels.set(i, StringUtils.appendIfMissing(labels.get(i), "'", "\""));
+			}
+		}
+
 		String sql = "SELECT gri.id FROM GroupRightInfo gri, Node n";
 		sql += " INNER JOIN gri.portfolio p1";
 		sql += " INNER JOIN n.portfolio p2";
@@ -400,16 +408,16 @@ public class GroupRightsDaoImpl extends AbstractDaoImpl<GroupRights> implements 
 		sql += " AND n.id = :nodeUuid";
 		sql += " AND gri.label IN (" + PhpUtil.implode(",", labels) + ")";
 
-		TypedQuery<Long> q1 = em.createQuery(sql, Long.class);
+		final TypedQuery<Long> q1 = em.createQuery(sql, Long.class);
 		q1.setParameter("nodeUuid", nodeUuid);
-		List<Long> griList = q1.getResultList();
+		final List<Long> griList = q1.getResultList();
 
 		sql = "SELECT gr FROM GroupRights gr";
 		sql += " WHERE gr.id.id = :uuid";
 		sql += " AND gr.id.groupRightInfo.id IN (" + PhpUtil.implode(",", griList) + ")";
-		TypedQuery<GroupRights> q2 = em.createQuery(sql, GroupRights.class);
+		final TypedQuery<GroupRights> q2 = em.createQuery(sql, GroupRights.class);
 		q2.setParameter("uuid", nodeUuid);
-		List<GroupRights> grList = q2.getResultList();
+		final List<GroupRights> grList = q2.getResultList();
 		for (GroupRights gr : grList) {
 			if ("hide".equals(macroName)) {
 				gr.setRead(false);
@@ -427,6 +435,13 @@ public class GroupRightsDaoImpl extends AbstractDaoImpl<GroupRights> implements 
 	 * @param labels
 	 */
 	public void updateNodeRights(UUID nodeUuid, List<String> labels) {
+
+		if (CollectionUtils.isNotEmpty(labels)) {
+			for (int i = 0; i < labels.size(); i++) {
+				labels.set(i, StringUtils.prependIfMissing(labels.get(i), "'", "\""));
+				labels.set(i, StringUtils.appendIfMissing(labels.get(i), "'", "\""));
+			}
+		}
 
 		String sql = "SELECT gri.id FROM GroupRightInfo gri, Node n";
 		sql += " INNER JOIN gri.portfolio p1";

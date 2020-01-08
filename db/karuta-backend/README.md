@@ -12,7 +12,7 @@ Voici les éléments relatifs à la base de données **karuta_backend**.
 -   `50_clear_db_karuta.sql` : script de purge de la base de données :
     -   supprime toutes les données contenues dans les tables
     -   réinitialise les séquences
--   `MPD_db_karuta.png` : modèle physique de données de la base de données
+-   `MPD_db_karuta.jpg` : modèle physique de données de la base de données
 
 
 

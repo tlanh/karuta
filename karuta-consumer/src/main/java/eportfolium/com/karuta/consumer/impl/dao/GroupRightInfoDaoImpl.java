@@ -15,6 +15,7 @@ import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
@@ -224,6 +225,12 @@ public class GroupRightInfoDaoImpl extends AbstractDaoImpl<GroupRightInfo> imple
 	 * @return
 	 */
 	public List<Long> getByNodeAndLabel(UUID nodeUuid, List<String> labels) {
+		if (CollectionUtils.isNotEmpty(labels)) {
+			for (int i = 0; i < labels.size(); i++) {
+				labels.set(i, StringUtils.prependIfMissing(labels.get(i), "'", "\""));
+				labels.set(i, StringUtils.appendIfMissing(labels.get(i), "'", "\""));
+			}
+		}
 		String sql = "SELECT gri.id FROM GroupRightInfo gri, Node n";
 		sql += " INNER JOIN gri.portfolio p1";
 		sql += " INNER JOIN n.portfolio p2";
@@ -232,7 +239,7 @@ public class GroupRightInfoDaoImpl extends AbstractDaoImpl<GroupRightInfo> imple
 		sql += " AND n.id = :nodeUuid";
 		sql += " AND gri.label IN (" + PhpUtil.implode(",", labels) + ")";
 
-		TypedQuery<Long> q = em.createQuery(sql, Long.class);
+		final TypedQuery<Long> q = em.createQuery(sql, Long.class);
 		q.setParameter("nodeUuid", nodeUuid);
 		return q.getResultList();
 	}
@@ -332,7 +339,6 @@ public class GroupRightInfoDaoImpl extends AbstractDaoImpl<GroupRightInfo> imple
 			query.setParameter("userId", userId);
 			res = (Map<String, Object>) query.getSingleResult();
 		} catch (NoResultException e) {
-			// TODO: handle exception
 		}
 		return res;
 	}

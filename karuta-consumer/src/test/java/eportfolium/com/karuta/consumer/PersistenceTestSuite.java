@@ -22,7 +22,7 @@ import junit.framework.TestSuite;
 @SuiteClasses({ TestCredentialDao.class, TestCredentialGroupDao.class, TestCredentialGroupMembersDao.class,
 		TestGroupInfoDao.class, TestGroupRightsDao.class, TestGroupUserDao.class, TestLogTableDao.class,
 		TestNodeDao.class, TestPortfolioDao.class, TestPortfolioGroupDao.class, TestPortfolioGroupMembersDao.class,
-		TestResourceTableDao.class })
+		TestResourceTableDao.class, TestGroupRightInfoDao.class })
 public class PersistenceTestSuite extends TestCase {
 	/**
 	 * Create the test case

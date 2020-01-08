@@ -19,7 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import eportfolium.com.karuta.consumer.contract.dao.CredentialDao;
 import eportfolium.com.karuta.model.bean.Credential;
-import eportfolium.com.karuta.model.bean.CredentialGroupMembers;
 
 @ContextConfiguration(locations = "classpath:application-context-mysql-test.xml")
 @RunWith(SpringJUnit4ClassRunner.class)
