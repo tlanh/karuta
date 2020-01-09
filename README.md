@@ -45,7 +45,8 @@ Tomcat est un serveur HTTP à part entière qui gère les servlets et les JSP. I
 ### Installer MySQL. 
 - Pour  Linux, suivez ce tutoriel : [_http://www-lisic.univ-littoral.fr/~ramat/downloads/tp-asr-5.pdf_](http://www-lisic.univ-littoral.fr/~ramat/downloads/tp-asr-5.pdf) .
 - Pour Windows, installez [_EasyPHP_](https://www.easyphp.org/save-easyphp-devserver-latest.php). Durant l’installation, NE choisissez PAS le répertoire par défaut C:/Program Files/… Privilégier un répertoire utilisateur (cad. un répertoire ou pas besoin d’avoir des droits administrateur) comme par exemple : C:\Users\<Votre_Nom>\devel\EasyPhp
-Vous disposez désormais de l'environnement suivant : 
+
+- Vous disposez désormais de l'environnement suivant : 
 
 Web Server           | Business             | Persistence          | Database Server          | Logger
 -------------------- | -------------------- | -------------------- | ------------------------ | --------- 
