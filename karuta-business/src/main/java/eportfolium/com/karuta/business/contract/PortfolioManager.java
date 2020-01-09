@@ -114,7 +114,4 @@ public interface PortfolioManager {
 
 	Map<String, String> transferPortfolioTable(Connection con, Map<Long, Long> userIds) throws SQLException;
 
-//	void transferRootNode(Connection con, Map<String, String> portIds, Map<String, String> nodesIds,
-//			Map<String, String> rtIds, Map<Long, Long> userIds) throws SQLException;
-
 }

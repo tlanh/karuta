@@ -143,7 +143,7 @@ public class EmailManagerImpl implements EmailManager {
 	 */
 
 	@SuppressWarnings("unchecked")
-	public boolean send(Integer langID, String template, String subject, Map<String, String> template_vars, Object to,
+	public boolean send(Integer langId, String template, String subject, Map<String, String> template_vars, Object to,
 			Object to_name, String from, String from_name, List<File> file_attachment, Boolean mode_smtp,
 			String template_path, boolean die, Integer id_shop, String bcc, String reply_to)
 			throws MessagingException, UnsupportedEncodingException {

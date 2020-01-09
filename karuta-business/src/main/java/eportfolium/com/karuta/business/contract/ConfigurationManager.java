@@ -89,8 +89,18 @@ public interface ConfigurationManager {
 
 	String getKarutaURL(Boolean ssl);
 
-	void transferConfigurationTable(Connection con);
 
+	/**
+	 * Used to delete all configuration data.
+	 * 
+	 * Permet de supprimer toutes les données de configuration.
+	 * 
+	 * @param con
+	 */
 	void removeConfigurations(Connection con);
 
+	
+	/*****************************/
+
+	void transferConfigurationTable(Connection con);
 }
