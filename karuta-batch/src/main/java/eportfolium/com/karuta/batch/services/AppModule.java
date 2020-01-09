@@ -267,7 +267,6 @@ public class AppModule {
 
 		Coercion<java.util.Date, LocalDate> toLocalDate = new Coercion<java.util.Date, LocalDate>() {
 			public LocalDate coerce(java.util.Date input) {
-				// TODO - confirm this conversion always works, esp. across timezones
 				return JavaTimeUtil.toLocalDate(input);
 			}
 		};
@@ -278,7 +277,6 @@ public class AppModule {
 
 		Coercion<LocalDate, java.util.Date> fromLocalDate = new Coercion<LocalDate, java.util.Date>() {
 			public java.util.Date coerce(LocalDate input) {
-				// TODO - confirm this conversion always works, esp. across timezones
 				return JavaTimeUtil.toJavaDate(input);
 			}
 		};

@@ -24,13 +24,11 @@ public class JavaTimeUtil {
 	// ///////////////////////////////////////////
 
 	public static java.sql.Timestamp toSQLTimestamp(ZonedDateTime dt) {
-		// TODO - confirm this conversion always works, esp. across timezones
 		java.sql.Timestamp ts = (dt == null ? null : new java.sql.Timestamp(dt.toInstant().toEpochMilli()));
 		return ts;
 	}
 
 	public static java.util.Date toJavaDate(ZonedDateTime dt) {
-		// TODO - confirm this conversion always works, esp. across timezones
 		java.util.Date ts = (dt == null ? null : new java.util.Date(dt.toInstant().toEpochMilli()));
 		return ts;
 	}
@@ -41,38 +39,32 @@ public class JavaTimeUtil {
 	}
 
 	public static java.sql.Date toSQLDate(LocalDate ld) {
-		// TODO - confirm this conversion always works, esp. across timezones
 		java.sql.Date d = (ld == null ? null
 				: new java.sql.Date(ld.atStartOfDay(paris).toInstant().toEpochMilli()));
 		return d;
 	}
 
 	public static java.util.Date toJavaDate(LocalDate ld) {
-		// TODO - confirm this conversion always works, esp. across timezones
 		java.util.Date d = (ld == null ? null : Date.from(ld.atStartOfDay(paris).toInstant()));
 		return d;
 	}
 
 	public static String toString(LocalDate ld) {
-		// TODO - confirm this conversion always works, esp. across timezones
 		String s = (ld == null ? null : localDateFormatter.withZone(ZoneId.of("UTC")).format(ld));
 		return s;
 	}
 
 	public static java.sql.Timestamp toSQLTimestamp(LocalDateTime ldt) {
-		// TODO - confirm this conversion always works, esp. across timezones
 		java.sql.Timestamp ts = (ldt == null ? null : Timestamp.valueOf(ldt));
 		return ts;
 	}
 
 	public static java.util.Date toJavaDate(LocalDateTime ldt) {
-		// TODO - confirm this conversion always works, esp. across timezones
 		java.util.Date d = (ldt == null ? null : Date.from(ldt.atZone(paris).toInstant()));
 		return d;
 	}
 
 	public static java.sql.Time toSQLTime(LocalTime lt) {
-		// TODO - confirm this conversion always works, esp. across timezones
 		java.sql.Time t = (lt == null ? null : Time.valueOf(lt));
 		return t;
 	}
@@ -112,61 +104,51 @@ public class JavaTimeUtil {
 	}
 
 	public static ZonedDateTime toDateTime(java.sql.Timestamp ts) {
-		// TODO - confirm this conversion always works, esp. across timezones
 		ZonedDateTime dt = (ts == null ? null : ZonedDateTime.ofInstant(ts.toInstant(), paris));
 		return dt;
 	}
 
 	public static ZonedDateTime toDateTime(java.util.Date d) {
-		// TODO - confirm this conversion always works, esp. across timezones
 		ZonedDateTime dt = (d == null ? null : ZonedDateTime.ofInstant(d.toInstant(), paris));
 		return dt;
 	}
 
 	public static ZonedDateTime toDateTime(java.sql.Timestamp ts, String timeZoneID) {
-		// TODO - confirm this conversion always works, esp. across timezones
 		ZonedDateTime dt = (ts == null ? null : ZonedDateTime.ofInstant(ts.toInstant(), ZoneId.of(timeZoneID)));
 		return dt;
 	}
 
 	public static ZonedDateTime toDateTime(java.util.Date d, String timeZoneID) {
-		// TODO - confirm this conversion always works, esp. across timezones
 		ZonedDateTime dt = (d == null ? null : ZonedDateTime.ofInstant(d.toInstant(), ZoneId.of(timeZoneID)));
 		return dt;
 	}
 
 	public static LocalDate toLocalDate(java.sql.Date d) {
-		// TODO - confirm this conversion always works, esp. across timezones
 		LocalDate ld = (d == null ? null : d.toLocalDate());
 		return ld;
 	}
 
 	public static LocalDate toLocalDate(java.util.Date d) {
-		// TODO - confirm this conversion always works, esp. across timezones
 		LocalDate ld = (d == null ? null : d.toInstant().atZone(paris).toLocalDate());
 		return ld;
 	}
 
 	public static LocalDate toLocalDate(String s) {
-		// TODO - confirm this conversion always works, esp. across timezones
 		LocalDate ld = (s == null ? null : LocalDate.parse(s, localDateFormatter.withZone(ZoneId.of("UTC"))));
 		return ld;
 	}
 
 	public static LocalDateTime toLocalDateTime(java.sql.Timestamp ts) {
-		// TODO - confirm this conversion always works, esp. across timezones
 		LocalDateTime ldt = (ts == null ? null : ts.toLocalDateTime());
 		return ldt;
 	}
 
 	public static LocalDateTime toLocalDateTime(java.util.Date d) {
-		// TODO - confirm this conversion always works, esp. across timezones
 		LocalDateTime ldt = (d == null ? null : d.toInstant().atZone(paris).toLocalDateTime());
 		return ldt;
 	}
 
 	public static LocalTime toLocalTime(java.sql.Time t) {
-		// TODO - confirm this conversion always works, esp. across timezones
 		LocalTime lt = (t == null ? null : t.toInstant().atZone(ZoneId.of("UTC")).toLocalTime());
 		return lt;
 	}
