@@ -14,7 +14,7 @@ Ceci est le dépôt associé au projet
 -   `karuta-webapp` : Le module contient "l’application web" du back-end (contrôleurs, Web services REST).Ces services sont destinées à être consommées par l’application avec IHM (karuta-frontend).
 
 
-## Procédure d’installation du back-end de Karuta.
+## Procédure d’installation du back-end de Karuta (développement).
 Ces étapes vous permettront d’installer, de modifier et d’exécuter rapidement le back-end de Karuta.
 
 ### Dézipper le projet.
