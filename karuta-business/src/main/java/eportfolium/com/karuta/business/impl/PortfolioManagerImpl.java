@@ -1389,7 +1389,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		return portfolio.getId().toString();
 	}
 
-	public Object instanciatePortfolio(MimeType mimeType, String portfolioId, String srccode, String tgtcode, Long id,
+	public String instanciatePortfolio(MimeType mimeType, String portfolioId, String srccode, String tgtcode, Long id,
 			int groupId, boolean copyshared, String groupname, boolean setOwner) {
 		// TODO Auto-generated method stub
 		return null;

@@ -77,7 +77,7 @@ public interface PortfolioManager {
 	boolean rewritePortfolioContent(MimeType inMimeType, MimeType outMimeType, String xmlPortfolio,
 			String portfolioUuid, Long userId, Boolean portfolioActive) throws BusinessException, Exception;
 
-	Object instanciatePortfolio(MimeType mimeType, String portfolioId, String srccode, String tgtcode, Long id,
+	String instanciatePortfolio(MimeType mimeType, String portfolioId, String srccode, String tgtcode, Long id,
 			int groupId, boolean copyshared, String groupname, boolean setOwner);
 
 	String importZippedPortfolio(MimeType mimeType, MimeType mimeType2, String path, String userName,

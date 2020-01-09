@@ -3,6 +3,16 @@
 Ceci est le dépôt associé au projet
 [_Karuta_](https://github.com/karutaproject/karuta-backend).
 
+## Améliorations apportées
+
+- Révision structure du code : 
+	- passage en architecture Ntiers plus modulaire : usage de frameworks (Hibernate, Spring, ...).
+- Révision de la sécurité des comptes d'utilisateurs (nouveau processus de chiffrement des mdp en BDD).
+- Mapping de la structure de la base de données sur des objets Java.
+- Révision de la gestion des erreurs au sein de l'application.
+- Compatible avec la version 9  de Tomcat.
+- Tests unitaires et tests d'intégration.
+- Suppression fichier de configuration `configKaruta.properties`, remplacer par une table configuration en base de données. 
 
 ## Contenu
 
