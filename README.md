@@ -67,9 +67,9 @@ Tomcat 9             | Spring IOC           | Hibernate            | MySQL      
 	- Sur Windows, d’abord démarrer EasyPhp puis démarrer le serveur de base de données et le serveur HTTP. À partir du dashboard d’EasyPHP, ouvrez phpMyAdmin.
 	- Sur Linux, [_http://localhost/phpmyadmin/_](http://localhost/phpmyadmin/)
 4. Pour créer la base de données, exécuter dans l'ordre les scripts SQL suivants :
-- `01_create_db_user_karuta.sql`
-- `02_create_db_karuta.sql`
-- `10_insert_data_db_ticket.sql`
+	- `01_create_db_user_karuta.sql`
+	- `02_create_db_karuta.sql`
+	- `10_insert_data_db_ticket.sql`
 
 ### Redémarrez Karuta.
 - Vérifiez que Karuta fonctionne en allant, avec votre navigateur web, sur la page [_http://localhost:8080/karuta-webapp_](http://localhost:8080/karuta-webapp)
