@@ -64,8 +64,8 @@ Tomcat 9             | Spring IOC           | Hibernate            | MySQL      
 1. Dans Eclipse, arrêter Karuta-webapp (dans la vue Console, cliquez sur la case rouge).
 2. À partir du projet racine « Karuta », ouvrir les dossiers db > karuta-backend. A l’intérieur du dossier se trouve les scripts MySQL que vous devrez exécuter.
 3. Ouvrir phpMyAdmin
-Sur Windows, d’abord démarrer EasyPhp puis démarrer le serveur de base de données et le serveur HTTP. À partir du dashboard d’EasyPHP, ouvrez phpMyAdmin.
-Sur Linux, [_http://localhost/phpmyadmin/_](http://localhost/phpmyadmin/)
+	- Sur Windows, d’abord démarrer EasyPhp puis démarrer le serveur de base de données et le serveur HTTP. À partir du dashboard d’EasyPHP, ouvrez phpMyAdmin.
+	- Sur Linux, [_http://localhost/phpmyadmin/_](http://localhost/phpmyadmin/)
 4. Pour créer la base de données, exécuter dans l'ordre les scripts SQL suivants :
 - `01_create_db_user_karuta.sql`
 - `02_create_db_karuta.sql`
