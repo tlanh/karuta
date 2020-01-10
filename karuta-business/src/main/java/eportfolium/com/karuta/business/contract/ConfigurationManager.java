@@ -33,12 +33,12 @@ public interface ConfigurationManager {
 
 	/**
 	 * Get several configuration values (in one language only)
-	 *
 	 * @param array   keys Keys wanted
 	 * @param integer id_lang Language ID
+	 *
 	 * @return array Values
 	 */
-	public Map<String, String> getMultiple(List<String> keys, Integer langID, Integer shopGroupID, Integer shopID);
+	public Map<String, String> getMultiple(List<String> keys, Integer langID);
 
 	/**
 	 * Update configuration key and value into database (automatically insert if key

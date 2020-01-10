@@ -3,16 +3,18 @@
 Ceci est le dépôt associé au projet
 [_Karuta_](https://github.com/karutaproject/karuta-backend).
 
+Pour plus d'informations, consulter la [_documentation_](http://www.mediafire.com/file/1e7alnwc58gn9o5/Karuta-doc.zip/file) associé au projet de refonte du backend.
+
 ## Améliorations apportées
 
-- Révision structure du code : 
+- Révision de la structure du code : 
 	- passage en architecture Ntiers plus modulaire : usage de frameworks (Hibernate, Spring, ...).
 - Révision de la sécurité des comptes d'utilisateurs (nouveau processus de chiffrement des mdp en BDD).
 - Mapping de la structure de la base de données sur des objets Java.
 - Révision de la gestion des erreurs au sein de l'application.
 - Compatible avec la version 9  de Tomcat.
 - Tests unitaires et tests d'intégration.
-- Suppression fichier de configuration `configKaruta.properties`, remplacer par une table configuration en base de données. 
+- Suppression fichier de configuration `configKaruta.properties`, remplacer par une table configuration en base de données.
 
 ## Contenu
 
@@ -22,7 +24,6 @@ Ceci est le dépôt associé au projet
 -   `karuta-consumer` : Le module contient les éléments d'interaction avec la base de données. S'y trouvent notamment les DAO.
 -   `karuta-model` : Le module contient les objets métiers (les beans DO). 
 -   `karuta-webapp` : Le module contient "l’application web" du back-end (contrôleurs, Web services REST).Ces services sont destinées à être consommées par l’application avec IHM (karuta-frontend).
-
 
 ## Procédure d’installation du back-end de Karuta (développement).
 Ces étapes vous permettront d’installer, de modifier et d’exécuter rapidement le back-end de Karuta.
@@ -66,25 +67,30 @@ Tomcat 9             | Spring IOC           | Hibernate            | MySQL      
 ## Comment utiliser Karuta ?
 
 ### Démarrer Karuta dans Eclipse :
-- Clic droit sur Tomcat Server 9 => Add and Remove « karuta-webapp ».
-- Si erreur, notamment ClassNotFoundException for org.slf4j.Logger or org.slf4j.impl.StaticLoggerBinder,  vérifier que les arguments et le chemin de classe correspondent à ceux indiqués ci-dessus.
-- Vérifiez que Karuta fonctionne en allant, avec votre navigateur web, sur la page [_http://localhost:8080/karuta-webapp_](http://localhost:8080/karuta-webapp). Une page avec It works doit s’afficher !
+- Clic droit sur Tomcat Server 9, puis cliquez sur **add and remove**, choisissez « karuta-webapp ». 
+- À nouveau clic droit sur Tomcat Server 9 puis cliquez sur **start**.
+- **Si erreur**, notamment `ClassNotFoundException` for `org.slf4j.Logger or org.slf4j.impl.StaticLoggerBinder`, vérifier les arguments du serveur J2EE. 
+	- Choisissez _Run > Run Configurations...._ La fenêtre « Run Configurations » apparaît.
+	- Choisissez Tomcat v9 server at localhost ou similaire.
+	- Cliquez sur l'onglet Arguments.
+	- Ajoutez à la suite dans la zone de texte VM arguments: `-Dlog4j.configurationFile=log4j.properties`
+
+- **Vérifiez que Karuta fonctionne** en allant, avec votre navigateur web, sur la page [_http://localhost:8080/karuta-webapp_](http://localhost:8080/karuta-webapp). Une page avec It works doit s’afficher !
 
 ### Remplissez la base de données MySQL :
 1. Dans Eclipse, arrêter Karuta-webapp (dans la vue Console, cliquez sur la case rouge).
 2. À partir du projet racine « Karuta », ouvrir les dossiers db > karuta-backend. A l’intérieur du dossier se trouve les scripts MySQL que vous devrez exécuter.
 3. Ouvrir phpMyAdmin
-	- Sur Windows, d’abord démarrer EasyPhp puis démarrer le serveur de base de données et le serveur HTTP. À partir du dashboard d’EasyPHP, ouvrez phpMyAdmin.
+	- Sur Windows, d’abord démarrer EasyPhp. Puis à partir du dashboard d’easyPHP, démarrer le serveur de base de données et le serveur HTTP. Enfin, ouvrez phpMyAdmin.
 	- Sur Linux, [_http://localhost/phpmyadmin/_](http://localhost/phpmyadmin/)
-4. Pour créer la base de données, exécuter dans l'ordre les scripts SQL suivants :
+4. Pour créer la base de données depuis phpmyadmin, exécuter dans l'ordre les scripts SQL suivants :
 	- `01_create_db_user_karuta.sql`
 	- `02_create_db_karuta.sql`
 	- `10_insert_data_db_ticket.sql`
 
 ### Redémarrez Karuta.
-- Vérifiez que Karuta fonctionne en allant, avec votre navigateur web, sur la page [_http://localhost:8080/karuta-webapp_](http://localhost:8080/karuta-webapp)
-	- Essayez de faire un test rapide pour voir si le système fonctionne ...
-	- Dans Eclipse, projet karuta-webapp => recherchez le fichier de test `src/test/java/eportfolium/comkaruta/webapp/rest/controller/CredentialBasicLiveTest.java`
-	- Double clic sur le fichier pour l’ouvrir.
-Choisissez Run > Run As > Junit Test
+- **Vérifiez que Karuta fonctionne** en allant, avec votre navigateur web, sur la page [_http://localhost:8080/karuta-webapp_](http://localhost:8080/karuta-webapp)
+- **Essayez de faire un test rapide** pour voir si le système fonctionne ...
+	- Dans Eclipse, projet karuta-webapp => recherchez le fichier de test `src/test/java/eportfolium/com/karuta/webapp/rest/controller/CredentialBasicLiveTest.java`
+	- Double clic sur le fichier pour l’ouvrir. Puis, choisissez _Run > Run As > Junit Test_. 
 Dans la vue « Console », le texte suivant doit s’afficher : _Output from Server .... created._

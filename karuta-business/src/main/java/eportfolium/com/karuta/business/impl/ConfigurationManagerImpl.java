@@ -40,7 +40,7 @@ public class ConfigurationManagerImpl implements ConfigurationManager {
 		return configurationDao.getMultiple(keys);
 	}
 
-	public Map<String, String> getMultiple(List<String> keys, Integer langID, Integer shopGroupID, Integer shopID) {
+	public Map<String, String> getMultiple(List<String> keys, Integer langID) {
 		return configurationDao.getMultiple(keys, langID);
 	}
 
