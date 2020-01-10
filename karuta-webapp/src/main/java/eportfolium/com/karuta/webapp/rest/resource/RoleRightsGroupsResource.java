@@ -105,7 +105,7 @@ public class RoleRightsGroupsResource extends AbstractResource {
 		try {
 			// Retourne le contenu du type
 			if (portId != null) {
-				returnValue = userManager.findUserRolesByPortfolio(portId, ui.userId);
+				returnValue = userManager.getUserRolesByPortfolio(portId, ui.userId);
 			}
 			return returnValue;
 		} catch (BusinessException ex) {
@@ -141,7 +141,7 @@ public class RoleRightsGroupsResource extends AbstractResource {
 		try {
 			// Retourne le contenu du type
 			if (rrgId != null) {
-				returnValue = userManager.findUserRole(rrgId);
+				returnValue = userManager.getUserRole(rrgId);
 			}
 			return returnValue;
 		} catch (RestWebApplicationException ex) {

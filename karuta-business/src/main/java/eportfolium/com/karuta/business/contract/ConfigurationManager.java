@@ -13,13 +13,13 @@ public interface ConfigurationManager {
 
 	/**
 	 * Get a single configuration value (in one language only)
-	 *
 	 * @param string key Key wanted
 	 * @param langID Language ID
+	 *
 	 * @return string Value
 	 */
 
-	String get(String key, Integer id_lang, Integer id_shop_group, Object id_shop);
+	String get(String key, Integer id_lang);
 
 	/**
 	 * Get a single configuration value (in one language only)
@@ -49,27 +49,27 @@ public interface ConfigurationManager {
 	 * when it should not be).
 	 * 
 	 * @TODO Fix saving HTML values in Configuration model
-	 *
 	 * @param string  key Key
 	 * @param mixed   values values is an array if the configuration is
 	 *                multilingual, a single string else.
+	 *
 	 * @param boolean html Specify if html is authorized in value
 	 * @param int     shopGroupID
 	 * @param int     shopID
 	 * @return boolean Update result
 	 */
-	boolean updateValue(String key, Map<Integer, String> values, boolean html, Integer shopGroupID, Integer shopID);
+	boolean updateValue(String key, Map<Integer, String> values, boolean html);
 
 	/**
 	 * Set TEMPORARY a single configuration value (in one language only)
-	 *
 	 * @param string key Key wanted
 	 * @param mixed  values values is an array if the configuration is multilingual,
 	 *               a single string else.
+	 *
 	 * @param int    id_shop_group
 	 * @param int    id_shop
 	 */
-	void set(String key, Map<Integer, String> values, Integer id_shop_group, Integer id_shop);
+	void set(String key, Map<Integer, String> values);
 
 	/**
 	 * Return ID a configuration key

@@ -58,9 +58,9 @@ public interface UserManager {
 	 * @return
 	 * @throws Exception
 	 */
-	String findUserRolesByPortfolio(String portId, Long id) throws Exception;
+	String getUserRolesByPortfolio(String portId, Long id) throws Exception;
 
-	String findUserRole(Long rrgid);
+	String getUserRole(Long rrgid);
 
 	Set<String[]> getNotificationUserList(Long userId, Long groupId, String uuid);
 

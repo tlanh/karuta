@@ -339,7 +339,7 @@ public class CredentialResource extends AbstractResource {
 						final Integer langId = Integer.valueOf(configurationManager.get("PS_LANG_DEFAULT"));
 						emailManager.send(langId, "employee_password",
 								emailManager.getTranslation("Your new password!"), template_vars, email, username, null,
-								null, null, null, Consts._PS_MAIL_DIR_, false, null, cc_email, null);
+								null, null, null, Consts._PS_MAIL_DIR_, false, cc_email, null);
 
 						retVal = 200;
 						retText = "sent";

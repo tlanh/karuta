@@ -79,13 +79,13 @@ public class EmailManagerImpl implements EmailManager {
 	public boolean send(Integer id_lang, String template, String subject, Map<String, String> template_vars, String to)
 			throws UnsupportedEncodingException, MessagingException {
 		return send(id_lang, template, subject, template_vars, to, null, null, null, null, null, Consts._PS_MAIL_DIR_,
-				false, null, null, null);
+				false, null, null);
 	}
 
 	public boolean send(Integer id_lang, String template, String subject, Map<String, String> template_vars, String to,
 			Object to_name) throws UnsupportedEncodingException, MessagingException {
 		return send(id_lang, template, subject, template_vars, to, to_name, null, null, null, null,
-				Consts._PS_MAIL_DIR_, false, null, null, null);
+				Consts._PS_MAIL_DIR_, false, null, null);
 	}
 
 	/**
@@ -107,7 +107,7 @@ public class EmailManagerImpl implements EmailManager {
 			Object to_name, String from, String from_name, List<File> file_attachment)
 			throws UnsupportedEncodingException, MessagingException {
 		return send(id_lang, template, subject, template_vars, to, to_name, from, from_name, file_attachment, null,
-				Consts._PS_MAIL_DIR_, false, null, null, null);
+				Consts._PS_MAIL_DIR_, false, null, null);
 	}
 
 	public boolean send(Integer id_lang, String template, String subject, Map<String, String> template_vars, String to,
@@ -115,13 +115,12 @@ public class EmailManagerImpl implements EmailManager {
 			String template_path, boolean die, Integer id_shop)
 			throws UnsupportedEncodingException, MessagingException {
 		return send(id_lang, template, subject, template_vars, to, to_name, from, from_name, file_attachment, mode_smtp,
-				template_path, die, id_shop, null, null);
+				template_path, die, null, null);
 	}
 
 	/**
 	 * Send Email
-	 *
-	 * @param int    id_lang Language ID of the email (to translate the template)
+	 * 
 	 * @param string template Template: the name of template not be a var but a
 	 *               string !
 	 * @param string subject Subject of the email
@@ -135,9 +134,10 @@ public class EmailManagerImpl implements EmailManager {
 	 * @param bool   mode_smtp SMTP mode (deprecated)
 	 * @param string template_path Template path
 	 * @param bool   die Die after error
-	 * @param int    id_shop Shop ID
 	 * @param string bcc Bcc recipient (email address)
 	 * @param string reply_to Email address for setting the Reply-To header
+	 * @param int    id_lang Language ID of the email (to translate the template)
+	 * @param int    id_shop Shop ID
 	 * @return bool|int Whether sending was successful. If not at all, false,
 	 *         otherwise amount of recipients succeeded.
 	 */
@@ -145,13 +145,13 @@ public class EmailManagerImpl implements EmailManager {
 	@SuppressWarnings("unchecked")
 	public boolean send(Integer langId, String template, String subject, Map<String, String> template_vars, Object to,
 			Object to_name, String from, String from_name, List<File> file_attachment, Boolean mode_smtp,
-			String template_path, boolean die, Integer id_shop, String bcc, String reply_to)
+			String template_path, boolean die, String bcc, String reply_to)
 			throws MessagingException, UnsupportedEncodingException {
 
 		final Map<String, String> configuration = configService.getMultiple(
 				Arrays.asList("PS_SHOP_EMAIL", "PS_MAIL_METHOD", "PS_MAIL_SERVER", "PS_MAIL_USER", "PS_MAIL_PASSWD",
 						"PS_SHOP_NAME", "PS_MAIL_SMTP_ENCRYPTION", "PS_MAIL_SMTP_PORT", "PS_MAIL_TYPE"),
-				null, null, id_shop);
+				null);
 
 		// Returns immediately if emails are deactivated
 		if (configService.get("PS_MAIL_METHOD").equals("3"))

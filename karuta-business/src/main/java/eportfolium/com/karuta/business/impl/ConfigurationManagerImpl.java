@@ -28,8 +28,8 @@ public class ConfigurationManagerImpl implements ConfigurationManager {
 		configurationDao.loadConfiguration();
 	}
 
-	public String get(String key, Integer id_lang, Integer id_shop_group, Object id_shop) {
-		return configurationDao.get(key, id_lang, id_shop_group, id_shop);
+	public String get(String key, Integer id_lang) {
+		return configurationDao.get(key, id_lang);
 	}
 
 	public String get(String key) {
@@ -41,16 +41,15 @@ public class ConfigurationManagerImpl implements ConfigurationManager {
 	}
 
 	public Map<String, String> getMultiple(List<String> keys, Integer langID, Integer shopGroupID, Integer shopID) {
-		return configurationDao.getMultiple(keys, langID, shopGroupID, shopID);
+		return configurationDao.getMultiple(keys, langID);
 	}
 
-	public boolean updateValue(String key, Map<Integer, String> values, boolean html, Integer shopGroupID,
-			Integer shopID) {
-		return configurationDao.updateValue(key, values, html, shopGroupID, shopID);
+	public boolean updateValue(String key, Map<Integer, String> values, boolean html) {
+		return configurationDao.updateValue(key, values, html);
 	}
 
-	public void set(String key, Map<Integer, String> values, Integer id_shop_group, Integer id_shop) {
-		configurationDao.set(key, values, id_shop_group, id_shop);
+	public void set(String key, Map<Integer, String> values) {
+		configurationDao.set(key, values);
 	}
 
 	public Long getIdByName(String key) {

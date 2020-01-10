@@ -376,7 +376,7 @@ public class UserManagerImpl implements UserManager {
 		return "";
 	}
 
-	public String findUserRolesByPortfolio(String portId, Long userId) throws Exception {
+	public String getUserRolesByPortfolio(String portId, Long userId) throws Exception {
 
 		// group_right_info pid:grid -> group_info grid:gid -> group_user gid:userid
 		List<GroupUser> guList = groupUserDao.getByPortfolioAndUser(portId, userId);
@@ -447,7 +447,7 @@ public class UserManagerImpl implements UserManager {
 		return stw.toString();
 	}
 
-	public String findUserRole(Long rrgid) {
+	public String getUserRole(Long rrgid) {
 
 		try {
 			List<GroupUser> guList = groupUserDao.getByRole(rrgid);

@@ -64,13 +64,14 @@ public class ConfigurationDaoImpl extends AbstractDaoImpl<Configuration> impleme
 
 	/**
 	 * Get a single configuration value (in one language only)
-	 *
+	 * 
 	 * @param string key Key wanted
 	 * @param langID Language ID
+	 *
 	 * @return string Value
 	 */
 
-	public String get(String key, Integer id_lang, Integer id_shop_group, Object id_shop) {
+	public String get(String key, Integer id_lang) {
 		if (_cache.get(this.getClass().getSimpleName()) == null) {
 			loadConfiguration();
 			// If conf if not initialized, try manual query
@@ -89,11 +90,11 @@ public class ConfigurationDaoImpl extends AbstractDaoImpl<Configuration> impleme
 	}
 
 	public String get(String key) {
-		return get(key, null, null, null);
+		return get(key, null);
 	}
 
 	public Map<String, String> getMultiple(List<String> keys) {
-		return getMultiple(keys, null, null, null);
+		return getMultiple(keys, null);
 	}
 
 	/**
@@ -103,13 +104,13 @@ public class ConfigurationDaoImpl extends AbstractDaoImpl<Configuration> impleme
 	 * @param integer id_lang Language ID
 	 * @return array Values
 	 */
-	public Map<String, String> getMultiple(List<String> keys, Integer langID, Integer shopGroupID, Integer shopID) {
+	public Map<String, String> getMultiple(List<String> keys, Integer langID) {
 		Validate.noNullElements(keys);
 
 		Map<String, String> results = new HashMap<String, String>();
 		String feature = null;
 		for (String key : keys) {
-			feature = get(key, langID, shopGroupID, shopID);
+			feature = get(key, langID);
 			results.put(key, feature == null ? "" : feature);
 		}
 		return results;
@@ -129,12 +130,9 @@ public class ConfigurationDaoImpl extends AbstractDaoImpl<Configuration> impleme
 	 * @param mixed   values values is an array if the configuration is
 	 *                multilingual, a single string else.
 	 * @param boolean html Specify if html is authorized in value
-	 * @param int     shopGroupID
-	 * @param int     shopID
 	 * @return boolean Update result
 	 */
-	public boolean updateValue(String key, Map<Integer, String> values, boolean html, Integer shopGroupID,
-			Integer shopID) {
+	public boolean updateValue(String key, Map<Integer, String> values, boolean html) {
 		if (!ValidateUtil.isConfigName(key)) {
 			throw new RuntimeException(String.format(
 					Tools.displayError("[%s] n'est pas une clé de configuration valide"), Tools.htmlentitiesUTF8(key)));
@@ -160,7 +158,7 @@ public class ConfigurationDaoImpl extends AbstractDaoImpl<Configuration> impleme
 			lang = entry.getKey();
 			value = entry.getValue();
 
-			Object stored_value = get(key, lang, shopGroupID, shopID);
+			Object stored_value = get(key, lang);
 			// if there isn't a stored_value, we must insert value
 			if ((!NumberUtils.isCreatable(value) && value.equals(stored_value))
 					|| (NumberUtils.isCreatable(value) && value.equals(stored_value) && hasKey(key, lang))) {
@@ -168,7 +166,7 @@ public class ConfigurationDaoImpl extends AbstractDaoImpl<Configuration> impleme
 			}
 
 			// If key already exists, update value
-			if (hasKey(key, lang, shopGroupID, shopID)) {
+			if (hasKey(key, lang)) {
 				if (PhpUtil.empty(lang)) {
 					// Update config not linked to lang
 					String sql = "SELECT c FROM Configuration c";
@@ -205,7 +203,7 @@ public class ConfigurationDaoImpl extends AbstractDaoImpl<Configuration> impleme
 			}
 		}
 
-		set(key, values, shopGroupID, shopID);
+		set(key, values);
 		return result;
 
 	}
@@ -216,10 +214,8 @@ public class ConfigurationDaoImpl extends AbstractDaoImpl<Configuration> impleme
 	 * @param string key Key wanted
 	 * @param mixed  values values is an array if the configuration is multilingual,
 	 *               a single string else.
-	 * @param int    id_shop_group
-	 * @param int    id_shop
 	 */
-	public void set(String key, Map<Integer, String> values, Integer id_shop_group, Integer id_shop) {
+	public void set(String key, Map<Integer, String> values) {
 		if (!ValidateUtil.isConfigName(key)) {
 			throw new RuntimeException(String.format(
 					Tools.displayError("[%s] n'est pas une clé de configuration valide"), Tools.htmlentitiesUTF8(key)));
@@ -274,10 +270,6 @@ public class ConfigurationDaoImpl extends AbstractDaoImpl<Configuration> impleme
 	}
 
 	private boolean hasKey(String key, Integer langID) {
-		return hasKey(key, langID, null, null);
-	}
-
-	private boolean hasKey(String key, Integer langID, Integer shopGroupID, Object shopID) {
 
 		if (!NumberUtils.isCreatable(key) && StringUtils.isBlank(key)) {
 			return false;

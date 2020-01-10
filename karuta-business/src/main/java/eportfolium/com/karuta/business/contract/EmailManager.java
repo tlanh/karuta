@@ -80,7 +80,6 @@ public interface EmailManager {
 	 * @param mode_smtp       SMTP mode (deprecated)
 	 * @param template_path   Template path
 	 * @param die             Die after error
-	 * @param id_shop         Shop ID
 	 * @param bcc             Bcc recipient (email address)
 	 * @param reply_to        reply_to Email address for setting the Reply-To header
 	 * @return true, if sending was successful. false, otherwise
@@ -89,7 +88,7 @@ public interface EmailManager {
 	 */
 	public boolean send(Integer langId, String template, String subject, Map<String, String> template_vars, Object to,
 			Object to_name, String from, String from_name, List<File> file_attachment, Boolean mode_smtp,
-			String template_path, boolean die, Integer id_shop, String bcc, String reply_to)
+			String template_path, boolean die, String bcc, String reply_to)
 			throws MessagingException, UnsupportedEncodingException;
 
 	/**

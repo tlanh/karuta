@@ -145,14 +145,14 @@ public class TestUserManager {
 	@Test
 	public void findUserRolesByPortfolio() throws Exception {
 		System.out.println("TestUserManager.findUserRolesByPortfolio()");
-		String userRoles = service.findUserRolesByPortfolio(portfolioUuid, 1L);
+		String userRoles = service.getUserRolesByPortfolio(portfolioUuid, 1L);
 		System.out.println(new XmlFormatter().format(userRoles));
 	}
 
 	@Test
 	public void findUserRole() {
 		System.out.println("TestUserManager.findUserRole()");
-		String userRole = service.findUserRole(3L);
+		String userRole = service.getUserRole(3L);
 		System.out.println(new XmlFormatter().format(userRole));
 	}
 
