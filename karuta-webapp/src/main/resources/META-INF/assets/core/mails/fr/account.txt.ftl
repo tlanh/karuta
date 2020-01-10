@@ -22,9 +22,5 @@ Conseils de sécurité importants :
 * Si vous pensez que quelqu'un utilise votre compte illégalement,
 veuillez nous prévenir immédiatement.
 
-Vous pouvez dès à présent passer commande sur notre boutique :
-${shop_name} [/${shop_url}] 
-
-${shop_name} [/${shop_url}] réalisé avec PrestaShop(tm)
-[http://www.prestashop.com/] 
+${shop_name} [/${shop_url}]
 

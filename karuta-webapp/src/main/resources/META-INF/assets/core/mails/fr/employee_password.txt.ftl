@@ -13,6 +13,5 @@ MOT DE PASSE : ${passwd}
 
 ADRESSE E-MAIL : ${email} 		 
 
-${shop_name} [/${shop_url}] réalisé avec PrestaShop(tm)
-[http://www.prestashop.com/] 
+${shop_name} [/${shop_url}]
 

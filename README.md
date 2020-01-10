@@ -8,7 +8,7 @@ Pour plus d'informations, consulter la [_documentation_](http://www.mediafire.co
 ## Améliorations apportées
 
 - Révision de la structure du code : 
-	- passage en architecture Ntiers plus modulaire : usage de frameworks (Hibernate, Spring, ...).
+	- passage en architecture n-tiers plus modulaire : usage de frameworks (Hibernate, Spring, ...).
 - Révision de la sécurité des comptes d'utilisateurs (nouveau processus de chiffrement des mdp en BDD).
 - Mapping de la structure de la base de données sur des objets Java.
 - Révision de la gestion des erreurs au sein de l'application.
@@ -29,12 +29,12 @@ Pour plus d'informations, consulter la [_documentation_](http://www.mediafire.co
 Ces étapes vous permettront d’installer, de modifier et d’exécuter rapidement le back-end de Karuta.
 
 ### Dézipper le projet.
-- Décompressez le fichier téléchargé, ce qui vous donnera un répertoire appelé karuta-master ou similaire.
+- Décompressez le [_fichier_](https://github.com/mlengagne/karuta/archive/master.zip) téléchargé, ce qui vous donnera un répertoire appelé karuta-master ou similaire.
 - Déplacez-le dans votre zone de développement, par exemple. /devel/karuta/. NE choisissez PAS un répertoire dont le chemin contient des espaces, par exemple. n'utilisez pas de répertoire dont le chemin inclut C:/Documents and Settings/.
 
 ### Ouvrez-le dans Eclipse. 
 - Eclipse 2019-12 R est préférable. Eclipse IDE pour les développeurs Java EE est un bon choix. (Le back-end de Karuta a été développé avec).
-- Dans Eclipse, choisissez _File > Import..._, puis choisissez  _General > Existing Projects into Workspace_, cliquer sur _Next >_, définissez le répertoire racine sur votre répertoire karuta-master eg. /devel/karuta-master/, cliquer sur _Finish_.
+- Dans Eclipse, choisissez _File > Import..._, puis choisissez  _Maven > Existing Maven Projects_, cliquer sur _Next >_, définissez le répertoire racine sur votre répertoire karuta-master eg. /devel/karuta-master/, cliquer sur _Finish_.
 - Le projet n’est pas encore construit, il affichera donc des erreurs.
 
 ### Installer JBoss Tools dans Eclipse. 
@@ -86,7 +86,7 @@ Tomcat 9             | Spring IOC           | Hibernate            | MySQL      
 4. Pour créer la base de données depuis phpmyadmin, exécuter dans l'ordre les scripts SQL suivants :
 	- `01_create_db_user_karuta.sql`
 	- `02_create_db_karuta.sql`
-	- `10_insert_data_db_ticket.sql`
+	- `10_insert_data_db_karuta.sql`
 
 ### Redémarrez Karuta.
 - **Vérifiez que Karuta fonctionne** en allant, avec votre navigateur web, sur la page [_http://localhost:8080/karuta-webapp_](http://localhost:8080/karuta-webapp)
