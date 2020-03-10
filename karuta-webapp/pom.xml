@@ -32,6 +32,10 @@
 			<groupId>eportfolium.com</groupId>
 			<artifactId>karuta-model</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>eportfolium.com</groupId>
+			<artifactId>karuta-consumer</artifactId>
+		</dependency>
 		<!-- ===== Bibliothèques tierces ===== -->
 		<dependency>
 			<groupId>org.springframework</groupId>

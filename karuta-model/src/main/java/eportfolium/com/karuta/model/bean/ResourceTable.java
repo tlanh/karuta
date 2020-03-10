@@ -76,7 +76,7 @@ public class ResourceTable implements Serializable {
 	@Id
 	@GenericGenerator(name = "uuid2", strategy = "uuid2")
 	@GeneratedValue(generator = "uuid2")
-	@Column(name = "node_uuid", unique = true, nullable = false, length = 36)
+	@Column(name = "node_uuid", unique = true, nullable = false, length = 16)
 	public UUID getId() {
 		return this.id;
 	}

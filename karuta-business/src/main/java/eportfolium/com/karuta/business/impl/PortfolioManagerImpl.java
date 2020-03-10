@@ -743,9 +743,126 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		return portfolioDao.changePortfolioConfiguration(portfolioUuid, portfolioActive);
 	}
 
-	public List<Portfolio> getPortfolios(MimeType outMimeType, long userId, long groupId, Boolean portfolioActive,
+	public String getPortfolios(MimeType outMimeType, long userId, long groupId, Boolean portfolioActive,
 			long substid, Boolean portfolioProject, String projectId, Boolean countOnly, String search) {
-		return portfolioDao.getPortfolios(userId, substid, portfolioActive);
+		StringBuilder result = new StringBuilder();
+		List<Portfolio> portfolios = portfolioDao.getPortfolios(userId, substid, portfolioActive);
+		result.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?><portfolios count=\""+portfolios.size()+"\">");
+		for( Portfolio p : portfolios ) {
+			Node n = p.getRootNode();
+			ResourceTable rctx = n.getContextResource();
+			ResourceTable rnode = n.getResource();
+			ResourceTable rcontent = n.getResResource();
+			
+			String isOwner = "N";
+			String ownerId = n.getModifUserId().toString();
+			if( Integer.parseInt(ownerId) == userId )
+				isOwner = "Y";
+			
+			result.append("<portfolio id=\"").append(p.getId().toString());
+			result.append("\" root_node_id=\"").append(p.getRootNode().toString());
+			result.append("\" owner=\"").append(isOwner);
+			result.append("\" ownerid=\"").append(ownerId);
+			result.append("\" modified=\"").append(p.getModifDate().toString()).append("\">");
+			
+				String nodetype = n.getAsmType().toString();
+				result.append("<").append(nodetype).append(" id=\"").append(n.getId().toString()).append("\">");
+				
+				if(!"asmResource".equals(nodetype))
+				{
+					String metawad = n.getMetadataWad();
+					if(metawad!=null && !"".equals(metawad) )
+					{
+						result.append("<metadata-wad ").append(metawad).append("/>");
+					}
+					else
+						result.append("<metadata-wad/>");
+					
+					String metaepm = n.getMetadataEpm();
+					if(metaepm!=null && !"".equals(metaepm) )
+						result.append("<metadata-epm "+metaepm+"/>");
+					else
+						result.append("<metadata-epm/>");
+					
+					String meta = n.getMetadata();
+					if(meta!=null && !"".equals(meta))
+						result.append("<metadata "+meta+"/>");
+					else
+						result.append("<metadata/>");
+					
+					String code = n.getCode();
+					if(meta!=null && !"".equals(meta))
+						result.append("<code>").append(code).append("</code>");
+					else
+						result.append("<code/>");
+					
+					String label = n.getLabel();
+					if(label!=null && !"".equals(label))
+						result.append("<label>").append(label).append("</label>");
+					else
+						result.append("<label/>");
+						
+					String descr = n.getDescr();
+					if(descr!=null && !"".equals(descr))
+						result.append("<description>").append(descr).append("</description>");
+					else
+						result.append("<description/>");
+					
+					String semantic = n.getSemantictag();
+					if(semantic!=null && !"".equals(semantic))
+						result.append("<semanticTag>").append(semantic).append("</semanticTag>");
+					else
+						result.append("<semanticTag/>");
+				
+				String nodeUuid = n.getId().toString();
+				if( rcontent != null )
+				{
+					String resresuuid = rcontent.getId().toString();
+					if( rcontent != null && resresuuid != null && !"".equals(resresuuid) )
+					{
+						String xsitype =  rcontent.getXsiType();
+						result.append("<asmResource id='").append(resresuuid).append("' contextid='").append(nodeUuid).append("' xsi_type='").append(xsitype).append("'>");
+						String resrescont = rcontent.getContent();
+						if( resrescont != null && !"".equals(resrescont) )
+							result.append(resrescont);
+						result.append("</asmResource>");
+					}
+				}
+				
+				if( rctx != null )
+				{
+					String rescontuuid =rctx.getId().toString();
+					if( rescontuuid != null && !"".equals(rescontuuid) )
+					{
+						String xsitype = rctx.getXsiType();
+						result.append("<asmResource id='").append(rescontuuid).append("' contextid='").append(nodeUuid).append("' xsi_type='").append(xsitype).append("'>");
+						String resrescont = rctx.getContent();
+						if( resrescont != null && !"".equals(resrescont) )
+							result.append(resrescont);
+						result.append("</asmResource>");
+					}
+				}
+				
+				if( rnode != null )
+				{
+					String resnodeuuid = rnode.getId().toString();
+					if( resnodeuuid != null && !"".equals(resnodeuuid) )
+					{
+						String xsitype = rnode.getXsiType().toString();
+						result.append("<asmResource id='").append(resnodeuuid).append("' contextid='").append(nodeUuid).append("' xsi_type='").append(xsitype).append("'>");
+						String resrescont = rnode.getContent();
+						if( resrescont != null && !"".equals(resrescont) )
+							result.append(resrescont);
+						result.append("</asmResource>");
+					}
+				}
+				result.append("</"+nodetype+">");
+				result.append("</portfolio>");
+			}
+
+		}
+		result.append("</portfolios>");
+		return result.toString();
 	}
 
 	public boolean rewritePortfolioContent(MimeType inMimeType, MimeType outMimeType, String xmlPortfolio,

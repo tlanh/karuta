@@ -45,7 +45,7 @@ public interface PortfolioManager {
 
 	String getPortfolioGroupListFromPortfolio(String portfolioUuid);
 
-	List<Portfolio> getPortfolios(MimeType outMimeType, long userId, long groupId, Boolean portfolioActive,
+	String getPortfolios(MimeType outMimeType, long userId, long groupId, Boolean portfolioActive,
 			long substid, Boolean portfolioProject, String projectId, Boolean countOnly, String search);
 
 	String getPortfolioShared(Long userId);

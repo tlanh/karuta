@@ -230,8 +230,8 @@ public class CredentialResource extends AbstractResource {
 				// String tokenID = resultCredential[2];
 
 				if (substit != null && !"0".equals(resultCredential[4])) {
-					int uid = Integer.parseInt(resultCredential[2]);
-					int subid = Integer.parseInt(resultCredential[4]);
+					long uid = Long.parseLong(resultCredential[2]);
+					long subid = Long.parseLong(resultCredential[4]);
 
 					session.setAttribute("user", resultCredential[3]);
 					session.setAttribute("uid", subid);
@@ -242,12 +242,13 @@ public class CredentialResource extends AbstractResource {
 								login, StrToTime.convert("now")));
 				} else {
 					String login1 = resultCredential[1];
-					int userId = Integer.parseInt(resultCredential[2]);
+					long userId = Long.parseLong(resultCredential[2]);
+					long subuid = 0;
 
 					session.setAttribute("user", login1);
 					session.setAttribute("uid", userId);
 					session.setAttribute("subuser", "");
-					session.setAttribute("subuid", 0);
+					session.setAttribute("subuid", subuid);
 					if (authLog != null)
 						authLog.info(String.format("Authentication success for user '%s' date '%s'\n", login,
 								StrToTime.convert("now")));
