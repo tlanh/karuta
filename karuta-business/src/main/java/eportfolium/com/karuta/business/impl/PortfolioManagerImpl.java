@@ -760,7 +760,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 				isOwner = "Y";
 			
 			result.append("<portfolio id=\"").append(p.getId().toString());
-			result.append("\" root_node_id=\"").append(p.getRootNode().toString());
+			result.append("\" root_node_id=\"").append(p.getRootNode().getId().toString());
 			result.append("\" owner=\"").append(isOwner);
 			result.append("\" ownerid=\"").append(ownerId);
 			result.append("\" modified=\"").append(p.getModifDate().toString()).append("\">");
