@@ -746,7 +746,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 	public String getPortfolios(MimeType outMimeType, long userId, long groupId, Boolean portfolioActive,
 			long substid, Boolean portfolioProject, String projectId, Boolean countOnly, String search) {
 		StringBuilder result = new StringBuilder();
-		List<Portfolio> portfolios = portfolioDao.getPortfolios(userId, substid, portfolioActive);
+		List<Portfolio> portfolios = portfolioDao.getPortfolios(userId, substid, portfolioActive, portfolioProject);
 		result.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?><portfolios count=\""+portfolios.size()+"\">");
 		for( Portfolio p : portfolios ) {
 			Node n = p.getRootNode();

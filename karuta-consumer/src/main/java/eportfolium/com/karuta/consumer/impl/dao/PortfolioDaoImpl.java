@@ -134,7 +134,7 @@ public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements Port
 		return result;
 	}
 
-	public List<Portfolio> getPortfolios(Long userId, Long substId, Boolean portfolioActive) {
+	public List<Portfolio> getPortfolios(Long userId, Long substId, Boolean portfolioActive, Boolean portfolioProject) {
 		if (PhpUtil.empty(userId) && PhpUtil.empty(substId)) {
 			return Arrays.asList();
 		}
@@ -151,6 +151,8 @@ public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements Port
 				sql += " WHERE p.active = 1";
 			else
 				sql += " WHERE p.active = 0";
+			if( portfolioProject != null && portfolioProject )
+				sql += " AND n.semantictag LIKE '%karuta-project%' ";
 
 			sql += " ORDER BY r.content";
 
@@ -175,6 +177,8 @@ public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements Port
 			sql += " AND p.active = 1 ";
 		else
 			sql += " AND p.active = 0 ";
+		if( portfolioProject != null && portfolioProject )
+			sql += " AND n.semantictag LIKE '%karuta-project%' ";
 
 		q = em.createQuery(sql, Portfolio.class);
 		q.setParameter("modifUserId", userId);
@@ -204,6 +208,8 @@ public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements Port
 			sql += " AND p.active = 1 ";
 		else
 			sql += " AND p.active = 0 ";
+		if( portfolioProject != null && portfolioProject )
+			sql += " AND n.semantictag LIKE '%karuta-project%' ";
 
 		/// Closing top level query and sorting
 		sql += " GROUP BY p.id ORDER BY content";

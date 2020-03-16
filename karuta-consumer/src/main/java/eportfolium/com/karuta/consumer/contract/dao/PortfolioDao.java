@@ -28,7 +28,7 @@ public interface PortfolioDao {
 
 	Portfolio getPortfolio(String portfolioUuid);
 
-	List<Portfolio> getPortfolios(Long userId, Long substid, Boolean portfolioActive);
+	List<Portfolio> getPortfolios(Long userId, Long substid, Boolean portfolioActive, Boolean portfolioProject);
 
 	Portfolio getPortfolioFromNodeCode(String nodeCode);
 
