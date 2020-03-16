@@ -615,10 +615,11 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 				e.printStackTrace();
 			}
 		} else {
+			result += "<portfolio ";
 			result += DomUtils.getXmlAttributeOutput("id", portfolio.getId().toString()) + " ";
-			result += DomUtils.getXmlAttributeOutput("root_node_id", portfolio.getRootNode().toString()) + " ";
+			result += DomUtils.getXmlAttributeOutput("root_node_id", portfolio.getRootNode().getId().toString()) + " ";
 			result += ">";
-			result += nodeManager.getNodeXmlOutput(portfolio.getRootNode().toString(), false, "nodeRes", userId,
+			result += nodeManager.getNodeXmlOutput(portfolio.getRootNode().getId().toString(), false, "nodeRes", userId,
 					groupId, null, false);
 			result += "</portfolio>";
 
