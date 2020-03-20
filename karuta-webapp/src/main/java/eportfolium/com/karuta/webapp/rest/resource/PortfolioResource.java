@@ -60,6 +60,7 @@ import org.apache.http.util.EntityUtils;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 import org.json.XML;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.MimeTypeUtils;
 import org.w3c.dom.Document;
@@ -100,7 +101,7 @@ public class PortfolioResource extends AbstractResource {
 	private NodeManager nodeManager;
 
 	@InjectLogger
-	private static Logger logger;
+	static private final Logger logger = LoggerFactory.getLogger(PortfolioResource.class);
 
 	/**
 	 * Get a portfolio from uuid. <br>
