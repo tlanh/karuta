@@ -408,6 +408,7 @@ public class NodeDaoImpl extends AbstractDaoImpl<Node> implements NodeDao {
 	@Override
 	public int updateNode(String nodeUuid) {
 		int status = 0;
+		if( nodeUuid == null ) return -1;
 
 		try {
 			List<Node> nodes = getFirstLevelChildren(nodeUuid);

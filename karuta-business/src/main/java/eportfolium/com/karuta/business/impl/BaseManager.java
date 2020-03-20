@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import javax.persistence.EntityNotFoundException;
 import javax.xml.parsers.DocumentBuilder;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -192,61 +193,73 @@ public abstract class BaseManager {
 
 				ResourceTable res_res_node = node.getResResource();
 				if (res_res_node != null && res_res_node.getId().toString().length() > 0) {
-					String nodeContent = res_res_node.getContent();
-					Date resModifdate = res_res_node.getModifDate();
-					if (nodeContent != null) {
-						data.append("<asmResource contextid=\"");
-						data.append(nodeUuid);
-						data.append("\" id=\"");
-						data.append(res_res_node.getId().toString());
-						data.append("\" last_modif=\"");
-						data.append(resModifdate);
-						data.append("\" xsi_type=\"nodeRes\">");
-						data.append(nodeContent.trim());
-						data.append("</asmResource>");
+					try
+					{
+						String nodeContent = res_res_node.getContent();
+						Date resModifdate = res_res_node.getModifDate();
+						if (nodeContent != null) {
+							data.append("<asmResource contextid=\"");
+							data.append(nodeUuid);
+							data.append("\" id=\"");
+							data.append(res_res_node.getId().toString());
+							data.append("\" last_modif=\"");
+							data.append(resModifdate);
+							data.append("\" xsi_type=\"nodeRes\">");
+							data.append(nodeContent.trim());
+							data.append("</asmResource>");
+						}
 					}
+					catch(EntityNotFoundException e){}
 				}
 
 				ResourceTable res_context_node = node.getContextResource();
 				if (res_context_node != null && res_context_node.getId().toString().length() > 0) {
-					String nodeContent = res_context_node.getContent();
-					Date resModifdate = res_context_node.getModifDate();
-					if (nodeContent != null) {
-						data.append("<asmResource contextid=\"");
-						data.append(nodeUuid);
-						data.append("\" id=\"");
-						data.append(res_context_node.getId().toString());
-						data.append("\" last_modif=\"");
-						data.append(resModifdate);
-						data.append("\" xsi_type=\"context\">");
-						data.append(nodeContent.trim());
-						data.append("</asmResource>");
-					} else {
-						data.append("<asmResource contextid=\"");
-						data.append(nodeUuid);
-						data.append("\" id=\"");
-						data.append(res_context_node.getId().toString());
-						data.append("\" xsi_type=\"context\"/>");
+					try
+					{
+						String nodeContent = res_context_node.getContent();
+						Date resModifdate = res_context_node.getModifDate();
+						if (nodeContent != null) {
+							data.append("<asmResource contextid=\"");
+							data.append(nodeUuid);
+							data.append("\" id=\"");
+							data.append(res_context_node.getId().toString());
+							data.append("\" last_modif=\"");
+							data.append(resModifdate);
+							data.append("\" xsi_type=\"context\">");
+							data.append(nodeContent.trim());
+							data.append("</asmResource>");
+						} else {
+							data.append("<asmResource contextid=\"");
+							data.append(nodeUuid);
+							data.append("\" id=\"");
+							data.append(res_context_node.getId().toString());
+							data.append("\" xsi_type=\"context\"/>");
+						}
 					}
+					catch(EntityNotFoundException e){}
 				}
 
 				ResourceTable res_node = node.getResource();
 				if (res_node != null && res_node.getId().toString().length() > 0) {
-					String nodeContent = res_node.getContent();
-					Date resModifdate = res_node.getModifDate();
-					if (nodeContent != null) {
-						data.append("<asmResource contextid=\"");
-						data.append(nodeUuid);
-						data.append("\" id=\"");
-						data.append(res_node.getId().toString());
-						data.append("\" last_modif=\"");
-						data.append(resModifdate);
-						data.append("\" xsi_type=\"");
-						data.append(node.getXsiType());
-						data.append("\">");
-						data.append(nodeContent.trim());
-						data.append("</asmResource>");
+					try
+					{
+						String nodeContent = res_node.getContent();
+						Date resModifdate = res_node.getModifDate();
+						if (nodeContent != null) {
+							data.append("<asmResource contextid=\"");
+							data.append(nodeUuid);
+							data.append("\" id=\"");
+							data.append(res_node.getId().toString());
+							data.append("\" last_modif=\"");
+							data.append(resModifdate);
+							data.append("\" xsi_type=\"");
+							data.append(res_node.getXsiType());
+							data.append("\">");
+							data.append(nodeContent.trim());
+							data.append("</asmResource>");
+						}
 					}
+					catch(EntityNotFoundException e){}
 				}
 
 				String snode = data.toString();
