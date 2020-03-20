@@ -288,12 +288,12 @@ public class ResourceTableDaoImpl extends AbstractDaoImpl<ResourceTable> impleme
 		final UUID uuidObj = UUID.fromString(uuid);
 		final UUID parentUuidObj = UUID.fromString(parentUuid);
 
+		ResourceTable rt = null;
 		if (((xsiType.equals("nodeRes") && sharedNodeRes)
 				|| (!xsiType.equals("context") && !xsiType.equals("nodeRes") && sharedRes))
 				&& portfolioModelId != null) {
 			// On ne fait rien
 		} else {
-			ResourceTable rt = null;
 			try {
 				rt = findById(uuidObj);
 			} catch (DoesNotExistException e) {
@@ -304,7 +304,7 @@ public class ResourceTableDaoImpl extends AbstractDaoImpl<ResourceTable> impleme
 			rt.setContent(content);
 			rt.setCredential(new Credential(userId));
 			rt.setModifUserId(userId);
-			merge(rt);
+			rt = merge(rt);	// Updated version of object is returned
 		}
 
 		String sql = "SELECT n FROM Node n";
@@ -317,16 +317,16 @@ public class ResourceTableDaoImpl extends AbstractDaoImpl<ResourceTable> impleme
 
 			// Ensuite on met à jour les id ressource au niveau du noeud parent
 			if (xsiType.equals("nodeRes")) {
-				n.setResResource(new ResourceTable(uuidObj));
+				n.setResResource(rt);
 				if (sharedNodeRes && portfolioModelId != null) {
 					n.setSharedNodeResUuid(uuidObj);
 				} else {
 					n.setSharedNodeResUuid(null);
 				}
 			} else if (xsiType.equals("context")) {
-				n.setContextResource(new ResourceTable(uuidObj));
+				n.setContextResource(rt);
 			} else {
-				n.setResource(new ResourceTable(uuidObj));
+				n.setResource(rt);
 				if (sharedRes && portfolioModelId != null) {
 					n.setSharedResUuid(uuidObj);
 				} else {
