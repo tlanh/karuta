@@ -179,7 +179,7 @@ public class Node implements Serializable {
 		this.parentNode = parentNode;
 	}
 
-	@Column(name = "node_children_uuid")
+	@Column(name = "node_children_uuid", columnDefinition = "TEXT")
 	public String getChildrenStr() {
 		return this.childrenStr;
 	}
