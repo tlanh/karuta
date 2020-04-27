@@ -42,11 +42,8 @@ public class ExportController {
 		ResponseEntity<String> response = null;
 
 		try {
-//			List<Map<String, String>> ids = 
 			exportManager.transferDataFromMySQLToMongoDB();
-//			if (!ids.isEmpty()) {
-//				exportManager.transferDataFromMySQLToMongoDB2(ids.get(0), ids.get(1));
-//			}
+
 			response = ResponseEntity.status(HttpStatus.OK).body("created");
 		} catch (Exception e) {
 			response = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Transfer not completed");
