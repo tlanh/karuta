@@ -25,6 +25,13 @@
 			<groupId>eportfolium.com</groupId>
 			<artifactId>karuta-model</artifactId>
 		</dependency>
+
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-core</artifactId>
+			<version>5.4.14.Final</version>
+		</dependency>
+
 		<!-- ===== Bibliothèques tierces ===== -->
 		<dependency>
 			<groupId>commons-logging</groupId>

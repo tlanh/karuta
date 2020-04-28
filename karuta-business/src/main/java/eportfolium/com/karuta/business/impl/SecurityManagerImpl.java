@@ -148,7 +148,7 @@ public class SecurityManagerImpl implements SecurityManager {
 
 	private static final Log log = LogFactory.getLog(SecurityManagerImpl.class);
 
-	private SecurityManagerImpl() {
+	public SecurityManagerImpl() {
 		this(DEFAULT_COST);
 	}
 
@@ -294,7 +294,7 @@ public class SecurityManagerImpl implements SecurityManager {
 	 * Do all tests of userPassword size, content, history, etc. here...
 	 * 
 	 * @param newPassword
-	 * @param customer
+	 * @param credential
 	 */
 	private void setPassword(String newPassword, Credential credential) throws BusinessException {
 

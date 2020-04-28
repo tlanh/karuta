@@ -8,10 +8,10 @@ import eportfolium.com.karuta.webapp.util.UserInfo;
 import eportfolium.com.karuta.webapp.util.javaUtils;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.core.Response;
 
 @RestController
 @RequestMapping("/elgg")
@@ -41,7 +41,7 @@ public class ElggController extends AbstractController {
                                        @CookieValue("group") String group,
                                        @RequestParam("type") Integer type,
                                        @RequestParam("limit") String limit,
-                                       HttpServletRequest request) {
+                                       HttpServletRequest request) throws RestWebApplicationException {
         int iLimit;
         try {
             iLimit = Integer.parseInt(limit);
@@ -62,8 +62,8 @@ public class ElggController extends AbstractController {
             return elgg.getSiteRiverFeed(iLimit);
         } catch (Exception ex) {
             ex.printStackTrace();
-            logger.error(javaUtils.getCompleteStackTrace(ex) + Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            logger.error(javaUtils.getCompleteStackTrace(ex) + HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -85,7 +85,7 @@ public class ElggController extends AbstractController {
                                        @CookieValue("credential") String token,
                                        @CookieValue("group") String group,
                                        @RequestParam("type") Integer type,
-                                       HttpServletRequest request) {
+                                       HttpServletRequest request) throws RestWebApplicationException {
         UserInfo ui = checkCredential(request, user, token, null);
 
         // Elgg variables
@@ -99,8 +99,8 @@ public class ElggController extends AbstractController {
             return elgg.postWire(message);
         } catch (Exception ex) {
             ex.printStackTrace();
-            logger.error(javaUtils.getCompleteStackTrace(ex) + Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            logger.error(javaUtils.getCompleteStackTrace(ex) + HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 }

@@ -10,11 +10,11 @@ import eportfolium.com.karuta.webapp.util.javaUtils;
 import org.json.XML;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.core.Response;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -51,9 +51,9 @@ public class ResourcesController extends AbstractController {
                               @RequestParam("group") long groupId,
                               @PathVariable("node-parent-id") String nodeParentUuid,
                               @RequestHeader("Accept") String accept,
-                              HttpServletRequest request) {
+                              HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(nodeParentUuid)) {
-            throw new RestWebApplicationException(Response.Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
 
         UserInfo ui = checkCredential(request, user, token, null);
@@ -65,13 +65,11 @@ public class ResourcesController extends AbstractController {
                 returnValue = XML.toJSONObject(returnValue).toString();
             return returnValue;
         } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(Response.Status.NOT_FOUND, "Resource " + nodeParentUuid + " not found");
-        } catch (RestWebApplicationException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Resource " + nodeParentUuid + " not found");
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -93,9 +91,9 @@ public class ResourcesController extends AbstractController {
                                @RequestParam("group") long groupId,
                                @PathVariable("portfolio-id") String portfolioUuid,
                                @RequestHeader("Accept") String accept,
-                               HttpServletRequest request) {
+                               HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(portfolioUuid)) {
-            throw new RestWebApplicationException(Response.Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
 
         UserInfo ui = checkCredential(request, user, token, null);
@@ -108,7 +106,7 @@ public class ResourcesController extends AbstractController {
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -132,9 +130,9 @@ public class ResourcesController extends AbstractController {
                               @RequestParam("group") long groupId,
                               @RequestParam("info") String info,
                               @PathVariable("node-parent-uuid") String nodeParentUuid,
-                              HttpServletRequest request) {
+                              HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(nodeParentUuid)) {
-            throw new RestWebApplicationException(Response.Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
 
         UserInfo ui = checkCredential(request, user, token, null);
@@ -155,15 +153,15 @@ public class ResourcesController extends AbstractController {
                     request.getRemoteAddr(), xmlResource));
             return returnValue;
         } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(Response.Status.NOT_FOUND, "Resource " + nodeParentUuid + " not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Resource " + nodeParentUuid + " not found");
         } catch (BusinessException ex) {
             logger.info(String.format(logformat, "ERR", nodeParentUuid, "resource", ui.userId, timeFormat,
                     request.getRemoteAddr(), xmlResource));
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -185,9 +183,9 @@ public class ResourcesController extends AbstractController {
                                @CookieValue("credential") String token,
                                @RequestParam("group") long groupId,
                                @PathVariable("node-parent-uuid") String nodeParentUuid,
-                               HttpServletRequest request) {
+                               HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(nodeParentUuid)) {
-            throw new RestWebApplicationException(Response.Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
 
         UserInfo ui = checkCredential(request, user, token, null);
@@ -197,11 +195,11 @@ public class ResourcesController extends AbstractController {
                     .addResource(MimeTypeUtils.TEXT_XML, nodeParentUuid, xmlResource, ui.userId, groupId).toString();
             return returnValue;
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -222,7 +220,7 @@ public class ResourcesController extends AbstractController {
                                @CookieValue("credential") String token,
                                @RequestParam("group") long groupId,
                                @RequestParam("resource") String resource,
-                               HttpServletRequest request) {
+                               HttpServletRequest request) throws RestWebApplicationException {
         UserInfo ui = checkCredential(request, user, token, null);
 
         try {
@@ -230,11 +228,11 @@ public class ResourcesController extends AbstractController {
                     .addResource(MimeTypeUtils.TEXT_XML, resource, xmlResource, ui.userId, groupId).toString();
             return returnValue;
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -254,9 +252,9 @@ public class ResourcesController extends AbstractController {
                                  @CookieValue("credential") String token,
                                  @RequestParam("group") long groupId,
                                  @PathVariable("resource-id") String resourceUuid,
-                                 HttpServletRequest request) {
+                                 HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(resourceUuid)) {
-            throw new RestWebApplicationException(Response.Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
         UserInfo ui = checkCredential(request, user, token, null);
 
@@ -264,13 +262,13 @@ public class ResourcesController extends AbstractController {
             resourceManager.removeResource(resourceUuid, ui.userId, groupId);
             return "";
         } catch (DoesNotExistException e) {
-            throw new RestWebApplicationException(Response.Status.NOT_FOUND, "Resource " + resourceUuid + " not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Resource " + resourceUuid + " not found");
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 

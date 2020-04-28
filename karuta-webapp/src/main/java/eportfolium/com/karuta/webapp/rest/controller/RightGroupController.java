@@ -1,8 +1,6 @@
 package eportfolium.com.karuta.webapp.rest.controller;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.Status;
 
 import eportfolium.com.karuta.webapp.util.UserInfo;
 import org.slf4j.Logger;
@@ -14,6 +12,8 @@ import eportfolium.com.karuta.model.exception.DoesNotExistException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import eportfolium.com.karuta.webapp.rest.provider.mapper.exception.RestWebApplicationException;
 import eportfolium.com.karuta.webapp.util.javaUtils;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -38,27 +38,26 @@ public class RightGroupController extends AbstractController {
      * @return
      */
     @PostMapping(produces = "application/xml")
-    public Response postRightGroup(@CookieValue("user") String user,
-                                   @CookieValue("credential") String token,
-                                   @RequestParam("group") Long groupId,
-                                   @RequestParam("groupRightId") Long groupRightId,
-                                   HttpServletRequest request) {
+    public ResponseEntity<String> postRightGroup(@CookieValue("user") String user,
+                                                 @CookieValue("credential") String token,
+                                                 @RequestParam("group") Long groupId,
+                                                 @RequestParam("groupRightId") Long groupRightId,
+                                                 HttpServletRequest request) throws RestWebApplicationException {
         UserInfo ui = checkCredential(request, user, token, null);
 
         try {
             groupManager.changeUserGroup(groupRightId, groupId, ui.userId);
             logger.info("modifié");
-            return null;
+            return ResponseEntity.ok().build();
         } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(Status.NOT_FOUND, "User group not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "User group not found");
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
 }
-

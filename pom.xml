@@ -91,27 +91,9 @@
 				<scope>provided</scope>
 			</dependency>
 			<dependency>
-				<groupId>javax.ws.rs</groupId>
-				<artifactId>javax.ws.rs-api</artifactId>
-				<version>2.1</version>
-			</dependency>
-			<dependency>
-				<groupId>org.glassfish.jersey.ext</groupId>
-				<artifactId>jersey-spring4</artifactId>
-				<version>${jersey.version}</version>
-			</dependency>
-			<dependency>
 				<groupId>javax.annotation</groupId>
 				<artifactId>javax.annotation-api</artifactId>
 				<version>1.2</version>
-			</dependency>
-			<!-- ===== avec BOM ===== -->
-			<dependency>
-				<groupId>org.glassfish.jersey</groupId>
-				<artifactId>jersey-bom</artifactId>
-				<version>${jersey.version}</version>
-				<type>pom</type>
-				<scope>import</scope>
 			</dependency>
 
 			<dependency>
@@ -143,12 +125,6 @@
 				<groupId>mysql</groupId>
 				<artifactId>mysql-connector-java</artifactId>
 				<version>8.0.16</version>
-				<scope>runtime</scope>
-			</dependency>
-			<dependency>
-				<groupId>org.mongodb</groupId>
-				<artifactId>mongo-java-driver</artifactId>
-				<version>3.4.1</version>
 				<scope>runtime</scope>
 			</dependency>
 			<!-- ===== pool de connexion ===== -->
@@ -388,6 +364,14 @@
 					<version>3.6</version>
 					<configuration>
 						<locales>fr</locales>
+					</configuration>
+				</plugin>
+
+				<plugin>
+					<groupId>org.springframework.boot</groupId>
+					<artifactId>spring-boot-maven-plugin</artifactId>
+					<configuration>
+						<skip>true</skip>
 					</configuration>
 				</plugin>
 			</plugins>

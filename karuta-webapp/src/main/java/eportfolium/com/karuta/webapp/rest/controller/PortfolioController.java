@@ -17,8 +17,6 @@ import java.util.zip.ZipOutputStream;
 import javax.servlet.ServletConfig;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.Status;
 import javax.xml.transform.Result;
 import javax.xml.transform.Source;
 import javax.xml.transform.Transformer;
@@ -37,7 +35,6 @@ import org.apache.commons.io.IOUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
-import org.apache.http.HttpStatus;
 import org.apache.http.StatusLine;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -46,11 +43,14 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.util.EntityUtils;
-import org.glassfish.jersey.media.multipart.FormDataParam;
 import org.json.XML;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.bind.annotation.*;
 import org.w3c.dom.Document;
@@ -92,7 +92,7 @@ public class PortfolioController extends AbstractController {
     private NodeManager nodeManager;
 
     @InjectLogger
-    static private final Logger logger = LoggerFactory.getLogger(PortfolioController.class);
+    static private Logger logger;
 
     /**
      * Get a portfolio from uuid. <br>
@@ -134,9 +134,9 @@ public class PortfolioController extends AbstractController {
                                @RequestParam("export") String export,
                                @RequestParam("lang") String lang,
                                @RequestParam("level") Integer cutoff,
-                               HttpServletRequest request) {
+                               HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(portfolioUuid)) {
-            throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
 
         UserInfo ui = checkCredential(request, user, token, null);
@@ -147,7 +147,7 @@ public class PortfolioController extends AbstractController {
 
             /// Finding back code. Not really pretty
             Date time = new Date();
-            Response response = null;
+            ResponseEntity response = null;
             SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
             String timeFormat = dt.format(time);
             Document doc = DomUtils.xmlString2Document(portfolio, new StringBuffer());
@@ -161,9 +161,10 @@ public class PortfolioController extends AbstractController {
             code = code.replace("_", "");
 
             if (export != null) {
-                response = Response.ok(portfolio)
-                        .header("content-disposition", "attachment; filename = \"" + code + "-" + timeFormat + ".xml\"")
-                        .build();
+                response = ResponseEntity
+                        .ok()
+                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename = \"" + code + "-" + timeFormat + ".xml\"")
+                        .body(portfolio);
             } else if (resource != null && files != null) {
                 //// Cas du renvoi d'un ZIP
                 HttpSession session = request.getSession(true);
@@ -175,8 +176,9 @@ public class PortfolioController extends AbstractController {
                 f.read(b);
                 f.close();
 
-                response = Response.ok(b, "application/octet-stream")
-                        .header("content-disposition", "attachment; filename = \"" + code + "-" + timeFormat + ".zip")
+                response = ResponseEntity.ok()
+                        .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE)
+                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename = \"" + code + "-" + timeFormat + ".zip")
                         .build();
 
                 // Temp file cleanup
@@ -184,27 +186,31 @@ public class PortfolioController extends AbstractController {
             } else {
                 if (accept.equals("application/json")) {
                     portfolio = XML.toJSONObject(portfolio).toString();
-                    response = Response.ok(portfolio).type("application/json").build();
+                    response = ResponseEntity.ok()
+                                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                                .body(portfolio);
                 } else
-                    response = Response.ok(portfolio).type("application/xml").build();
+                    response = ResponseEntity.ok()
+                                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_XML_VALUE)
+                                .body(portfolio);
             }
             return response;
         } catch (DoesNotExistException ex) {
             logger.info("Portfolio " + portfolioUuid + " not found");
-            throw new RestWebApplicationException(Status.NOT_FOUND, "Portfolio " + portfolioUuid + " not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Portfolio " + portfolioUuid + " not found");
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
-            throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
 
     }
 
     private File getZipFile(String portfolioUuid, String portfolioContent, String lang, Document doc,
-                            HttpSession session) throws IOException, XPathExpressionException {
+                            HttpSession session) throws IOException, XPathExpressionException, RestWebApplicationException {
         if (!isUUID(portfolioUuid)) {
-            throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
 
         /// Temp file in temp directory
@@ -334,12 +340,12 @@ public class PortfolioController extends AbstractController {
                                      @RequestParam("user") Integer userId,
                                      @RequestParam("group") Integer group,
                                      @RequestParam("resources") String resources,
-                                     HttpServletRequest request) {
+                                     HttpServletRequest request) throws RestWebApplicationException {
         UserInfo ui = checkCredential(request, user, token, null);
 
         try {
             if (ui.userId == 0) {
-                return Response.status(Status.FORBIDDEN).build();
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
 
             if (resources == null)
@@ -348,15 +354,15 @@ public class PortfolioController extends AbstractController {
                     .getPortfolioByCode(MimeTypeUtils.TEXT_XML, code, ui.userId, groupId, resources, ui.subId)
                     .toString();
             if ("".equals(returnValue)) {
-                return Response.status(Status.NOT_FOUND).entity("").build();
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("");
             }
 
             return returnValue;
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
-            throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -405,7 +411,7 @@ public class PortfolioController extends AbstractController {
                                 @RequestParam("project") String project,
                                 @RequestParam("count") String count,
                                 @RequestParam("search") String search,
-                                HttpServletRequest request) {
+                                HttpServletRequest request) throws RestWebApplicationException {
 
         UserInfo ui = checkCredential(request, user, token, null);
 
@@ -482,12 +488,12 @@ public class PortfolioController extends AbstractController {
                 return returnValue;
             }
         } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(Status.NOT_FOUND, "Portfolio(s) not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Portfolio(s) not found");
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
-            throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -510,9 +516,9 @@ public class PortfolioController extends AbstractController {
                                @CookieValue("credential") String token,
                                @PathVariable("portfolio-id") String portfolioUuid, 
                                @RequestParam("active") String active,
-                               HttpServletRequest request) {
+                               HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(portfolioUuid)) {
-            throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
 
         UserInfo ui = checkCredential(request, user, token, null);
@@ -531,7 +537,7 @@ public class PortfolioController extends AbstractController {
 
         } catch (Exception ex) {
             ex.printStackTrace();
-            throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -544,21 +550,21 @@ public class PortfolioController extends AbstractController {
      * @return
      */
     @PostMapping("/portfolio/{portfolio-id}/parserights")
-    public Response postPortfolio(@PathVariable("portfolio-id") String portfolioUuid, 
-                                  HttpServletRequest request) {
+    public ResponseEntity<String> postPortfolio(@PathVariable("portfolio-id") String portfolioUuid,
+                                                HttpServletRequest request) throws RestWebApplicationException {
 
         UserInfo ui = checkCredential(request, null, null, null);
 
         try {
             if (!securityManager.isAdmin(ui.userId))
-                return Response.status(Status.FORBIDDEN).build();
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
 
             portfolioManager.postPortfolioParserights(portfolioUuid, ui.userId);
 
-            return Response.status(Status.OK).build();
+            return ResponseEntity.ok().build();
         } catch (Exception ex) {
             ex.printStackTrace();
-            throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -581,7 +587,7 @@ public class PortfolioController extends AbstractController {
                                     @CookieValue("credential") String token,
                                     @PathVariable("portfolio-id") String portfolioUuid,
                                     @PathVariable("newOwnerId") long newOwner, 
-                                    HttpServletRequest request) {
+                                    HttpServletRequest request) throws RestWebApplicationException {
 
         UserInfo ui = checkCredential(request, user, token, null);
         boolean retval = false;
@@ -594,7 +600,7 @@ public class PortfolioController extends AbstractController {
             }
         } catch (Exception ex) {
             ex.printStackTrace();
-            throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
 
         return Boolean.toString(retval);
@@ -620,9 +626,9 @@ public class PortfolioController extends AbstractController {
                                             @RequestParam("group") int groupId,
                                             @RequestParam("portfolio") String portfolioUuid,
                                             @RequestParam("active") Boolean portfolioActive,
-                                            HttpServletRequest request) {
+                                            HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(portfolioUuid)) {
-            throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
 
         UserInfo ui = checkCredential(request, user, token, null);
@@ -635,7 +641,7 @@ public class PortfolioController extends AbstractController {
             return returnValue;
         } catch (BusinessException ex) {
             ex.printStackTrace();
-            throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -670,14 +676,14 @@ public class PortfolioController extends AbstractController {
                                            @RequestParam("copyshared") String copy,
                                            @RequestParam("groupname") String groupname,
                                            @RequestParam("owner") String setowner,
-                                           HttpServletRequest request) {
+                                           HttpServletRequest request) throws RestWebApplicationException {
 
         UserInfo ui = checkCredential(request, user, token, null);
 
         //// TODO: IF user is creator and has parameter owner -> change ownership
         try {
             if (!securityManager.isAdmin(ui.userId) && !securityManager.isCreator(ui.userId)) {
-                return Response.status(Status.FORBIDDEN).entity("403").build();
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("403");
             }
 
             boolean setOwner = false;
@@ -698,11 +704,11 @@ public class PortfolioController extends AbstractController {
                     tgtcode, ui.userId, groupId, copyshared, groupname, setOwner).toString();
 
             if (returnValue.startsWith("no rights"))
-                throw new RestWebApplicationException(Status.FORBIDDEN, returnValue);
+                throw new RestWebApplicationException(HttpStatus.FORBIDDEN, returnValue);
             else if (returnValue.startsWith("erreur"))
-                throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, returnValue);
+                throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, returnValue);
             else if ("".equals(returnValue)) {
-                return Response.status(Status.NOT_FOUND).build();
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
             }
 
             return returnValue;
@@ -711,7 +717,7 @@ public class PortfolioController extends AbstractController {
         } catch (Exception ex) {
             logger.error(ex.getMessage());
             ex.printStackTrace();
-            throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -733,14 +739,14 @@ public class PortfolioController extends AbstractController {
      * @return
      */
     @PostMapping("/copy/{portfolio-id}")
-    public Response postCopyPortfolio(@CookieValue("user") String user,
+    public ResponseEntity<String> postCopyPortfolio(@CookieValue("user") String user,
                                       @CookieValue("credential") String token,
                                       @RequestParam("group") int groupId,
                                       @PathVariable("portfolio-id") String portfolioUuid,
                                       @RequestParam("sourcecode") String srccode,
                                       @RequestParam("targetcode") String tgtcode,
                                       @RequestParam("owner") String setowner,
-                                      HttpServletRequest request) {
+                                      HttpServletRequest request) throws RestWebApplicationException {
 
         String value = "Instanciate: " + portfolioUuid;
 
@@ -750,13 +756,13 @@ public class PortfolioController extends AbstractController {
         //// propriété
         try {
             if (!securityManager.isAdmin(ui.userId) && !securityManager.isCreator(ui.userId)) {
-                return Response.status(Status.FORBIDDEN).entity("403").build();
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("403");
             }
 
             /// Check if code exist, find a suitable one otherwise. Eh.
             String newcode = tgtcode;
             if (nodeManager.isCodeExist(newcode, null)) {
-                return Response.status(Status.CONFLICT).entity("code exist").build();
+                return ResponseEntity.status(HttpStatus.CONFLICT).body("code exist");
             }
 
             boolean setOwner = false;
@@ -767,13 +773,13 @@ public class PortfolioController extends AbstractController {
             String returnValue = portfolioManager
                     .copyPortfolio(MimeTypeUtils.TEXT_XML, portfolioUuid, srccode, tgtcode, ui.userId, setOwner)
                     .toString();
-            logger.debug("Status " + Status.OK.getStatusCode() + " : " + value + " to: " + returnValue);
-            return Response.status(Status.OK).entity(returnValue).build();
+            logger.debug("Status " + HttpStatus.OK + " : " + value + " to: " + returnValue);
+            return ResponseEntity.ok().body(returnValue);
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(value + " --> Error", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
 
-            throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -796,7 +802,7 @@ public class PortfolioController extends AbstractController {
      * @return
      */
     @PostMapping(consumes = "multipart/form-data", produces = "application/xml")
-    public String postFormPortfolio(@FormDataParam("uploadfile") String xmlPortfolio,
+    public String postFormPortfolio(@RequestParam("uploadfile") String xmlPortfolio,
                                     @CookieValue("user") String user,
                                     @CookieValue("credential") String token,
                                     @RequestParam("group") int groupId,
@@ -805,10 +811,10 @@ public class PortfolioController extends AbstractController {
                                     @RequestParam("srce") String srceType,
                                     @RequestParam("srceurl") String srceUrl,
                                     @RequestParam("xsl") String xsl,
-                                    @FormDataParam("instance") String instance,
-                                    @FormDataParam("project") String projectName,
+                                    @RequestParam("instance") String instance,
+                                    @RequestParam("project") String projectName,
                                     ServletConfig sc,
-                                    HttpServletRequest request) {
+                                    HttpServletRequest request) throws RestWebApplicationException {
         return postPortfolio(xmlPortfolio, user, token, groupId, userId, modelId, srceType,
                 srceUrl, xsl, instance, projectName, sc, request);
     }
@@ -825,25 +831,24 @@ public class PortfolioController extends AbstractController {
      * @return
      */
     @PostMapping(value = "/shared/{userid}", produces = "application/xml")
-    public Response getPortfolioShared(@CookieValue("user") String user, @CookieValue("credential") String token,
-                                       @RequestParam("group") int groupId,
-                                       @PathVariable("userid") long userid,
-                                       HttpServletRequest request) {
+    public ResponseEntity<String> getPortfolioShared(@CookieValue("user") String user,
+                                                     @CookieValue("credential") String token,
+                                                     @RequestParam("group") int groupId,
+                                                     @PathVariable("userid") long userid,
+                                                     HttpServletRequest request) throws RestWebApplicationException {
         UserInfo ui = checkCredential(request, user, token, null);
 
         try {
             if (securityManager.isAdmin(ui.userId)) {
                 String res = portfolioManager.getPortfolioShared(userid);
-                return Response.ok(res).build();
+                return ResponseEntity.ok(res);
             } else {
-                return Response.status(403).build();
+                return ResponseEntity.status(403).build();
             }
-        } catch (RestWebApplicationException ex) {
-            throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -870,7 +875,7 @@ public class PortfolioController extends AbstractController {
                                   @RequestParam("model") String modelId,
                                   @RequestParam("instance") String instance,
                                   @RequestParam("lang") String lang,
-                                  HttpServletRequest request) {
+                                  HttpServletRequest request) throws RestWebApplicationException {
         UserInfo ui = checkCredential(request, user, token, null); // FIXME
 
         try {
@@ -943,9 +948,10 @@ public class PortfolioController extends AbstractController {
             SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
             String timeFormat = dt.format(time);
 
-            Response response = Response.ok(b, "application/octet-stream")
-                    .header("content-disposition", "attachment; filename = \"" + name + "-" + timeFormat + ".zip\"")
-                    .build();
+            ResponseEntity response = ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename = \"" + name + "-" + timeFormat + ".zip\"")
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE)
+                    .body(b);
 
             // Delete all zipped file
             for (int i = 0; i < files.length; ++i)
@@ -958,9 +964,9 @@ public class PortfolioController extends AbstractController {
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), modelId,
-                    Status.INTERNAL_SERVER_ERROR.getStatusCode());
+                    HttpStatus.INTERNAL_SERVER_ERROR);
 
-            throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -984,12 +990,12 @@ public class PortfolioController extends AbstractController {
     public String postPortfolioZip(@CookieValue("user") String user,
                                    @CookieValue("credential") String token,
                                    @RequestParam("group") long groupId,
-                                   @FormDataParam("fileupload") InputStream fileInputStream,
+                                   @RequestParam("fileupload") InputStream fileInputStream,
                                    @RequestParam("user") Integer userId,
                                    @RequestParam("model") String modelId,
-                                   @FormDataParam("instance") String instance,
-                                   @FormDataParam("project") String projectName,
-                                   HttpServletRequest request) {
+                                   @RequestParam("instance") String instance,
+                                   @RequestParam("project") String projectName,
+                                   HttpServletRequest request) throws RestWebApplicationException {
 
         UserInfo ui = checkCredential(request, user, token, null);
         javax.servlet.ServletContext servletContext = request.getSession().getServletContext();
@@ -1010,7 +1016,7 @@ public class PortfolioController extends AbstractController {
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -1032,10 +1038,10 @@ public class PortfolioController extends AbstractController {
                                   @RequestParam("group") long groupId,
                                   @PathVariable("portfolio-id") String portfolioUuid,
                                   @RequestParam("user") Integer userId,
-                                  HttpServletRequest request) {
+                                  HttpServletRequest request) throws RestWebApplicationException {
 
         if (!isUUID(portfolioUuid)) {
-            throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
         UserInfo ui = checkCredential(request, user, token, null);
         try {
@@ -1044,11 +1050,11 @@ public class PortfolioController extends AbstractController {
             return "";
         } catch (BusinessException ex) {
             logger.debug("Portfolio " + portfolioUuid + " not found");
-            throw new RestWebApplicationException(Status.NOT_FOUND, "Portfolio " + portfolioUuid + " not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Portfolio " + portfolioUuid + " not found");
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.debug(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -1086,7 +1092,7 @@ public class PortfolioController extends AbstractController {
                                 @RequestParam("instance") String instance,
                                 @RequestParam("project") String projectName,
                                 ServletConfig sc,
-                                HttpServletRequest request) {
+                                HttpServletRequest request) throws RestWebApplicationException {
 
         UserInfo ui = checkCredential(request, user, token, null); // FIXME
 
@@ -1107,7 +1113,7 @@ public class PortfolioController extends AbstractController {
                 try {
                     HttpResponse response = client.execute(get);
                     StatusLine status = response.getStatusLine();
-                    if (status.getStatusCode() != HttpStatus.SC_OK) {
+                    if (status.getStatusCode() != 200) {
                         System.err.println("Method failed: " + status.getStatusCode());
                     }
 
@@ -1158,11 +1164,11 @@ public class PortfolioController extends AbstractController {
                     xmlPortfolio, ui.userId, groupId, modelId, ui.subId, instantiate, projectName).toString();
             return returnValue;
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -1187,10 +1193,10 @@ public class PortfolioController extends AbstractController {
                                       @RequestParam("group") long groupId,
                                       @RequestParam("user") Long userId,
                                       @RequestParam("model") String modelId,
-                                      @FormDataParam("uploadfile") InputStream uploadedInputStream,
-                                      @FormDataParam("instance") String instance,
-                                      @FormDataParam("project") String projectName,
-                                      HttpServletRequest request) {
+                                      @RequestParam("uploadfile") InputStream uploadedInputStream,
+                                      @RequestParam("instance") String instance,
+                                      @RequestParam("project") String projectName,
+                                      HttpServletRequest request) throws RestWebApplicationException {
 
         UserInfo ui = checkCredential(request, user, token, null); // FIXME
         String returnValue = "";

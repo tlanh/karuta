@@ -12,7 +12,10 @@ import eportfolium.com.karuta.webapp.util.javaUtils;
 import org.json.XML;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.bind.annotation.*;
 import org.w3c.dom.Document;
@@ -21,7 +24,6 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.core.Response;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.xpath.XPath;
@@ -64,9 +66,9 @@ public class NodesController extends AbstractController {
                           @PathVariable("node-id") String nodeUuid,
                           @RequestHeader("Accept") String accept,
                           @RequestParam("level") Integer cutoff,
-                          HttpServletRequest request) {
+                          HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(nodeUuid)) {
-            throw new RestWebApplicationException(Response.Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
 
         UserInfo ui = checkCredential(request, user, token, null);
@@ -82,15 +84,15 @@ public class NodesController extends AbstractController {
             return returnValue;
         } catch (DoesNotExistException ex) {
             ex.printStackTrace();
-            throw new RestWebApplicationException(Response.Status.NOT_FOUND, "Node " + nodeUuid + " not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeUuid + " not found");
         } catch (NullPointerException ex) {
             ex.printStackTrace();
-            throw new RestWebApplicationException(Response.Status.NOT_ACCEPTABLE, "Incorrect Mime Type");
+            throw new RestWebApplicationException(HttpStatus.NOT_ACCEPTABLE, "Incorrect Mime Type");
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -115,9 +117,9 @@ public class NodesController extends AbstractController {
                                       @PathVariable("node-id") String nodeUuid,
                                       @RequestHeader("Accept") String accept,
                                       @RequestParam("level") Integer cutoff,
-                                      HttpServletRequest request) {
+                                      HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(nodeUuid)) {
-            throw new RestWebApplicationException(Response.Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
 
         UserInfo ui = checkCredential(request, user, token, null);
@@ -132,15 +134,15 @@ public class NodesController extends AbstractController {
             }
             return returnValue;
         } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(Response.Status.NOT_FOUND, "Node " + nodeUuid + " not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeUuid + " not found");
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (NullPointerException ex) {
             ex.printStackTrace();
-            throw new RestWebApplicationException(Response.Status.NOT_ACCEPTABLE, "Incorrect Mime Type");
+            throw new RestWebApplicationException(HttpStatus.NOT_ACCEPTABLE, "Incorrect Mime Type");
         } catch (Exception ex) {
             ex.printStackTrace();
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -163,9 +165,9 @@ public class NodesController extends AbstractController {
                                      @RequestParam("group") long groupId,
                                      @PathVariable("nodeid") String nodeUuid,
                                      @RequestHeader("Accept") String accept,
-                                     HttpServletRequest request) {
+                                     HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(nodeUuid)) {
-            throw new RestWebApplicationException(Response.Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
 
         UserInfo ui = checkCredential(request, user, token, null);
@@ -180,13 +182,13 @@ public class NodesController extends AbstractController {
             }
             return returnValue;
         } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(Response.Status.NOT_FOUND, "Node " + nodeUuid + " not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeUuid + " not found");
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -210,9 +212,9 @@ public class NodesController extends AbstractController {
                                 @RequestParam("group") long groupId,
                                 @PathVariable("node-id") String nodeUuid,
                                 @RequestHeader("Accept") String accept,
-                                HttpServletRequest request) {
+                                HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(nodeUuid)) {
-            throw new RestWebApplicationException(Response.Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
 
         UserInfo ui = checkCredential(request, user, token, null);
@@ -225,19 +227,19 @@ public class NodesController extends AbstractController {
                 if (accept.equals(MediaType.APPLICATION_JSON))
                     returnValue = XML.toJSONObject(returnValue).toString();
             } else {
-                throw new RestWebApplicationException(Response.Status.FORBIDDEN,
+                throw new RestWebApplicationException(HttpStatus.FORBIDDEN,
                         "Vous n'avez pas les droits necessaires");
             }
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (NullPointerException ex) {
-            throw new RestWebApplicationException(Response.Status.NOT_FOUND, "Node " + nodeUuid + " not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeUuid + " not found");
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -257,23 +259,21 @@ public class NodesController extends AbstractController {
                                      @CookieValue("credential") String token,
                                      @PathVariable("node-id") String nodeUuid,
                                      @RequestHeader("Accept") String accept,
-                                     HttpServletRequest request) {
+                                     HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(nodeUuid)) {
-            throw new RestWebApplicationException(Response.Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
         UserInfo ui = checkCredential(request, user, token, null);
         try {
             return nodeManager.getPortfolioIdFromNode(ui.userId, nodeUuid).toString();
         } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(Response.Status.NOT_FOUND,
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND,
                     "Error, this shouldn't happen. No Portfolio related to node : '" + nodeUuid + "' was found");
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
-        } catch (RestWebApplicationException ex) {
-            throw new RestWebApplicationException(ex.getStatus(), ex.getResponse().getEntity().toString());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -299,9 +299,9 @@ public class NodesController extends AbstractController {
                                  @RequestParam("group") int groupId,
                                  @PathVariable("node-id") String nodeUuid,
                                  @RequestHeader("Accept") String accept,
-                                 HttpServletRequest request) {
+                                 HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(nodeUuid)) {
-            throw new RestWebApplicationException(Response.Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
 
         UserInfo ui = checkCredential(request, user, token, null);
@@ -357,15 +357,13 @@ public class NodesController extends AbstractController {
                     nodeManager.executeMacroOnNode(ui.userId, nodeUuid, "reset");
                 }
             }
-            logger.info("Change rights " + Response.Status.OK.getStatusCode());
-        } catch (RestWebApplicationException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+            logger.info("Change rights " + HttpStatus.OK);
         } catch (NullPointerException ex) {
-            throw new RestWebApplicationException(Response.Status.NOT_FOUND, "Node " + nodeUuid + " not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeUuid + " not found");
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
 
         return "";
@@ -390,9 +388,9 @@ public class NodesController extends AbstractController {
                                        @RequestParam("group") long groupId,
                                        @PathVariable("portfolio-uuid") String portfolioUuid,
                                        @PathVariable("semantictag") String semantictag,
-                                       HttpServletRequest request) {
+                                       HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(portfolioUuid)) {
-            throw new RestWebApplicationException(Response.Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
 
         UserInfo ui = checkCredential(request, user, token, null);
@@ -401,13 +399,13 @@ public class NodesController extends AbstractController {
             return nodeManager
                     .getNodeBySemanticTag(MimeTypeUtils.TEXT_XML, portfolioUuid, semantictag, ui.userId, groupId);
         } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(Response.Status.NOT_FOUND, "no node found for tag :" + semantictag);
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "no node found for tag :" + semantictag);
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -430,9 +428,9 @@ public class NodesController extends AbstractController {
                                         @RequestParam("group") long groupId,
                                         @PathVariable("portfolio-uuid") String portfolioUuid,
                                         @PathVariable("semantictag") String semantictag,
-                                        HttpServletRequest request) {
+                                        HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(portfolioUuid)) {
-            throw new RestWebApplicationException(Response.Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
 
         UserInfo ui = checkCredential(request, user, token, null);
@@ -441,11 +439,11 @@ public class NodesController extends AbstractController {
             return nodeManager
                     .getNodesBySemanticTag(MimeTypeUtils.TEXT_XML, ui.userId, groupId, portfolioUuid, semantictag);
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -467,9 +465,9 @@ public class NodesController extends AbstractController {
                           @CookieValue("credential") String token,
                           @RequestParam("group") long groupId,
                           @PathVariable("node-id") String nodeUuid,
-                          HttpServletRequest request) {
+                          HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(nodeUuid)) {
-            throw new RestWebApplicationException(Response.Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
 
         UserInfo ui = checkCredential(request, user, token, null);
@@ -478,13 +476,13 @@ public class NodesController extends AbstractController {
                     .toString();
             return returnValue;
         } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(Response.Status.NOT_FOUND, "Node " + nodeUuid + " not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeUuid + " not found");
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -508,9 +506,9 @@ public class NodesController extends AbstractController {
                                   @RequestParam("group") int groupId,
                                   @RequestParam("info") String info,
                                   @PathVariable("nodeid") String nodeUuid,
-                                  HttpServletRequest request) {
+                                  HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(nodeUuid)) {
-            throw new RestWebApplicationException(Response.Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
 
         UserInfo ui = checkCredential(request, user, token, null);
@@ -531,15 +529,15 @@ public class NodesController extends AbstractController {
                     request.getRemoteAddr(), xmlNode));
             return returnValue;
         } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(Response.Status.NOT_FOUND, "Node " + nodeUuid + " not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeUuid + " not found");
         } catch (BusinessException ex) {
             logger.error(String.format(logformat, "ERR", nodeUuid, "metadata", ui.userId, timeFormat,
                     request.getRemoteAddr(), xmlNode));
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -563,9 +561,9 @@ public class NodesController extends AbstractController {
                                      @RequestParam("group") Long groupId,
                                      @RequestParam("info") String info,
                                      @PathVariable("nodeid") String nodeUuid,
-                                     HttpServletRequest request) {
+                                     HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(nodeUuid)) {
-            throw new RestWebApplicationException(Response.Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
 
         UserInfo ui = checkCredential(request, user, token, null);
@@ -586,15 +584,15 @@ public class NodesController extends AbstractController {
                     request.getRemoteAddr(), xmlNode));
             return returnValue;
         } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(Response.Status.NOT_FOUND, "Node " + nodeUuid + " not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeUuid + " not found");
         } catch (BusinessException ex) {
             logger.error(String.format(logformat, "ERR", nodeUuid, "metadatawad", ui.userId, timeFormat,
                     request.getRemoteAddr(), xmlNode));
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -614,9 +612,9 @@ public class NodesController extends AbstractController {
                                      @PathVariable("nodeid") String nodeUuid,
                                      @RequestParam("group") long groupId,
                                      @RequestParam("info") String info,
-                                     HttpServletRequest request) {
+                                     HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(nodeUuid)) {
-            throw new RestWebApplicationException(Response.Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
 
         UserInfo ui = checkCredential(request, null, null, null);
@@ -637,15 +635,15 @@ public class NodesController extends AbstractController {
                     request.getRemoteAddr(), xmlNode));
             return returnValue;
         } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(Response.Status.NOT_FOUND, "Node " + nodeUuid + " not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeUuid + " not found");
         } catch (BusinessException ex) {
             logger.error(String.format(logformat, "ERR", nodeUuid, "metadataepm", ui.userId, timeFormat,
                     request.getRemoteAddr(), xmlNode));
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -670,9 +668,9 @@ public class NodesController extends AbstractController {
                                      @RequestParam("group") long groupId,
                                      @RequestParam("info") String info,
                                      @PathVariable("nodeid") String nodeUuid,
-                                     HttpServletRequest request) {
+                                     HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(nodeUuid)) {
-            throw new RestWebApplicationException(Response.Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
 
         UserInfo ui = checkCredential(request, user, token, null);
@@ -695,11 +693,11 @@ public class NodesController extends AbstractController {
         } catch (BusinessException ex) {
             logger.error(String.format(logformat, "ERR", nodeUuid, "nodecontext", ui.userId, timeFormat,
                     request.getRemoteAddr(), xmlNode));
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -723,9 +721,9 @@ public class NodesController extends AbstractController {
                                       @RequestParam("group") long groupId,
                                       @RequestParam("info") String info,
                                       @PathVariable("nodeid") String nodeUuid,
-                                      HttpServletRequest request) {
+                                      HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(nodeUuid)) {
-            throw new RestWebApplicationException(Response.Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
 
         UserInfo ui = checkCredential(request, user, token, null);
@@ -748,10 +746,10 @@ public class NodesController extends AbstractController {
         } catch (BusinessException ex) {
             logger.error(String.format(logformat, "ERR", nodeUuid, "noderesource", ui.userId, timeFormat,
                     request.getRemoteAddr(), xmlNode));
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -779,20 +777,20 @@ public class NodesController extends AbstractController {
                                  @RequestParam("srcetag") String semtag,
                                  @RequestParam("srcecode") String code,
                                  @RequestParam("uuid") String srcuuid,
-                                 HttpServletRequest request) {
+                                 HttpServletRequest request) throws RestWebApplicationException {
 
         UserInfo ui = checkCredential(request, user, token, null);
 
         if (ui.userId == 0)
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, "Vous n'êtes pas connecté");
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, "Vous n'êtes pas connecté");
 
         try {
             return nodeManager.importNode(MimeTypeUtils.TEXT_XML, parentId, semtag, code, srcuuid, ui.userId, groupId);
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -820,20 +818,20 @@ public class NodesController extends AbstractController {
                                @RequestParam("srcetag") String semtag,
                                @RequestParam("srcecode") String code,
                                @RequestParam("uuid") String srcuuid,
-                               HttpServletRequest request) {
+                               HttpServletRequest request) throws RestWebApplicationException {
 
         UserInfo ui = checkCredential(request, user, token, null);
 
         if (ui.userId == 0)
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, "Vous n'êtes pas connecté");
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, "Vous n'êtes pas connecté");
 
         try {
             return nodeManager.copyNode(MimeTypeUtils.TEXT_XML, parentId, semtag, code, srcuuid, ui.userId, groupId);
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -865,20 +863,20 @@ public class NodesController extends AbstractController {
                            @RequestParam("semtag_parent") String semtag_parent,
                            @RequestParam("code_parent") String code_parent,
                            @RequestParam("level") Integer cutoff,
-                           HttpServletRequest request) {
+                           HttpServletRequest request) throws RestWebApplicationException {
         UserInfo ui = checkCredential(request, user, token, null);
 
         try {
             return nodeManager.getNodes(MimeTypeUtils.TEXT_XML, portfoliocode, semtag, ui.userId, groupId,
                     semtag_parent, code_parent, cutoff);
         } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(Response.Status.NOT_FOUND, "Portfolio inexistant");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Portfolio inexistant");
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, "Vous n'avez pas les droits d'acces");
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error("getNodes", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -897,16 +895,16 @@ public class NodesController extends AbstractController {
      * @return
      */
     @PostMapping(value = "/node/{parent-id}", consumes = "application/xml", produces = "application/xml")
-    public Response postNode(String xmlNode,
-                             @CookieValue("user") String user,
-                             @CookieValue("credential") String token,
-                             @RequestParam("group") Integer group,
-                             @PathVariable("parent-id") String parentId,
-                             @RequestParam("user") Integer userId,
-                             @RequestParam("group") long groupId,
-                             HttpServletRequest request) {
+    public ResponseEntity<String> postNode(String xmlNode,
+                                           @CookieValue("user") String user,
+                                           @CookieValue("credential") String token,
+                                           @RequestParam("group") Integer group,
+                                           @PathVariable("parent-id") String parentId,
+                                           @RequestParam("user") Integer userId,
+                                           @RequestParam("group") long groupId,
+                                           HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(parentId)) {
-            throw new RestWebApplicationException(Response.Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
 
         UserInfo ui = checkCredential(request, user, token, null);
@@ -920,21 +918,25 @@ public class NodesController extends AbstractController {
         try {
 
             if (ui.userId == 0) {
-                return Response.status(403).entity("Not logged in").build();
+                return ResponseEntity
+                        .status(HttpStatus.FORBIDDEN)
+                        .body("Not logged in");
             } else {
                 String returnValue = nodeManager
                         .addNode(MimeTypeUtils.TEXT_XML, parentId, xmlNode, ui.userId, groupId, false);
-                Response response;
+                ResponseEntity<String> response = ResponseEntity
+                                                    .status(event.status)
+                                                    .header(HttpHeaders.CONTENT_TYPE, event.mediaType)
+                                                    .body(returnValue);
                 event.status = 200;
-                response = Response.status(event.status).entity(returnValue).type(event.mediaType).build();
                 // eventbus.processEvent(event); ???
                 return response;
             }
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, "Vous n'avez pas les droits d'acces");
         } catch (Exception ex) {
             ex.printStackTrace();
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -948,36 +950,38 @@ public class NodesController extends AbstractController {
      * @return
      */
     @PostMapping(value = "/node/{node-id}/moveup", consumes = "application/xml", produces = "application/xml")
-    public Response postMoveNodeUp(String xmlNode,
+    public ResponseEntity<String> postMoveNodeUp(String xmlNode,
                                    @PathVariable("node-id") String nodeId,
-                                   HttpServletRequest request) {
+                                   HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(nodeId)) {
-            throw new RestWebApplicationException(Response.Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
         UserInfo ui = checkCredential(request, null, null, null); // FIXME
-        Response response = null;
+        ResponseEntity<String> response = null;
 
         try {
             if (nodeId == null) {
-                response = Response.status(400).entity("Missing uuid").build();
+                response = ResponseEntity
+                            .status(HttpStatus.BAD_REQUEST)
+                            .body("Missing uuid");
             } else {
 
                 Long returnValue = nodeManager.moveNodeUp(nodeId);
 
                 if (returnValue == -1L) {
-                    response = Response.status(404).entity("Non-existing node").build();
+                    response = ResponseEntity.status(HttpStatus.NOT_FOUND).body("Non-existing node");
                 }
                 if (returnValue == -2L) {
-                    response = Response.status(409).entity("Cannot move first node").build();
+                    response = ResponseEntity.status(HttpStatus.CONFLICT).body("Cannot move first node");
                 } else {
-                    response = Response.status(204).build();
+                    response = ResponseEntity.status(HttpStatus.NO_CONTENT).build();
                 }
             }
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
         return response;
     }
@@ -994,29 +998,29 @@ public class NodesController extends AbstractController {
      */
     @PostMapping(value = "/node/{node-id}/parentof/{parent-id}", consumes = "application/xml",
             produces = "application/xml")
-    public Response postChangeNodeParent(String xmlNode, @PathVariable("node-id") String nodeId,
+    public ResponseEntity<String> postChangeNodeParent(String xmlNode, @PathVariable("node-id") String nodeId,
                                          @PathVariable("parent-id") String parentId,
-                                         HttpServletRequest request) {
+                                         HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(nodeId) || !isUUID(parentId)) {
-            throw new RestWebApplicationException(Response.Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
 
         UserInfo ui = checkCredential(request, null, null, null); // FIXME
         try {
             boolean returnValue = nodeManager.changeParentNode(ui.userId, nodeId, parentId);
-            Response response;
+            ResponseEntity response;
             if (!returnValue) {
-                response = Response.status(409).entity("Cannot move").build();
+                response = ResponseEntity.status(HttpStatus.CONFLICT).body("Cannot move");
             } else {
-                response = Response.status(200).build();
+                response = ResponseEntity.status(HttpStatus.OK).build();
             }
 
             return response;
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -1041,9 +1045,9 @@ public class NodesController extends AbstractController {
                                  @RequestParam("group") int groupId,
                                  @PathVariable("node-id") String nodeId,
                                  @PathVariable("action-name") String macro,
-                                 HttpServletRequest request) {
+                                 HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(nodeId)) {
-            throw new RestWebApplicationException(Response.Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
 
         UserInfo ui = checkCredential(request, user, token, null);
@@ -1052,15 +1056,15 @@ public class NodesController extends AbstractController {
 
             String returnValue = nodeManager.executeMacroOnNode(ui.userId, nodeId, macro);
             if (returnValue == "erreur") {
-                throw new RestWebApplicationException(Response.Status.FORBIDDEN, "Vous n'avez pas les droits d'acces");
+                throw new RestWebApplicationException(HttpStatus.FORBIDDEN, "Vous n'avez pas les droits d'acces");
             }
 
             return returnValue;
         } catch (RestWebApplicationException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -1080,19 +1084,19 @@ public class NodesController extends AbstractController {
                              @CookieValue("credential") String token,
                              @RequestParam("group") long groupId,
                              @PathVariable("node-uuid") String nodeUuid,
-                             HttpServletRequest request) {
+                             HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(nodeUuid)) {
-            throw new RestWebApplicationException(Response.Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
         UserInfo ui = checkCredential(request, user, token, null);
         try {
             nodeManager.removeNode(nodeUuid, ui.userId, groupId);
             return "";
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -1118,9 +1122,9 @@ public class NodesController extends AbstractController {
                                  @RequestParam("lang") String lang,
                                  @RequestParam("xsl-file") String xslFile,
                                  @RequestHeader("Accept") String accept,
-                                 HttpServletRequest request) {
+                                 HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(nodeUuid)) {
-            throw new RestWebApplicationException(Response.Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
 
         UserInfo ui = checkCredential(request, user, token, null);
@@ -1145,12 +1149,12 @@ public class NodesController extends AbstractController {
 
             return returnValue;
         } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(Response.Status.NOT_FOUND,
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND,
                     "Node " + nodeUuid + " not found or xsl not found :" + ex.getMessage());
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (NullPointerException ex) {
-            throw new RestWebApplicationException(Response.Status.NOT_FOUND,
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND,
                     "Node " + nodeUuid + " not found or xsl not found :" + ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -1180,9 +1184,9 @@ public class NodesController extends AbstractController {
                                                  @RequestParam("group") long groupId,
                                                  @PathVariable("node-id") String nodeUuid,
                                                  @PathVariable("semantic-tag") String semantictag,
-                                                 HttpServletRequest request) {
+                                                 HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(nodeUuid)) {
-            throw new RestWebApplicationException(Response.Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
         UserInfo ui = checkCredential(request, user, token, null);
         try {
@@ -1190,12 +1194,12 @@ public class NodesController extends AbstractController {
                     .addNodeFromModelBySemanticTag(MimeTypeUtils.TEXT_XML, nodeUuid, semantictag, ui.userId, groupId);
             return returnValue;
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN,
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN,
                     "Vous n'avez pas les droits d'acces " + ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 

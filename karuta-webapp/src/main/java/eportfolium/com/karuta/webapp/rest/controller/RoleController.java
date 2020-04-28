@@ -1,11 +1,11 @@
 package eportfolium.com.karuta.webapp.rest.controller;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.core.Response.Status;
 
 import eportfolium.com.karuta.webapp.util.UserInfo;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.util.MimeTypeUtils;
 
 import eportfolium.com.karuta.business.contract.PortfolioManager;
@@ -50,16 +50,16 @@ public class RoleController extends AbstractController {
                           @CookieValue("credential") String token,
                           @RequestParam("group") int groupId,
                           @PathVariable("role-id") Long roleId,
-                          HttpServletRequest request) {
+                          HttpServletRequest request) throws RestWebApplicationException {
         // checkCredential(httpServletRequest, user, token, null); FIXME
         try {
             return userManager.getRole(roleId);
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Status.NOT_FOUND, "Role " + roleId + " not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Role " + roleId + " not found");
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -81,9 +81,9 @@ public class RoleController extends AbstractController {
                                    @RequestParam("group") int groupId,
                                    @RequestParam("role") String role,
                                    @RequestParam("portfolio-id") String portfolioId,
-                                   HttpServletRequest request) {
+                                   HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(portfolioId)) {
-            throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
         UserInfo ui = checkCredential(request, user, token, null);
         try {
@@ -93,7 +93,7 @@ public class RoleController extends AbstractController {
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
 
     }
@@ -116,19 +116,19 @@ public class RoleController extends AbstractController {
                           @CookieValue("credential") String token,
                           @RequestParam("group") int groupId,
                           @PathVariable("role-id") long roleId,
-                          HttpServletRequest request) {
+                          HttpServletRequest request) throws RestWebApplicationException {
 
         UserInfo ui = checkCredential(request, user, token, null);
         try {
             return securityManager.changeRole(ui.userId, roleId, xmlRole).toString();
         } catch (DoesNotExistException e) {
-            throw new RestWebApplicationException(Status.NOT_FOUND, "Role with id " + roleId + " not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Role with id " + roleId + " not found");
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 }

@@ -11,10 +11,10 @@ import eportfolium.com.karuta.webapp.util.UserInfo;
 import eportfolium.com.karuta.webapp.util.javaUtils;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.core.Response;
 
 @RestController
 @RequestMapping("/rolerightsgroups")
@@ -52,9 +52,9 @@ public class RoleRightsGroupsController extends AbstractController {
                                  @RequestParam("portfolio") String portfolio,
                                  @RequestParam("user") Long queryuser,
                                  @RequestParam("role") String role,
-                                 HttpServletRequest request) {
+                                 HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(portfolio)) {
-            throw new RestWebApplicationException(Response.Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
 
         checkCredential(request, user, token, group); // FIXME ?
@@ -63,11 +63,11 @@ public class RoleRightsGroupsController extends AbstractController {
             // Retourne le contenu du type
             return userManager.getRoleList(portfolio, queryuser, role);
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error("getRightsGroup", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -87,9 +87,9 @@ public class RoleRightsGroupsController extends AbstractController {
                                         @CookieValue("credential") String token,
                                         @CookieValue("group") String group,
                                         @RequestParam("portfolio") String portId,
-                                        HttpServletRequest request) {
+                                        HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(portId)) {
-            throw new RestWebApplicationException(Response.Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
         UserInfo ui = checkCredential(request, user, token, group); // FIXME
         String returnValue = "";
@@ -100,11 +100,11 @@ public class RoleRightsGroupsController extends AbstractController {
             }
             return returnValue;
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error("getPortfolioRightInfo", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -124,7 +124,7 @@ public class RoleRightsGroupsController extends AbstractController {
                                @CookieValue("credential") String token,
                                @CookieValue("group") String group,
                                @PathVariable("rolerightsgroup-id") Long rrgId,
-                               HttpServletRequest request) {
+                               HttpServletRequest request) throws RestWebApplicationException {
         UserInfo ui = checkCredential(request, user, token, group);
 
         String returnValue = "";
@@ -135,12 +135,10 @@ public class RoleRightsGroupsController extends AbstractController {
                 returnValue = userManager.getUserRole(rrgId);
             }
             return returnValue;
-        } catch (RestWebApplicationException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error("getRightInfo", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -166,16 +164,16 @@ public class RoleRightsGroupsController extends AbstractController {
                                       @CookieValue("group") String group,
                                       @PathVariable("rolerightsgroup-id") Long rrgId,
                                       @PathVariable("user-id") Long queryuser,
-                                      HttpServletRequest request) {
+                                      HttpServletRequest request) throws RestWebApplicationException {
         UserInfo ui = checkCredential(request, user, token, group);
         try {
             return securityManager.addUserRole(ui.userId, rrgId, queryuser);
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -197,17 +195,17 @@ public class RoleRightsGroupsController extends AbstractController {
                                      @CookieValue("credential") String token,
                                      @CookieValue("group") String group,
                                      @PathVariable("rolerightsgroup-id") Long rrgId,
-                                     HttpServletRequest request) {
+                                     HttpServletRequest request) throws RestWebApplicationException {
         UserInfo ui = checkCredential(request, user, token, group);
 
         try {
             return securityManager.addUsersToRole(ui.userId, rrgId, xmlNode);
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -229,18 +227,18 @@ public class RoleRightsGroupsController extends AbstractController {
                                    @CookieValue("credential") String token,
                                    @CookieValue("group") String group,
                                    @PathVariable("rolerightsgroup-id") Long groupRightInfoId,
-                                   HttpServletRequest request) {
+                                   HttpServletRequest request) throws RestWebApplicationException {
         UserInfo ui = checkCredential(request, user, token, null);
 
         try {
             securityManager.removeRole(ui.userId, groupRightInfoId);
             return "";
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -258,18 +256,18 @@ public class RoleRightsGroupsController extends AbstractController {
                                        @CookieValue("group") String group,
                                        @PathVariable("rolerightsgroup-id") Long rrgId,
                                        @PathVariable("user-id") Integer queryuser,
-                                       HttpServletRequest httpServletRequest) {
+                                       HttpServletRequest httpServletRequest) throws RestWebApplicationException {
         UserInfo ui = checkCredential(httpServletRequest, user, token, null);
 
         try {
             securityManager.removeUserRole(ui.userId, rrgId);
             return "";
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -291,7 +289,7 @@ public class RoleRightsGroupsController extends AbstractController {
                                            @CookieValue("credential") String token,
                                            @CookieValue("group") String group,
                                            @RequestParam("portfolio") String portId,
-                                           HttpServletRequest request) {
+                                           HttpServletRequest request) throws RestWebApplicationException {
         UserInfo ui = checkCredential(request, user, token, group);
 
         String returnValue = "";
@@ -302,11 +300,11 @@ public class RoleRightsGroupsController extends AbstractController {
             }
             return returnValue;
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -328,7 +326,7 @@ public class RoleRightsGroupsController extends AbstractController {
                                @CookieValue("credential") String token,
                                @CookieValue("group") String group,
                                @PathVariable("rolerightsgroup-id") Long rrgId,
-                               HttpServletRequest request) {
+                               HttpServletRequest request) throws RestWebApplicationException {
 
         UserInfo ui = checkCredential(request, user, token, group);
 
@@ -339,13 +337,13 @@ public class RoleRightsGroupsController extends AbstractController {
             }
             return "";
         } catch (DoesNotExistException e) {
-            throw new RestWebApplicationException(Response.Status.NOT_FOUND, "Role with id " + rrgId + " not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Role with id " + rrgId + " not found");
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -367,9 +365,9 @@ public class RoleRightsGroupsController extends AbstractController {
                                   @CookieValue("credential") String token,
                                   @CookieValue("group") String group,
                                   @PathVariable("portfolio-id") String portfolio,
-                                  HttpServletRequest request) {
+                                  HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(portfolio)) {
-            throw new RestWebApplicationException(Response.Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
 
         UserInfo ui = checkCredential(request, user, token, group);
@@ -378,11 +376,11 @@ public class RoleRightsGroupsController extends AbstractController {
             returnValue = portfolioManager.addRoleInPortfolio(ui.userId, portfolio, xmlNode);
             return returnValue;
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 

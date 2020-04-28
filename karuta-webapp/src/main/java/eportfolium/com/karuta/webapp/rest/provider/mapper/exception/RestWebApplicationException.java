@@ -15,19 +15,23 @@
 
 package eportfolium.com.karuta.webapp.rest.provider.mapper.exception;
 
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.Status;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 
-public class RestWebApplicationException extends WebApplicationException {
+public class RestWebApplicationException extends Exception {
 	private static final long serialVersionUID = -4729775688199298967L;
 
-	Status stat;
+	HttpStatus stat;
 	String msg;
 
-	public RestWebApplicationException(Status status, String message) {
-		super(Response.status(status).entity(message).type(MediaType.TEXT_PLAIN).build());
+	public RestWebApplicationException(HttpStatus status, String message) {
+		super(ResponseEntity
+				.status(status)
+				.header(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_PLAIN_VALUE)
+				.body(message)
+				.toString());
 		msg = message;
 		stat = status;
 	}
@@ -36,7 +40,7 @@ public class RestWebApplicationException extends WebApplicationException {
 		return msg;
 	}
 
-	public Status getStatus() {
+	public HttpStatus getStatus() {
 		return stat;
 	}
 }

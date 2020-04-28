@@ -9,9 +9,10 @@ import eportfolium.com.karuta.webapp.rest.provider.mapper.exception.RestWebAppli
 import eportfolium.com.karuta.webapp.util.javaUtils;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import javax.ws.rs.core.Response;
 import java.util.Arrays;
 
 /**
@@ -44,7 +45,7 @@ public class CredentialGroupController {
      * @return groupid
      */
     @PostMapping()
-    public String postUserGroup(@RequestParam("label") String groupName) {
+    public String postUserGroup(@RequestParam("label") String groupName) throws RestWebApplicationException {
 
         try {
             Long response = groupManager.addCredentialGroup(groupName);
@@ -53,7 +54,7 @@ public class CredentialGroupController {
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.NOT_MODIFIED, "Error in creation");
+            throw new RestWebApplicationException(HttpStatus.NOT_MODIFIED, "Error in creation");
         }
     }
 
@@ -67,9 +68,9 @@ public class CredentialGroupController {
      * @return Code 200
      */
     @PutMapping
-    public Response putUserInUserGroup(@RequestParam("group") Long groupId,
+    public ResponseEntity<String> putUserInUserGroup(@RequestParam("group") Long groupId,
                                        @RequestParam("user") Long user,
-                                       @RequestParam String label) {
+                                       @RequestParam String label) throws RestWebApplicationException {
         try {
             boolean isOK = false;
             if (label != null) {
@@ -79,13 +80,17 @@ public class CredentialGroupController {
                 logger.debug("putUserInUserGroup successful, user was correctly added to the group " + groupId);
             }
             if (isOK)
-                return Response.status(200).entity("Changed").build();
+                return ResponseEntity
+                            .status(HttpStatus.OK)
+                            .body("Changed");
             else
-                return Response.status(200).entity("Not OK").build();
+                return ResponseEntity
+                        .status(HttpStatus.OK)
+                        .body("Not OK");
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -106,14 +111,14 @@ public class CredentialGroupController {
     @GetMapping
     public String getUsersByUserGroup(@RequestParam("group") Long cgId,
                                       @RequestParam("user") Long userId,
-                                      @RequestParam("label") String groupName) {
+                                      @RequestParam("label") String groupName) throws RestWebApplicationException {
         String xmlUsers = "";
 
         try {
             if (groupName != null) {
                 CredentialGroup crGroup = groupManager.getCredentialGroupByName(groupName);
                 if (crGroup == null) {
-                    throw new RestWebApplicationException(Response.Status.NOT_FOUND, "");
+                    throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "");
                 }
                 xmlUsers = Long.toString(crGroup.getId());
             } else if (userId != null)
@@ -127,7 +132,7 @@ public class CredentialGroupController {
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
         return xmlUsers;
     }
@@ -141,7 +146,7 @@ public class CredentialGroupController {
      * @return Code 200
      */
     @DeleteMapping
-    public String deleteUsersByUserGroup(@RequestParam Long group, @RequestParam Long user) {
+    public String deleteUsersByUserGroup(@RequestParam Long group, @RequestParam Long user) throws RestWebApplicationException {
         Boolean isOK = false;
 
         try {
@@ -157,7 +162,7 @@ public class CredentialGroupController {
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 }

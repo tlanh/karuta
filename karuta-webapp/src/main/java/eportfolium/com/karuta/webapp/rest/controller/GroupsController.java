@@ -8,10 +8,10 @@ import eportfolium.com.karuta.webapp.util.UserInfo;
 import eportfolium.com.karuta.webapp.util.javaUtils;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.core.Response;
 
 @RestController
 @RequestMapping("/groups")
@@ -41,13 +41,13 @@ public class GroupsController extends AbstractController {
     public String getGroups(@CookieValue("user") String user,
                             @CookieValue("credential") String token,
                             @RequestParam("group") int groupId,
-                            HttpServletRequest request) {
+                            HttpServletRequest request) throws RestWebApplicationException {
         UserInfo ui = checkCredential(request, user, token, null);
         try {
             return groupManager.getUserGroups(ui.userId);
         } catch (Exception ex) {
             ex.printStackTrace();
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -67,9 +67,9 @@ public class GroupsController extends AbstractController {
                                      @CookieValue("credential") String token,
                                      @RequestParam("group") int groupId,
                                      @PathVariable("portfolio-id") String portfolioUuid,
-                                     HttpServletRequest request) {
+                                     HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(portfolioUuid)) {
-            throw new RestWebApplicationException(Response.Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
         UserInfo ui = checkCredential(request, user, token, null);
         try {
@@ -77,7 +77,7 @@ public class GroupsController extends AbstractController {
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 }

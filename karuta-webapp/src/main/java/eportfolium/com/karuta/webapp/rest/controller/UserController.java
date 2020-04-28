@@ -1,8 +1,6 @@
 package eportfolium.com.karuta.webapp.rest.controller;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.Status;
 
 import eportfolium.com.karuta.webapp.util.UserInfo;
 import org.slf4j.Logger;
@@ -17,6 +15,8 @@ import eportfolium.com.karuta.util.PhpUtil;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import eportfolium.com.karuta.webapp.rest.provider.mapper.exception.RestWebApplicationException;
 import eportfolium.com.karuta.webapp.util.javaUtils;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -56,26 +56,26 @@ public class UserController extends AbstractController {
      * @return
      */
     @PostMapping(consumes = "application/xml", produces = "application/xml")
-    public Response postUser(String xmluser,
-                             @CookieValue("user") String user,
-                             @CookieValue("credential") String token,
-                             @RequestParam("group") int groupId,
-                             HttpServletRequest request) {
+    public ResponseEntity<String> postUser(String xmluser,
+                                           @CookieValue("user") String user,
+                                           @CookieValue("credential") String token,
+                                           @RequestParam("group") int groupId,
+                                           HttpServletRequest request) throws RestWebApplicationException {
         UserInfo ui = checkCredential(request, user, token, null);
 
         try {
             String xmlUser = securityManager.addUsers(xmluser, ui.userId);
             if (xmlUser == null) {
-                return Response.status(Status.CONFLICT).entity("Existing user or invalid input").build();
+                return ResponseEntity.status(HttpStatus.CONFLICT).body("Existing user or invalid input");
             }
 
-            return Response.ok(xmlUser).build();
+            return ResponseEntity.ok(xmlUser);
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Status.BAD_REQUEST, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, ex.getMessage());
         }
     }
 
@@ -101,12 +101,12 @@ public class UserController extends AbstractController {
                            @RequestParam("username") String username,
                            @RequestParam("firstname") String firstname,
                            @RequestParam("lastname") String lastname,
-                           HttpServletRequest request) {
+                           HttpServletRequest request) throws RestWebApplicationException {
 
         UserInfo ui = checkCredential(request, user, token, null);
 
         if (ui.userId == 0)
-            throw new RestWebApplicationException(Status.FORBIDDEN, "Not logged in");
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, "Not logged in");
 
         try {
             String xmlGroups = "";
@@ -115,14 +115,14 @@ public class UserController extends AbstractController {
             else if (ui.userId != 0)
                 xmlGroups = userManager.getUserInfos(ui.userId);
             else
-                throw new RestWebApplicationException(Status.FORBIDDEN, "Not authorized");
+                throw new RestWebApplicationException(HttpStatus.FORBIDDEN, "Not authorized");
 
             return xmlGroups;
         } catch (RestWebApplicationException ex) {
             throw ex;
         } catch (Exception ex) {
             ex.printStackTrace();
-            throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -145,14 +145,14 @@ public class UserController extends AbstractController {
                           @CookieValue("credential") String token,
                           @RequestParam("group") int groupId,
                           @PathVariable("user-id") int userid,
-                          HttpServletRequest request) {
+                          HttpServletRequest request) throws RestWebApplicationException {
         try {
             return userManager.getUserInfos(Long.valueOf(userid));
         } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(Status.NOT_FOUND, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
-            throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -168,13 +168,13 @@ public class UserController extends AbstractController {
     @GetMapping(value = "/user/username/{username}", produces = "application/xml")
     public String getUserId(@CookieValue("user") String user,
                             @CookieValue("credential") String token,
-                            @PathVariable("username") String username) {
+                            @PathVariable("username") String username) throws RestWebApplicationException {
         // FIXME : Authentication ?
 
         try {
             Long userid = userManager.getUserId(username);
             if (PhpUtil.empty(userid)) {
-                throw new RestWebApplicationException(Status.NOT_FOUND, "User not found");
+                throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "User not found");
             } else {
                 return userid.toString();
             }
@@ -182,7 +182,7 @@ public class UserController extends AbstractController {
             throw ex;
         } catch (Exception ex) {
             ex.printStackTrace();
-            throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, "Error : " + ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, "Error : " + ex.getMessage());
         }
     }
 
@@ -201,7 +201,7 @@ public class UserController extends AbstractController {
     public String getGroupsUser(@CookieValue("user") String user,
                                 @CookieValue("credential") String token,
                                 @RequestParam("group") int groupId,
-                                @PathVariable("user-id") long userIdCible) {
+                                @PathVariable("user-id") long userIdCible) throws RestWebApplicationException {
         // FIXME : Authentication ?
 
         try {
@@ -209,7 +209,7 @@ public class UserController extends AbstractController {
             return xmlgroupsUser;
         } catch (Exception ex) {
             ex.printStackTrace();
-            throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -231,9 +231,9 @@ public class UserController extends AbstractController {
                                  @CookieValue("group") String group,
                                  @PathVariable("portfolio-id") String portfolioUuid,
                                  @PathVariable("role") String role,
-                                 HttpServletRequest request) {
+                                 HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(portfolioUuid)) {
-            throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
 
         UserInfo ui = checkCredential(request, user, token, group); // FIXME
@@ -242,7 +242,7 @@ public class UserController extends AbstractController {
             return userManager.getUsersByRole(ui.userId, portfolioUuid, role);
         } catch (Exception ex) {
             ex.printStackTrace();
-            throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -264,22 +264,22 @@ public class UserController extends AbstractController {
                               @CookieValue("credential") String token,
                               @RequestParam("group") int groupId,
                               @RequestParam("userId") Long userId,
-                              HttpServletRequest request) {
+                              HttpServletRequest request) throws RestWebApplicationException {
 
         UserInfo ui = checkCredential(request, user, token, null);
 
         if (!securityManager.isAdmin(ui.userId) && ui.userId != userId)
-            throw new RestWebApplicationException(Status.FORBIDDEN, "No admin right");
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, "No admin right");
 
         try {
             securityManager.removeUsers(ui.userId, userId);
             return "user " + userId + " deleted";
         } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(Status.NOT_FOUND, "user " + userId + " not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "user " + userId + " not found");
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -299,7 +299,7 @@ public class UserController extends AbstractController {
                              @CookieValue("credential") String token,
                              @RequestParam("group") long groupId,
                              @PathVariable("user-id") Long userid,
-                             HttpServletRequest request) {
+                             HttpServletRequest request) throws RestWebApplicationException {
 
         UserInfo ui = checkCredential(request, user, token, null);
 
@@ -307,11 +307,11 @@ public class UserController extends AbstractController {
             securityManager.removeUsers(ui.userId, userid);
             return "user " + userid + " deleted";
         } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(Status.NOT_FOUND, "user " + userid + " not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "user " + userid + " not found");
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -339,7 +339,7 @@ public class UserController extends AbstractController {
                           @CookieValue("credential") String token,
                           @RequestParam("group") int groupId,
                           @PathVariable("user-id") long userid,
-                          HttpServletRequest request) {
+                          HttpServletRequest request) throws RestWebApplicationException {
 
         UserInfo ui = checkCredential(request, user, token, null);
 
@@ -354,14 +354,14 @@ public class UserController extends AbstractController {
                 logger.info(String.format("[%s] ", ip));
                 queryUser = securityManager.changeUserInfo(ui.userId, userid, xmlInfUser);
             } else
-                throw new RestWebApplicationException(Status.FORBIDDEN, "Not authorized");
+                throw new RestWebApplicationException(HttpStatus.FORBIDDEN, "Not authorized");
 
             return queryUser;
         } catch (RestWebApplicationException ex) {
-            throw new RestWebApplicationException(Status.FORBIDDEN, ex.getResponse().getEntity().toString());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
-            throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, "Error : " + ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, "Error : " + ex.getMessage());
         }
     }
 
@@ -383,18 +383,18 @@ public class UserController extends AbstractController {
                                   @CookieValue("group") String group,
                                   @PathVariable("portfolio-id") String portfolioUuid,
                                   @PathVariable("role") String role,
-                                  HttpServletRequest request) {
+                                  HttpServletRequest request) throws RestWebApplicationException {
         // FIXME: Authentication ?
 
         if (!isUUID(portfolioUuid)) {
-            throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
 
         try {
             return groupManager.getGroupsByRole(portfolioUuid, role);
         } catch (Exception ex) {
             ex.printStackTrace();
-            throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 }

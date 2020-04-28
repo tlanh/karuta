@@ -7,10 +7,11 @@ import eportfolium.com.karuta.webapp.util.UserInfo;
 import eportfolium.com.karuta.webapp.util.javaUtils;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.core.Response;
 
 /**
  * Managing and listing portfolio groups.
@@ -40,10 +41,10 @@ public class PortfolioGroupController extends AbstractController {
      */
 
     @PostMapping
-    public Response postPortfolioGroup(@RequestParam("label") String groupname,
+    public ResponseEntity<String> postPortfolioGroup(@RequestParam("label") String groupname,
                                        @RequestParam("type") String type,
                                        @RequestParam("parent") Long parent,
-                                       HttpServletRequest request) {
+                                       HttpServletRequest request) throws RestWebApplicationException {
         UserInfo ui = checkCredential(request, null, null, null); // FIXME
         Long response = -1L;
 
@@ -53,15 +54,15 @@ public class PortfolioGroupController extends AbstractController {
             logger.debug("Portfolio group " + groupname + " created");
 
             if (response == -1) {
-                return Response.status(Response.Status.NOT_MODIFIED).entity("Error in creation").build();
+                return ResponseEntity.status(HttpStatus.NOT_MODIFIED).body("Error in creation");
             }
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
 
-        return Response.ok(Long.toString(response)).build();
+        return ResponseEntity.ok(Long.toString(response));
     }
 
     /**
@@ -75,21 +76,21 @@ public class PortfolioGroupController extends AbstractController {
      * @return Code 200
      */
     @PutMapping
-    public Response putPortfolioInPortfolioGroup(@RequestParam("group") Long group,
+    public ResponseEntity<String> putPortfolioInPortfolioGroup(@RequestParam("group") Long group,
                                                  @RequestParam("uuid") String uuid,
                                                  @RequestParam("label") String label,
-                                                 HttpServletRequest request) {
+                                                 HttpServletRequest request) throws RestWebApplicationException {
         UserInfo ui = checkCredential(request, null, null, null);
 
         try {
             int response = -1;
             response = portfolioManager.addPortfolioInGroup(uuid, group, label, ui.userId); // FIXME
             logger.debug("Portfolio added  in group " + label);
-            return Response.ok(Integer.toString(response)).build();
+            return ResponseEntity.ok(Integer.toString(response));
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -113,7 +114,7 @@ public class PortfolioGroupController extends AbstractController {
     public String getPortfolioByPortfolioGroup(@RequestParam("group") Long group,
                                                @RequestParam("uuid") String portfolioUuid,
                                                @RequestParam("label") String groupLabel,
-                                               HttpServletRequest request) {
+                                               HttpServletRequest request) throws RestWebApplicationException {
         UserInfo ui = checkCredential(request, null, null, null);
         String xmlUsers = "";
 
@@ -121,7 +122,7 @@ public class PortfolioGroupController extends AbstractController {
             if (groupLabel != null) {
                 Long groupid = portfolioManager.getPortfolioGroupIdFromLabel(groupLabel, ui.userId);
                 if (groupid == -1) {
-                    throw new RestWebApplicationException(Response.Status.NOT_FOUND, "");
+                    throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "");
                 }
                 xmlUsers = Long.toString(groupid);
             } else if (portfolioUuid != null) {
@@ -133,7 +134,7 @@ public class PortfolioGroupController extends AbstractController {
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
 
         return xmlUsers;
@@ -151,7 +152,7 @@ public class PortfolioGroupController extends AbstractController {
     @DeleteMapping
     public String deletePortfolioByPortfolioGroup(@RequestParam("group") long groupId,
                                                   @RequestParam("uuid") String uuid,
-                                                  HttpServletRequest request) {
+                                                  HttpServletRequest request) throws RestWebApplicationException {
 //		checkCredential(httpServletRequest, null, null, null); //FIXME
         boolean response = false;
         try {
@@ -163,7 +164,7 @@ public class PortfolioGroupController extends AbstractController {
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
         return String.valueOf(response);
     }

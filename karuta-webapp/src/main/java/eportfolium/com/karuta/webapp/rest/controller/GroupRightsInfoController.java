@@ -1,7 +1,6 @@
 package eportfolium.com.karuta.webapp.rest.controller;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.core.Response.Status;
 
 import eportfolium.com.karuta.webapp.util.UserInfo;
 import org.slf4j.Logger;
@@ -11,6 +10,7 @@ import eportfolium.com.karuta.business.contract.PortfolioManager;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import eportfolium.com.karuta.webapp.rest.provider.mapper.exception.RestWebApplicationException;
 import eportfolium.com.karuta.webapp.util.javaUtils;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -41,9 +41,9 @@ public class GroupRightsInfoController extends AbstractController {
                                       @CookieValue("credential") String token,
                                       @RequestParam("group") int groupId,
                                       @RequestParam("portfolioId") String portfolioId,
-                                      HttpServletRequest request) {
+                                      HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(portfolioId)) {
-            throw new RestWebApplicationException(Status.BAD_REQUEST, "Not UUID");
+            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
         UserInfo ui = checkCredential(request, user, token, null);
 
@@ -52,7 +52,7 @@ public class GroupRightsInfoController extends AbstractController {
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 }

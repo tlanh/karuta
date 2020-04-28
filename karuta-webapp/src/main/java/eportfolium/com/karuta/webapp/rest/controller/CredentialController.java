@@ -5,8 +5,6 @@ import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.Status;
 
 import eportfolium.com.karuta.webapp.util.UserInfo;
 import org.apache.commons.lang3.StringUtils;
@@ -16,6 +14,10 @@ import org.apache.commons.logging.LogFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -68,15 +70,15 @@ public class CredentialController extends AbstractController {
      */
 
     @GetMapping(produces = "application/xml")
-    public Response getCredential(@CookieValue("user") String user,
-                                  @CookieValue("credential") String token,
-                                  @RequestParam("group") int groupId,
-                                  HttpServletRequest request) {
+    public ResponseEntity<String> getCredential(@CookieValue("user") String user,
+                                                @CookieValue("credential") String token,
+                                                @RequestParam("group") int groupId,
+                                                HttpServletRequest request) throws RestWebApplicationException {
         UserInfo ui = checkCredential(request, user, token, null);
 
         if (ui.userId == 0) // userid not valid -- id de l'utilisateur non valide.
         {
-            return Response.status(401).build();
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
         try {
@@ -121,10 +123,10 @@ public class CredentialController extends AbstractController {
                 shibuilder.append(xmluser.substring(lastst));
                 xmluser = shibuilder.toString();
             }
-            return Response.ok(xmluser).build();
+            return ResponseEntity.ok(xmluser);
         } catch (Exception ex) {
             ex.printStackTrace();
-            throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -133,19 +135,13 @@ public class CredentialController extends AbstractController {
      * PUT /rest/api/credential/login
      *
      * @param xmlCredential
-     * @param user
-     * @param token
-     * @param groupId
      * @param request
      * @return
      */
     @PutMapping(value = "/login", consumes = "application/xml", produces = "application/xml")
-    public Response putCredentialFromXml(String xmlCredential,
-                                         @CookieValue("user") String user,
-                                         @CookieValue("credential") String token,
-                                         @RequestParam("group") int groupId,
-                                         HttpServletRequest request) {
-        return this.postCredentialFromXml(xmlCredential, user, token, 0, request);
+    public ResponseEntity<String> putCredentialFromXml(String xmlCredential,
+                                         HttpServletRequest request) throws RestWebApplicationException {
+        return postCredentialFromXml(xmlCredential, request);
     }
 
     /**
@@ -153,18 +149,12 @@ public class CredentialController extends AbstractController {
      * POST /rest/api/credential/login
      *
      * @param xmlCredential
-     * @param user
-     * @param token
-     * @param groupId
      * @param request
      * @return
      */
     @PostMapping(value = "/login", consumes = "application/xml", produces = "application/xml")
-    public Response postCredentialFromXml(String xmlCredential,
-                                          @CookieValue("user") String user,
-                                          @CookieValue("credential") String token,
-                                          @RequestParam("group") int groupId,
-                                          HttpServletRequest request) {
+    public ResponseEntity<String> postCredentialFromXml(String xmlCredential,
+                                          HttpServletRequest request) throws RestWebApplicationException {
         HttpSession session = request.getSession(true);
         KEvent event = new KEvent();
         event.eventType = KEvent.EventType.LOGIN;
@@ -240,18 +230,25 @@ public class CredentialController extends AbstractController {
             }
             // eventbus.processEvent(event);
 
-            return Response.status(event.status).entity(retVal).type(event.mediaType).build();
+            return ResponseEntity
+                        .status(event.status)
+                        .header(HttpHeaders.CONTENT_TYPE, event.mediaType)
+                        .body(retVal);
         } catch (RestWebApplicationException ex) {
             ex.printStackTrace();
             logger.error(ex.getLocalizedMessage());
-            throw new RestWebApplicationException(Status.FORBIDDEN, "invalid Credential or invalid group member");
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, "invalid Credential or invalid group member");
         } catch (Exception ex) {
+            ex.printStackTrace();
             status = 500;
             retVal = ex.getMessage();
             logger.error(ex.getMessage());
         }
 
-        return Response.status(status).entity(retVal).type("application/xml").build();
+        return ResponseEntity
+                .status(status)
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_XML_VALUE)
+                .body(retVal);
     }
 
     /**
@@ -263,7 +260,7 @@ public class CredentialController extends AbstractController {
      * @return
      */
     @PostMapping(value = "/forgot", consumes = "application/xml")
-    public Response postForgotCredential(String xml, HttpServletRequest request) {
+    public ResponseEntity<String> postForgotCredential(String xml, HttpServletRequest request) throws RestWebApplicationException {
         int retVal = 404;
         String retText = "";
         Logger securityLog = null;
@@ -326,14 +323,16 @@ public class CredentialController extends AbstractController {
             } catch (BusinessException ex) {
                 ex.printStackTrace();
                 logger.error(ex.getLocalizedMessage());
-                throw new RestWebApplicationException(Status.FORBIDDEN, "invalid Credential or invalid group member");
+                throw new RestWebApplicationException(HttpStatus.FORBIDDEN, "invalid Credential or invalid group member");
             } catch (Exception ex) {
                 logger.error(ex.getMessage());
                 ex.printStackTrace();
-                throw new RestWebApplicationException(Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+                throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
             }
         }
-        return Response.status(retVal).entity(retText).build();
+        return ResponseEntity
+                    .status(retVal)
+                    .body(retText);
     }
 
     /**
@@ -350,23 +349,23 @@ public class CredentialController extends AbstractController {
      * @return
      */
     @PostMapping("/login/cas")
-    public Response postCredentialFromCas(String content,
+    public ResponseEntity<String> postCredentialFromCas(String content,
                                           @CookieValue("user") String user,
                                           @CookieValue("credential") String token,
                                           @RequestParam("group") int groupId,
                                           @RequestParam("ticket") String ticket,
                                           @RequestParam("redir") String redir,
-                                          HttpServletRequest request) {
+                                          HttpServletRequest request) throws RestWebApplicationException {
         return getCredentialFromCas(user, token, groupId, ticket, redir, request);
     }
 
     @GetMapping("/login/cas")
-    public Response getCredentialFromCas(@CookieValue("user") String user,
+    public ResponseEntity<String> getCredentialFromCas(@CookieValue("user") String user,
                                          @CookieValue("credential") String token,
                                          @RequestParam("group") int groupId,
                                          @RequestParam("ticket") String ticket,
                                          @RequestParam("redir") String redir,
-                                         HttpServletRequest httpServletRequest) {
+                                         HttpServletRequest httpServletRequest) throws RestWebApplicationException {
 
         HttpSession session = httpServletRequest.getSession(true); // FIXME
         String xmlResponse = null;
@@ -379,13 +378,16 @@ public class CredentialController extends AbstractController {
             ServiceTicketValidator sv = new ServiceTicketValidator();
 
             if (casUrlValidation == null) {
-                Response response = null;
+                ResponseEntity<String> response = null;
                 try {
                     // formulate the response
-                    response = Response.status(Status.PRECONDITION_FAILED).entity("CAS URL not defined").build();
+                    response = ResponseEntity
+                            .status(HttpStatus.PRECONDITION_FAILED)
+                            .body("CAS URL not defined");
                 } catch (Exception e) {
-                    response = Response.status(500).build();
+                    response = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
                 }
+
                 return response;
             }
 
@@ -419,7 +421,9 @@ public class CredentialController extends AbstractController {
             xmlResponse = sv.getResponse();
             if (xmlResponse.contains("cas:authenticationFailure")) {
                 System.out.println(String.format("CAS response: %s\n", xmlResponse));
-                return Response.status(Status.FORBIDDEN).entity("CAS error").build();
+                return ResponseEntity
+                        .status(HttpStatus.FORBIDDEN)
+                        .body("CAS error");
             }
 
             // <cas:user>vassoilm</cas:user>
@@ -430,24 +434,27 @@ public class CredentialController extends AbstractController {
                 session.setAttribute("user", sv.getUser()); // FIXME
                 session.setAttribute("uid", Integer.parseInt(userId)); // FIXME
             } else {
-                return Response.status(403)
-                        .entity("Login " + sv.getUser() + " not found or bad CAS auth (bad ticket or bad url service : "
-                                + completeURL + ") : " + sv.getErrorMessage())
-                        .build();
+                return ResponseEntity
+                        .status(HttpStatus.FORBIDDEN)
+                        .body("Login " + sv.getUser() + " not found or bad CAS auth (bad ticket or bad url service : "
+                                + completeURL + ") : " + sv.getErrorMessage());
             }
 
-            Response response = null;
+            ResponseEntity response = null;
+
             try {
                 // formulate the response
-                response = Response.status(201).header("Location", redir)
-                        .entity("<script>document.location.replace('" + redir + "')</script>").build();
+                response = ResponseEntity
+                            .status(HttpStatus.CREATED)
+                            .header("Location", redir)
+                            .body("<script>document.location.replace('" + redir + "')</script>");
             } catch (Exception e) {
-                response = Response.status(500).build();
+                response = ResponseEntity.status(500).build();
             }
             return response;
         } catch (Exception ex) {
             ex.printStackTrace();
-            throw new RestWebApplicationException(Status.FORBIDDEN,
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN,
                     "Vous n'avez pas les droits necessaires (ticket ?, casUrlValidation) :" + casUrlValidation);
         }
     }
@@ -460,11 +467,11 @@ public class CredentialController extends AbstractController {
      * @return
      */
     @PostMapping("/logout")
-    public Response logout(HttpServletRequest request) {
+    public ResponseEntity<String> logout(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
         if (session != null)
             session.invalidate();
-        return Response.ok("logout").build();
+        return ResponseEntity.ok("logout");
     }
 
 }

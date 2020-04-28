@@ -9,10 +9,10 @@ import eportfolium.com.karuta.webapp.util.UserInfo;
 import eportfolium.com.karuta.webapp.util.javaUtils;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.core.Response;
 
 @RestController
 @RequestMapping("/groupRights")
@@ -41,7 +41,7 @@ public class GroupRightsController extends AbstractController {
     public String getGroupRights(@CookieValue("user") String user,
                                  @CookieValue("credential") String token,
                                  @RequestParam("group") long groupId,
-                                 HttpServletRequest request) {
+                                 HttpServletRequest request) throws RestWebApplicationException {
 
         UserInfo ui = checkCredential(request, user, token, null);
         try {
@@ -49,7 +49,7 @@ public class GroupRightsController extends AbstractController {
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -67,19 +67,19 @@ public class GroupRightsController extends AbstractController {
     public String deleteGroupRights(@CookieValue("user") String user,
                                     @CookieValue("credential") String token,
                                     @RequestParam("group") long groupId,
-                                    HttpServletRequest request) {
+                                    HttpServletRequest request) throws RestWebApplicationException {
         UserInfo ui = checkCredential(request, user, token, null);
         try {
             groupManager.removeRights(groupId, ui.userId);
             return "supprimé";
         } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(Response.Status.NOT_FOUND, "Group " + groupId + " not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Group " + groupId + " not found");
         } catch (BusinessException ex) {
-            throw new RestWebApplicationException(Response.Status.FORBIDDEN, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(Response.Status.INTERNAL_SERVER_ERROR, ex.getMessage());
+            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 }

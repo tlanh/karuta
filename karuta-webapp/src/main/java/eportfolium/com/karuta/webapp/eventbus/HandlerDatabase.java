@@ -21,11 +21,11 @@ import java.io.UnsupportedEncodingException;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
-import javax.ws.rs.core.Response.Status;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.util.MimeTypeUtils;
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
@@ -68,10 +68,10 @@ public class HandlerDatabase implements KEventHandler {
 					String tokenID = resultCredential[1];
 
 					if (tokenID == null)
-						throw new RestWebApplicationException(Status.FORBIDDEN,
+						throw new RestWebApplicationException(HttpStatus.FORBIDDEN,
 								"invalid credential or invalid group member");
 					else if (tokenID.length() == 0)
-						throw new RestWebApplicationException(Status.FORBIDDEN,
+						throw new RestWebApplicationException(HttpStatus.FORBIDDEN,
 								"invalid credential or invalid group member");
 
 					this.userId = Integer.parseInt(resultCredential[3]);
@@ -83,7 +83,7 @@ public class HandlerDatabase implements KEventHandler {
 
 					System.out.println("LOGIN event");
 				} else
-					throw new RestWebApplicationException(Status.FORBIDDEN,
+					throw new RestWebApplicationException(HttpStatus.FORBIDDEN,
 							"invalid credential or invalid group member");
 
 				break;

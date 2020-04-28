@@ -15,31 +15,40 @@
 
 package eportfolium.com.karuta.webapp.rest;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.orm.jpa.JpaTransactionManager;
+import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
+import org.springframework.web.servlet.view.freemarker.FreeMarkerConfigurer;
 
-import javax.ws.rs.ApplicationPath;
+@SpringBootApplication
+@ComponentScan(basePackages = "eportfolium.com.karuta")
+public class RestApplication {
+	@Autowired
+	private JdbcTemplate jdbcTemplate;
 
-import org.glassfish.jersey.logging.LoggingFeature;
-import org.glassfish.jersey.media.multipart.MultiPartFeature;
-import org.glassfish.jersey.server.ResourceConfig;
-
-/**
- * Classe de configuration de l'application REST
- *
- * @author mlengagne
- *
- */
-@ApplicationPath("/api")
-public class RestApplication extends ResourceConfig {
-
-	/**
-	 * Constructeur par défaut.
-	 */
-	public RestApplication() {
-		packages("eportfolium.com.karuta.webapp.rest");
-		register(MultiPartFeature.class);
-		register(new LoggingFeature(Logger.getLogger(LoggingFeature.DEFAULT_LOGGER_NAME), Level.INFO,
-				LoggingFeature.Verbosity.PAYLOAD_ANY, 10000));
+	@Bean
+	public LocalContainerEntityManagerFactoryBean entityManagerFactoryManager(EntityManagerFactoryBuilder builder) {
+		return builder
+				.dataSource(jdbcTemplate.getDataSource())
+				.packages("eportfolium.com.karuta.model")
+				.persistenceUnit("karuta-backend")
+				.build();
 	}
+
+	@Bean
+	public JpaTransactionManager transactionManager() {
+		return new JpaTransactionManager();
+	}
+
+
+	public static void main(String[] args) {
+		SpringApplication.run(RestApplication.class, args);
+	}
+
 }
