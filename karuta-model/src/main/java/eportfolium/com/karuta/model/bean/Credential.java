@@ -32,8 +32,6 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 import javax.persistence.UniqueConstraint;
 
-import org.hibernate.search.annotations.Indexed;
-
 /**
  * @author mlengagne
  *         <p>
@@ -44,7 +42,6 @@ import org.hibernate.search.annotations.Indexed;
  *         </p>
  *
  */
-@Indexed
 @Entity
 @Table(name = "credential", uniqueConstraints = @UniqueConstraint(columnNames = "login"))
 public class Credential implements Serializable {

@@ -23,24 +23,9 @@
 
 		<!-- ===== Bibliothèques tierces ===== -->
 		<dependency>
-			<groupId>org.hibernate.ogm</groupId>
-			<artifactId>hibernate-ogm-mongodb</artifactId>
-		</dependency>
-		<!-- Infinispan integration: -->
-		<dependency>
-			<groupId>org.infinispan</groupId>
-			<artifactId>infinispan-directory-provider</artifactId>
-		</dependency>
-		<!--Hibernate search -->
-		<dependency>
 			<groupId>org.hibernate</groupId>
-			<artifactId>hibernate-search-orm</artifactId>
-			<exclusions>
-				<exclusion>
-					<groupId>org.hibernate</groupId>
-					<artifactId>hibernate-core</artifactId>
-				</exclusion>
-			</exclusions>
+			<artifactId>hibernate-core</artifactId>
+			<version>5.4.14.Final</version>
 		</dependency>
 		<dependency>
 			<groupId>junit</groupId>
