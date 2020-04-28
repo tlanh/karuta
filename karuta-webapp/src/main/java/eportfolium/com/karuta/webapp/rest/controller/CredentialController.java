@@ -139,7 +139,7 @@ public class CredentialController extends AbstractController {
      * @return
      */
     @PutMapping(value = "/login", consumes = "application/xml", produces = "application/xml")
-    public ResponseEntity<String> putCredentialFromXml(String xmlCredential,
+    public ResponseEntity<String> putCredentialFromXml(@RequestBody String xmlCredential,
                                          HttpServletRequest request) throws RestWebApplicationException {
         return postCredentialFromXml(xmlCredential, request);
     }
@@ -153,8 +153,8 @@ public class CredentialController extends AbstractController {
      * @return
      */
     @PostMapping(value = "/login", consumes = "application/xml", produces = "application/xml")
-    public ResponseEntity<String> postCredentialFromXml(String xmlCredential,
-                                          HttpServletRequest request) throws RestWebApplicationException {
+    public ResponseEntity<String> postCredentialFromXml(@RequestBody String xmlCredential,
+                                                        HttpServletRequest request) throws RestWebApplicationException {
         HttpSession session = request.getSession(true);
         KEvent event = new KEvent();
         event.eventType = KEvent.EventType.LOGIN;
@@ -260,7 +260,8 @@ public class CredentialController extends AbstractController {
      * @return
      */
     @PostMapping(value = "/forgot", consumes = "application/xml")
-    public ResponseEntity<String> postForgotCredential(String xml, HttpServletRequest request) throws RestWebApplicationException {
+    public ResponseEntity<String> postForgotCredential(@RequestBody String xml,
+                                                       HttpServletRequest request) throws RestWebApplicationException {
         int retVal = 404;
         String retText = "";
         Logger securityLog = null;
@@ -349,7 +350,7 @@ public class CredentialController extends AbstractController {
      * @return
      */
     @PostMapping("/login/cas")
-    public ResponseEntity<String> postCredentialFromCas(String content,
+    public ResponseEntity<String> postCredentialFromCas(@RequestBody String content,
                                           @CookieValue("user") String user,
                                           @CookieValue("credential") String token,
                                           @RequestParam("group") int groupId,

@@ -56,7 +56,7 @@ public class UserController extends AbstractController {
      * @return
      */
     @PostMapping(consumes = "application/xml", produces = "application/xml")
-    public ResponseEntity<String> postUser(String xmluser,
+    public ResponseEntity<String> postUser(@RequestBody String xmluser,
                                            @CookieValue("user") String user,
                                            @CookieValue("credential") String token,
                                            @RequestParam("group") int groupId,
@@ -334,7 +334,7 @@ public class UserController extends AbstractController {
      *         </user>
      */
     @PutMapping(value = "/user/{user-id}", produces = "application/xml")
-    public String putUser(String xmlInfUser,
+    public String putUser(@RequestBody String xmlInfUser,
                           @CookieValue("user") String user,
                           @CookieValue("credential") String token,
                           @RequestParam("group") int groupId,

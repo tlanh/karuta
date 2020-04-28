@@ -9,10 +9,7 @@ import eportfolium.com.karuta.webapp.util.javaUtils;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.CookieValue;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -45,7 +42,7 @@ public class MacroController extends AbstractController {
      */
     @PostMapping(value = "/action/{uuid}/{macro-name}",
             consumes = {"text/plain", "application/xml"}, produces = "text/plain")
-    public String postMacro(String xmlNode,
+    public String postMacro(@RequestBody String xmlNode,
                             @CookieValue("user") String user,
                             @CookieValue("credential") String token,
                             @CookieValue("group") String group,

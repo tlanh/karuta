@@ -80,7 +80,7 @@ public class ElggController extends AbstractController {
      * @return
      */
     @PostMapping(value = "/wire", produces = "application/xml")
-    public String getElggSiteRiverFeed(String message,
+    public String getElggSiteRiverFeed(@RequestBody String message,
                                        @CookieValue("user") String user,
                                        @CookieValue("credential") String token,
                                        @CookieValue("group") String group,

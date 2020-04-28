@@ -111,7 +111,7 @@ public class RoleController extends AbstractController {
      * @return
      */
     @PutMapping(value = "/role/{role-id}", produces = "application/xml")
-    public String putRole(String xmlRole,
+    public String putRole(@RequestBody String xmlRole,
                           @CookieValue("user") String user,
                           @CookieValue("credential") String token,
                           @RequestParam("group") int groupId,
@@ -132,4 +132,3 @@ public class RoleController extends AbstractController {
         }
     }
 }
-

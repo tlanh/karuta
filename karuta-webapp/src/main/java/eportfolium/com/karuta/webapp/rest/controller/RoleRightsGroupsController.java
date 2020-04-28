@@ -147,7 +147,6 @@ public class RoleRightsGroupsController extends AbstractController {
      * POST
      * /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}/users/user/{user-id}
      *
-     * @param xmlNode
      * @param user
      * @param token
      * @param group
@@ -158,8 +157,7 @@ public class RoleRightsGroupsController extends AbstractController {
      */
     @PostMapping(value = "/rolerightsgroup/{rolerightsgroup-id}/users/user/{user-id}",
             produces = "application/xml")
-    public String postRightGroupUsers(String xmlNode,
-                                      @CookieValue("user") String user,
+    public String postRightGroupUsers(@CookieValue("user") String user,
                                       @CookieValue("credential") String token,
                                       @CookieValue("group") String group,
                                       @PathVariable("rolerightsgroup-id") Long rrgId,
@@ -190,7 +188,7 @@ public class RoleRightsGroupsController extends AbstractController {
      * @return
      */
     @PostMapping(value = "/rolerightsgroup/{rolerightsgroup-id}/users", produces = "application/xml")
-    public String postRightGroupUser(String xmlNode,
+    public String postRightGroupUser(@RequestBody String xmlNode,
                                      @CookieValue("user") String user,
                                      @CookieValue("credential") String token,
                                      @CookieValue("group") String group,
@@ -213,7 +211,6 @@ public class RoleRightsGroupsController extends AbstractController {
      * Delete a role. <br>
      * DELETE /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}
      *
-     * @param xmlNode
      * @param user
      * @param token
      * @param group
@@ -222,8 +219,7 @@ public class RoleRightsGroupsController extends AbstractController {
      * @return
      */
     @DeleteMapping(value = "/rolerightsgroup/{rolerightsgroup-id}", produces = "application/xml")
-    public String deleteRightGroup(String xmlNode,
-                                   @CookieValue("user") String user,
+    public String deleteRightGroup(@CookieValue("user") String user,
                                    @CookieValue("credential") String token,
                                    @CookieValue("group") String group,
                                    @PathVariable("rolerightsgroup-id") Long groupRightInfoId,
@@ -250,8 +246,7 @@ public class RoleRightsGroupsController extends AbstractController {
      **/
     @DeleteMapping(value = "/rolerightsgroup/{rolerightsgroup-id}/users/user/{user-id}",
             produces = "application/xml")
-    public String deleteRightGroupUser(String xmlNode,
-                                       @CookieValue("user") String user,
+    public String deleteRightGroupUser(@CookieValue("user") String user,
                                        @CookieValue("credential") String token,
                                        @CookieValue("group") String group,
                                        @PathVariable("rolerightsgroup-id") Long rrgId,
@@ -275,7 +270,6 @@ public class RoleRightsGroupsController extends AbstractController {
      * Remove all users from a role. <br>
      * DELETE /rest/api/rolerightsgroups/all/users
      *
-     * @param xmlNode
      * @param user
      * @param token
      * @param group
@@ -284,8 +278,7 @@ public class RoleRightsGroupsController extends AbstractController {
      * @return
      */
     @DeleteMapping(value = "/all/users", produces = "application/xml")
-    public String deletePortfolioRightInfo(String xmlNode,
-                                           @CookieValue("user") String user,
+    public String deletePortfolioRightInfo(@CookieValue("user") String user,
                                            @CookieValue("credential") String token,
                                            @CookieValue("group") String group,
                                            @RequestParam("portfolio") String portId,
@@ -321,7 +314,7 @@ public class RoleRightsGroupsController extends AbstractController {
      * @return
      */
     @PutMapping(value = "/rolerightsgroup/{rolerightsgroup-id}", produces = "application/xml")
-    public String putRightInfo(String xmlNode,
+    public String putRightInfo(@RequestBody String xmlNode,
                                @CookieValue("user") String user,
                                @CookieValue("credential") String token,
                                @CookieValue("group") String group,
@@ -360,7 +353,7 @@ public class RoleRightsGroupsController extends AbstractController {
      * @return
      */
     @PostMapping(value = "/{portfolio-id}", produces = "application/xml")
-    public String postRightGroups(String xmlNode,
+    public String postRightGroups(@RequestBody String xmlNode,
                                   @CookieValue("user") String user,
                                   @CookieValue("credential") String token,
                                   @CookieValue("group") String group,

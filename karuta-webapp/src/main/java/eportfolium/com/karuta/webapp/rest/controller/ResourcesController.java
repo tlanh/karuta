@@ -124,7 +124,7 @@ public class ResourcesController extends AbstractController {
      * @return
      */
     @PutMapping(value = "/resource/{node-parent-uuid}", produces = "application/xml")
-    public String putResource(String xmlResource,
+    public String putResource(@RequestBody String xmlResource,
                               @CookieValue("user") String user,
                               @CookieValue("credential") String token,
                               @RequestParam("group") long groupId,
@@ -178,7 +178,7 @@ public class ResourcesController extends AbstractController {
      * @return
      */
     @PostMapping(value = "/{node-parent-uuid}", produces = "application/xml")
-    public String postResource(String xmlResource,
+    public String postResource(@RequestBody String xmlResource,
                                @CookieValue("user") String user,
                                @CookieValue("credential") String token,
                                @RequestParam("group") long groupId,
@@ -215,7 +215,7 @@ public class ResourcesController extends AbstractController {
      * @return
      */
     @PostMapping(produces = "application/xml")
-    public String postResources(String xmlResource,
+    public String postResources(@RequestBody String xmlResource,
                                @CookieValue("user") String user,
                                @CookieValue("credential") String token,
                                @RequestParam("group") long groupId,
@@ -273,4 +273,3 @@ public class ResourcesController extends AbstractController {
     }
 
 }
-

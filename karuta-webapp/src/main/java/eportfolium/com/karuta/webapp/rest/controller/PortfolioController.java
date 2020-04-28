@@ -324,8 +324,6 @@ public class PortfolioController extends AbstractController {
      * @param token
      * @param groupId
      * @param code
-     * @param accept
-     * @param userId
      * @param group
      * @param resources
      * @param request
@@ -336,8 +334,6 @@ public class PortfolioController extends AbstractController {
                                      @CookieValue("credential") String token,
                                      @RequestParam("group") long groupId,
                                      @PathVariable("code") String code,
-                                     @RequestHeader("Accept") String accept,
-                                     @RequestParam("user") Integer userId,
                                      @RequestParam("group") Integer group,
                                      @RequestParam("resources") String resources,
                                      HttpServletRequest request) throws RestWebApplicationException {
@@ -379,8 +375,6 @@ public class PortfolioController extends AbstractController {
      * @param userId             for this user (only with root)
      * @param code
      * @param portfolioUuid
-     * @param index              start + n
-     * @param numResult          number of results (10<n<50)
      * @param cutoff
      * @param public_var
      * @param project
@@ -404,8 +398,6 @@ public class PortfolioController extends AbstractController {
                                 @RequestParam("userid") Integer userId,
                                 @RequestParam("code") String code,
                                 @RequestParam("portfolio") String portfolioUuid,
-                                @RequestParam("i") String index,
-                                @RequestParam("n") String numResult,
                                 @RequestParam("level") Integer cutoff,
                                 @RequestParam("public") String public_var,
                                 @RequestParam("project") String project,
@@ -511,7 +503,7 @@ public class PortfolioController extends AbstractController {
      * @return
      */
     @PutMapping(value = "/portfolio/{portfolio-id}", consumes = "application/xml", produces = "application/xml")
-    public String putPortfolio(String xmlPortfolio,
+    public String putPortfolio(@RequestBody String xmlPortfolio,
                                @CookieValue("user") String user,
                                @CookieValue("credential") String token,
                                @PathVariable("portfolio-id") String portfolioUuid, 
@@ -572,7 +564,6 @@ public class PortfolioController extends AbstractController {
      * Change portfolio owner. <br>
      * PUT /rest/api/portfolios/portfolios/{portfolio-id}/setOwner/{newOwnerId}
      *
-     * @param xmlPortfolio
      * @param user
      * @param token
      * @param portfolioUuid      portfolio-id
@@ -582,8 +573,7 @@ public class PortfolioController extends AbstractController {
      */
     @PutMapping(value = "/portfolio/{portfolio-id}/setOwner/{newOwnerId}", consumes = "application/xml",
         produces = "application/xml")
-    public String putPortfolioOwner(String xmlPortfolio,
-                                    @CookieValue("user") String user,
+    public String putPortfolioOwner(@CookieValue("user") String user,
                                     @CookieValue("credential") String token,
                                     @PathVariable("portfolio-id") String portfolioUuid,
                                     @PathVariable("newOwnerId") long newOwner, 
@@ -610,7 +600,6 @@ public class PortfolioController extends AbstractController {
      * Modify some portfolio option. <br>
      * PUT /rest/api/portfolios/portfolios/{portfolio-id}
      *
-     * @param xmlPortfolio
      * @param user
      * @param token
      * @param groupId
@@ -620,8 +609,7 @@ public class PortfolioController extends AbstractController {
      * @return
      */
     @PutMapping(consumes = "application/xml", produces = "application/xml")
-    public String putPortfolioConfiguration(String xmlPortfolio,
-                                            @CookieValue("user") String user,
+    public String putPortfolioConfiguration(@CookieValue("user") String user,
                                             @CookieValue("credential") String token,
                                             @RequestParam("group") int groupId,
                                             @RequestParam("portfolio") String portfolioUuid,
@@ -860,9 +848,7 @@ public class PortfolioController extends AbstractController {
      * @param user
      * @param token
      * @param portfolioList      list of portfolios, separated with ','
-     * @param userId
      * @param modelId
-     * @param instance
      * @param lang
      * @param request
      * @return zipped portfolio (with files) inside zip file
@@ -870,10 +856,8 @@ public class PortfolioController extends AbstractController {
     @GetMapping(value = "/zip", consumes = "application/zip")
     public Object getPortfolioZip(@CookieValue("user") String user,
                                   @CookieValue("credential") String token,
-                                  @RequestParam("portfolios") String portfolioList, 
-                                  @RequestParam("user") Integer userId,
+                                  @RequestParam("portfolios") String portfolioList,
                                   @RequestParam("model") String modelId,
-                                  @RequestParam("instance") String instance,
                                   @RequestParam("lang") String lang,
                                   HttpServletRequest request) throws RestWebApplicationException {
         UserInfo ui = checkCredential(request, user, token, null); // FIXME
@@ -979,7 +963,6 @@ public class PortfolioController extends AbstractController {
      * @param token
      * @param groupId
      * @param fileInputStream
-     * @param userId
      * @param modelId
      * @param instance
      * @param projectName
@@ -991,7 +974,6 @@ public class PortfolioController extends AbstractController {
                                    @CookieValue("credential") String token,
                                    @RequestParam("group") long groupId,
                                    @RequestParam("fileupload") InputStream fileInputStream,
-                                   @RequestParam("user") Integer userId,
                                    @RequestParam("model") String modelId,
                                    @RequestParam("instance") String instance,
                                    @RequestParam("project") String projectName,
@@ -1028,7 +1010,6 @@ public class PortfolioController extends AbstractController {
      * @param token
      * @param groupId
      * @param portfolioUuid
-     * @param userId
      * @param request
      * @return
      */
@@ -1037,7 +1018,6 @@ public class PortfolioController extends AbstractController {
                                   @CookieValue("credential") String token,
                                   @RequestParam("group") long groupId,
                                   @PathVariable("portfolio-id") String portfolioUuid,
-                                  @RequestParam("user") Integer userId,
                                   HttpServletRequest request) throws RestWebApplicationException {
 
         if (!isUUID(portfolioUuid)) {
@@ -1080,7 +1060,7 @@ public class PortfolioController extends AbstractController {
      * @return <portfolios> <portfolio id="uuid"/> </portfolios>
      */
     @PostMapping(consumes = "application/xml", produces = "application/xml")
-    public String postPortfolio(String xmlPortfolio,
+    public String postPortfolio(@RequestBody String xmlPortfolio,
                                 @CookieValue("user") String user,
                                 @CookieValue("credential") String token,
                                 @RequestParam("group") int groupId,
@@ -1191,7 +1171,6 @@ public class PortfolioController extends AbstractController {
     public String postPortfolioByForm(@CookieValue("user") String user,
                                       @CookieValue("credential") String token,
                                       @RequestParam("group") long groupId,
-                                      @RequestParam("user") Long userId,
                                       @RequestParam("model") String modelId,
                                       @RequestParam("uploadfile") InputStream uploadedInputStream,
                                       @RequestParam("instance") String instance,
@@ -1225,4 +1204,3 @@ public class PortfolioController extends AbstractController {
         return returnValue;
     }
 }
-

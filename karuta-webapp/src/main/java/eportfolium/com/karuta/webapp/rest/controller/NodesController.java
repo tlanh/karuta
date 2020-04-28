@@ -293,7 +293,7 @@ public class NodesController extends AbstractController {
      */
     @PostMapping(value = "/node/{node-id}/rights", consumes = "application/xml",
             produces = {"application/json", "application/xml"})
-    public String postNodeRights(String xmlNode,
+    public String postNodeRights(@RequestBody String xmlNode,
                                  @CookieValue("user") String user,
                                  @CookieValue("credential") String token,
                                  @RequestParam("group") int groupId,
@@ -460,7 +460,7 @@ public class NodesController extends AbstractController {
      * @return
      */
     @PutMapping(value = "/node/{node-id}", produces = "application/xml")
-    public String putNode(String xmlNode,
+    public String putNode(@RequestBody String xmlNode,
                           @CookieValue("user") String user,
                           @CookieValue("credential") String token,
                           @RequestParam("group") long groupId,
@@ -500,7 +500,7 @@ public class NodesController extends AbstractController {
      * @return
      */
     @PutMapping(value = "/node/{nodeid}/metadata", produces = "application/xml")
-    public String putNodeMetadata(String xmlNode,
+    public String putNodeMetadata(@RequestBody String xmlNode,
                                   @CookieValue("user") String user,
                                   @CookieValue("credential") String token,
                                   @RequestParam("group") int groupId,
@@ -555,7 +555,7 @@ public class NodesController extends AbstractController {
      * @return
      */
     @PutMapping(value = "/node/{nodeid}/metadatawad", produces = "application/xml")
-    public String putNodeMetadataWad(String xmlNode,
+    public String putNodeMetadataWad(@RequestBody String xmlNode,
                                      @CookieValue("user") String user,
                                      @CookieValue("credential") String token,
                                      @RequestParam("group") Long groupId,
@@ -608,7 +608,7 @@ public class NodesController extends AbstractController {
      * @return
      */
     @PutMapping(value = "/node/{nodeid}/metadataepm", produces = "application/xml")
-    public String putNodeMetadataEpm(String xmlNode,
+    public String putNodeMetadataEpm(@RequestBody String xmlNode,
                                      @PathVariable("nodeid") String nodeUuid,
                                      @RequestParam("group") long groupId,
                                      @RequestParam("info") String info,
@@ -662,7 +662,7 @@ public class NodesController extends AbstractController {
      * @return
      */
     @PutMapping(value = "/node/{nodeid}/nodecontext", produces = "application/xml")
-    public String putNodeNodeContext(String xmlNode,
+    public String putNodeNodeContext(@RequestBody String xmlNode,
                                      @CookieValue("user") String user,
                                      @CookieValue("credential") String token,
                                      @RequestParam("group") long groupId,
@@ -715,7 +715,7 @@ public class NodesController extends AbstractController {
      * @return
      */
     @PutMapping(value = "/node/{nodeid}/noderesource", produces = "application/xml")
-    public String putNodeNodeResource(String xmlNode,
+    public String putNodeNodeResource(@RequestBody String xmlNode,
                                       @CookieValue("user") String user,
                                       @CookieValue("credential") String token,
                                       @RequestParam("group") long groupId,
@@ -757,7 +757,6 @@ public class NodesController extends AbstractController {
      * Instanciate a node with right parsing <br>
      * POST /rest/api/nodes/node/import/{dest-id}
      *
-     * @param xmlNode
      * @param user
      * @param token
      * @param groupId
@@ -769,8 +768,7 @@ public class NodesController extends AbstractController {
      * @return
      */
     @PostMapping("/node/import/{dest-id}")
-    public String postImportNode(String xmlNode,
-                                 @CookieValue("user") String user,
+    public String postImportNode(@CookieValue("user") String user,
                                  @CookieValue("credential") String token,
                                  @RequestParam("group") long groupId,
                                  @PathVariable("dest-id") String parentId,
@@ -798,7 +796,6 @@ public class NodesController extends AbstractController {
      * Raw copy a node. <br>
      * POST /rest/api/nodes/node/copy/{dest-id}
      *
-     * @param xmlNode
      * @param user
      * @param token
      * @param groupId
@@ -810,8 +807,7 @@ public class NodesController extends AbstractController {
      * @return
      */
     @PostMapping("/node/copy/{dest-id}")
-    public String postCopyNode(String xmlNode,
-                               @CookieValue("user") String user,
+    public String postCopyNode(@CookieValue("user") String user,
                                @CookieValue("credential") String token,
                                @RequestParam("group") long groupId,
                                @PathVariable("dest-id") String parentId,
@@ -890,17 +886,15 @@ public class NodesController extends AbstractController {
      * @param token
      * @param group
      * @param parentId
-     * @param userId
      * @param groupId
      * @return
      */
     @PostMapping(value = "/node/{parent-id}", consumes = "application/xml", produces = "application/xml")
-    public ResponseEntity<String> postNode(String xmlNode,
+    public ResponseEntity<String> postNode(@RequestBody String xmlNode,
                                            @CookieValue("user") String user,
                                            @CookieValue("credential") String token,
                                            @RequestParam("group") Integer group,
                                            @PathVariable("parent-id") String parentId,
-                                           @RequestParam("user") Integer userId,
                                            @RequestParam("group") long groupId,
                                            HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(parentId)) {
@@ -944,15 +938,13 @@ public class NodesController extends AbstractController {
      * Move a node up between siblings. <br>
      * POST /rest/api/nodes/node/{node-id}/moveup
      *
-     * @param xmlNode
      * @param nodeId
      * @param request
      * @return
      */
     @PostMapping(value = "/node/{node-id}/moveup", consumes = "application/xml", produces = "application/xml")
-    public ResponseEntity<String> postMoveNodeUp(String xmlNode,
-                                   @PathVariable("node-id") String nodeId,
-                                   HttpServletRequest request) throws RestWebApplicationException {
+    public ResponseEntity<String> postMoveNodeUp(@PathVariable("node-id") String nodeId,
+                                                 HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(nodeId)) {
             throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
@@ -990,7 +982,6 @@ public class NodesController extends AbstractController {
      * Move a node to another parent. <br>
      * POST /rest/api/nodes/node/{node-id}/parentof/{parent-id}
      *
-     * @param xmlNode
      * @param nodeId
      * @param parentId
      * @param request
@@ -998,9 +989,9 @@ public class NodesController extends AbstractController {
      */
     @PostMapping(value = "/node/{node-id}/parentof/{parent-id}", consumes = "application/xml",
             produces = "application/xml")
-    public ResponseEntity<String> postChangeNodeParent(String xmlNode, @PathVariable("node-id") String nodeId,
-                                         @PathVariable("parent-id") String parentId,
-                                         HttpServletRequest request) throws RestWebApplicationException {
+    public ResponseEntity<String> postChangeNodeParent(@PathVariable("node-id") String nodeId,
+                                                       @PathVariable("parent-id") String parentId,
+                                                       HttpServletRequest request) throws RestWebApplicationException {
         if (!isUUID(nodeId) || !isUUID(parentId)) {
             throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
         }
@@ -1008,14 +999,12 @@ public class NodesController extends AbstractController {
         UserInfo ui = checkCredential(request, null, null, null); // FIXME
         try {
             boolean returnValue = nodeManager.changeParentNode(ui.userId, nodeId, parentId);
-            ResponseEntity response;
-            if (!returnValue) {
-                response = ResponseEntity.status(HttpStatus.CONFLICT).body("Cannot move");
-            } else {
-                response = ResponseEntity.status(HttpStatus.OK).build();
-            }
 
-            return response;
+            if (!returnValue) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body("Cannot move");
+            } else {
+                return ResponseEntity.status(HttpStatus.OK).build();
+            }
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
@@ -1028,7 +1017,6 @@ public class NodesController extends AbstractController {
      * Execute a macro command on a node, changing rights related. <br>
      * POST /rest/api/nodes/node/{node-id}/action/{action-name} *
      *
-     * @param xmlNode
      * @param user
      * @param token
      * @param groupId
@@ -1039,8 +1027,7 @@ public class NodesController extends AbstractController {
      */
     @PostMapping(value = "/node/{node-id}/action/{action-name}", consumes = "application/xml",
         produces = "application/xml")
-    public String postActionNode(String xmlNode,
-                                 @CookieValue("user") String user,
+    public String postActionNode(@CookieValue("user") String user,
                                  @CookieValue("credential") String token,
                                  @RequestParam("group") int groupId,
                                  @PathVariable("node-id") String nodeId,
@@ -1167,7 +1154,6 @@ public class NodesController extends AbstractController {
      *
      * POST /rest/api/nodes/{node-id}/frommodelbysemantictag/{semantic-tag}
      *
-     * @param xmlNode
      * @param user
      * @param token
      * @param groupId
@@ -1178,8 +1164,7 @@ public class NodesController extends AbstractController {
      */
     @PostMapping(value = "/{node-id}/frommodelbysemantictag/{semantic-tag}", consumes = "application/xml",
         produces = "application/xml")
-    public String postNodeFromModelBySemanticTag(String xmlNode,
-                                                 @CookieValue("user") String user,
+    public String postNodeFromModelBySemanticTag(@CookieValue("user") String user,
                                                  @CookieValue("credential") String token,
                                                  @RequestParam("group") long groupId,
                                                  @PathVariable("node-id") String nodeUuid,

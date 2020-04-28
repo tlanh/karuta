@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -34,7 +35,8 @@ public class RightsController extends AbstractController {
      * @return
      */
     @PostMapping(produces = "application/xml")
-    public String postChangeRights(String xmlNode, HttpServletRequest request) throws RestWebApplicationException {
+    public String postChangeRights(@RequestBody String xmlNode,
+                                   HttpServletRequest request) throws RestWebApplicationException {
 
         UserInfo ui = checkCredential(request, null, null, null);
 
