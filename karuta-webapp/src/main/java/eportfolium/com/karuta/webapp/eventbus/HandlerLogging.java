@@ -60,9 +60,9 @@ public class HandlerLogging implements KEventHandler {
 				String httpHeaders = "";
 
 				@SuppressWarnings("unchecked")
-				final List<Object> headerNames = Collections.<Object>list(httpServletRequest.getHeaderNames());
-				for (final Object header : headerNames) {
-					httpHeaders += header.toString() + ": " + httpServletRequest.getHeader(header.toString()) + "\n";
+				final List<String> headerNames = Collections.<String>list(httpServletRequest.getHeaderNames());
+				for (final String header : headerNames) {
+					httpHeaders += header + ": " + httpServletRequest.getHeader(header) + "\n";
 				}
 
 				String url = httpServletRequest.getRequestURL().toString();
