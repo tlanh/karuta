@@ -278,6 +278,7 @@ public class ConfigurationDaoImpl extends AbstractDaoImpl<Configuration> impleme
 			String obj = q.getSingleResult();
 			return obj;
 		} catch (NoResultException e) {
+			// TODO: More explicit message or controler ; might raise otherwise when used
 			return null;
 		} catch (NonUniqueResultException e) {
 			throw new IllegalStateException("Duplicate feature found with name = " + key + ".", e);
