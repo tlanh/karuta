@@ -79,7 +79,7 @@ public class GroupRightsDaoImpl extends AbstractDaoImpl<GroupRights> implements 
 	 * Regarde si l'utilisateur à un droit sur le noeud en fonction du groupe donné
 	 * en paramètre.
 	 * 
-	 * @param nodeUuid
+	 * @param uuid
 	 * @param userId
 	 * @param groupId
 	 * @return
@@ -288,8 +288,7 @@ public class GroupRightsDaoImpl extends AbstractDaoImpl<GroupRights> implements 
 	 * en parametre.
 	 * 
 	 * @param uuid
-	 * @param userId
-	 * @param groupId
+	 * @param grid
 	 * @return
 	 */
 	public GroupRights getRightsByGrid(String uuid, Long grid) {
@@ -301,8 +300,7 @@ public class GroupRightsDaoImpl extends AbstractDaoImpl<GroupRights> implements 
 	 * en parametre.
 	 * 
 	 * @param uuid
-	 * @param userId
-	 * @param groupId
+	 * @param grid
 	 * @return
 	 */
 	public GroupRights getRightsByGrid(UUID uuid, Long grid) {

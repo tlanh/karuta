@@ -233,8 +233,8 @@ public class GroupRightInfoDaoImpl extends AbstractDaoImpl<GroupRightInfo> imple
 	/**
 	 * Role et uuid
 	 * 
-	 * @param uuid
-	 * @param label
+	 * @param nodeUuid
+	 * @param labels
 	 * @return
 	 */
 	public List<Long> getByNodeAndLabel(UUID nodeUuid, List<String> labels) {

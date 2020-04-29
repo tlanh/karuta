@@ -175,7 +175,7 @@ public class CredentialDaoImpl extends AbstractDaoImpl<Credential> implements Cr
 	/**
 	 * Return userid from its login.
 	 *
-	 * @param string userLogin login
+	 * @param userLogin login
 	 * @return userid
 	 */
 
@@ -186,8 +186,8 @@ public class CredentialDaoImpl extends AbstractDaoImpl<Credential> implements Cr
 	/**
 	 * Return userid from its login or email.
 	 *
-	 * @param string userLogin login
-	 * @param string email email is checked if login omitted
+	 * @param userLogin login
+	 * @param email email is checked if login omitted
 	 * @return userid
 	 */
 	public Long getUserId(String userLogin, String email) {
@@ -217,7 +217,7 @@ public class CredentialDaoImpl extends AbstractDaoImpl<Credential> implements Cr
 	/**
 	 * Return credential instance from its login
 	 *
-	 * @param string login login
+	 * @param login login
 	 * @return Credential instance
 	 */
 	public Credential getByLogin(String login) {
@@ -227,7 +227,7 @@ public class CredentialDaoImpl extends AbstractDaoImpl<Credential> implements Cr
 	/**
 	 * Return credential instance from its login
 	 *
-	 * @param string login login
+	 * @param login login
 	 * @return Credential instance
 	 */
 	public Credential getUserByLogin(String login) {
@@ -250,8 +250,8 @@ public class CredentialDaoImpl extends AbstractDaoImpl<Credential> implements Cr
 	/**
 	 * Return credential instance from its login
 	 *
-	 * @param string login login
-	 * @param string passwd Password is also checked if specified
+	 * @param login login
+	 * @param passwd Password is also checked if specified
 	 * @return Credential instance
 	 */
 	public Credential getByLogin(String login, String passwd) {
@@ -282,7 +282,7 @@ public class CredentialDaoImpl extends AbstractDaoImpl<Credential> implements Cr
 	/**
 	 * Return credential instance from its e-mail
 	 *
-	 * @param string email e-mail
+	 * @param email e-mail
 	 * @return Credential instance
 	 */
 	public Credential getByEmail(String email) {
@@ -292,8 +292,8 @@ public class CredentialDaoImpl extends AbstractDaoImpl<Credential> implements Cr
 	/**
 	 * Return credential instance from its e-mail (optionnaly check password)
 	 *
-	 * @param string email e-mail
-	 * @param string passwd Password is also checked if specified
+	 * @param email e-mail
+	 * @param passwd Password is also checked if specified
 	 * @return Credential instance
 	 */
 	public Credential getByEmail(String email, String passwd) {
