@@ -24,6 +24,7 @@ import javax.persistence.NoResultException;
 import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Repository;
 
 import eportfolium.com.karuta.consumer.contract.dao.GroupUserDao;
@@ -32,15 +33,7 @@ import eportfolium.com.karuta.model.bean.GroupInfo;
 import eportfolium.com.karuta.model.bean.GroupUser;
 import eportfolium.com.karuta.model.bean.GroupUserId;
 import eportfolium.com.karuta.model.exception.BusinessException;
-import eportfolium.com.karuta.util.PhpUtil;
-import eportfolium.com.karuta.util.Tools;
 
-/**
- * Home object implementation for domain model class GroupUser.
- * 
- * @see dao.GroupUser
- * @author Hibernate Tools
- */
 @Repository
 public class GroupUserDaoImpl extends AbstractDaoImpl<GroupUser> implements GroupUserDao {
 
@@ -50,8 +43,8 @@ public class GroupUserDaoImpl extends AbstractDaoImpl<GroupUser> implements Grou
 	}
 
 	public List<GroupUser> getByUser(final Long userId) {
-		if (PhpUtil.empty(userId)) {
-			throw new IllegalArgumentException(Tools.displayError("userId invalide"));
+		if (userId == null || userId == 0L) {
+			throw new IllegalArgumentException("userId invalide");
 		}
 
 		String sql = "SELECT gu FROM GroupUser gu";
@@ -181,7 +174,7 @@ public class GroupUserDaoImpl extends AbstractDaoImpl<GroupUser> implements Grou
 		List<Long> gidList = q1.getResultList();
 
 		sql = "SELECT gu FROM GroupUser gu";
-		sql += " WHERE gu.id.groupInfo.id IN (" + PhpUtil.implode(",", gidList) + ")";
+		sql += " WHERE gu.id.groupInfo.id IN (" + StringUtils.join(gidList, ",") + ")";
 
 		TypedQuery<GroupUser> q2 = em.createQuery(sql, GroupUser.class);
 		List<GroupUser> guList = q2.getResultList();
@@ -243,8 +236,8 @@ public class GroupUserDaoImpl extends AbstractDaoImpl<GroupUser> implements Grou
 
 	@Override
 	public GroupUser getUniqueByUser(Long userId) {
-		if (PhpUtil.empty(userId)) {
-			throw new IllegalArgumentException(Tools.displayError("userId invalide"));
+		if (userId == null || userId == 0L) {
+			throw new IllegalArgumentException("userId invalide");
 		}
 
 		GroupUser gu = null;

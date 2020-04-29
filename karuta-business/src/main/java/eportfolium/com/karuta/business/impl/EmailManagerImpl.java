@@ -27,6 +27,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.function.Predicate;
+import java.util.regex.Pattern;
 
 import javax.mail.Message;
 import javax.mail.MessagingException;
@@ -45,6 +47,8 @@ import javax.net.ssl.X509TrustManager;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.StringEscapeUtils;
+import org.apache.commons.validator.routines.EmailValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,8 +61,6 @@ import eportfolium.com.karuta.business.contract.ConfigurationManager;
 import eportfolium.com.karuta.business.contract.EmailManager;
 import eportfolium.com.karuta.config.Consts;
 import eportfolium.com.karuta.consumer.contract.dao.ConfigurationDao;
-import eportfolium.com.karuta.util.Tools;
-import eportfolium.com.karuta.util.ValidateUtil;
 import freemarker.template.Configuration;
 
 @Service
@@ -180,22 +182,33 @@ public class EmailManagerImpl implements EmailManager {
 		// Sending an e-mail can be of vital importance for the merchant, when his
 		// password is lost for example, so we
 		// must not die but do our best to send the e-mail
-		if (from == null || !ValidateUtil.isEmail(from))
+		EmailValidator emailValidator = EmailValidator.getInstance();
+
+		Predicate<String> nameValidator = Pattern.compile("^[^<>;=#{}]*$", Pattern.UNICODE_CASE)
+											.asPredicate();
+
+		Predicate<String> subjectValidator = Pattern.compile("^[^<>;{}]*$", Pattern.UNICODE_CASE)
+												.asPredicate();
+
+		Predicate<String> templateValidator = Pattern.compile("^[a-z0-9_-]+$").asPredicate();
+
+		boolean validFrom = emailValidator.isValid(from);
+
+		if (from == null || validFrom)
 			from = configuration.get("PS_SHOP_EMAIL");
-		if (!ValidateUtil.isEmail(from))
+		if (!validFrom)
 			from = null;
 
 		// from_name is not that important, no need to die if it is not valid
-		if (from_name == null || !ValidateUtil.isMailName(from_name))
+		if (from_name == null || !nameValidator.test(from_name))
 			from_name = configuration.get("PS_SHOP_NAME");
-		if (!ValidateUtil.isMailName(from_name))
+		if (!nameValidator.test(from_name))
 			from_name = null;
 
 		// It would be difficult to send an e-mail if the e-mail is not valid, so this
 		// time we can die if there is a
 		// problem
-		if (!(to instanceof Collection) && !ValidateUtil.isEmail((String) to)) {
-			// Tools::dieOrLog(Tools::displayError(), $die);
+		if (!(to instanceof Collection) && !emailValidator.isValid((String) to)) {
 			LOGGER.info("Error: parameter \"to\" is corrupted");
 			return false;
 		}
@@ -206,18 +219,16 @@ public class EmailManagerImpl implements EmailManager {
 
 		// Do not crash for this error, that may be a complicated customer name
 		if (to_name instanceof String && StringUtils.isNotEmpty((String) to_name)
-				&& !ValidateUtil.isMailName((String) to_name)) {
+				&& !nameValidator.test((String) to_name)) {
 			to_name = null;
 		}
 
-		if (!ValidateUtil.isTplName(template)) {
-			// Tools::dieOrLog(Tools::displayError('Error: invalid e-mail template'), $die);
+		if (!templateValidator.test(template)) {
 			LOGGER.info("Error: invalid e-mail template");
 			return false;
 		}
 
-		if (!ValidateUtil.isMailSubject(subject)) {
-			// Tools::dieOrLog(Tools::displayError('Error: invalid e-mail subject'), $die);
+		if (!subjectValidator.test(subject)) {
 			LOGGER.info("Error: invalid e-mail subject");
 			return false;
 		}
@@ -232,15 +243,14 @@ public class EmailManagerImpl implements EmailManager {
 			java.util.Iterator<String> it = tmp_to.iterator();
 			for (int key = 0; key < tmp_to.size(); key++) {
 				String addr = it.next().trim();
-				if (!ValidateUtil.isEmail(addr)) {
-					// Tools::dieOrLog(Tools::displayError('Error: invalid e-mail address'), $die);
+				if (!emailValidator.isValid(addr)) {
 					LOGGER.info("Error: invalid e-mail address");
 					return false;
 				}
 
 				if (to_name instanceof List<?>) {
 					List<String> tmp_to_name = (List<String>) to_name;
-					if (CollectionUtils.isNotEmpty(tmp_to_name) && ValidateUtil.isGenericName(tmp_to_name.get(key)))
+					if (CollectionUtils.isNotEmpty(tmp_to_name) && nameValidator.test(tmp_to_name.get(key)))
 						current_to_name = tmp_to_name.get(key);
 				}
 
@@ -271,8 +281,7 @@ public class EmailManagerImpl implements EmailManager {
 		if (configuration.get("PS_MAIL_METHOD").equals("2")) {
 			if (configuration.get("PS_MAIL_SERVER").isEmpty() || configuration.get("PS_MAIL_SMTP_PORT").isEmpty()) {
 				LOGGER.info("Error: invalid SMTP server or SMTP port");
-				// Tools::dieOrLog(Tools::displayError('Error: invalid SMTP server or SMTP
-				// port'), $die);
+
 				return false;
 			}
 
@@ -376,8 +385,8 @@ public class EmailManagerImpl implements EmailManager {
 			}
 		}
 
-		template_vars.put("shop_name", Tools.safeOutput(configService.get("PS_SHOP_NAME")));
-		template_vars.put("color", Tools.safeOutput(configService.get("PS_MAIL_COLOR")));
+		template_vars.put("shop_name", StringEscapeUtils.escapeHtml4(configService.get("PS_SHOP_NAME")));
+		template_vars.put("color", StringEscapeUtils.escapeHtml4(configService.get("PS_MAIL_COLOR")));
 
 		if (!template_vars.containsKey("shop_url")) {
 			template_vars.put("shop_url", configurationManager.getKarutaURL(null));

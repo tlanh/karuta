@@ -48,14 +48,7 @@ import eportfolium.com.karuta.model.bean.Portfolio;
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.model.exception.DoesNotExistException;
 import eportfolium.com.karuta.util.JavaTimeUtil;
-import eportfolium.com.karuta.util.PhpUtil;
 
-/**
- * Home object implementation for domain model class Portfolio.
- * 
- * @see dao.Portfolio
- * @author Hibernate Tools
- */
 @Repository
 public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements PortfolioDao {
 
@@ -150,7 +143,7 @@ public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements Port
 	}
 
 	public List<Portfolio> getPortfolios(Long userId, Long substId, Boolean portfolioActive, Boolean portfolioProject) {
-		if (PhpUtil.empty(userId) && PhpUtil.empty(substId)) {
+		if ((userId == null || userId == 0L) && (substId == null || substId == 0L)) {
 			return Arrays.asList();
 		}
 		TypedQuery<Portfolio> q;
@@ -232,7 +225,7 @@ public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements Port
 		q = em.createQuery(sql, Portfolio.class);
 		q.setParameter("userId", userId);
 
-		if (PhpUtil.empty(substId)) {
+		if (substId == null || substId == 0L) {
 			q.setParameter("substUserId", userId);
 		} else {
 			q.setParameter("substUserId", substId);
@@ -325,7 +318,7 @@ public class PortfolioDaoImpl extends AbstractDaoImpl<Portfolio> implements Port
 
 	public boolean isOwner(Long userId, String portfolioUuid) {
 		boolean result = false;
-		if (!PhpUtil.empty(userId)) {
+		if (!(userId == null || userId == 0)) {
 			String sql = "SELECT n.modifUserId FROM Node n";
 			sql += " INNER JOIN n.portfolio p";
 			sql += " WHERE n.modifUserId = :userId";

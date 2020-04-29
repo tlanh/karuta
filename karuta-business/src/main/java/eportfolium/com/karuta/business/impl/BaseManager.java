@@ -41,7 +41,6 @@ import eportfolium.com.karuta.model.bean.GroupRights;
 import eportfolium.com.karuta.model.bean.GroupRightsId;
 import eportfolium.com.karuta.model.bean.Node;
 import eportfolium.com.karuta.model.bean.ResourceTable;
-import eportfolium.com.karuta.util.PhpUtil;
 
 public abstract class BaseManager {
 
@@ -74,7 +73,7 @@ public abstract class BaseManager {
 		{
 			rights = new GroupRights(new GroupRightsId(new GroupRightInfo(), null), true, true, true, true, false);
 		} else {
-			if (PhpUtil.empty(groupId)) {
+			if (groupId == null || groupId == 0L) {
 				rights = groupRightsDao.getRightsByIdAndUser(nodeUuid, userId);
 			}
 

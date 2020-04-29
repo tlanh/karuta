@@ -33,9 +33,6 @@ import org.springframework.stereotype.Repository;
 
 import eportfolium.com.karuta.consumer.contract.dao.ConfigurationDao;
 import eportfolium.com.karuta.model.bean.Configuration;
-import eportfolium.com.karuta.util.PhpUtil;
-import eportfolium.com.karuta.util.Tools;
-import eportfolium.com.karuta.util.ValidateUtil;
 
 /**
  * Home object implementation for domain model class Configuration.
@@ -148,9 +145,8 @@ public class ConfigurationDaoImpl extends AbstractDaoImpl<Configuration> impleme
 	 * @return boolean Update result
 	 */
 	public boolean updateValue(String key, Map<Integer, String> values, boolean html) {
-		if (!ValidateUtil.isConfigName(key)) {
-			throw new RuntimeException(String.format(
-					Tools.displayError("[%s] n'est pas une clé de configuration valide"), Tools.htmlentitiesUTF8(key)));
+		if (!StringUtils.isAlphanumeric(key)) {
+			throw new RuntimeException(String.format("[%s] n'est pas une clé de configuration valide", key));
 		}
 
 		if (values == null) {
@@ -161,7 +157,7 @@ public class ConfigurationDaoImpl extends AbstractDaoImpl<Configuration> impleme
 		if (html) {
 			for (java.util.Iterator<Entry<Integer, String>> it = values.entrySet().iterator(); it.hasNext();) {
 				entry = it.next();
-				values.put(entry.getKey(), Tools.purifyHTML(entry.getValue()));
+				values.put(entry.getKey(), entry.getValue());
 			}
 		}
 
@@ -182,7 +178,7 @@ public class ConfigurationDaoImpl extends AbstractDaoImpl<Configuration> impleme
 
 			// If key already exists, update value
 			if (hasKey(key, lang)) {
-				if (PhpUtil.empty(lang)) {
+				if (lang == null || lang == 0) {
 					// Update config not linked to lang
 					String sql = "SELECT c FROM Configuration c";
 					sql += " WHERE c.name = :key";
@@ -203,10 +199,10 @@ public class ConfigurationDaoImpl extends AbstractDaoImpl<Configuration> impleme
 			// If key does not exists, create it
 			else {
 				Long configID = getIdByName(key);
-				if (PhpUtil.empty(configID)) {
+				if (configID == null | configID == 0L) {
 					Configuration c = new Configuration();
 					c.setName(key);
-					c.setValue(!PhpUtil.empty(lang) ? null : value);
+					c.setValue(!(lang == null || lang == 0) ? null : value);
 					try {
 						persist(c);
 						configID = c.getId();
@@ -231,9 +227,8 @@ public class ConfigurationDaoImpl extends AbstractDaoImpl<Configuration> impleme
 	 *               a single string else.
 	 */
 	public void set(String key, Map<Integer, String> values) {
-		if (!ValidateUtil.isConfigName(key)) {
-			throw new RuntimeException(String.format(
-					Tools.displayError("[%s] n'est pas une clé de configuration valide"), Tools.htmlentitiesUTF8(key)));
+		if (!StringUtils.isAlphanumeric(key)) {
+			throw new RuntimeException(String.format("[%s] n'est pas une clé de configuration valide", key));
 		}
 
 		Entry<Integer, String> entry;

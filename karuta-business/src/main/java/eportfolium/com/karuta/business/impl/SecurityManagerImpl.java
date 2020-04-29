@@ -40,6 +40,7 @@ import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.validator.routines.EmailValidator;
 import org.passay.CharacterRule;
 import org.passay.EnglishCharacterData;
 import org.passay.PasswordGenerator;
@@ -79,9 +80,6 @@ import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.model.exception.DoesNotExistException;
 import eportfolium.com.karuta.model.exception.GenericBusinessException;
 import eportfolium.com.karuta.model.exception.ValueRequiredException;
-import eportfolium.com.karuta.util.PhpUtil;
-import eportfolium.com.karuta.util.StringUtil;
-import eportfolium.com.karuta.util.ValidateUtil;
 
 /**
  * Cette classe rassemble la gestion et la modification des utilisateurs, des
@@ -240,7 +238,7 @@ public class SecurityManagerImpl implements SecurityManager {
 
 	public Long addUser(String username, String email) throws BusinessException {
 
-		if (!ValidateUtil.isEmail(email)) {
+		if (!EmailValidator.getInstance().isValid(email)) {
 			throw new IllegalArgumentException();
 		}
 
@@ -298,7 +296,7 @@ public class SecurityManagerImpl implements SecurityManager {
 	 */
 	private void setPassword(String newPassword, Credential credential) throws BusinessException {
 
-		if (StringUtil.isEmpty(newPassword)) {
+		if (StringUtils.isEmpty(newPassword)) {
 			throw new ValueRequiredException(credential, "User_newpassword_is_required");
 		}
 
@@ -708,7 +706,7 @@ public class SecurityManagerImpl implements SecurityManager {
 	 * @return bool result
 	 */
 	public boolean checkPassword(Long userId, String passwd) {
-		if (userId == null || !ValidateUtil.isUnsignedId(userId.intValue()) || !ValidateUtil.isPasswd(passwd)) {
+		if (userId == null || passwd.length() < CredentialDao.PASSWORD_LENGTH) {
 			log.error("Fatal Error : illegal checkPassword parameters");
 			throw new RuntimeException();
 		}
@@ -911,7 +909,7 @@ public class SecurityManagerImpl implements SecurityManager {
 			returnValue[2] = Long.toString(uid); // User id
 			returnValue[4] = Long.toString(subuid); // Substitute
 			Credential cr = null;
-			if (!PhpUtil.empty(subuid)) {
+			if (!(subuid == null || subuid == 0L)) {
 				returnValue[3] = substitute;
 				cr = credentialDao.getUserByLogin(substitute);
 			} else {

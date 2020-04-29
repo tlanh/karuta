@@ -31,18 +31,8 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Objects;
-import java.util.Set;
-import java.util.StringTokenizer;
-import java.util.UUID;
 import java.util.zip.Deflater;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -59,6 +49,7 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.BooleanUtils;
@@ -111,9 +102,6 @@ import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.model.exception.DoesNotExistException;
 import eportfolium.com.karuta.model.exception.GenericBusinessException;
 import eportfolium.com.karuta.util.JavaTimeUtil;
-import eportfolium.com.karuta.util.PhpUtil;
-import eportfolium.com.karuta.util.Tools;
-import eportfolium.com.karuta.util.ValidateUtil;
 
 @Service
 @Transactional
@@ -894,7 +882,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 			}
 		}
 
-		if (PhpUtil.empty(userId) || !ValidateUtil.isUnsignedId(userId.intValue())) {
+		if (userId == null || userId == 0L) {
 			if (resPortfolio != null)
 				userId = resPortfolio.getCredential().getId();
 		}
@@ -1496,7 +1484,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 				// Il sera mis e jour avec l'UUID asmContext final dans writeNode
 				try {
 					String resolved = resolve.get(uuid); /// New uuid
-					String sessionval = Tools.passwdGen(24, "RANDOM");
+					String sessionval = passwdGen(24);
 					// session.getId()
 					// FIX ... there is no session id in RESTFUL webServices so generate a mocked
 					// one in place
@@ -1605,7 +1593,8 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 					parent = pg.getParent().getParent();
 				}
 				resolve.put(Long.valueOf(currTreeNode.nodeId), currTreeNode);
-				if (parent != null && !PhpUtil.empty(parent.getId())) {
+
+				if (parent != null && !(parent.getId() == null || parent.getId() == 0)) {
 					TreeNode parentTreeNode = resolve.get(parent.getId());
 					parentTreeNode.childs.add(currTreeNode);
 				} else // Top level groups
@@ -1633,7 +1622,9 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		final StringBuilder result = new StringBuilder();
 		result.append("<portfolio>");
 		for (PortfolioGroupMembers pgm : pgmList) {
-			if (pgm.getPortfolioGroup() != null && !PhpUtil.empty(pgm.getPortfolioGroup().getId())) {
+			Long portfolioGid = pgm.getPortfolioGroup().getId();
+
+			if (pgm.getPortfolioGroup() != null && !(portfolioGid == null || portfolioGid == 0L)) {
 				result.append("<group");
 				result.append(" id=\"");
 				result.append(pgm.getPortfolioGroup().getId());
@@ -2038,5 +2029,14 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 	public void removePortfolioGroups() {
 		portfolioGroupMembersDao.removeAll();
 		portfolioGroupDao.removeAll();
+	}
+
+	private String passwdGen(Integer length) {
+		Random random = new Random();
+
+		Double num_bytes = Math.ceil(length * 0.75);
+		byte[] bytes = new byte[num_bytes.intValue()];
+		random.nextBytes(bytes);
+		return new String(Base64.encodeBase64(bytes)).replaceAll("\\s+$", "").substring(0, length);
 	}
 }

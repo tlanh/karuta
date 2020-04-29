@@ -17,8 +17,6 @@ package eportfolium.com.karuta.model.exception;
 
 import java.io.Serializable;
 
-import eportfolium.com.karuta.model.bean.BaseEntity;
-import eportfolium.com.karuta.util.ClassUtil;
 import eportfolium.com.karuta.util.MessageUtil;
 
 @SuppressWarnings("serial")
@@ -31,24 +29,6 @@ public class DuplicatePrimaryKeyException extends BusinessException {
 	private int informationLevel = INFORMATIONLEVEL_ENTITY_ID;
 	private String entityLabelMessageId;
 	private Serializable id;
-
-	/**
-	 * This exception is thrown by an IPersistenceExceptionInterpreter when an attempt to create an entity has failed because
-	 * it already exists.  This is not possible when the entity definition specifies auto-generated ids.
-	 * 
-	 * @param entity	the entity being created.
-	 * @param id	the id of the entity.
-	 */
-	public DuplicatePrimaryKeyException(BaseEntity entity, Serializable id) {
-
-		// Don't convert the message ids to messages yet because we're in the
-		// server's locale, not the user's.
-
-		super();
-		this.informationLevel = INFORMATIONLEVEL_ENTITY_ID;
-		this.entityLabelMessageId = ClassUtil.extractUnqualifiedName(entity);
-		this.id = id;
-	}
 
 	/**
 	 * This exception is thrown by an IPersistenceExceptionInterpreter when an attempt to create an entity has failed because

@@ -28,11 +28,6 @@ public class ExceptionUtil {
 		return m == null ? t.getClass().getSimpleName() : m;
 	}
 
-	static public String getRootCauseMessage(Throwable t) {
-		Throwable rc = getRootCause(t);
-		return getMessage(rc);
-	}
-
 	static public Throwable getRootCause(Throwable t) {
 		Throwable cause = t;
 		Throwable subCause = cause.getCause();

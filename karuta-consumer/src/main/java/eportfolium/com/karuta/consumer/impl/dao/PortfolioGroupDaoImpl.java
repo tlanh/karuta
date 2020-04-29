@@ -25,15 +25,7 @@ import org.springframework.stereotype.Repository;
 import eportfolium.com.karuta.consumer.contract.dao.PortfolioGroupDao;
 import eportfolium.com.karuta.model.bean.Portfolio;
 import eportfolium.com.karuta.model.bean.PortfolioGroup;
-import eportfolium.com.karuta.util.PhpUtil;
-import eportfolium.com.karuta.util.ValidateUtil;
 
-/**
- * Home object implementation for domain model class PortfolioGroup.
- * 
- * @see dao.PortfolioGroup
- * @author Hibernate Tools
- */
 @Repository
 public class PortfolioGroupDaoImpl extends AbstractDaoImpl<PortfolioGroup> implements PortfolioGroupDao {
 
@@ -82,7 +74,7 @@ public class PortfolioGroupDaoImpl extends AbstractDaoImpl<PortfolioGroup> imple
 	}
 
 	public List<Portfolio> getPortfoliosByPortfolioGroup(Long portfolioGroupId) {
-		if (PhpUtil.empty(portfolioGroupId) || !ValidateUtil.isUnsignedId(portfolioGroupId.intValue())) {
+		if (portfolioGroupId == null || portfolioGroupId == 0L) {
 			throw new IllegalArgumentException();
 		}
 		

@@ -17,8 +17,6 @@ package eportfolium.com.karuta.model.exception;
 
 import java.io.Serializable;
 
-import eportfolium.com.karuta.model.bean.BaseEntity;
-import eportfolium.com.karuta.util.ClassUtil;
 import eportfolium.com.karuta.util.MessageUtil;
 
 @SuppressWarnings("serial")
@@ -37,35 +35,6 @@ public class CannotDeleteIsReferencedException extends BusinessException {
 	private String referencedByPropertyName;
 
 	private String entityName;
-
-	/**
-	 * This exception is thrown by an IPersistenceExceptionInterpreter when an attempt to delete an entity has failed because the
-	 * entity is referenced by other entities or it "contains" entities that are referenced by other entities. For
-	 * example, it is thrown if attempting to delete a Department that still contains Teachers that are referenced by other
-	 * entities.
-	 * 
-	 * @param entity
-	 *            the entity being deleted, eg. a Department object.
-	 * @param id
-	 *            the id of the entity.
-	 * @param referencedByEntityName
-	 *            the name of another entity that references the entity.
-	 * @param referencedByPropertyName
-	 *            the name of the property in another entity that references the entity.
-	 */
-	public CannotDeleteIsReferencedException(BaseEntity entity, Serializable id, String referencedByEntityName,
-			String referencedByPropertyName) {
-
-		// Don't convert the message ids to messages yet because we're in the
-		// server's locale, not the user's.
-
-		super();
-		this.informationLevel = INFORMATIONLEVEL_ENTITY_ID_REFBYENTITY_REFBYPROPERTY;
-		this.entityLabelMessageId = ClassUtil.extractUnqualifiedName(entity);
-		this.id = id;
-		this.referencedByEntityName = referencedByEntityName;
-		this.referencedByPropertyName = referencedByPropertyName;
-	}
 	
 	/**
 	 * This exception is thrown by an IPersistenceExceptionInterpreter when an attempt to delete an entity has failed because the

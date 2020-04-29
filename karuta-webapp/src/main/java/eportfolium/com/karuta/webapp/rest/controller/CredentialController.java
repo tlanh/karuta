@@ -15,6 +15,7 @@
 
 package eportfolium.com.karuta.webapp.rest.controller;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -45,7 +46,6 @@ import eportfolium.com.karuta.business.contract.SecurityManager;
 import eportfolium.com.karuta.business.contract.UserManager;
 import eportfolium.com.karuta.config.Consts;
 import eportfolium.com.karuta.model.exception.BusinessException;
-import eportfolium.com.karuta.util.StrToTime;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import eportfolium.com.karuta.webapp.eventbus.KEvent;
 import eportfolium.com.karuta.webapp.rest.provider.mapper.exception.RestWebApplicationException;
@@ -211,7 +211,7 @@ public class CredentialController extends AbstractController {
 
                 if (authLog != null)
                     authLog.info(String.format("Authentication error for user '%s' date '%s'\n", login,
-                            StrToTime.convert("now")));
+                            new Date()));
             } else if (!"0".equals(resultCredential[2])) {
                 // String tokenID = resultCredential[2];
 
@@ -225,7 +225,7 @@ public class CredentialController extends AbstractController {
                     session.setAttribute("subuid", uid);
                     if (authLog != null)
                         authLog.info(String.format("Authentication success for user '%s' date '%s' (Substitution)\n",
-                                login, StrToTime.convert("now")));
+                                login, new Date()));
                 } else {
                     String login1 = resultCredential[1];
                     long userId = Long.parseLong(resultCredential[2]);
@@ -237,7 +237,7 @@ public class CredentialController extends AbstractController {
                     session.setAttribute("subuid", subuid);
                     if (authLog != null)
                         authLog.info(String.format("Authentication success for user '%s' date '%s'\n", login,
-                                StrToTime.convert("now")));
+                                new Date()));
                 }
 
                 event.status = 200;

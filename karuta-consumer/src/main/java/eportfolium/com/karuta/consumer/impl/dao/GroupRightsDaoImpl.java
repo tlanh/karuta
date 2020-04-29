@@ -35,14 +35,7 @@ import eportfolium.com.karuta.model.bean.GroupRightInfo;
 import eportfolium.com.karuta.model.bean.GroupRights;
 import eportfolium.com.karuta.model.bean.GroupRightsId;
 import eportfolium.com.karuta.model.bean.Node;
-import eportfolium.com.karuta.util.PhpUtil;
 
-/**
- * Home object implementation for domain model class GroupRights.
- * 
- * @see dao.GroupRights
- * @author Hibernate Tools
- */
 @Repository
 public class GroupRightsDaoImpl extends AbstractDaoImpl<GroupRights> implements GroupRightsDao {
 
@@ -342,7 +335,7 @@ public class GroupRightsDaoImpl extends AbstractDaoImpl<GroupRights> implements 
 
 		sql = "SELECT gr FROM GroupRights gr";
 		sql += " WHERE gr.id.id = :uuid";
-		sql += " AND gr.id.groupRightInfo.id IN (" + PhpUtil.implode(",", pa_implode) + ")";
+		sql += " AND gr.id.groupRightInfo.id IN (" + StringUtils.join(pa_implode, ",") + ")";
 
 		TypedQuery<GroupRights> q2 = em.createQuery(sql, GroupRights.class);
 		q2.setParameter("uuid", uuid);
@@ -421,7 +414,7 @@ public class GroupRightsDaoImpl extends AbstractDaoImpl<GroupRights> implements 
 		sql += " INNER JOIN gri.groupInfo gi";
 		sql += " WHERE p1.id = p2.id";
 		sql += " AND n.id = :nodeUuid";
-		sql += " AND gri.label IN (" + PhpUtil.implode(",", labels) + ")";
+		sql += " AND gri.label IN (" + String.join(",", labels) + ")";
 
 		final TypedQuery<Long> q1 = em.createQuery(sql, Long.class);
 		q1.setParameter("nodeUuid", nodeUuid);
@@ -429,7 +422,7 @@ public class GroupRightsDaoImpl extends AbstractDaoImpl<GroupRights> implements 
 
 		sql = "SELECT gr FROM GroupRights gr";
 		sql += " WHERE gr.id.id = :uuid";
-		sql += " AND gr.id.groupRightInfo.id IN (" + PhpUtil.implode(",", griList) + ")";
+		sql += " AND gr.id.groupRightInfo.id IN (" + StringUtils.join(griList, ",") + ")";
 		final TypedQuery<GroupRights> q2 = em.createQuery(sql, GroupRights.class);
 		q2.setParameter("uuid", nodeUuid);
 		final List<GroupRights> grList = q2.getResultList();
@@ -464,7 +457,7 @@ public class GroupRightsDaoImpl extends AbstractDaoImpl<GroupRights> implements 
 		sql += " INNER JOIN gri.groupInfo gi";
 		sql += " WHERE p1.id = p2.id";
 		sql += " AND n.id = :nodeUuid";
-		sql += " AND gri.label IN (" + PhpUtil.implode(",", labels) + ")";
+		sql += " AND gri.label IN (" + String.join(",", labels) + ")";
 
 		TypedQuery<Long> q1 = em.createQuery(sql, Long.class);
 		q1.setParameter("nodeUuid", nodeUuid);
@@ -472,7 +465,7 @@ public class GroupRightsDaoImpl extends AbstractDaoImpl<GroupRights> implements 
 
 		sql = "SELECT gr FROM GroupRights gr";
 		sql += " WHERE gr.id.id = :uuid";
-		sql += " AND gr.id.groupRightInfo.id IN ( " + PhpUtil.implode(",", griList) + " )";
+		sql += " AND gr.id.groupRightInfo.id IN ( " + StringUtils.join(griList, ",") + " )";
 		TypedQuery<GroupRights> q2 = em.createQuery(sql, GroupRights.class);
 		q2.setParameter("uuid", nodeUuid);
 		List<GroupRights> grList = q2.getResultList();

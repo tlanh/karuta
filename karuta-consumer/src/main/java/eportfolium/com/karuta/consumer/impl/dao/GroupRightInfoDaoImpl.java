@@ -42,12 +42,10 @@ import eportfolium.com.karuta.model.bean.GroupRightInfo;
 import eportfolium.com.karuta.model.bean.GroupRights;
 import eportfolium.com.karuta.model.bean.GroupUser;
 import eportfolium.com.karuta.model.bean.Portfolio;
-import eportfolium.com.karuta.util.PhpUtil;
 
 /**
  * Home object implementation for domain model class GroupRightInfo.
- * 
- * @see dao.GroupRightInfo
+ *
  * @author Hibernate Tools
  */
 @Repository
@@ -252,7 +250,7 @@ public class GroupRightInfoDaoImpl extends AbstractDaoImpl<GroupRightInfo> imple
 		sql += " INNER JOIN gri.groupInfo gi";
 		sql += " WHERE p1.id = p2.id";
 		sql += " AND n.id = :nodeUuid";
-		sql += " AND gri.label IN (" + PhpUtil.implode(",", labels) + ")";
+		sql += " AND gri.label IN (" + String.join(",", labels) + ")";
 
 		final TypedQuery<Long> q = em.createQuery(sql, Long.class);
 		q.setParameter("nodeUuid", nodeUuid);

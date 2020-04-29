@@ -17,7 +17,6 @@ package eportfolium.com.karuta.model.exception;
 
 import java.io.Serializable;
 
-import eportfolium.com.karuta.model.bean.BaseEntity;
 import eportfolium.com.karuta.util.ClassUtil;
 import eportfolium.com.karuta.util.MessageUtil;
 
@@ -55,35 +54,6 @@ public class OptimisticLockException extends BusinessException {
 		this.entityLabelMessageId = ClassUtil.extractUnqualifiedName(entityName);
 		this.id = id;
 		this.entityName = entityName;
-		this.exception = exception;
-	}
-
-	/**
-	 * This exception is thrown by an IPersistenceExceptionInterpreter when an attempt to update an entity has failed
-	 * because the entity has been updated by an intervening transaction since we read its state.
-	 * 
-	 * @param entityName the entity being updated. It will be stripped down to its unqualified name (eg.
-	 *        jumpstart.Department would be stripped down to Department) to be used as a message key when generating a
-	 *        message in getMessage().
-	 * @param id the id of the entity.
-	 * @param exception the root cause exception, eg. a Hibernate StaleObjectException.
-	 */
-	public OptimisticLockException(BaseEntity entity, Serializable id, Exception exception) {
-
-		// Don't convert the message ids to messages yet because we're in the server's locale, not the user's.
-
-		super();
-
-		if (entity == null) {
-			throw new IllegalArgumentException("entity is null");
-		}
-		if (id == null) {
-			throw new IllegalArgumentException("id is null");
-		}
-
-		this.entityLabelMessageId = ClassUtil.extractUnqualifiedName(entity);
-		this.id = id;
-		this.entityName = entity.getClass().getName();
 		this.exception = exception;
 	}
 

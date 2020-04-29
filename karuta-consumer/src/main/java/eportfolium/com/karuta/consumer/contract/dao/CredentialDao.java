@@ -36,6 +36,8 @@ import eportfolium.com.karuta.model.exception.DoesNotExistException;
  */
 public interface CredentialDao {
 
+	public static final int PASSWORD_LENGTH = 5;
+
 	List<Credential> findAll();
 
 	void persist(Credential transientInstance);

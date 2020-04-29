@@ -15,12 +15,7 @@
 
 package eportfolium.com.karuta.util;
 
-import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Properties;
 
 import org.slf4j.Logger;
@@ -99,36 +94,7 @@ public class ResourceUtil {
 
 	}
 
-	static public List<String> getResourceFiles(String path) throws IOException {
-		List<String> filenames = new ArrayList<>();
-
-		try (InputStream in = getResourceAsStream(path);
-				BufferedReader br = new BufferedReader(new InputStreamReader(in))) {
-			String resource;
-
-			while ((resource = br.readLine()) != null) {
-				filenames.add(resource);
-			}
-		}
-
-		return filenames;
-	}
-
-	static public InputStream getResourceAsStream(String resource) {
-		if (myClass == null) {
-			myClass = new ResourceUtil();
-		}
-		final InputStream in = getContextClassLoader().getResourceAsStream(resource);
-
-		return in == null ? myClass.getClass().getResourceAsStream(resource) : in;
-	}
-
 	static private ClassLoader getContextClassLoader() {
 		return Thread.currentThread().getContextClassLoader();
-	}
-
-	static public String getExtension(String path) {
-		String[] strings = path.split("\\.");
-		return strings[strings.length - 1];
 	}
 }

@@ -26,7 +26,6 @@ import eportfolium.com.karuta.business.contract.SecurityManager;
 import eportfolium.com.karuta.business.contract.UserManager;
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.model.exception.DoesNotExistException;
-import eportfolium.com.karuta.util.PhpUtil;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import eportfolium.com.karuta.webapp.rest.provider.mapper.exception.RestWebApplicationException;
 import eportfolium.com.karuta.webapp.util.javaUtils;
@@ -188,7 +187,7 @@ public class UserController extends AbstractController {
 
         try {
             Long userid = userManager.getUserId(username);
-            if (PhpUtil.empty(userid)) {
+            if (userid == null || userid == 0) {
                 throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "User not found");
             } else {
                 return userid.toString();

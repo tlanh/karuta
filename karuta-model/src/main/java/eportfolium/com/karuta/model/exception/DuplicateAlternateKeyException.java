@@ -15,8 +15,6 @@
 
 package eportfolium.com.karuta.model.exception;
 
-import eportfolium.com.karuta.model.bean.BaseEntity;
-import eportfolium.com.karuta.util.ClassUtil;
 import eportfolium.com.karuta.util.MessageUtil;
 
 @SuppressWarnings("serial")
@@ -30,24 +28,6 @@ public class DuplicateAlternateKeyException extends BusinessException {
 	private String entityLabelMessageId;
 	private String technicalMessageText;
 	private String keyValue;
-
-	/**
-	 * This exception is thrown by an IPersistenceExceptionInterpreter when an attempt to create an entity has failed because
-	 * the entity specifies an alternate key (a unique key other than the primary key) that is already in use.
-	 * 
-	 * @param entity	the entity being created.
-	 * @param technicalMessageText	typically this is a constraint violation message from the database.
-	 */
-	public DuplicateAlternateKeyException(BaseEntity entity, String technicalMessageText) {
-
-		// Don't convert the message ids to messages yet because we're in the
-		// server's locale, not the user's.
-
-		super();
-		this.informationLevel = INFORMATIONLEVEL_ENTITY_TECHMSG;
-		this.entityLabelMessageId = ClassUtil.extractUnqualifiedName(entity);
-		this.technicalMessageText = technicalMessageText;
-	}
 
 	/**
 	 * This exception is thrown by an IPersistenceExceptionInterpreter when an attempt to create an entity has failed because

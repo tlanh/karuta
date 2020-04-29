@@ -30,20 +30,12 @@ import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.validator.routines.EmailValidator;
 import org.springframework.stereotype.Repository;
 
-import eportfolium.com.karuta.config.Settings;
 import eportfolium.com.karuta.consumer.contract.dao.CredentialDao;
-import eportfolium.com.karuta.consumer.util.query.QueryBuilder;
 import eportfolium.com.karuta.model.bean.Credential;
-import eportfolium.com.karuta.util.ValidateUtil;
 
-/**
- * Home object implementation for domain model class Credential.
- * 
- * @see dao.Credential
- * @author Hibernate Tools
- */
 @Repository
 public class CredentialDaoImpl extends AbstractDaoImpl<Credential> implements CredentialDao {
 
@@ -119,15 +111,19 @@ public class CredentialDaoImpl extends AbstractDaoImpl<Credential> implements Cr
 
 	@SuppressWarnings("unchecked")
 	public List<Credential> getUsers(String username, String firstname, String lastname) {
-		// Build query
-		QueryBuilder builder = new QueryBuilder();
-		builder.append("FROM Credential c");
-		builder.append("LEFT JOIN FETCH c.credentialSubstitution cs");
-		builder.appendLikeIgnoreCaseSkipEmpty("c.login", username);
-		builder.appendLikeIgnoreCaseSkipEmpty("c.displayFirstname", firstname);
-		builder.appendLikeIgnoreCaseSkipEmpty("cs.displayLastname", lastname);
-		builder.append("ORDER BY c.id");
-		Query q = builder.createQuery(em);
+
+		String sql = "SELECT c FROM Credential c";
+		sql += " LEFT JOIN FETCH c.credentialSubstitution cs";
+		sql += " WHERE lower(c.login) LIKE :username";
+		sql += " AND lower(c.displayFirstname) LIKE :firstname";
+		sql += " AND lower(cs.displayLastname) LIKE :lastname";
+		sql += "ORDER BY c.id";
+		Query q = em.createQuery(sql);
+
+		q.setParameter("username", username);
+		q.setParameter("firstname", firstname);
+		q.setParameter("lastname", lastname);
+
 		List<Credential> l = q.getResultList();
 		return l;
 	}
@@ -301,12 +297,13 @@ public class CredentialDaoImpl extends AbstractDaoImpl<Credential> implements Cr
 	 * @return Credential instance
 	 */
 	public Credential getByEmail(String email, String passwd) {
-		if (!ValidateUtil.isEmail(email) || (passwd != null && !ValidateUtil.isPasswd(passwd))) {
+		if (!EmailValidator.getInstance().isValid(email) || (passwd != null
+				&& (passwd.length() >= PASSWORD_LENGTH && passwd.length() < 255))) {
 			throw new IllegalArgumentException();
 		}
 
 		Credential result = null;
-		String sql = "SELECT c FROM " + Settings._DB_PREFIX_ + "Credential c";
+		String sql = "SELECT c FROM Credential c";
 		sql += " WHERE c.email = :email";
 		sql += " AND c.active = 1";
 		if (StringUtils.isNotEmpty(passwd)) {
@@ -407,7 +404,7 @@ public class CredentialDaoImpl extends AbstractDaoImpl<Credential> implements Cr
 	}
 
 	public Credential getActiveByUserId(Long userId) {
-		if (userId == null || !ValidateUtil.isUnsignedId(userId.intValue())) {
+		if (userId == null) {
 			log.error("Fatal Error : userId is not correct");
 			throw new IllegalArgumentException();
 		}
