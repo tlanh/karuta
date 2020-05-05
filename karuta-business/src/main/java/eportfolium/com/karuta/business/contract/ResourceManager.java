@@ -15,9 +15,6 @@
 
 package eportfolium.com.karuta.business.contract;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.util.MimeType;
@@ -45,8 +42,12 @@ public interface ResourceManager {
 
 	void changeResourceByXsiType(String nodeUuid, String xsiType, String content, Long userId) throws Exception;
 
-	Map<String, String> transferResourceTable(Connection con, Map<Long, Long> userIds) throws SQLException;
+	int addResource(String uuid, String parentUuid, String xsiType, String content, String portfolioModelId,
+						   boolean sharedNodeRes, boolean sharedRes, Long userId);
 
-	void removeResources();
+	int updateResource(UUID nodeUuid, String content, Long userId);
 
+	int updateResource(String uuid, String xsiType, String content, Long userId);
+
+	int updateContextResource(UUID nodeUuid, String content, Long userId);
 }

@@ -21,6 +21,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import org.springframework.util.MimeType;
 
@@ -116,17 +117,12 @@ public interface PortfolioManager {
 
 	String getPortfolioUuidFromNode(String nodeUuid);
 
-	Map<Long, Long> transferPortfolioGroupTable(Connection con) throws SQLException;
+	void updateTime(UUID portfolioId);
 
-	void transferParentPortfolioGroup(Connection con, Map<Long, Long> pgIds) throws SQLException;
+	boolean updateTimeByNode(UUID portfolioId);
 
-	void transferPortfolioGroupMembersTable(Connection con, Map<String, String> portIds, Map<Long, Long> pgIds)
-			throws SQLException;
-
-	void removePortfolios();
-
-	void removePortfolioGroups();
-
-	Map<String, String> transferPortfolioTable(Connection con, Map<Long, Long> userIds) throws SQLException;
-
+	List<Portfolio> getPortfolios(Long userId,
+								  Long substid,
+								  Boolean portfolioActive,
+								  Boolean portfolioProject);
 }

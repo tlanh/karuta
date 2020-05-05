@@ -15,104 +15,183 @@
 
 package eportfolium.com.karuta.business.impl;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
+import eportfolium.com.karuta.consumer.repositories.ConfigurationRepository;
+import eportfolium.com.karuta.model.bean.Configuration;
 import org.apache.commons.lang3.BooleanUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Validate;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Isolation;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import eportfolium.com.karuta.business.contract.ConfigurationManager;
-import eportfolium.com.karuta.consumer.contract.dao.ConfigurationDao;
-import eportfolium.com.karuta.model.bean.Configuration;
 
 @Service
 @Transactional
 public class ConfigurationManagerImpl implements ConfigurationManager {
 
 	@Autowired
-	private ConfigurationDao configurationDao;
+	private ConfigurationRepository configurationRepository;
+
+	protected Map<Integer, Map<String, Map<Object, Object>>> cache = new HashMap<>();
+	protected Map<String, String> types = new HashMap<>();
 
 	public void loadConfiguration() {
-		configurationDao.loadConfiguration();
+		Iterable<Configuration> result = configurationRepository.findAll();
+
+		int lang = 0;
+
+		for (Configuration conf : result) {
+			types.put(conf.getName(), "normal");
+
+			if (!cache.containsKey(lang)) {
+				Map<String, Map<Object, Object>> map = new HashMap() {{
+					put("global", new HashMap<>());
+					put("group", new HashMap<>());
+					put("shop", new HashMap<>());
+				}};
+
+				cache.put(lang, map);
+			}
+
+			cache.get(lang).get("global").put(conf.getName(), conf.getValue());
+		}
 	}
 
 	public String get(String key, Integer id_lang) {
-		return configurationDao.get(key, id_lang);
+		if (cache.isEmpty()) {
+			loadConfiguration();
+		}
+
+		if (cache.get(id_lang) == null)
+			id_lang = 0;
+
+		if (hasKey(key, id_lang))
+			return (String) cache.get(id_lang).get("global").get(key);
+		else
+			return null;
 	}
 
 	public String get(String key) {
-		return configurationDao.get(key);
+		return get(key, null);
 	}
 
 	public Map<String, String> getMultiple(List<String> keys) {
-		return configurationDao.getMultiple(keys);
+		return getMultiple(keys, null);
 	}
 
+	/**
+	 * Get several configuration values (in one language only)
+	 *
+	 * @param keys Keys wanted
+	 * @param langID Language ID
+	 * @return array Values
+	 */
 	public Map<String, String> getMultiple(List<String> keys, Integer langID) {
-		return configurationDao.getMultiple(keys, langID);
+		Validate.noNullElements(keys);
+
+		Map<String, String> results = new HashMap<>();
+		String feature = null;
+
+		for (String key : keys) {
+			feature = get(key, langID);
+			results.put(key, feature == null ? "" : feature);
+		}
+
+		return results;
 	}
 
-	public boolean updateValue(String key, Map<Integer, String> values, boolean html) {
-		return configurationDao.updateValue(key, values, html);
+	/**
+	 * @TODO Fix saving HTML values in Configuration model
+	 *
+	 * @param key
+	 * @param values
+	 * @return
+	 */
+	public boolean updateValue(String key, final Map<Integer, String> values) {
+		if (!StringUtils.isAlphanumeric(key)) {
+			throw new RuntimeException(String.format("[%s] n'est pas une clé de configuration valide", key));
+		}
+
+		List<Configuration> settings = new ArrayList<>();
+
+		values.forEach((lang, value) -> {
+			Object stored_value = get(key, lang);
+
+			// if there isn't a stored_value, we must insert value
+			if ((!NumberUtils.isCreatable(value) && value.equals(stored_value))
+					|| (NumberUtils.isCreatable(value) && value.equals(stored_value) && hasKey(key, lang))) {
+				return;
+			}
+
+			// If key already exists, update value
+			if (hasKey(key, lang)) {
+				if (lang == null || lang == 0) {
+					Optional<Configuration> setting = configurationRepository.findByName(key);
+
+					if (setting.isPresent()) {
+						Configuration configuration = setting.get();
+						configuration.setValue(value);
+
+						settings.add(configuration);
+					}
+				}
+			}
+			// If key does not exists, create it
+			else if (!configurationRepository.existsByName(key)) {
+				Configuration configuration = new Configuration();
+				configuration.setName(key);
+				configuration.setValue(!(lang == null || lang == 0) ? null : value);
+
+				settings.add(configuration);
+			}
+		});
+
+		configurationRepository.saveAll(settings);
+		set(key, values);
+
+		return true;
 	}
 
 	public void set(String key, Map<Integer, String> values) {
-		configurationDao.set(key, values);
+		if (!StringUtils.isAlphanumeric(key)) {
+			throw new RuntimeException(String.format("[%s] n'est pas une clé de configuration valide", key));
+		}
+
+		values.forEach((lang, value) -> {
+			cache.get(lang).get("global").put(key, value);
+		});
 	}
 
-	public Long getIdByName(String key) {
-		return configurationDao.getIdByName(key);
-	}
+	private boolean hasKey(String key, Integer langID) {
+		if (!NumberUtils.isCreatable(key) && StringUtils.isBlank(key)) {
+			return false;
+		}
 
-	public String getValueByName(String key) {
-		return configurationDao.getValueByName(key);
+		return cache.get(langID).get("global") != null
+				&& (cache.get(langID).get("global").get(key) != null
+					|| cache.get(langID).get("global").containsKey(key));
 	}
 
 	public String getKarutaURL(Boolean ssl) {
-		boolean ssl_enabled = BooleanUtils.toBoolean(Integer.parseInt(configurationDao.get("PS_SSL_ENABLED")));
+		boolean ssl_enabled = BooleanUtils.toBoolean(Integer.parseInt(get("PS_SSL_ENABLED")));
+
 		if (ssl == null) {
-			String sslEverywhere = configurationDao.get("PS_SSL_ENABLED_EVERYWHERE");
+			String sslEverywhere = get("PS_SSL_ENABLED_EVERYWHERE");
+
 			if (sslEverywhere != null) {
 				ssl = (ssl_enabled && BooleanUtils.toBoolean(Integer.parseInt(sslEverywhere)));
 			}
 		}
 
-		String base = ((ssl != null && ssl && ssl_enabled) ? "https://" + configurationDao.getDomainSsl()
-				: "http://" + configurationDao.getDomain());
-		return base;
-	}
-
-	@Override
-	@Transactional(isolation = Isolation.DEFAULT, propagation = Propagation.REQUIRES_NEW)
-	public void transferConfigurationTable(Connection con) {
-
-		ResultSet res = configurationDao.findAll("configuration", con);
-		Configuration cf = null;
-		try {
-			while (res.next()) {
-				cf = new Configuration();
-				cf.setId(res.getLong("id_configuration"));
-				cf.setName(res.getString("name"));
-				cf.setValue(res.getString("value"));
-				cf.setModifDate(res.getDate("modifDate"));
-				cf = configurationDao.merge(cf);
-			}
-		} catch (SQLException e) {
-			e.printStackTrace();
+		if (ssl && ssl_enabled) {
+			return "https://" + get("PS_SHOP_DOMAIN_SSL");
+		} else {
+			return "http://" + get("PS_SHOP_DOMAIN");
 		}
-	}
-
-	@Override
-	@Transactional(isolation = Isolation.DEFAULT, propagation = Propagation.REQUIRES_NEW)
-	public void removeConfigurations(Connection con) {
-		configurationDao.removeAll();
 	}
 
 }

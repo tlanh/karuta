@@ -699,7 +699,7 @@ public class PortfolioController extends AbstractController {
             /// Vérifiez si le code existe, trouvez-en un qui convient, sinon. Eh.
             String newcode = tgtcode;
             int num = 0;
-            while (nodeManager.isCodeExist(null, newcode))
+            while (nodeManager.isCodeExist(newcode))
                 newcode = tgtcode + " (" + num++ + ")";
             tgtcode = newcode;
 
@@ -764,7 +764,7 @@ public class PortfolioController extends AbstractController {
 
             /// Check if code exist, find a suitable one otherwise. Eh.
             String newcode = tgtcode;
-            if (nodeManager.isCodeExist(newcode, null)) {
+            if (nodeManager.isCodeExist(newcode)) {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body("code exist");
             }
 

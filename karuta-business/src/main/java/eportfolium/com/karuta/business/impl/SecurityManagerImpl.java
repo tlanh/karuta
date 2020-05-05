@@ -16,18 +16,11 @@
 package eportfolium.com.karuta.business.impl;
 
 import java.io.StringReader;
-import java.math.BigInteger;
-import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -36,6 +29,8 @@ import javax.crypto.spec.PBEKeySpec;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import eportfolium.com.karuta.business.contract.ConfigurationManager;
+import eportfolium.com.karuta.consumer.repositories.*;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
@@ -54,14 +49,6 @@ import org.xml.sax.InputSource;
 
 import eportfolium.com.karuta.business.contract.EmailManager;
 import eportfolium.com.karuta.business.contract.SecurityManager;
-import eportfolium.com.karuta.consumer.contract.dao.ConfigurationDao;
-import eportfolium.com.karuta.consumer.contract.dao.CredentialDao;
-import eportfolium.com.karuta.consumer.contract.dao.CredentialGroupMembersDao;
-import eportfolium.com.karuta.consumer.contract.dao.CredentialSubstitutionDao;
-import eportfolium.com.karuta.consumer.contract.dao.GroupInfoDao;
-import eportfolium.com.karuta.consumer.contract.dao.GroupRightInfoDao;
-import eportfolium.com.karuta.consumer.contract.dao.GroupUserDao;
-import eportfolium.com.karuta.consumer.contract.dao.PortfolioDao;
 import eportfolium.com.karuta.consumer.util.DomUtils;
 import eportfolium.com.karuta.model.bean.Credential;
 import eportfolium.com.karuta.model.bean.CredentialGroup;
@@ -98,28 +85,28 @@ public class SecurityManagerImpl implements SecurityManager {
 	private EmailManager emailManager;
 
 	@Autowired
-	private CredentialDao credentialDao;
+	private CredentialRepository credentialRepository;
 
 	@Autowired
-	private CredentialSubstitutionDao credentialSubstitutionDao;
+	private CredentialSubstitutionRepository credentialSubstitutionRepository;
 
 	@Autowired
-	private CredentialGroupMembersDao credentialGroupMembersDao;
+	private CredentialGroupMembersRepository credentialGroupMembersRepository;
 
 	@Autowired
-	private GroupUserDao groupUserDao;
+	private GroupUserRepository groupUserRepository;
 
 	@Autowired
-	private GroupRightInfoDao groupRightInfoDao;
+	private GroupRightInfoRepository groupRightInfoRepository;
 
 	@Autowired
-	private GroupInfoDao groupInfoDao;
+	private GroupInfoRepository groupInfoRepository;
 
 	@Autowired
-	private PortfolioDao portfolioDao;
+	private PortfolioRepository portfolioRepository;
 
 	@Autowired
-	private ConfigurationDao configurationDao;
+	private ConfigurationManager configurationManager;
 
 	/**
 	 * Each token produced by this class uses this identifier as a prefix.
@@ -169,17 +156,16 @@ public class SecurityManagerImpl implements SecurityManager {
 	 * the password.
 	 */
 	public boolean changePassword(String username, String password) {
-		boolean changed = false;
 		try {
-			Credential credential = credentialDao.getByLogin(username, null);
+			Credential credential = credentialRepository.findByLogin(username);
 			setPassword(password, credential);
-			credentialDao.merge(credential);
-			changed = true;
-		} catch (BusinessException e) {
-			e.printStackTrace();
-		}
 
-		return changed;
+			credentialRepository.save(credential);
+
+			return true;
+		} catch (BusinessException e) {
+			return false;
+		}
 	}
 
 	/**
@@ -191,7 +177,9 @@ public class SecurityManagerImpl implements SecurityManager {
 	 * @throws BusinessException
 	 */
 	public void changeUserPassword(Long userId, String currentPassword, String newPassword) throws BusinessException {
-		Credential user = credentialDao.findById(userId);
+		Credential user = credentialRepository
+							.findById(userId)
+							.orElse(new Credential());
 
 		if (!authenticate(currentPassword.toCharArray(), user.getPassword())) {
 			throw new AuthenticationException("User_password_incorrect");
@@ -200,40 +188,35 @@ public class SecurityManagerImpl implements SecurityManager {
 		if (user.getPassword() != null && authenticate(newPassword.toCharArray(), user.getPassword())) {
 			throw new GenericBusinessException("User_newpassword_is_same");
 		}
+
 		setPassword(newPassword, user);
-		credentialDao.merge(user);
-	}
-
-	public void changeUser(Credential user) throws BusinessException {
-		Credential c = credentialDao.merge(user);
-
-		// If id is different it means the person did not exist so merge has created a
-		// new one.
-		if (!Long.valueOf(c.getId()).equals(user.getId())) {
-			throw new DoesNotExistException(Credential.class, user.getId());
-		}
+		credentialRepository.save(user);
 	}
 
 	public boolean registerUser(String username, String password) {
-		boolean isRegistered = false;
-
-		if (!credentialDao.userExists(username)) {
+		if (!credentialRepository.existsByLogin(username)) {
 			Credential newUser = new Credential();
 			newUser.setLogin(username);
+
 			try {
 				setPassword(password, newUser);
+
 				newUser.setDisplayFirstname("");
 				newUser.setDisplayLastname("");
 				newUser.setOther("");
 				newUser.setIsDesigner(Integer.valueOf(1));
-				// ajouter l'utilisateur en base.
-				credentialDao.persist(newUser);
-				isRegistered = true;
+
+				credentialRepository.save(newUser);
+
+				return true;
 			} catch (BusinessException e) {
 				e.printStackTrace();
+
+				return false;
 			}
 		}
-		return isRegistered;
+
+		return false;
 	}
 
 	public Long addUser(String username, String email) throws BusinessException {
@@ -243,28 +226,19 @@ public class SecurityManagerImpl implements SecurityManager {
 		}
 
 		final Credential cr = new Credential();
+
 		cr.setLogin(username);
 		cr.setDisplayFirstname("");
 		cr.setDisplayLastname("");
 		cr.setEmail(email);
 		cr.setOther("");
 		cr.setActive(1);
-		/// Credential checking use hashing, we'll never reach this.
-		setPassword(generatePassword(), cr);
-		credentialDao.persist(cr);
-		// NE retourne PAS l'utilisateur en entier, car son mot de passe utilisateur y
-		// est présent
-		return cr.getId();
-	}
 
-	/// Generate password
-	public String generatePassword2() throws NoSuchAlgorithmException {
-		long base = System.currentTimeMillis();
-		MessageDigest md = MessageDigest.getInstance("SHA-1");
-		byte[] output = md.digest(Long.toString(base).getBytes());
-		String password = String.format("%032X", new BigInteger(1, output));
-		password = password.substring(0, 9);
-		return password;
+		setPassword(generatePassword(), cr);
+
+		credentialRepository.save(cr);
+
+		return cr.getId();
 	}
 
 	public String generatePassword() {
@@ -295,7 +269,6 @@ public class SecurityManagerImpl implements SecurityManager {
 	 * @param credential
 	 */
 	private void setPassword(String newPassword, Credential credential) throws BusinessException {
-
 		if (StringUtils.isEmpty(newPassword)) {
 			throw new ValueRequiredException(credential, "User_newpassword_is_required");
 		}
@@ -362,27 +335,22 @@ public class SecurityManagerImpl implements SecurityManager {
 
 	@Override
 	public void removeUser(Long byUser, Long forUser) throws BusinessException {
-		if (!credentialDao.isAdmin(byUser))
+		if (!credentialRepository.isAdmin(byUser))
 			throw new GenericBusinessException("FORBIDDEN : No admin right");
 
-		credentialDao.removeById(forUser);
+		credentialRepository.deleteById(forUser);
 	}
 
 	public void removeUsers(Long byUser, Long forUser) throws DoesNotExistException, BusinessException {
-		if (!isAdmin(byUser) && byUser != forUser)
-			// when not admin or self
+		if (!credentialRepository.isAdmin(byUser) && byUser != forUser)
 			throw new GenericBusinessException("FORBIDDEN : No admin right");
 
-		List<GroupUser> guList = groupUserDao.getByUser(forUser);
-		for (java.util.Iterator<GroupUser> it = guList.iterator(); it.hasNext();) {
-			groupUserDao.remove(it.next());
-			it.remove();
-		}
-		credentialDao.removeById(forUser);
+		groupUserRepository.deleteAll(groupUserRepository.getByUser(forUser));
+		credentialRepository.deleteById(forUser);
 	}
 
 	public String addUsers(String xmlUsers, Long userId) throws Exception {
-		if (!credentialDao.isAdmin(userId) && !credentialDao.isCreator(userId))
+		if (!credentialRepository.isAdmin(userId) && !credentialRepository.isCreator(userId))
 			throw new GenericBusinessException("403 FORBIDDEN : No admin right");
 
 		String result = null;
@@ -452,7 +420,7 @@ public class SecurityManagerImpl implements SecurityManager {
 						}
 
 						// On ajoute l'utilisateur dans la base de données
-						credentialDao.persist(cr);
+						credentialRepository.save(cr);
 						id = cr.getId();
 
 						CredentialSubstitution subst = new CredentialSubstitution();
@@ -465,13 +433,10 @@ public class SecurityManagerImpl implements SecurityManager {
 
 						if (cr.getCanSubstitute() == 1) {
 							subst.setId(csId);
-							credentialSubstitutionDao.persist(subst);
+							credentialSubstitutionRepository.save(subst);
 							cr.setCredentialSubstitution(subst);
 						} else {
-							try {
-								credentialSubstitutionDao.removeById(csId);
-							} catch (DoesNotExistException e) {
-							}
+							credentialSubstitutionRepository.deleteById(csId);
 						}
 
 						userdone.append("<user ").append("id=\"").append(id).append("\">");
@@ -502,12 +467,10 @@ public class SecurityManagerImpl implements SecurityManager {
 	}
 
 	public boolean addUser(String username, String email, boolean isDesigner, long userId) throws Exception {
-		if (!credentialDao.isAdmin(userId) && !credentialDao.isCreator(userId))
+		if (!credentialRepository.isAdmin(userId) && !credentialRepository.isCreator(userId))
 			throw new GenericBusinessException("Status.FORBIDDEN : No admin right");
 
-		boolean isAdded = false;
-
-		if (!credentialDao.userExists(username)) {
+		if (!credentialRepository.existsByLogin(username)) {
 
 			try {
 				Credential newUser = new Credential();
@@ -521,9 +484,9 @@ public class SecurityManagerImpl implements SecurityManager {
 				newUser.setOther("");
 				newUser.setDisplayLastname("");
 				newUser.setIsDesigner(BooleanUtils.toInteger(isDesigner));
-				// Insert user
-				credentialDao.persist(newUser);
-				isAdded = true;
+
+				credentialRepository.save(newUser);
+
 
 				final Map<String, String> template_vars = new HashMap<String, String>();
 				template_vars.put("firstname", username);
@@ -531,7 +494,7 @@ public class SecurityManagerImpl implements SecurityManager {
 				template_vars.put("email", email);
 				template_vars.put("passwd", passwd);
 
-				final Integer langId = Integer.valueOf(configurationDao.get("PS_LANG_DEFAULT"));
+				final Integer langId = Integer.valueOf(configurationManager.get("PS_LANG_DEFAULT"));
 				try {
 					// Envoie d'un e-mail à l'utilisateur
 					emailManager.send(langId, "account", emailManager.getTranslation("Welcome!"), template_vars, email,
@@ -539,14 +502,23 @@ public class SecurityManagerImpl implements SecurityManager {
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
+
+				return true;
 			} catch (BusinessException e) {
 				e.printStackTrace();
+
+				return false;
 			}
 		}
-		return isAdded;
+
+		return false;
 	}
 
 	public String changeUser(Long byUserId, Long forUserId, String xmlUser) throws BusinessException {
+		if (credentialRepository.existsById(forUserId)) {
+			throw new GenericBusinessException("Unknown user id");
+		}
+
 		String result1 = null;
 		String currentPassword = null;
 		String newPassword = null;
@@ -617,9 +589,9 @@ public class SecurityManagerImpl implements SecurityManager {
 
 			/// Vérifier si l'utilisateur qui demande les modifications est bien
 			/// administrateur
-			if (isOK || credentialDao.isAdmin(byUserId)) {
+			if (isOK || credentialRepository.isAdmin(byUserId)) {
 				// Récupération de l'utilisateur en base de données.
-				Credential user = credentialDao.findById(forUserId);
+				Credential user = credentialRepository.findById(forUserId).get();
 
 				if (userlogin != null) {
 					user.setLogin(userlogin);
@@ -660,7 +632,8 @@ public class SecurityManagerImpl implements SecurityManager {
 				if (other != null) {
 					user.setOther(other);
 				}
-				credentialDao.merge(user);
+
+				credentialRepository.save(user);
 
 				if (hasSubstitute != null) {
 					CredentialSubstitution subst = new CredentialSubstitution();
@@ -673,12 +646,9 @@ public class SecurityManagerImpl implements SecurityManager {
 
 					if ("1".equals(hasSubstitute)) {
 						subst.setId(csId);
-						credentialSubstitutionDao.persist(subst);
+						credentialSubstitutionRepository.save(subst);
 					} else if ("0".equals(hasSubstitute)) {
-						try {
-							credentialSubstitutionDao.removeById(csId);
-						} catch (DoesNotExistException e) {
-						}
+						credentialSubstitutionRepository.deleteById(csId);
 					}
 				}
 			} else {
@@ -692,11 +662,11 @@ public class SecurityManagerImpl implements SecurityManager {
 	}
 
 	public boolean isAdmin(Long userId) {
-		return credentialDao.isAdmin(userId);
+		return credentialRepository.isAdmin(userId);
 	}
 
 	public boolean isCreator(Long userId) {
-		return credentialDao.isCreator(userId);
+		return credentialRepository.isCreator(userId);
 	}
 
 	/**
@@ -706,17 +676,20 @@ public class SecurityManagerImpl implements SecurityManager {
 	 * @return bool result
 	 */
 	public boolean checkPassword(Long userId, String passwd) {
-		if (userId == null || passwd.length() < CredentialDao.PASSWORD_LENGTH) {
+		if (userId == null || passwd.length() < CredentialRepository.PASSWORD_LENGTH) {
 			log.error("Fatal Error : illegal checkPassword parameters");
 			throw new RuntimeException();
 		}
-		Credential cr = credentialDao.getActiveByUserId(userId);
+		Credential cr = credentialRepository.findActiveById(userId);
 		return cr != null ? authenticate(passwd.toCharArray(), cr.getPassword()) : false;
 	}
 
 	public String changeUserInfo(Long byUserId, Long forUserId, String xmlUser) throws BusinessException {
 		if (byUserId != forUserId)
 			throw new GenericBusinessException("Not authorized");
+
+		if (credentialRepository.existsById(forUserId))
+			throw new GenericBusinessException("Unknown user id");
 
 		String result1 = null;
 		String currentPassword = null;
@@ -765,7 +738,8 @@ public class SecurityManagerImpl implements SecurityManager {
 			}
 
 			try {
-				Credential cr = credentialDao.findById(forUserId);
+				Credential cr = credentialRepository.findById(forUserId).get();
+
 				if (email != null) {
 					cr.setEmail(email);
 				}
@@ -775,7 +749,7 @@ public class SecurityManagerImpl implements SecurityManager {
 				if (lastname != null) {
 					cr.setDisplayLastname(lastname);
 				}
-				credentialDao.merge(cr);
+				credentialRepository.save(cr);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -794,21 +768,26 @@ public class SecurityManagerImpl implements SecurityManager {
 	 */
 	public Long addRole(String portfolioUuid, String role, Long userId) throws BusinessException {
 		Long groupId = 0L;
-		Node rootNode = portfolioDao.getPortfolioRootNode(portfolioUuid);
+		Node rootNode = portfolioRepository.getPortfolioRootNode(UUID.fromString(portfolioUuid));
 
-		if (!credentialDao.isAdmin(userId) && !credentialDao.isDesigner(userId, rootNode.getId().toString())
-				&& !credentialDao.isCreator(userId))
+		if (!credentialRepository.isAdmin(userId)
+				&& !credentialRepository.isDesigner(userId, rootNode.getId())
+				&& !credentialRepository.isCreator(userId))
 			throw new GenericBusinessException("No admin right");
 
 		try {
-			GroupRightInfo gri = groupRightInfoDao.getByPortfolioAndLabel(portfolioUuid, role);
+			GroupRightInfo gri = groupRightInfoRepository.getByPortfolioAndLabel(UUID.fromString(portfolioUuid), role);
+
 			if (gri != null) {
 				groupId = gri.getGroupInfo().getId();
 			} else {
-				Long grid = groupRightInfoDao.add(portfolioUuid, role);
-				if (grid != 0) {
-					groupId = groupInfoDao.add(grid, 1L, role);
-				}
+				GroupRightInfo ngri = new GroupRightInfo(new Portfolio(UUID.fromString(portfolioUuid)), role);
+				groupRightInfoRepository.save(ngri);
+
+				GroupInfo gi = new GroupInfo(ngri.getId(), 1L, role);
+				groupInfoRepository.save(gi);
+
+				groupId = gi.getId();
 			}
 		} catch (Exception ex) {
 			ex.printStackTrace();
@@ -817,19 +796,15 @@ public class SecurityManagerImpl implements SecurityManager {
 	}
 
 	public void addUserToGroup(Long byUser, Long forUser, Long groupId) throws BusinessException {
-		if (!credentialDao.isAdmin(byUser))
+		if (!credentialRepository.isAdmin(byUser))
 			throw new GenericBusinessException("403 FORBIDDEN : No admin right");
 
-		GroupUser gu = null;
 		GroupUserId gid = new GroupUserId();
 		gid.setCredential(new Credential(forUser));
 		gid.setGroupInfo(new GroupInfo(groupId));
-		try {
-			gu = groupUserDao.findById(gid);
-		} catch (DoesNotExistException e) {
-			gu = new GroupUser();
-			gu.setId(gid);
-			groupUserDao.persist(gu);
+
+		if (!groupUserRepository.existsById(gid)) {
+			groupUserRepository.save(new GroupUser(gid));
 		}
 	}
 
@@ -841,7 +816,7 @@ public class SecurityManagerImpl implements SecurityManager {
 			for (Long credentialGroupId : credentialGroupIds) {
 				cgm = new CredentialGroupMembers(
 						new CredentialGroupMembersId(new CredentialGroup(credentialGroupId), new Credential(userId)));
-				credentialGroupMembersDao.persist(cgm);
+				credentialGroupMembersRepository.save(cgm);
 			}
 		} catch (Exception e) {
 			added = false;
@@ -850,20 +825,17 @@ public class SecurityManagerImpl implements SecurityManager {
 	}
 
 	public String addUserRole(Long byUserId, Long rrgid, Long forUser) throws BusinessException {
-		if (!credentialDao.isAdmin(byUserId) && !groupRightInfoDao.isOwner(byUserId, rrgid))
+		if (!credentialRepository.isAdmin(byUserId) && !groupRightInfoRepository.isOwner(byUserId, rrgid))
 			throw new GenericBusinessException("403 FORBIDDEN : No admin right");
 
 		// Vérifie si un group_info/grid existe
-		GroupInfo gi = groupInfoDao.getGroupByGrid(rrgid);
+		GroupInfo gi = groupInfoRepository.getGroupByGrid(rrgid);
 
 		if (gi == null) {
 			// Copie de RRG vers group_info
-			GroupRightInfo gri = groupRightInfoDao.findById(rrgid);
-			gi = new GroupInfo();
-			gi.setGroupRightInfo(gri);
-			gi.setLabel(gri.getLabel());
-			gi.setOwner(gri.getOwner());
-			groupInfoDao.persist(gi);
+			GroupRightInfo gri = groupRightInfoRepository.findById(rrgid).get();
+
+			groupInfoRepository.save(new GroupInfo(gri, gri.getOwner(), gri.getLabel()));
 		}
 
 		// Ajout de l'utilisateur
@@ -877,7 +849,8 @@ public class SecurityManagerImpl implements SecurityManager {
 		Long uid = 0L;
 		Long subuid = 0L;
 		try {
-			Credential c = credentialDao.getUserByLogin(login);
+			Credential c = credentialRepository.findByLogin(login);
+
 			if (c != null) {
 				if (!authenticate(password.toCharArray(), c.getPassword()))
 					return returnValue;
@@ -889,18 +862,18 @@ public class SecurityManagerImpl implements SecurityManager {
 
 			if (substitute != null) {
 				/// Specific lenient substitution rule
-				CredentialSubstitution cs = credentialSubstitutionDao.getSubstitutionRule(uid, 0L, "USER");
+				CredentialSubstitution cs = credentialSubstitutionRepository.getSubstitutionRule(uid, 0L, "USER");
 
 				if (cs != null) {
 					// User can get "any" account, except admin one
-					Credential cr = credentialDao.getByLogin(substitute, false);
+					Credential cr = credentialRepository.findByLoginAndAdmin(substitute, 0);
 					if (cr != null)
 						subuid = cr.getId();
 				} else {
 					/// General rule, when something specific is written in 'id', with USER or GROUP
-					subuid = credentialSubstitutionDao.getSubuidFromUserType(substitute, uid);
+					subuid = credentialSubstitutionRepository.getSubuidFromUserType(substitute, uid);
 					if (subuid == null)
-						subuid = credentialSubstitutionDao.getSubuidFromGroupType(substitute, uid);
+						subuid = credentialSubstitutionRepository.getSubuidFromGroupType(substitute, uid);
 				}
 			}
 
@@ -909,12 +882,13 @@ public class SecurityManagerImpl implements SecurityManager {
 			returnValue[2] = Long.toString(uid); // User id
 			returnValue[4] = Long.toString(subuid); // Substitute
 			Credential cr = null;
+
 			if (!(subuid == null || subuid == 0L)) {
 				returnValue[3] = substitute;
-				cr = credentialDao.getUserByLogin(substitute);
+				cr = credentialRepository.findByLogin(substitute);
 			} else {
 				returnValue[3] = "";
-				cr = credentialDao.getUserByLogin(login);
+				cr = credentialRepository.findByLogin(login);
 			}
 
 			returnValue[0] = "<credential>";
@@ -934,42 +908,43 @@ public class SecurityManagerImpl implements SecurityManager {
 	}
 
 	public boolean userHasRole(long userId, long roleId) {
-		return credentialDao.userHasRole(userId, roleId);
+		return groupUserRepository.hasRole(userId, roleId);
 	}
 
 	public void removeRole(Long userId, Long groupRightInfoId) throws Exception {
-		if (!credentialDao.isAdmin(userId) && !groupRightInfoDao.isOwner(userId, groupRightInfoId))
+		if (!credentialRepository.isAdmin(userId) && !groupRightInfoRepository.isOwner(userId, groupRightInfoId))
 			throw new GenericBusinessException("403 FORBIDDEN : no admin rights");
-		groupRightInfoDao.removeById(groupRightInfoId);
+
+		groupRightInfoRepository.deleteById(groupRightInfoId);
 	}
 
 	public void removeUserRole(Long userId, Long groupRightInfoId) throws BusinessException {
-		if (!credentialDao.isAdmin(userId) && !groupRightInfoDao.isOwner(userId, groupRightInfoId))
+		if (!credentialRepository.isAdmin(userId) && !groupRightInfoRepository.isOwner(userId, groupRightInfoId))
 			throw new GenericBusinessException("403 FORBIDDEN : no admin rights");
 
 		try {
-			groupUserDao.removeByUserAndRole(userId, groupRightInfoId);
+			groupUserRepository.delete(groupUserRepository.getByUserAndRole(userId, groupRightInfoId));
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 
 	public void removeUsersFromRole(Long userId, String portId) throws Exception {
-		if (!credentialDao.isAdmin(userId))
+		if (!credentialRepository.isAdmin(userId))
 			throw new GenericBusinessException("403 FORBIDDEN : no admin rights");
-		groupUserDao.removeByPortfolio(portId);
+		groupUserRepository.deleteByPortfolio(UUID.fromString(portId));
 	}
 
 	public void removeRights(Long userId, Long groupId) throws BusinessException {
-		if (!credentialDao.isAdmin(userId))
+		if (!credentialRepository.isAdmin(userId))
 			throw new GenericBusinessException("403 FORBIDDEN : no admin rights");
 
-		groupInfoDao.removeById(groupId);
+		groupInfoRepository.deleteById(groupId);
 	}
 
 	public Long changeRole(Long userId, Long rrgId, String xmlRole)
 			throws DoesNotExistException, BusinessException, Exception {
-		if (!credentialDao.isAdmin(userId) && !groupRightInfoDao.isOwner(userId, rrgId))
+		if (!credentialRepository.isAdmin(userId) && !groupRightInfoRepository.isOwner(userId, rrgId))
 			throw new GenericBusinessException("403 FORBIDDEN, no admin rights");
 
 		/// Parse data
@@ -983,7 +958,8 @@ public class SecurityManagerImpl implements SecurityManager {
 		NodeList labelNodes = document.getElementsByTagName("label");
 		org.w3c.dom.Node labelNode = labelNodes.item(0);
 
-		GroupRightInfo gri = groupRightInfoDao.findById(rrgId);
+		GroupRightInfo gri = groupRightInfoRepository.findById(rrgId).get();
+
 		if (labelNode != null) {
 			org.w3c.dom.Node labelText = labelNode.getFirstChild();
 			if (labelText != null) {
@@ -997,12 +973,13 @@ public class SecurityManagerImpl implements SecurityManager {
 			gri.setPortfolio(new Portfolio(UUID.fromString(portfolioNode.getAttribute("id"))));
 		}
 
-		gri = groupRightInfoDao.merge(gri);
+		groupRightInfoRepository.save(gri);
+
 		return gri.getId();
 	}
 
 	public String addUsersToRole(Long userId, Long rrgid, String xmlUser) throws BusinessException {
-		if (!credentialDao.isAdmin(userId) && !groupRightInfoDao.isOwner(userId, rrgid))
+		if (!credentialRepository.isAdmin(userId) && !groupRightInfoRepository.isOwner(userId, rrgid))
 			throw new GenericBusinessException("403 FORBIDDEN : no admin right");
 
 		String value = "";
@@ -1044,7 +1021,7 @@ public class SecurityManagerImpl implements SecurityManager {
 
 	@Override
 	public Credential authenticateUser(String login, String password) throws AuthenticationException {
-		Credential user = credentialDao.getByLogin(login);
+		Credential user = credentialRepository.findByLogin(login);
 		if (user != null) {
 			if (!authenticate(password.toCharArray(), user.getPassword())) {
 				throw new AuthenticationException("User_password_incorrect");
@@ -1056,8 +1033,8 @@ public class SecurityManagerImpl implements SecurityManager {
 	}
 
 	@Override
-	public Boolean deleteUserFromCredentialGroup(Long userId, Long credentialGroupId) {
-		return credentialGroupMembersDao.deleteUserFromGroup(userId, credentialGroupId);
+	public void deleteUserFromCredentialGroup(Long userId, Long credentialGroupId) {
+		credentialGroupMembersRepository.deleteUserFromGroup(userId, credentialGroupId);
 	}
 
 }

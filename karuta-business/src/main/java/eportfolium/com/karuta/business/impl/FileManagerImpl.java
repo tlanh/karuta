@@ -23,9 +23,6 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -43,22 +40,14 @@ import org.apache.http.impl.client.HttpClients;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Isolation;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import eportfolium.com.karuta.business.contract.FileManager;
-import eportfolium.com.karuta.consumer.contract.dao.DataTableDao;
-import eportfolium.com.karuta.model.bean.DataTable;
 
 @Service
 @Transactional
 public class FileManagerImpl implements FileManager {
-
-	@Autowired
-	private DataTableDao dataTableDao;
 
 	public boolean sendFile(String sessionid, String backend, String user, String uuid, String lang, File file)
 			throws Exception {
@@ -242,30 +231,4 @@ public class FileManagerImpl implements FileManager {
 		}
 		return folder;
 	}
-
-	@Override
-	@Transactional(isolation = Isolation.DEFAULT, propagation = Propagation.REQUIRES_NEW)
-	public void transferDataTable(Connection con) throws SQLException {
-		ResultSet res = dataTableDao.findAll("data_table", con);
-		DataTable dt = null;
-		while (res.next()) {
-			dt = new DataTable();
-			dt.setId(res.getString("id"));
-			dt.setOwner(res.getLong("owner"));
-			dt.setCreator(res.getLong("creator"));
-			dt.setType(res.getString("type"));
-			dt.setMimetype(res.getString("mimetype"));
-			dt.setFilename(res.getString("filename"));
-			dt.setCDate(res.getLong("c_date"));
-			dt.setData(res.getBytes("data"));
-			dataTableDao.merge(dt);
-		}
-	}
-
-	@Override
-	@Transactional(isolation = Isolation.DEFAULT, propagation = Propagation.REQUIRES_NEW)
-	public void removeData() {
-		dataTableDao.removeAll();
-	}
-
 }

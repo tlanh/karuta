@@ -35,8 +35,5 @@ public interface FileManager {
 
 	String unzip(String zipFile, String destinationFolder) throws FileNotFoundException, IOException;
 
-	void transferDataTable(Connection con) throws SQLException;
-
-	void removeData();
 
 }

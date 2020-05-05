@@ -89,8 +89,6 @@ public interface SecurityManager {
 
 	void removeUsers(Long byUser, Long forUser) throws BusinessException;
 
-	void changeUser(Credential user) throws BusinessException;
-
 	boolean isAdmin(Long userId);
 
 	boolean isCreator(Long userId);
@@ -128,8 +126,6 @@ public interface SecurityManager {
 
 	void removeRole(Long userId, Long groupRightInfoId) throws Exception;
 
-	void removeRights(Long userId, Long groupId) throws BusinessException;
-
 	Long changeRole(Long userId, Long rrgId, String xmlRole) throws DoesNotExistException, BusinessException, Exception;
 
 	String addUsersToRole(Long id, Long rrgId, String xmlUser) throws BusinessException;
@@ -154,6 +150,6 @@ public interface SecurityManager {
 	 * @param credentialGroupId
 	 * @return
 	 */
-	Boolean deleteUserFromCredentialGroup(Long userId, Long credentialGroupId);
+	void deleteUserFromCredentialGroup(Long userId, Long credentialGroupId);
 
 }

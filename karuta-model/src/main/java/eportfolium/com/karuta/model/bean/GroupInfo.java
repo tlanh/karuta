@@ -50,6 +50,12 @@ public class GroupInfo implements Serializable {
 	public GroupInfo() {
 	}
 
+	public GroupInfo(Long grid, Long owner, String label) {
+		this.groupRightInfo = new GroupRightInfo(grid);
+		this.owner = owner;
+		this.label = label;
+	}
+
 	public GroupInfo(Long groupId) {
 		this.id = groupId;
 	}
@@ -60,8 +66,7 @@ public class GroupInfo implements Serializable {
 		this.label = label;
 	}
 
-	public GroupInfo(Long id, GroupRightInfo groupRightInfo, long owner, String label) {
-		this.id = id;
+	public GroupInfo(GroupRightInfo groupRightInfo, long owner, String label) {
 		this.groupRightInfo = groupRightInfo;
 		this.owner = owner;
 		this.label = label;

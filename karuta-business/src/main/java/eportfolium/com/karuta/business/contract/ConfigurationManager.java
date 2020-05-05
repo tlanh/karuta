@@ -15,7 +15,6 @@
 
 package eportfolium.com.karuta.business.contract;
 
-import java.sql.Connection;
 import java.util.List;
 import java.util.Map;
 
@@ -62,18 +61,10 @@ public interface ConfigurationManager {
 	 * Values are inserted/updated directly using SQL, because using (Configuration)
 	 * ObjectModel may not insert values correctly (for example, HTML is escaped,
 	 * when it should not be).
-	 * 
-	 * @TODO Fix saving HTML values in Configuration model
-	 * @param string  key Key
-	 * @param mixed   values values is an array if the configuration is
-	 *                multilingual, a single string else.
 	 *
-	 * @param boolean html Specify if html is authorized in value
-	 * @param int     shopGroupID
-	 * @param int     shopID
 	 * @return boolean Update result
 	 */
-	boolean updateValue(String key, Map<Integer, String> values, boolean html);
+	boolean updateValue(String key, Map<Integer, String> values);
 
 	/**
 	 * Set TEMPORARY a single configuration value (in one language only)
@@ -86,36 +77,5 @@ public interface ConfigurationManager {
 	 */
 	void set(String key, Map<Integer, String> values);
 
-	/**
-	 * Return ID a configuration key
-	 *
-	 * @param string key
-	 * @return long Configuration key ID
-	 */
-	Long getIdByName(String key);
-
-	/**
-	 * Return Value a configuration value
-	 *
-	 * @param string key
-	 * @return a string, configuration value
-	 */
-	String getValueByName(String key);
-
 	String getKarutaURL(Boolean ssl);
-
-
-	/**
-	 * Used to delete all configuration data.
-	 * 
-	 * Permet de supprimer toutes les données de configuration.
-	 * 
-	 * @param con
-	 */
-	void removeConfigurations(Connection con);
-
-	
-	/*****************************/
-
-	void transferConfigurationTable(Connection con);
 }

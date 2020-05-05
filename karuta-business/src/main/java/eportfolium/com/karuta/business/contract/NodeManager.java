@@ -15,10 +15,9 @@
 
 package eportfolium.com.karuta.business.contract;
 
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import javax.xml.parsers.ParserConfigurationException;
 
@@ -95,7 +94,9 @@ public interface NodeManager {
 			String forcedUuid, String forcedUuidParent, boolean sharedResParent, boolean sharedNodeResParent,
 			boolean rewriteId, Map<String, String> resolve, boolean parseRights) throws BusinessException;
 
-	boolean isCodeExist(String code, String uuid);
+	boolean isCodeExist(String code, UUID uuid);
+
+	boolean isCodeExist(String code);
 
 	String executeMacroOnNode(long userId, String nodeUuid, String macroName) throws BusinessException;
 
@@ -148,13 +149,9 @@ public interface NodeManager {
 	String importNode(MimeType mimeType, String parentId, String semtag, String code, String srcuuid, Long id,
 			long groupId) throws BusinessException, Exception;
 
-	void transferAnnotationTable(Connection con, Map<String, String> nodesIds) throws SQLException;
+	int updateNodeCode(UUID nodeId, String code);
 
-	void removeAnnotations();
+	UUID getChildUuidBySemtag(UUID rootId, String semantictag);
 
-	void removeNodes();
-
-	Map<String, String> transferNodeTable(Connection con, Map<String, String> rtIds, Map<String, String> portIds,
-			Map<Long, Long> userIds) throws SQLException;
-
+	List<Node> getChildren(UUID nodeId);
 }

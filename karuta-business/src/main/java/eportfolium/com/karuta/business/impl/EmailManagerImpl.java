@@ -60,7 +60,6 @@ import org.springframework.transaction.annotation.Transactional;
 import eportfolium.com.karuta.business.contract.ConfigurationManager;
 import eportfolium.com.karuta.business.contract.EmailManager;
 import eportfolium.com.karuta.config.Consts;
-import eportfolium.com.karuta.consumer.contract.dao.ConfigurationDao;
 import freemarker.template.Configuration;
 
 @Service
@@ -71,9 +70,6 @@ public class EmailManagerImpl implements EmailManager {
 	public static final int TYPE_BOTH = 3;
 
 	static private final Logger LOGGER = LoggerFactory.getLogger(EmailManagerImpl.class);
-
-	@Autowired
-	private ConfigurationDao configService;
 
 	@Autowired
 	private ConfigurationManager configurationManager;
@@ -163,13 +159,13 @@ public class EmailManagerImpl implements EmailManager {
 			String template_path, boolean die, String bcc, String reply_to)
 			throws MessagingException, UnsupportedEncodingException {
 
-		final Map<String, String> configuration = configService.getMultiple(
+		final Map<String, String> configuration = configurationManager.getMultiple(
 				Arrays.asList("PS_SHOP_EMAIL", "PS_MAIL_METHOD", "PS_MAIL_SERVER", "PS_MAIL_USER", "PS_MAIL_PASSWD",
 						"PS_SHOP_NAME", "PS_MAIL_SMTP_ENCRYPTION", "PS_MAIL_SMTP_PORT", "PS_MAIL_TYPE"),
 				null);
 
 		// Returns immediately if emails are deactivated
-		if (configService.get("PS_MAIL_METHOD").equals("3"))
+		if (configurationManager.get("PS_MAIL_METHOD").equals("3"))
 			return true;
 
 		if (!configuration.containsKey("PS_MAIL_SMTP_ENCRYPTION"))
@@ -310,7 +306,7 @@ public class EmailManagerImpl implements EmailManager {
 			properties.setProperty("mail.smtp.auth", "true");
 		}
 
-		String mailDomain = configService.get("PS_MAIL_DOMAIN");
+		String mailDomain = configurationManager.get("PS_MAIL_DOMAIN");
 		if (mailDomain != null && StringUtils.isNotBlank(mailDomain)) {
 			properties.setProperty("mail.smtp.auth.ntlm.domain", mailDomain);
 		}
@@ -362,8 +358,8 @@ public class EmailManagerImpl implements EmailManager {
 			return false;
 		}
 		String logo = null;
-		String PS_LOGO_IN_MAIL = configService.get("PS_LOGO_MAIL");
-		String PS_LOGO = configService.get("PS_LOGO");
+		String PS_LOGO_IN_MAIL = configurationManager.get("PS_LOGO_MAIL");
+		String PS_LOGO = configurationManager.get("PS_LOGO");
 		template_vars.put("shop_logo", "");
 
 		if (PS_LOGO_IN_MAIL != null && PS_LOGO != null && BooleanUtils.toBoolean(Integer.parseInt(PS_LOGO_IN_MAIL))
@@ -383,8 +379,8 @@ public class EmailManagerImpl implements EmailManager {
 			}
 		}
 
-		template_vars.put("shop_name", StringEscapeUtils.escapeHtml4(configService.get("PS_SHOP_NAME")));
-		template_vars.put("color", StringEscapeUtils.escapeHtml4(configService.get("PS_MAIL_COLOR")));
+		template_vars.put("shop_name", StringEscapeUtils.escapeHtml4(configurationManager.get("PS_SHOP_NAME")));
+		template_vars.put("color", StringEscapeUtils.escapeHtml4(configurationManager.get("PS_MAIL_COLOR")));
 
 		if (!template_vars.containsKey("shop_url")) {
 			template_vars.put("shop_url", configurationManager.getKarutaURL(null));

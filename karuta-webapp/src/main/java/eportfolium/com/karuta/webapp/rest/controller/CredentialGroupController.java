@@ -161,23 +161,12 @@ public class CredentialGroupController {
      * @return Code 200
      */
     @DeleteMapping
-    public String deleteUsersByUserGroup(@RequestParam Long group, @RequestParam Long user) throws RestWebApplicationException {
-        Boolean isOK = false;
+    public String deleteUsersByUserGroup(@RequestParam Long group, @RequestParam Long user) {
+        if (user == null)
+            groupManager.removeCredentialGroup(group);
+        else
+            securityManager.deleteUserFromCredentialGroup(user, group);
 
-        try {
-            if (user == null)
-                isOK = groupManager.removeCredentialGroup(group);
-            else
-                isOK = securityManager.deleteUserFromCredentialGroup(user, group);
-
-            if (isOK)
-                return "Deleted";
-            else
-                return "Not OK";
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
+        return "Deleted";
     }
 }

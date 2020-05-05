@@ -15,9 +15,6 @@
 
 package eportfolium.com.karuta.business.contract;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.Map;
 import java.util.Set;
 
 import eportfolium.com.karuta.model.bean.Credential;
@@ -80,16 +77,5 @@ public interface UserManager {
 	Set<String[]> getNotificationUserList(Long userId, Long groupId, String uuid);
 
 	Credential getUser(Long userId) throws DoesNotExistException;
-
-	// -----------------------------------------------------------------------------------------------------------------
-
-	void transferCredentialGroupMembersTable(Connection con, Map<Long, Long> userIds, Map<Long, Long> cgIds)
-			throws SQLException;
-
-	Map<Long, Long> transferCredentialTable(Connection con) throws SQLException;
-
-	void transferCredentialSubstitutionTable(Connection con, Map<Long, Long> userIds) throws SQLException;
-
-	void removeUsers();
 
 }

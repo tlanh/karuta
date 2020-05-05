@@ -73,6 +73,12 @@ public class GroupRightInfo implements Serializable {
 		this.portfolio = portfolio;
 	}
 
+	public GroupRightInfo(Portfolio portfolio, String label) {
+		this.portfolio = portfolio;
+		this.label = label;
+		this.owner = 1;
+	}
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(name = "grid", unique = true, nullable = false)

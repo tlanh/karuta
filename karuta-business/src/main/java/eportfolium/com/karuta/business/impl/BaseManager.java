@@ -26,6 +26,9 @@ import java.util.UUID;
 import javax.persistence.EntityNotFoundException;
 import javax.xml.parsers.DocumentBuilder;
 
+import eportfolium.com.karuta.consumer.repositories.CredentialRepository;
+import eportfolium.com.karuta.consumer.repositories.GroupRightsRepository;
+import eportfolium.com.karuta.consumer.repositories.NodeRepository;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,9 +36,6 @@ import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 
-import eportfolium.com.karuta.consumer.contract.dao.CredentialDao;
-import eportfolium.com.karuta.consumer.contract.dao.GroupRightsDao;
-import eportfolium.com.karuta.consumer.contract.dao.NodeDao;
 import eportfolium.com.karuta.model.bean.GroupRightInfo;
 import eportfolium.com.karuta.model.bean.GroupRights;
 import eportfolium.com.karuta.model.bean.GroupRightsId;
@@ -45,13 +45,13 @@ import eportfolium.com.karuta.model.bean.ResourceTable;
 public abstract class BaseManager {
 
 	@Autowired
-	protected CredentialDao credentialDao;
+	protected CredentialRepository credentialRepository;
 
 	@Autowired
-	protected NodeDao nodeDao;
+	protected NodeRepository nodeRepository;
 
 	@Autowired
-	protected GroupRightsDao groupRightsDao;
+	protected GroupRightsRepository groupRightsRepository;
 
 	// Help reconstruct tree
 	protected class t_tree {
@@ -66,20 +66,21 @@ public abstract class BaseManager {
 	public GroupRights getRights(Long userId, Long groupId, String nodeUuid) {
 
 		GroupRights rights = null;
+		UUID nodeId = UUID.fromString(nodeUuid);
 
-		if (credentialDao.isAdmin(userId)) {
+		if (credentialRepository.isAdmin(userId)) {
 			rights = new GroupRights(new GroupRightsId(new GroupRightInfo(), null), true, true, true, true, false);
-		} else if (credentialDao.isDesigner(userId, nodeUuid)) /// Droits via le partage totale (obsolete) ou si c'est
+		} else if (credentialRepository.isDesigner(userId, nodeId)) /// Droits via le partage totale (obsolete) ou si c'est
 		{
 			rights = new GroupRights(new GroupRightsId(new GroupRightInfo(), null), true, true, true, true, false);
 		} else {
 			if (groupId == null || groupId == 0L) {
-				rights = groupRightsDao.getRightsByIdAndUser(nodeUuid, userId);
+				rights = groupRightsRepository.getRightsByIdAndUser(nodeId, userId);
 			}
 
-			rights = groupRightsDao.getRightsByUserAndGroup(nodeUuid, userId, groupId);
-			rights = groupRightsDao.getSpecificRightsForUser(nodeUuid, userId);
-			rights = groupRightsDao.getPublicRightsByGroupId(nodeUuid, groupId);
+			rights = groupRightsRepository.getRightsByUserAndGroup(nodeId, userId, groupId);
+			rights = groupRightsRepository.getSpecificRightsForUser(nodeId, userId);
+			rights = groupRightsRepository.getPublicRightsByGroupId(nodeId, groupId);
 
 		}
 
@@ -90,7 +91,7 @@ public abstract class BaseManager {
 		}
 
 		// Dernière chance pour les droits avec les droits publics.
-		if (nodeDao.isPublic(nodeUuid)) {
+		if (nodeRepository.isPublic(nodeId)) {
 			rights.setRead(true);
 		}
 		return rights;

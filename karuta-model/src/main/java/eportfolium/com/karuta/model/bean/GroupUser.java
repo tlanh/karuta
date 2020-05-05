@@ -47,6 +47,10 @@ public class GroupUser implements Serializable {
 	public GroupUser() {
 	}
 
+	public GroupUser(Long groupId, Long userId) {
+		this.id = new GroupUserId(new GroupInfo(groupId), new Credential(userId));
+	}
+
 	public GroupUser(GroupUserId id) {
 		this.id = id;
 	}
