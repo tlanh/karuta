@@ -41,13 +41,4 @@ public abstract class AbstractController {
 
         return ui;
     }
-    protected boolean isUUID(String uuidstr) {
-        try {
-            UUID.fromString(uuidstr);
-        } catch (Exception e) {
-            return false;
-        }
-
-        return true;
-    }
 }

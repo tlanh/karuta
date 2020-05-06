@@ -30,6 +30,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/rolerightsgroups")
@@ -64,13 +65,10 @@ public class RoleRightsGroupsController extends AbstractController {
     public String getRightsGroup(@CookieValue("user") String user,
                                  @CookieValue("credential") String token,
                                  @CookieValue("group") String group,
-                                 @RequestParam("portfolio") String portfolio,
+                                 @RequestParam("portfolio") UUID portfolio,
                                  @RequestParam("user") Long queryuser,
                                  @RequestParam("role") String role,
                                  HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(portfolio)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
 
         checkCredential(request, user, token, group); // FIXME ?
 
@@ -93,7 +91,7 @@ public class RoleRightsGroupsController extends AbstractController {
      * @param user
      * @param token
      * @param group
-     * @param portId
+     * @param portfolioId
      * @param request
      * @return
      */
@@ -101,17 +99,16 @@ public class RoleRightsGroupsController extends AbstractController {
     public String getPortfolioRightInfo(@CookieValue("user") String user,
                                         @CookieValue("credential") String token,
                                         @CookieValue("group") String group,
-                                        @RequestParam("portfolio") String portId,
+                                        @RequestParam("portfolio") UUID portfolioId,
                                         HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(portId)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
+
         UserInfo ui = checkCredential(request, user, token, group); // FIXME
         String returnValue = "";
+
         try {
             // Retourne le contenu du type
-            if (portId != null) {
-                returnValue = userManager.getUserRolesByPortfolio(portId, ui.userId);
+            if (portfolioId != null) {
+                returnValue = userManager.getUserRolesByPortfolio(portfolioId, ui.userId);
             }
             return returnValue;
         } catch (BusinessException ex) {
@@ -288,7 +285,7 @@ public class RoleRightsGroupsController extends AbstractController {
      * @param user
      * @param token
      * @param group
-     * @param portId
+     * @param portfolioId
      * @param request
      * @return
      */
@@ -296,15 +293,15 @@ public class RoleRightsGroupsController extends AbstractController {
     public String deletePortfolioRightInfo(@CookieValue("user") String user,
                                            @CookieValue("credential") String token,
                                            @CookieValue("group") String group,
-                                           @RequestParam("portfolio") String portId,
+                                           @RequestParam("portfolio") UUID portfolioId,
                                            HttpServletRequest request) throws RestWebApplicationException {
         UserInfo ui = checkCredential(request, user, token, group);
 
         String returnValue = "";
         try {
             // Retourne le contenu du type
-            if (portId != null) {
-                securityManager.removeUsersFromRole(ui.userId, portId);
+            if (portfolioId != null) {
+                securityManager.removeUsersFromRole(ui.userId, portfolioId);
             }
             return returnValue;
         } catch (BusinessException ex) {
@@ -363,7 +360,7 @@ public class RoleRightsGroupsController extends AbstractController {
      * @param user
      * @param token
      * @param group
-     * @param portfolio
+     * @param portfolioId
      * @param request
      * @return
      */
@@ -372,17 +369,13 @@ public class RoleRightsGroupsController extends AbstractController {
                                   @CookieValue("user") String user,
                                   @CookieValue("credential") String token,
                                   @CookieValue("group") String group,
-                                  @PathVariable("portfolio-id") String portfolio,
+                                  @PathVariable("portfolio-id") UUID portfolioId,
                                   HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(portfolio)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
 
         UserInfo ui = checkCredential(request, user, token, group);
-        String returnValue = "";
+
         try {
-            returnValue = portfolioManager.addRoleInPortfolio(ui.userId, portfolio, xmlNode);
-            return returnValue;
+            return portfolioManager.addRoleInPortfolio(ui.userId, portfolioId, xmlNode);
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {

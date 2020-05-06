@@ -20,13 +20,14 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.UUID;
 
 public interface FileManager {
 
 	boolean sendFile(String sessionid, String backend, String user, String uuid, String lang, File file)
 			throws Exception;
 
-	boolean rewriteFile(String sessionid, String backend, String user, String uuid, String lang, File file)
+	boolean rewriteFile(String sessionid, String backend, String user, UUID id, String lang, File file)
 			throws Exception;
 
 	boolean updateResource(String sessionid, String backend, String uuid, String lang, String json) throws Exception;

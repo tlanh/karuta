@@ -16,6 +16,7 @@
 package eportfolium.com.karuta.webapp.eventbus;
 
 import java.util.HashMap;
+import java.util.UUID;
 
 import org.springframework.http.MediaType;
 import org.w3c.dom.Document;
@@ -35,7 +36,7 @@ public class KEvent
 	public String mediaType = MediaType.APPLICATION_XML_VALUE;
 	public DataType dataType;
 
-	public String uuid = null;   // uuid being edited (portfolio/node/context)
+	public UUID uuid = null;   // uuid being edited (portfolio/node/context)
 	public String message = null;
 	public String inputData = null;  // Raw input data
 	public HashMap<String, String> inputParameter = null;    // Parameters given

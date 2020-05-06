@@ -761,14 +761,14 @@ public class SecurityManagerImpl implements SecurityManager {
 	/**
 	 * Crée le role
 	 * 
-	 * @param portfolioUuid
+	 * @param portfolioId
 	 * @param role
 	 * @param userId
 	 * @return
 	 */
-	public Long addRole(String portfolioUuid, String role, Long userId) throws BusinessException {
+	public Long addRole(UUID portfolioId, String role, Long userId) throws BusinessException {
 		Long groupId = 0L;
-		Node rootNode = portfolioRepository.getPortfolioRootNode(UUID.fromString(portfolioUuid));
+		Node rootNode = portfolioRepository.getPortfolioRootNode(portfolioId);
 
 		if (!credentialRepository.isAdmin(userId)
 				&& !credentialRepository.isDesigner(userId, rootNode.getId())
@@ -776,12 +776,12 @@ public class SecurityManagerImpl implements SecurityManager {
 			throw new GenericBusinessException("No admin right");
 
 		try {
-			GroupRightInfo gri = groupRightInfoRepository.getByPortfolioAndLabel(UUID.fromString(portfolioUuid), role);
+			GroupRightInfo gri = groupRightInfoRepository.getByPortfolioAndLabel(portfolioId, role);
 
 			if (gri != null) {
 				groupId = gri.getGroupInfo().getId();
 			} else {
-				GroupRightInfo ngri = new GroupRightInfo(new Portfolio(UUID.fromString(portfolioUuid)), role);
+				GroupRightInfo ngri = new GroupRightInfo(new Portfolio(portfolioId), role);
 				groupRightInfoRepository.save(ngri);
 
 				GroupInfo gi = new GroupInfo(ngri.getId(), 1L, role);
@@ -929,10 +929,10 @@ public class SecurityManagerImpl implements SecurityManager {
 		}
 	}
 
-	public void removeUsersFromRole(Long userId, String portId) throws Exception {
+	public void removeUsersFromRole(Long userId, UUID portfolioId) throws Exception {
 		if (!credentialRepository.isAdmin(userId))
 			throw new GenericBusinessException("403 FORBIDDEN : no admin rights");
-		groupUserRepository.deleteByPortfolio(UUID.fromString(portId));
+		groupUserRepository.deleteByPortfolio(portfolioId);
 	}
 
 	public void removeRights(Long userId, Long groupId) throws BusinessException {

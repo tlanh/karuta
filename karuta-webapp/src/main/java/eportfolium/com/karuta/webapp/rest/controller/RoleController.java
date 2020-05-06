@@ -33,6 +33,8 @@ import eportfolium.com.karuta.webapp.rest.provider.mapper.exception.RestWebAppli
 import eportfolium.com.karuta.webapp.util.javaUtils;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/roles")
 public class RoleController extends AbstractController {
@@ -95,12 +97,11 @@ public class RoleController extends AbstractController {
                                    @CookieValue("credential") String token,
                                    @RequestParam("group") int groupId,
                                    @RequestParam("role") String role,
-                                   @RequestParam("portfolio-id") String portfolioId,
+                                   @RequestParam("portfolio-id") UUID portfolioId,
                                    HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(portfolioId)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
+
         UserInfo ui = checkCredential(request, user, token, null);
+
         try {
             String returnValue = portfolioManager
                     .getRoleByPortfolio(MimeTypeUtils.TEXT_XML, role, portfolioId, ui.userId);

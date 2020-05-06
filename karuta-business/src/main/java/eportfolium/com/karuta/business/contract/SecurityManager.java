@@ -16,6 +16,7 @@
 package eportfolium.com.karuta.business.contract;
 
 import java.util.List;
+import java.util.UUID;
 
 import eportfolium.com.karuta.model.bean.Credential;
 import eportfolium.com.karuta.model.exception.AuthenticationException;
@@ -107,7 +108,7 @@ public interface SecurityManager {
 
 	String addUsers(String xmlUsers, Long userId) throws Exception;
 
-	Long addRole(String portfolioUuid, String role, Long userId) throws BusinessException;
+	Long addRole(UUID portfolioId, String role, Long userId) throws BusinessException;
 
 	/**
 	 * Add user to a role
@@ -122,7 +123,7 @@ public interface SecurityManager {
 
 	void removeUserRole(Long userId, Long groupRightInfoId) throws BusinessException;
 
-	void removeUsersFromRole(Long userId, String portId) throws Exception;
+	void removeUsersFromRole(Long userId, UUID portfolioId) throws Exception;
 
 	void removeRole(Long userId, Long groupRightInfoId) throws Exception;
 

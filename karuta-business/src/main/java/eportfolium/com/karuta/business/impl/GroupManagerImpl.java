@@ -108,14 +108,11 @@ public class GroupManagerImpl implements GroupManager {
 		return result;
 	}
 
-	public boolean changeNotifyRoles(Long userId, String portfolioUuid, String nodeUuid, String notify)
+	public boolean changeNotifyRoles(Long userId, UUID portfolioId, UUID nodeId, String notify)
 			throws GenericBusinessException {
 
 		if (!credentialRepository.isAdmin(userId))
 			throw new GenericBusinessException("No admin right");
-
-		UUID nodeId = UUID.fromString(nodeUuid);
-		UUID portfolioId = UUID.fromString(portfolioUuid);
 
 		List<GroupRights> grList = groupRightsRepository.getRightsByPortfolio(nodeId, portfolioId);
 
@@ -125,17 +122,17 @@ public class GroupManagerImpl implements GroupManager {
 		return true;
 	}
 
-	public boolean setPublicState(Long userId, String portfolioUuid, boolean isPublic) throws BusinessException {
+	public boolean setPublicState(Long userId, UUID portfolioId, boolean isPublic) throws BusinessException {
 		boolean ret = false;
 		if (!credentialRepository.isAdmin(userId)
-				&& !portfolioRepository.isOwner(UUID.fromString(portfolioUuid), userId)
-				&& !credentialRepository.isDesigner(userId, UUID.fromString(portfolioUuid))
+				&& !portfolioRepository.isOwner(portfolioId, userId)
+				&& !credentialRepository.isDesigner(userId, portfolioId)
 				&& !credentialRepository.isCreator(userId))
 			throw new GenericBusinessException("No admin right");
 
 		try {
 			// S'assure qu'il y ait au moins un groupe de base
-			List<GroupRightInfo> rs = groupRightInfoRepository.getDefaultByPortfolio(UUID.fromString(portfolioUuid));
+			List<GroupRightInfo> rs = groupRightInfoRepository.getDefaultByPortfolio(portfolioId);
 			long gid = 0;
 			if (CollectionUtils.isNotEmpty(rs))
 				gid = rs.get(0).getGroupInfo().getId();
@@ -146,13 +143,13 @@ public class GroupManagerImpl implements GroupManager {
 				GroupRightInfo gri = new GroupRightInfo();
 				gri.setOwner(userId);
 				gri.setLabel("all");
-				gri.setPortfolio(new Portfolio(UUID.fromString(portfolioUuid)));
+				gri.setPortfolio(new Portfolio(portfolioId));
 
 				groupRightInfoRepository.save(gri);
 
 				// Insert all nodes into rights
 				// TODO: Might need updates on additional nodes too
-				List<Node> nodes = nodeRepository.getNodes(UUID.fromString(portfolioUuid));
+				List<Node> nodes = nodeRepository.getNodes(portfolioId);
 				Iterator<Node> it = nodes.iterator();
 				Node current = null;
 				GroupRights gr = null;
@@ -191,8 +188,8 @@ public class GroupManagerImpl implements GroupManager {
 
 	}
 
-	public String getGroupsByRole(String portfolioUuid, String role) {
-		List<GroupInfo> giList = groupInfoRepository.getGroupsByRole(UUID.fromString(portfolioUuid), role);
+	public String getGroupsByRole(UUID portfolioId, String role) {
+		List<GroupInfo> giList = groupInfoRepository.getGroupsByRole(portfolioId, role);
 
 		String result = "<groups>";
 
@@ -247,13 +244,13 @@ public class GroupManagerImpl implements GroupManager {
 	 * Ajout des droits du portfolio dans GroupRightInfo et GroupRights
 	 * 
 	 * @param label
-	 * @param uuid
+	 * @param nodeId
 	 * @param right
-	 * @param portfolioUuid
+	 * @param portfolioId
 	 * @param userId
-	 * @return-
+	 * @return
 	 */
-	public boolean addGroupRights(String label, String nodeUuid, String right, String portfolioUuid, Long userId) {
+	public boolean addGroupRights(String label, UUID nodeId, String right, UUID portfolioId, Long userId) {
 		List<GroupUser> res = null;
 		GroupRights res2 = null;
 		GroupRightInfo gri = null;
@@ -279,8 +276,6 @@ public class GroupManagerImpl implements GroupManager {
 		}
 
 		try {
-			UUID portfolioId = UUID.fromString(portfolioUuid);
-			UUID nodeId = UUID.fromString(nodeUuid);
 
 			if (StringUtils.isNotBlank(label) && right != null) {
 				// Si le nom de group est 'user'. Le remplacer par le rôle de l'utilisateur
@@ -288,8 +283,8 @@ public class GroupManagerImpl implements GroupManager {
 				if ("user".equals(label)) {
 					res = groupUserRepository.getByPortfolioAndUser(portfolioId, userId);
 
-				} else if (!"".equals(portfolioUuid)) /// Rôle et portfolio
-				{
+				} else if (portfolioId != null) { /// Rôle et portfolio
+
 					gri = groupRightInfoRepository.getByPortfolioAndLabel(portfolioId, label);
 					if (gri == null) // Groupe non-existant
 					{
@@ -304,8 +299,7 @@ public class GroupManagerImpl implements GroupManager {
 						groupInfoRepository.save(new GroupInfo(gri, userId, label));
 					}
 
-				} else // Role et uuid
-				{
+				} else { // Role et uuid
 					gr = groupRightsRepository.getRightsByIdAndLabel(nodeId, label);
 				}
 
@@ -329,7 +323,7 @@ public class GroupManagerImpl implements GroupManager {
 						res2 = new GroupRights();
 						res2.setId(new GroupRightsId());
 						res2.setGroupRightInfo(groupRightInfoRepository.findById(grid).get());
-						res2.setGroupRightsId(UUID.fromString(nodeUuid));
+						res2.setGroupRightsId(nodeId);
 					}
 					if (GroupRights.READ.equalsIgnoreCase(right)) {
 						res2.setRead(BooleanUtils.toBoolean(RD));

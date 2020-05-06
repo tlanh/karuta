@@ -24,30 +24,28 @@ import eportfolium.com.karuta.model.exception.DoesNotExistException;
 
 public interface ResourceManager {
 
-	String getResource(MimeType outMimeType, String nodeParentUuid, Long userId, Long groupId) throws BusinessException;
+	String getResource(MimeType outMimeType, UUID parentNodeId, Long userId, Long groupId) throws BusinessException;
 
-	String getResource(String nodeUuid);
+	String getResource(UUID nodeId);
 
-	String getResource(UUID nodeUuid);
+	String getResources(MimeType outMimeType, UUID portfolioId, Long userId, Long groupId) throws Exception;
 
-	String getResources(MimeType outMimeType, String portfolioUuid, Long userId, Long groupId) throws Exception;
-
-	Integer changeResource(MimeType inMimeType, String nodeParentUuid, String in, Long userId, Long groupId)
+	Integer changeResource(MimeType inMimeType, UUID parentNodeId, String in, Long userId, Long groupId)
 			throws BusinessException, Exception;
 
-	String addResource(MimeType inMimeType, String nodeParentUuid, String in, Long userId, Long groupId)
+	String addResource(MimeType inMimeType, UUID parentNodeId, String in, Long userId, Long groupId)
 			throws BusinessException, Exception;
 
-	void removeResource(String resourceUuid, Long userId, Long groupId) throws DoesNotExistException, BusinessException;
+	void removeResource(UUID resourceId, Long userId, Long groupId) throws DoesNotExistException, BusinessException;
 
-	void changeResourceByXsiType(String nodeUuid, String xsiType, String content, Long userId) throws Exception;
+	void changeResourceByXsiType(UUID nodeId, String xsiType, String content, Long userId) throws Exception;
 
-	int addResource(String uuid, String parentUuid, String xsiType, String content, String portfolioModelId,
+	int addResource(UUID id, UUID parentId, String xsiType, String content, UUID portfolioModelId,
 						   boolean sharedNodeRes, boolean sharedRes, Long userId);
 
 	int updateResource(UUID nodeUuid, String content, Long userId);
 
-	int updateResource(String uuid, String xsiType, String content, Long userId);
+	int updateResource(UUID id, String xsiType, String content, Long userId);
 
 	int updateContextResource(UUID nodeUuid, String content, Long userId);
 }

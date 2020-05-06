@@ -16,6 +16,7 @@
 package eportfolium.com.karuta.business.contract;
 
 import java.util.Set;
+import java.util.UUID;
 
 import eportfolium.com.karuta.model.bean.Credential;
 import eportfolium.com.karuta.model.exception.BusinessException;
@@ -41,9 +42,9 @@ public interface UserManager {
 
 	String getUsersByCredentialGroup(Long userGroupId);
 
-	String getUserGroupByPortfolio(String portfolioUuid, Long userId);
+	String getUserGroupByPortfolio(UUID portfolioId, Long userId);
 
-	String getUsersByRole(Long userId, String portfolioUuid, String role);
+	String getUsersByRole(Long userId, UUID portfolioId, String role);
 
 	String getRole(Long groupRightInfoId) throws BusinessException;
 
@@ -60,21 +61,21 @@ public interface UserManager {
 	Long getUserId(String userLogin, String email);
 
 
-	String getRoleList(String portfolio, Long userId, String role) throws BusinessException;
+	String getRoleList(UUID portfolioId, Long userId, String role) throws BusinessException;
 
 	/**
 	 * Liste des RRG utilisateurs d'un portfolio donné
 	 * 
-	 * @param portId
+	 * @param portfolioId
 	 * @param id
 	 * @return
 	 * @throws Exception
 	 */
-	String getUserRolesByPortfolio(String portId, Long id) throws Exception;
+	String getUserRolesByPortfolio(UUID portfolioId, Long id) throws Exception;
 
 	String getUserRole(Long rrgid);
 
-	Set<String[]> getNotificationUserList(Long userId, Long groupId, String uuid);
+	Set<String[]> getNotificationUserList(Long userId, Long groupId, UUID groupRightId);
 
 	Credential getUser(Long userId) throws DoesNotExistException;
 

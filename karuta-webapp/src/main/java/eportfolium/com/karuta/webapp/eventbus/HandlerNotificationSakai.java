@@ -25,6 +25,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.UUID;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
@@ -119,7 +120,7 @@ public class HandlerNotificationSakai implements KEventHandler {
 					Document doc = parseString(event.inputData);
 					doc.getElementsByTagName("");
 
-					String portfolio = portfolioManager.getPortfolioUuidFromNode(event.uuid);
+					UUID portfolio = portfolioManager.getPortfolioUuidFromNode(event.uuid);
 
 					getSakaiTicket();
 

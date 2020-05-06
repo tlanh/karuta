@@ -49,6 +49,7 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/nodes")
@@ -67,7 +68,7 @@ public class NodesController extends AbstractController {
      * @param user
      * @param token
      * @param groupId
-     * @param nodeUuid
+     * @param nodeId
      * @param accept
      * @param cutoff
      * @param request
@@ -78,20 +79,17 @@ public class NodesController extends AbstractController {
     public String getNode(@CookieValue("user") String user,
                           @CookieValue("credential") String token,
                           @RequestParam("group") long groupId,
-                          @PathVariable("node-id") String nodeUuid,
+                          @PathVariable("node-id") UUID nodeId,
                           @RequestHeader("Accept") String accept,
                           @RequestParam("level") Integer cutoff,
                           HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(nodeUuid)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
 
         UserInfo ui = checkCredential(request, user, token, null);
 
         try {
 
             String returnValue = nodeManager
-                    .getNode(MimeTypeUtils.TEXT_XML, nodeUuid, false, ui.userId, groupId, null, cutoff);
+                    .getNode(MimeTypeUtils.TEXT_XML, nodeId, false, ui.userId, groupId, null, cutoff);
             if (returnValue.length() != 0) {
                 if (accept.equals(MediaType.APPLICATION_JSON))
                     returnValue = XML.toJSONObject(returnValue).toString();
@@ -99,7 +97,7 @@ public class NodesController extends AbstractController {
             return returnValue;
         } catch (DoesNotExistException ex) {
             ex.printStackTrace();
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeUuid + " not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeId + " not found");
         } catch (NullPointerException ex) {
             ex.printStackTrace();
             throw new RestWebApplicationException(HttpStatus.NOT_ACCEPTABLE, "Incorrect Mime Type");
@@ -118,7 +116,7 @@ public class NodesController extends AbstractController {
      * @param user
      * @param token
      * @param groupId
-     * @param nodeUuid
+     * @param nodeId
      * @param accept
      * @param cutoff
      * @param request
@@ -129,19 +127,16 @@ public class NodesController extends AbstractController {
     public String getNodeWithChildren(@CookieValue("user") String user,
                                       @CookieValue("credential") String token,
                                       @RequestParam("group") long groupId,
-                                      @PathVariable("node-id") String nodeUuid,
+                                      @PathVariable("node-id") UUID nodeId,
                                       @RequestHeader("Accept") String accept,
                                       @RequestParam("level") Integer cutoff,
                                       HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(nodeUuid)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
 
         UserInfo ui = checkCredential(request, user, token, null);
 
         try {
             String returnValue = nodeManager
-                    .getNode(MimeTypeUtils.TEXT_XML, nodeUuid, true, ui.userId, groupId, null, cutoff);
+                    .getNode(MimeTypeUtils.TEXT_XML, nodeId, true, ui.userId, groupId, null, cutoff);
             if (returnValue.length() != 0) {
                 if (accept.equals(MediaType.APPLICATION_JSON)) {
                     returnValue = XML.toJSONObject(returnValue).toString();
@@ -149,7 +144,7 @@ public class NodesController extends AbstractController {
             }
             return returnValue;
         } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeUuid + " not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeId + " not found");
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (NullPointerException ex) {
@@ -168,7 +163,7 @@ public class NodesController extends AbstractController {
      * @param user
      * @param token
      * @param groupId
-     * @param nodeUuid
+     * @param nodeId
      * @param accept
      * @param request
      * @return <metadata-wad/>
@@ -178,18 +173,15 @@ public class NodesController extends AbstractController {
     public String getNodeMetadataWad(@CookieValue("user") String user,
                                      @CookieValue("credential") String token,
                                      @RequestParam("group") long groupId,
-                                     @PathVariable("nodeid") String nodeUuid,
+                                     @PathVariable("nodeid") UUID nodeId,
                                      @RequestHeader("Accept") String accept,
                                      HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(nodeUuid)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
 
         UserInfo ui = checkCredential(request, user, token, null);
 
         try {
 
-            String returnValue = nodeManager.getNodeMetadataWad(MimeTypeUtils.TEXT_XML, nodeUuid, ui.userId, groupId)
+            String returnValue = nodeManager.getNodeMetadataWad(MimeTypeUtils.TEXT_XML, nodeId, ui.userId, groupId)
                     .toString();
             if (returnValue.length() != 0) {
                 if (accept.equals(MediaType.APPLICATION_JSON))
@@ -197,7 +189,7 @@ public class NodesController extends AbstractController {
             }
             return returnValue;
         } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeUuid + " not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeId + " not found");
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
@@ -214,7 +206,7 @@ public class NodesController extends AbstractController {
      * @param user
      * @param token
      * @param groupId
-     * @param nodeUuid
+     * @param nodeId
      * @param accept
      * @param request
      * @return <node uuid=""> <role name=""> <right RD="" WR="" DL="" /> </role>
@@ -225,18 +217,15 @@ public class NodesController extends AbstractController {
     public String getNodeRights(@CookieValue("user") String user,
                                 @CookieValue("credential") String token,
                                 @RequestParam("group") long groupId,
-                                @PathVariable("node-id") String nodeUuid,
+                                @PathVariable("node-id") UUID nodeId,
                                 @RequestHeader("Accept") String accept,
                                 HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(nodeUuid)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
 
         UserInfo ui = checkCredential(request, user, token, null);
 
         try {
 
-            GroupRights gr = nodeManager.getRights(ui.userId, groupId, nodeUuid);
+            GroupRights gr = nodeManager.getRights(ui.userId, groupId, nodeId);
             String returnValue = null;
             if (gr != null) {
                 if (accept.equals(MediaType.APPLICATION_JSON))
@@ -250,7 +239,7 @@ public class NodesController extends AbstractController {
         } catch (RestWebApplicationException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (NullPointerException ex) {
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeUuid + " not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeId + " not found");
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
@@ -264,7 +253,7 @@ public class NodesController extends AbstractController {
      *
      * @param user
      * @param token
-     * @param nodeUuid
+     * @param nodeId
      * @param accept
      * @param request
      * @return portfolioid
@@ -272,18 +261,15 @@ public class NodesController extends AbstractController {
     @GetMapping(value = "/node/{node-id}/portfolioid", produces = "text/plain")
     public String getNodePortfolioId(@CookieValue("user") String user,
                                      @CookieValue("credential") String token,
-                                     @PathVariable("node-id") String nodeUuid,
+                                     @PathVariable("node-id") UUID nodeId,
                                      @RequestHeader("Accept") String accept,
                                      HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(nodeUuid)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
         UserInfo ui = checkCredential(request, user, token, null);
         try {
-            return nodeManager.getPortfolioIdFromNode(ui.userId, nodeUuid).toString();
+            return nodeManager.getPortfolioIdFromNode(ui.userId, nodeId).toString();
         } catch (DoesNotExistException ex) {
             throw new RestWebApplicationException(HttpStatus.NOT_FOUND,
-                    "Error, this shouldn't happen. No Portfolio related to node : '" + nodeUuid + "' was found");
+                    "Error, this shouldn't happen. No Portfolio related to node : '" + nodeId + "' was found");
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
@@ -301,7 +287,7 @@ public class NodesController extends AbstractController {
      * @param user
      * @param token
      * @param groupId
-     * @param nodeUuid
+     * @param nodeId
      * @param accept
      * @param request
      * @return
@@ -312,12 +298,9 @@ public class NodesController extends AbstractController {
                                  @CookieValue("user") String user,
                                  @CookieValue("credential") String token,
                                  @RequestParam("group") int groupId,
-                                 @PathVariable("node-id") String nodeUuid,
+                                 @PathVariable("node-id") UUID nodeId,
                                  @RequestHeader("Accept") String accept,
                                  HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(nodeUuid)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
 
         UserInfo ui = checkCredential(request, user, token, null);
 
@@ -365,16 +348,16 @@ public class NodesController extends AbstractController {
                         nodeRights.setSubmit("Y".equals(val));
 
                     // Executer le changement de droits.
-                    nodeManager.changeRights(ui.userId, nodeUuid, roleName, nodeRights);
+                    nodeManager.changeRights(ui.userId, nodeId, roleName, nodeRights);
                 } else if ("action".equals(right.getNodeName())) // Using an action on node
                 {
                     // réinitialiser les droits
-                    nodeManager.executeMacroOnNode(ui.userId, nodeUuid, "reset");
+                    nodeManager.executeMacroOnNode(ui.userId, nodeId, "reset");
                 }
             }
             logger.info("Change rights " + HttpStatus.OK);
         } catch (NullPointerException ex) {
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeUuid + " not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeId + " not found");
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
@@ -391,7 +374,7 @@ public class NodesController extends AbstractController {
      * @param user
      * @param token
      * @param groupId
-     * @param portfolioUuid
+     * @param portfolioId
      * @param semantictag
      * @param request
      * @return node in ASM format
@@ -401,18 +384,15 @@ public class NodesController extends AbstractController {
     public String getNodeBySemanticTag(@CookieValue("user") String user,
                                        @CookieValue("credential") String token,
                                        @RequestParam("group") long groupId,
-                                       @PathVariable("portfolio-uuid") String portfolioUuid,
+                                       @PathVariable("portfolio-uuid") UUID portfolioId,
                                        @PathVariable("semantictag") String semantictag,
                                        HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(portfolioUuid)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
 
         UserInfo ui = checkCredential(request, user, token, null);
 
         try {
             return nodeManager
-                    .getNodeBySemanticTag(MimeTypeUtils.TEXT_XML, portfolioUuid, semantictag, ui.userId, groupId);
+                    .getNodeBySemanticTag(MimeTypeUtils.TEXT_XML, portfolioId, semantictag, ui.userId, groupId);
         } catch (DoesNotExistException ex) {
             throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "no node found for tag :" + semantictag);
         } catch (BusinessException ex) {
@@ -431,7 +411,7 @@ public class NodesController extends AbstractController {
      * @param user
      * @param token
      * @param groupId
-     * @param portfolioUuid
+     * @param portfolioId
      * @param semantictag
      * @param request
      * @return nodes in ASM format
@@ -441,18 +421,15 @@ public class NodesController extends AbstractController {
     public String getNodesBySemanticTag(@CookieValue("user") String user,
                                         @CookieValue("credential") String token,
                                         @RequestParam("group") long groupId,
-                                        @PathVariable("portfolio-uuid") String portfolioUuid,
+                                        @PathVariable("portfolio-uuid") UUID portfolioId,
                                         @PathVariable("semantictag") String semantictag,
                                         HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(portfolioUuid)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
 
         UserInfo ui = checkCredential(request, user, token, null);
 
         try {
             return nodeManager
-                    .getNodesBySemanticTag(MimeTypeUtils.TEXT_XML, ui.userId, groupId, portfolioUuid, semantictag);
+                    .getNodesBySemanticTag(MimeTypeUtils.TEXT_XML, ui.userId, groupId, portfolioId, semantictag);
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
@@ -470,7 +447,7 @@ public class NodesController extends AbstractController {
      * @param user
      * @param token
      * @param groupId
-     * @param nodeUuid
+     * @param nodeId
      * @param request
      * @return
      */
@@ -479,19 +456,16 @@ public class NodesController extends AbstractController {
                           @CookieValue("user") String user,
                           @CookieValue("credential") String token,
                           @RequestParam("group") long groupId,
-                          @PathVariable("node-id") String nodeUuid,
+                          @PathVariable("node-id") UUID nodeId,
                           HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(nodeUuid)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
 
         UserInfo ui = checkCredential(request, user, token, null);
         try {
-            String returnValue = nodeManager.changeNode(MimeTypeUtils.TEXT_XML, nodeUuid, xmlNode, ui.userId, groupId)
+            String returnValue = nodeManager.changeNode(MimeTypeUtils.TEXT_XML, nodeId, xmlNode, ui.userId, groupId)
                     .toString();
             return returnValue;
         } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeUuid + " not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeId + " not found");
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
@@ -510,7 +484,7 @@ public class NodesController extends AbstractController {
      * @param token
      * @param groupId
      * @param info
-     * @param nodeUuid
+     * @param nodeId
      * @param request
      * @return
      */
@@ -520,11 +494,8 @@ public class NodesController extends AbstractController {
                                   @CookieValue("credential") String token,
                                   @RequestParam("group") int groupId,
                                   @RequestParam("info") String info,
-                                  @PathVariable("nodeid") String nodeUuid,
+                                  @PathVariable("nodeid") UUID nodeId,
                                   HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(nodeUuid)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
 
         UserInfo ui = checkCredential(request, user, token, null);
 
@@ -539,14 +510,14 @@ public class NodesController extends AbstractController {
 
         try {
             String returnValue = nodeManager
-                    .changeNodeMetadata(MimeTypeUtils.TEXT_XML, nodeUuid, xmlNode, ui.userId, groupId).toString();
-            logger.info(String.format(logformat, "OK", nodeUuid, "metadata", ui.userId, timeFormat,
+                    .changeNodeMetadata(MimeTypeUtils.TEXT_XML, nodeId, xmlNode, ui.userId, groupId).toString();
+            logger.info(String.format(logformat, "OK", nodeId, "metadata", ui.userId, timeFormat,
                     request.getRemoteAddr(), xmlNode));
             return returnValue;
         } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeUuid + " not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeId + " not found");
         } catch (BusinessException ex) {
-            logger.error(String.format(logformat, "ERR", nodeUuid, "metadata", ui.userId, timeFormat,
+            logger.error(String.format(logformat, "ERR", nodeId, "metadata", ui.userId, timeFormat,
                     request.getRemoteAddr(), xmlNode));
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
@@ -565,7 +536,7 @@ public class NodesController extends AbstractController {
      * @param token
      * @param groupId
      * @param info
-     * @param nodeUuid
+     * @param nodeId
      * @param request
      * @return
      */
@@ -575,11 +546,8 @@ public class NodesController extends AbstractController {
                                      @CookieValue("credential") String token,
                                      @RequestParam("group") Long groupId,
                                      @RequestParam("info") String info,
-                                     @PathVariable("nodeid") String nodeUuid,
+                                     @PathVariable("nodeid") UUID nodeId,
                                      HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(nodeUuid)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
 
         UserInfo ui = checkCredential(request, user, token, null);
 
@@ -594,14 +562,14 @@ public class NodesController extends AbstractController {
 
         try {
             String returnValue = nodeManager
-                    .changeNodeMetadataWad(MimeTypeUtils.TEXT_XML, nodeUuid, xmlNode, ui.userId, groupId).toString();
-            logger.info(String.format(logformat, "OK", nodeUuid, "metadatawad", ui.userId, timeFormat,
+                    .changeNodeMetadataWad(MimeTypeUtils.TEXT_XML, nodeId, xmlNode, ui.userId, groupId).toString();
+            logger.info(String.format(logformat, "OK", nodeId, "metadatawad", ui.userId, timeFormat,
                     request.getRemoteAddr(), xmlNode));
             return returnValue;
         } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeUuid + " not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeId + " not found");
         } catch (BusinessException ex) {
-            logger.error(String.format(logformat, "ERR", nodeUuid, "metadatawad", ui.userId, timeFormat,
+            logger.error(String.format(logformat, "ERR", nodeId, "metadatawad", ui.userId, timeFormat,
                     request.getRemoteAddr(), xmlNode));
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
@@ -616,7 +584,7 @@ public class NodesController extends AbstractController {
      * PUT /rest/api/nodes/node/{node-id}/metadataepm
      *
      * @param xmlNode
-     * @param nodeUuid
+     * @param nodeId
      * @param groupId
      * @param info
      * @param request
@@ -624,13 +592,10 @@ public class NodesController extends AbstractController {
      */
     @PutMapping(value = "/node/{nodeid}/metadataepm", produces = "application/xml")
     public String putNodeMetadataEpm(@RequestBody String xmlNode,
-                                     @PathVariable("nodeid") String nodeUuid,
+                                     @PathVariable("nodeid") UUID nodeId,
                                      @RequestParam("group") long groupId,
                                      @RequestParam("info") String info,
                                      HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(nodeUuid)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
 
         UserInfo ui = checkCredential(request, null, null, null);
 
@@ -645,14 +610,14 @@ public class NodesController extends AbstractController {
 
         try {
             String returnValue = nodeManager
-                    .changeNodeMetadataEpm(MimeTypeUtils.TEXT_XML, nodeUuid, xmlNode, ui.userId, groupId).toString();
-            logger.info(String.format(logformat, "OK", nodeUuid, "metadataepm", ui.userId, timeFormat,
+                    .changeNodeMetadataEpm(MimeTypeUtils.TEXT_XML, nodeId, xmlNode, ui.userId, groupId).toString();
+            logger.info(String.format(logformat, "OK", nodeId, "metadataepm", ui.userId, timeFormat,
                     request.getRemoteAddr(), xmlNode));
             return returnValue;
         } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeUuid + " not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeId + " not found");
         } catch (BusinessException ex) {
-            logger.error(String.format(logformat, "ERR", nodeUuid, "metadataepm", ui.userId, timeFormat,
+            logger.error(String.format(logformat, "ERR", nodeId, "metadataepm", ui.userId, timeFormat,
                     request.getRemoteAddr(), xmlNode));
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
@@ -665,14 +630,13 @@ public class NodesController extends AbstractController {
     /**
      * Rewrite node nodecontext. <br>
      * PUT /rest/api/nodes/node/{node-id}/nodecontext parameters: return:
-     **/
-    /**
+     *
      * @param xmlNode
      * @param user
      * @param token
      * @param groupId
      * @param info
-     * @param nodeUuid
+     * @param nodeId
      * @param request
      * @return
      */
@@ -682,11 +646,8 @@ public class NodesController extends AbstractController {
                                      @CookieValue("credential") String token,
                                      @RequestParam("group") long groupId,
                                      @RequestParam("info") String info,
-                                     @PathVariable("nodeid") String nodeUuid,
+                                     @PathVariable("nodeid") UUID nodeId,
                                      HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(nodeUuid)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
 
         UserInfo ui = checkCredential(request, user, token, null);
 
@@ -701,12 +662,12 @@ public class NodesController extends AbstractController {
 
         try {
             String returnValue = nodeManager
-                    .changeNodeContext(MimeTypeUtils.TEXT_XML, nodeUuid, xmlNode, ui.userId, groupId).toString();
-            logger.info(String.format(logformat, "OK", nodeUuid, "nodecontext", ui.userId, timeFormat,
+                    .changeNodeContext(MimeTypeUtils.TEXT_XML, nodeId, xmlNode, ui.userId, groupId).toString();
+            logger.info(String.format(logformat, "OK", nodeId, "nodecontext", ui.userId, timeFormat,
                     request.getRemoteAddr(), xmlNode));
             return returnValue;
         } catch (BusinessException ex) {
-            logger.error(String.format(logformat, "ERR", nodeUuid, "nodecontext", ui.userId, timeFormat,
+            logger.error(String.format(logformat, "ERR", nodeId, "nodecontext", ui.userId, timeFormat,
                     request.getRemoteAddr(), xmlNode));
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
@@ -725,7 +686,7 @@ public class NodesController extends AbstractController {
      * @param token
      * @param groupId
      * @param info
-     * @param nodeUuid
+     * @param nodeId
      * @param request
      * @return
      */
@@ -735,11 +696,8 @@ public class NodesController extends AbstractController {
                                       @CookieValue("credential") String token,
                                       @RequestParam("group") long groupId,
                                       @RequestParam("info") String info,
-                                      @PathVariable("nodeid") String nodeUuid,
+                                      @PathVariable("nodeid") UUID nodeId,
                                       HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(nodeUuid)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
 
         UserInfo ui = checkCredential(request, user, token, null);
 
@@ -754,12 +712,12 @@ public class NodesController extends AbstractController {
 
         try {
             String returnValue = nodeManager
-                    .changeNodeResource(MimeTypeUtils.TEXT_XML, nodeUuid, xmlNode, ui.userId, groupId).toString();
-            logger.info(String.format(logformat, "OK", nodeUuid, "noderesource", ui.userId, timeFormat,
+                    .changeNodeResource(MimeTypeUtils.TEXT_XML, nodeId, xmlNode, ui.userId, groupId).toString();
+            logger.info(String.format(logformat, "OK", nodeId, "noderesource", ui.userId, timeFormat,
                     request.getRemoteAddr(), xmlNode));
             return returnValue;
         } catch (BusinessException ex) {
-            logger.error(String.format(logformat, "ERR", nodeUuid, "noderesource", ui.userId, timeFormat,
+            logger.error(String.format(logformat, "ERR", nodeId, "noderesource", ui.userId, timeFormat,
                     request.getRemoteAddr(), xmlNode));
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
@@ -778,7 +736,7 @@ public class NodesController extends AbstractController {
      * @param parentId
      * @param semtag
      * @param code
-     * @param srcuuid
+     * @param sourceId
      * @param request
      * @return
      */
@@ -786,10 +744,10 @@ public class NodesController extends AbstractController {
     public String postImportNode(@CookieValue("user") String user,
                                  @CookieValue("credential") String token,
                                  @RequestParam("group") long groupId,
-                                 @PathVariable("dest-id") String parentId,
+                                 @PathVariable("dest-id") UUID parentId,
                                  @RequestParam("srcetag") String semtag,
                                  @RequestParam("srcecode") String code,
-                                 @RequestParam("uuid") String srcuuid,
+                                 @RequestParam("uuid") UUID sourceId,
                                  HttpServletRequest request) throws RestWebApplicationException {
 
         UserInfo ui = checkCredential(request, user, token, null);
@@ -798,7 +756,7 @@ public class NodesController extends AbstractController {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, "Vous n'êtes pas connecté");
 
         try {
-            return nodeManager.importNode(MimeTypeUtils.TEXT_XML, parentId, semtag, code, srcuuid, ui.userId, groupId);
+            return nodeManager.importNode(MimeTypeUtils.TEXT_XML, parentId, semtag, code, sourceId, ui.userId, groupId).toString();
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
@@ -817,7 +775,7 @@ public class NodesController extends AbstractController {
      * @param parentId
      * @param semtag
      * @param code
-     * @param srcuuid
+     * @param sourceId
      * @param request
      * @return
      */
@@ -825,10 +783,10 @@ public class NodesController extends AbstractController {
     public String postCopyNode(@CookieValue("user") String user,
                                @CookieValue("credential") String token,
                                @RequestParam("group") long groupId,
-                               @PathVariable("dest-id") String parentId,
+                               @PathVariable("dest-id") UUID parentId,
                                @RequestParam("srcetag") String semtag,
                                @RequestParam("srcecode") String code,
-                               @RequestParam("uuid") String srcuuid,
+                               @RequestParam("uuid") UUID sourceId,
                                HttpServletRequest request) throws RestWebApplicationException {
 
         UserInfo ui = checkCredential(request, user, token, null);
@@ -837,7 +795,7 @@ public class NodesController extends AbstractController {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, "Vous n'êtes pas connecté");
 
         try {
-            return nodeManager.copyNode(MimeTypeUtils.TEXT_XML, parentId, semtag, code, srcuuid, ui.userId, groupId);
+            return nodeManager.copyNode(MimeTypeUtils.TEXT_XML, parentId, semtag, code, sourceId, ui.userId, groupId);
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
@@ -909,13 +867,9 @@ public class NodesController extends AbstractController {
                                            @CookieValue("user") String user,
                                            @CookieValue("credential") String token,
                                            @RequestParam("group") Integer group,
-                                           @PathVariable("parent-id") String parentId,
+                                           @PathVariable("parent-id") UUID parentId,
                                            @RequestParam("group") long groupId,
                                            HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(parentId)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
-
         UserInfo ui = checkCredential(request, user, token, null);
 
         KEvent event = new KEvent();
@@ -958,11 +912,9 @@ public class NodesController extends AbstractController {
      * @return
      */
     @PostMapping(value = "/node/{node-id}/moveup", consumes = "application/xml", produces = "application/xml")
-    public ResponseEntity<String> postMoveNodeUp(@PathVariable("node-id") String nodeId,
+    public ResponseEntity<String> postMoveNodeUp(@PathVariable("node-id") UUID nodeId,
                                                  HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(nodeId)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
+
         UserInfo ui = checkCredential(request, null, null, null); // FIXME
         ResponseEntity<String> response = null;
 
@@ -1004,12 +956,9 @@ public class NodesController extends AbstractController {
      */
     @PostMapping(value = "/node/{node-id}/parentof/{parent-id}", consumes = "application/xml",
             produces = "application/xml")
-    public ResponseEntity<String> postChangeNodeParent(@PathVariable("node-id") String nodeId,
-                                                       @PathVariable("parent-id") String parentId,
+    public ResponseEntity<String> postChangeNodeParent(@PathVariable("node-id") UUID nodeId,
+                                                       @PathVariable("parent-id") UUID parentId,
                                                        HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(nodeId) || !isUUID(parentId)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
 
         UserInfo ui = checkCredential(request, null, null, null); // FIXME
         try {
@@ -1045,12 +994,9 @@ public class NodesController extends AbstractController {
     public String postActionNode(@CookieValue("user") String user,
                                  @CookieValue("credential") String token,
                                  @RequestParam("group") int groupId,
-                                 @PathVariable("node-id") String nodeId,
+                                 @PathVariable("node-id") UUID nodeId,
                                  @PathVariable("action-name") String macro,
                                  HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(nodeId)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
 
         UserInfo ui = checkCredential(request, user, token, null);
 
@@ -1077,7 +1023,7 @@ public class NodesController extends AbstractController {
      * @param user
      * @param token
      * @param groupId
-     * @param nodeUuid
+     * @param nodeId
      * @param request
      * @return
      */
@@ -1085,14 +1031,13 @@ public class NodesController extends AbstractController {
     public String deleteNode(@CookieValue("user") String user,
                              @CookieValue("credential") String token,
                              @RequestParam("group") long groupId,
-                             @PathVariable("node-uuid") String nodeUuid,
+                             @PathVariable("node-uuid") UUID nodeId,
                              HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(nodeUuid)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
+
         UserInfo ui = checkCredential(request, user, token, null);
+
         try {
-            nodeManager.removeNode(nodeUuid, ui.userId, groupId);
+            nodeManager.removeNode(nodeId, ui.userId, groupId);
             return "";
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
@@ -1109,7 +1054,7 @@ public class NodesController extends AbstractController {
      * @param user
      * @param token
      * @param groupId
-     * @param nodeUuid
+     * @param nodeId
      * @param lang
      * @param xslFile
      * @param accept
@@ -1120,14 +1065,11 @@ public class NodesController extends AbstractController {
     public String getNodeWithXSL(@CookieValue("user") String user,
                                  @CookieValue("credential") String token,
                                  @RequestParam("group") long groupId,
-                                 @PathVariable("node-id") String nodeUuid,
+                                 @PathVariable("node-id") UUID nodeId,
                                  @RequestParam("lang") String lang,
                                  @RequestParam("xsl-file") String xslFile,
                                  @RequestHeader("Accept") String accept,
                                  HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(nodeUuid)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
 
         UserInfo ui = checkCredential(request, user, token, null);
 
@@ -1143,7 +1085,7 @@ public class NodesController extends AbstractController {
             ppath = ppath.substring(0, ppath.lastIndexOf(File.separator, ppath.length() - 2) + 1);
             xslFile = ppath + xslFile;
             String returnValue = nodeManager
-                    .getNodeWithXSL(MimeTypeUtils.TEXT_XML, nodeUuid, xslFile, parameters, ui.userId, groupId);
+                    .getNodeWithXSL(MimeTypeUtils.TEXT_XML, nodeId, xslFile, parameters, ui.userId, groupId);
             if (returnValue.length() != 0) {
                 if (MediaType.APPLICATION_JSON.equals(accept))
                     returnValue = XML.toJSONObject(returnValue).toString();
@@ -1152,12 +1094,12 @@ public class NodesController extends AbstractController {
             return returnValue;
         } catch (DoesNotExistException ex) {
             throw new RestWebApplicationException(HttpStatus.NOT_FOUND,
-                    "Node " + nodeUuid + " not found or xsl not found :" + ex.getMessage());
+                    "Node " + nodeId + " not found or xsl not found :" + ex.getMessage());
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (NullPointerException ex) {
             throw new RestWebApplicationException(HttpStatus.NOT_FOUND,
-                    "Node " + nodeUuid + " not found or xsl not found :" + ex.getMessage());
+                    "Node " + nodeId + " not found or xsl not found :" + ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
@@ -1172,7 +1114,7 @@ public class NodesController extends AbstractController {
      * @param user
      * @param token
      * @param groupId
-     * @param nodeUuid
+     * @param nodeId
      * @param semantictag
      * @param request
      * @return
@@ -1182,16 +1124,15 @@ public class NodesController extends AbstractController {
     public String postNodeFromModelBySemanticTag(@CookieValue("user") String user,
                                                  @CookieValue("credential") String token,
                                                  @RequestParam("group") long groupId,
-                                                 @PathVariable("node-id") String nodeUuid,
+                                                 @PathVariable("node-id") UUID nodeId,
                                                  @PathVariable("semantic-tag") String semantictag,
                                                  HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(nodeUuid)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
+
         UserInfo ui = checkCredential(request, user, token, null);
+
         try {
             String returnValue = nodeManager
-                    .addNodeFromModelBySemanticTag(MimeTypeUtils.TEXT_XML, nodeUuid, semantictag, ui.userId, groupId);
+                    .addNodeFromModelBySemanticTag(MimeTypeUtils.TEXT_XML, nodeId, semantictag, ui.userId, groupId);
             return returnValue;
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN,

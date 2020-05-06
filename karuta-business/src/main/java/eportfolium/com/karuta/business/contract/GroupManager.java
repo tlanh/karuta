@@ -18,17 +18,19 @@ package eportfolium.com.karuta.business.contract;
 import eportfolium.com.karuta.model.bean.CredentialGroup;
 import eportfolium.com.karuta.model.exception.BusinessException;
 
+import java.util.UUID;
+
 public interface GroupManager {
 
 
 	String getCredentialGroupByUser(Long userId);
 
-	String getGroupsByRole(String portfolioUuid, String role);
+	String getGroupsByRole(UUID portfolioId, String role);
 
-	boolean changeNotifyRoles(Long userId, String portfolioUuid, String nodeUuid, String notify)
+	boolean changeNotifyRoles(Long userId, UUID portfolioId, UUID nodeId, String notify)
 			throws BusinessException;
 
-	boolean setPublicState(Long userId, String portfolioUuid, boolean isPublic) throws BusinessException;
+	boolean setPublicState(Long userId, UUID portfolioId, boolean isPublic) throws BusinessException;
 
 	Long addCredentialGroup(String credentialGroupName);
 
@@ -53,17 +55,7 @@ public interface GroupManager {
 
 	String getGroupRights(Long userId, Long groupId) throws Exception;
 
-	/**
-	 * Ajout des droits du portfolio dans GroupRightInfo et GroupRights
-	 * 
-	 * @param label
-	 * @param uuid
-	 * @param right
-	 * @param portfolioUuid
-	 * @param userId
-	 * @return
-	 */
-	boolean addGroupRights(String label, String nodeUuid, String right, String portfolioUuid, Long userId);
+	boolean addGroupRights(String label, UUID nodeUuid, String right, UUID portfolioId, Long userId);
 
 	void removeRights(long groupId, Long userId) throws BusinessException;
 

@@ -33,6 +33,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 /**
  * @author mlengagne
  *
@@ -234,7 +236,7 @@ public class UserController extends AbstractController {
      * @param user
      * @param token
      * @param group
-     * @param portfolioUuid
+     * @param portfolioId
      * @param role
      * @param request
      * @return
@@ -243,17 +245,14 @@ public class UserController extends AbstractController {
     public String getUsersByRole(@CookieValue("user") String user,
                                  @CookieValue("credential") String token,
                                  @CookieValue("group") String group,
-                                 @PathVariable("portfolio-id") String portfolioUuid,
+                                 @PathVariable("portfolio-id") UUID portfolioId,
                                  @PathVariable("role") String role,
                                  HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(portfolioUuid)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
 
         UserInfo ui = checkCredential(request, user, token, group); // FIXME
 
         try {
-            return userManager.getUsersByRole(ui.userId, portfolioUuid, role);
+            return userManager.getUsersByRole(ui.userId, portfolioId, role);
         } catch (Exception ex) {
             ex.printStackTrace();
             throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
@@ -386,7 +385,7 @@ public class UserController extends AbstractController {
      * @param user
      * @param token
      * @param group
-     * @param portfolioUuid
+     * @param portfolioId
      * @param role
      * @param request
      * @return
@@ -395,17 +394,13 @@ public class UserController extends AbstractController {
     public String getGroupsByRole(@CookieValue("user") String user,
                                   @CookieValue("credential") String token,
                                   @CookieValue("group") String group,
-                                  @PathVariable("portfolio-id") String portfolioUuid,
+                                  @PathVariable("portfolio-id") UUID portfolioId,
                                   @PathVariable("role") String role,
                                   HttpServletRequest request) throws RestWebApplicationException {
         // FIXME: Authentication ?
 
-        if (!isUUID(portfolioUuid)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
-
         try {
-            return groupManager.getGroupsByRole(portfolioUuid, role);
+            return groupManager.getGroupsByRole(portfolioId, role);
         } catch (Exception ex) {
             ex.printStackTrace();
             throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());

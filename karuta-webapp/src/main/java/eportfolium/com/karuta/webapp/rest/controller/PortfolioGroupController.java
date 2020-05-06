@@ -27,6 +27,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.UUID;
 
 /**
  * Managing and listing portfolio groups.
@@ -92,7 +93,7 @@ public class PortfolioGroupController extends AbstractController {
      */
     @PutMapping
     public ResponseEntity<String> putPortfolioInPortfolioGroup(@RequestParam("group") Long group,
-                                                 @RequestParam("uuid") String uuid,
+                                                 @RequestParam("uuid") UUID uuid,
                                                  @RequestParam("label") String label,
                                                  HttpServletRequest request) throws RestWebApplicationException {
         UserInfo ui = checkCredential(request, null, null, null);
@@ -120,14 +121,14 @@ public class PortfolioGroupController extends AbstractController {
      * </group>
      *
      * @param group              group id
-     * @param portfolioUuid
+     * @param portfolioId
      * @param groupLabel         group label
      * @param request
      * @return group id or empty str if group id not found
      */
     @GetMapping
     public String getPortfolioByPortfolioGroup(@RequestParam("group") Long group,
-                                               @RequestParam("uuid") String portfolioUuid,
+                                               @RequestParam("uuid") UUID portfolioId,
                                                @RequestParam("label") String groupLabel,
                                                HttpServletRequest request) throws RestWebApplicationException {
         UserInfo ui = checkCredential(request, null, null, null);
@@ -140,8 +141,8 @@ public class PortfolioGroupController extends AbstractController {
                     throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "");
                 }
                 xmlUsers = Long.toString(groupid);
-            } else if (portfolioUuid != null) {
-                xmlUsers = portfolioManager.getPortfolioGroupListFromPortfolio(portfolioUuid);
+            } else if (portfolioId != null) {
+                xmlUsers = portfolioManager.getPortfolioGroupListFromPortfolio(portfolioId);
             } else if (group == null)
                 xmlUsers = portfolioManager.getPortfolioGroupList();
             else
@@ -166,7 +167,7 @@ public class PortfolioGroupController extends AbstractController {
      */
     @DeleteMapping
     public String deletePortfolioByPortfolioGroup(@RequestParam("group") long groupId,
-                                                  @RequestParam("uuid") String uuid,
+                                                  @RequestParam("uuid") UUID uuid,
                                                   HttpServletRequest request) throws RestWebApplicationException {
 //		checkCredential(httpServletRequest, null, null, null); //FIXME
         boolean response = false;

@@ -169,8 +169,9 @@ public class UserManagerImpl implements UserManager {
 		return result;
 	}
 
-	public String getUserGroupByPortfolio(String portfolioUuid, Long userId) {
-		List<GroupUser> res = groupUserRepository.getByPortfolioAndUser(UUID.fromString(portfolioUuid), userId);
+	@Override
+	public String getUserGroupByPortfolio(UUID portfolioId, Long userId) {
+		List<GroupUser> res = groupUserRepository.getByPortfolioAndUser(portfolioId, userId);
 
 		String result = "<groups>";
 		Iterator<GroupUser> it = res.iterator();
@@ -192,8 +193,9 @@ public class UserManagerImpl implements UserManager {
 		return result;
 	}
 
-	public String getUsersByRole(Long userId, String portfolioUuid, String role) {
-		List<Credential> users = credentialRepository.getUsersByRole(UUID.fromString(portfolioUuid), role);
+	@Override
+	public String getUsersByRole(Long userId, UUID portfolioId, String role) {
+		List<Credential> users = credentialRepository.getUsersByRole(portfolioId, role);
 		String result = "<users>";
 
 		for (Credential res : users) {
@@ -298,16 +300,15 @@ public class UserManagerImpl implements UserManager {
 		return credentialRepository.getIdByLoginAndEmail(userLogin, email);
 	}
 
-	public String getRoleList(String portfolio, Long userId, String role) throws BusinessException {
+	public String getRoleList(UUID portfolioId, Long userId, String role) throws BusinessException {
 
 		try {
 			boolean bypass = false;
 			List<GroupRightInfo> griList = new ArrayList<>();
-			UUID portfolioId = UUID.fromString(portfolio);
 
-			if (portfolio != null && userId != null) {
+			if (portfolioId != null && userId != null) {
 				griList = groupRightInfoRepository.getByPortfolioAndUser(portfolioId, userId);
-			} else if (portfolio != null && role != null) {
+			} else if (portfolioId != null && role != null) {
 				GroupRightInfo tmp = groupRightInfoRepository.getByPortfolioAndLabel(portfolioId, role);
 				if (tmp != null) {
 					griList = Arrays.asList(tmp);
@@ -315,7 +316,7 @@ public class UserManagerImpl implements UserManager {
 					griList = Arrays.asList();
 				}
 				bypass = true;
-			} else if (portfolio != null) {
+			} else if (portfolioId != null) {
 				griList = groupRightInfoRepository.getByPortfolioID(portfolioId);
 			} else if (userId != null) {
 				griList = groupRightInfoRepository.getByUser(userId);
@@ -375,10 +376,11 @@ public class UserManagerImpl implements UserManager {
 		return "";
 	}
 
-	public String getUserRolesByPortfolio(String portId, Long userId) throws Exception {
+	@Override
+	public String getUserRolesByPortfolio(UUID portfolioId, Long userId) throws Exception {
 
 		// group_right_info pid:grid -> group_info grid:gid -> group_user gid:userid
-		List<GroupUser> guList = groupUserRepository.getByPortfolioAndUser(UUID.fromString(portId), userId);
+		List<GroupUser> guList = groupUserRepository.getByPortfolioAndUser(portfolioId, userId);
 
 		/// Time to create data
 		DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
@@ -386,7 +388,7 @@ public class UserManagerImpl implements UserManager {
 		Document document = documentBuilder.newDocument();
 
 		Element root = document.createElement("portfolio");
-		root.setAttribute("id", portId);
+		root.setAttribute("id", portfolioId.toString());
 		document.appendChild(root);
 
 		Element rrgUsers = null;
@@ -537,14 +539,16 @@ public class UserManagerImpl implements UserManager {
 		return "";
 	}
 
-	public Set<String[]> getNotificationUserList(Long userId, Long groupId, String uuid) {
+	@Override
+	public Set<String[]> getNotificationUserList(Long userId, Long groupId, UUID groupRightId) {
 		Set<String[]> retval = new HashSet<String[]>();
 
 		try {
 			String roles = "";
 			UUID portfolio = null;
 
-			Map<String, Object> rolesToBeNotified = groupRightInfoRepository.getRolesToBeNotified(groupId, userId, UUID.fromString(uuid));
+			Map<String, Object> rolesToBeNotified = groupRightInfoRepository.getRolesToBeNotified(groupId, userId, groupRightId);
+
 			if (rolesToBeNotified != null) {
 				portfolio = (UUID) rolesToBeNotified.get("portfolioUUID");
 				roles = MapUtils.getString(rolesToBeNotified, "notifyRoles");

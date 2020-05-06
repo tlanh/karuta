@@ -56,31 +56,25 @@ public class ResourceManagerImpl extends BaseManager implements ResourceManager 
 	@Autowired
 	private ResourceTableRepository resourceTableRepository;
 
-	public String getResource(MimeType outMimeType, String nodeParentUuid, Long userId, Long groupId)
+	public String getResource(MimeType outMimeType, UUID parentNodeId, Long userId, Long groupId)
 			throws BusinessException {
 
-		if (!hasRight(userId, groupId, nodeParentUuid, GroupRights.READ)) {
+		if (!hasRight(userId, groupId, parentNodeId, GroupRights.READ)) {
 			throw new GenericBusinessException("403 FORBIDDEN : No READ credential");
 		}
 
-		ResourceTable rt = resourceTableRepository.getResourceByParentNodeUuid(UUID.fromString(nodeParentUuid));
+		ResourceTable rt = resourceTableRepository.getResourceByParentNodeUuid(parentNodeId);
 
-		String result = "<asmResource id=\"" + rt.getId().toString() + "\" contextid=\"" + nodeParentUuid + "\"  >"
+		return "<asmResource id=\"" + rt.getId().toString() + "\" contextid=\"" + parentNodeId.toString() + "\">"
 				+ rt.getXsiType() + "</asmResource>";
-
-		return result;
 	}
 
 	/** Récupère le noeud, et assemble les ressources, s'il y en a */
-	public String getResource(UUID nodeUuid) {
-		return getResource(nodeUuid.toString());
-	}
-
-	/** Récupère le noeud, et assemble les ressources, s'il y en a */
-	public String getResource(String nodeUuid) {
+	@Override
+	public String getResource(UUID nodeId) {
 		String result = "";
 
-		Node resNode = nodeRepository.findById(UUID.fromString(nodeUuid)).get();
+		Node resNode = nodeRepository.findById(nodeId).get();
 		String m_epm = resNode.getMetadataEpm();
 		if (m_epm == null)
 			m_epm = "";
@@ -119,9 +113,12 @@ public class ResourceManagerImpl extends BaseManager implements ResourceManager 
 		return result;
 	}
 
-	public String getResources(MimeType outMimeType, String portfolioUuid, Long userId, Long groupId) throws Exception {
-		List<ResourceTable> res = resourceTableRepository.getResourcesByPortfolioUUID(UUID.fromString(portfolioUuid));
+	@Override
+	public String getResources(MimeType outMimeType, UUID portfolioId, Long userId, Long groupId) throws Exception {
+		List<ResourceTable> res = resourceTableRepository.getResourcesByPortfolioUUID(portfolioId);
+
 		String returnValue = "";
+
 		if (outMimeType.getSubtype().equals("xml")) {
 			returnValue += "<resources>";
 			for (ResourceTable rt : res) {
@@ -145,58 +142,56 @@ public class ResourceManagerImpl extends BaseManager implements ResourceManager 
 		return returnValue;
 	}
 
-	public Integer changeResource(MimeType inMimeType, String nodeParentUuid, String xmlResource, Long userId,
+	public Integer changeResource(MimeType inMimeType, UUID parentNodeId, String xmlResource, Long userId,
 			Long groupId) throws BusinessException, Exception {
 
 		int retVal = -1;
 
 		xmlResource = DomUtils.filterXmlResource(xmlResource);
 
-		ResourceTable rt = resourceTableRepository.getResourceByParentNodeUuid(UUID.fromString(nodeParentUuid));
-		String nodeUuid = rt.getId().toString();
+		ResourceTable rt = resourceTableRepository.getResourceByParentNodeUuid(parentNodeId);
 
 		Document doc = DomUtils.xmlString2Document(xmlResource, new StringBuffer());
 		// Puis on le recrée
 		org.w3c.dom.Node node = (doc.getElementsByTagName("asmResource")).item(0);
 
-		if (!hasRight(userId, groupId, nodeParentUuid, GroupRights.WRITE))
+		if (!hasRight(userId, groupId, parentNodeId, GroupRights.WRITE))
 			throw new GenericBusinessException("403 FORBIDDEN : No WRITE credential");
 
-		portfolioManager.updateTimeByNode(UUID.fromString(nodeParentUuid));
+		portfolioManager.updateTimeByNode(parentNodeId);
 
-		retVal = updateResource(nodeUuid, null, DomUtils.getInnerXml(node), userId);
+		retVal = updateResource(rt.getId(), null, DomUtils.getInnerXml(node), userId);
 
 		return retVal;
 
 	}
 
-	public String addResource(MimeType inMimeType, String nodeParentUuid, String in, Long userId, Long groupId)
+	public String addResource(MimeType inMimeType, UUID parentNodeId, String in, Long userId, Long groupId)
 			throws BusinessException, Exception {
 		if (!credentialRepository.isAdmin(userId))
 			throw new GenericBusinessException("403 FORBIDDEN : No ADMIN right");
 
 		in = DomUtils.filterXmlResource(in);
 
-		if (!hasRight(userId, groupId, nodeParentUuid, GroupRights.WRITE)) {
+		if (!hasRight(userId, groupId, parentNodeId, GroupRights.WRITE)) {
 			throw new GenericBusinessException("403 FORBIDDEN : No WRITE credential");
 		} else
-			nodeManager.addNode(inMimeType, nodeParentUuid, in, userId, groupId, true);
+			nodeManager.addNode(inMimeType, parentNodeId, in, userId, groupId, true);
 
 		return "";
 	}
 
-	public void removeResource(String resourceUuid, Long userId, Long groupId)
+	public void removeResource(UUID resourceId, Long userId, Long groupId)
 			throws DoesNotExistException, BusinessException {
 		if (!credentialRepository.isAdmin(userId))
 			throw new GenericBusinessException("403 FORBIDDEN : No admin right");
 
-		if (hasRight(userId, groupId, resourceUuid, GroupRights.DELETE)) {
-			resourceTableRepository.deleteById(UUID.fromString(resourceUuid));
+		if (hasRight(userId, groupId, resourceId, GroupRights.DELETE)) {
+			resourceTableRepository.deleteById(resourceId);
 		}
 	}
 
-	public void changeResourceByXsiType(String nodeUuid, String xsiType, String content, Long userId) throws Exception {
-		UUID nodeId = UUID.fromString(nodeUuid);
+	public void changeResourceByXsiType(UUID nodeId, String xsiType, String content, Long userId) throws Exception {
 
 		if (StringUtils.equals(xsiType, "nodeRes")) {
 			updateResResource(nodeId, content, userId);
@@ -231,12 +226,10 @@ public class ResourceManagerImpl extends BaseManager implements ResourceManager 
 	}
 
 	@Override
-	public int addResource(String uuid, String parentUuid, String xsiType, String content, String portfolioModelId,
+	public int addResource(UUID id, UUID parentId, String xsiType, String content, UUID portfolioModelId,
 						   boolean sharedNodeRes, boolean sharedRes, Long userId) {
 
 		int status = 0;
-		final UUID uuidObj = UUID.fromString(uuid);
-		final UUID parentUuidObj = UUID.fromString(parentUuid);
 
 		ResourceTable rt = null;
 		if (((xsiType.equals("nodeRes") && sharedNodeRes)
@@ -244,13 +237,13 @@ public class ResourceManagerImpl extends BaseManager implements ResourceManager 
 				&& portfolioModelId != null) {
 			// On ne fait rien
 		} else {
-			Optional<ResourceTable> resourceTableOptional = resourceTableRepository.findById(uuidObj);
+			Optional<ResourceTable> resourceTableOptional = resourceTableRepository.findById(id);
 
 			if (resourceTableOptional.isPresent()) {
 				rt = resourceTableOptional.get();
 			} else {
 				rt = new ResourceTable();
-				rt.setId(uuidObj);
+				rt.setId(id);
 			}
 
 			rt.setXsiType(xsiType);
@@ -263,13 +256,13 @@ public class ResourceManagerImpl extends BaseManager implements ResourceManager 
 
 
 		try {
-			final Node n = nodeRepository.findById(parentUuidObj).get();
+			final Node n = nodeRepository.findById(parentId).get();
 
 			// Ensuite on met à jour les id ressource au niveau du noeud parent
 			if (xsiType.equals("nodeRes")) {
 				n.setResResource(rt);
 				if (sharedNodeRes && portfolioModelId != null) {
-					n.setSharedNodeResUuid(uuidObj);
+					n.setSharedNodeResUuid(id);
 				} else {
 					n.setSharedNodeResUuid(null);
 				}
@@ -278,7 +271,7 @@ public class ResourceManagerImpl extends BaseManager implements ResourceManager 
 			} else {
 				n.setResource(rt);
 				if (sharedRes && portfolioModelId != null) {
-					n.setSharedResUuid(uuidObj);
+					n.setSharedResUuid(id);
 				} else {
 					n.setSharedResUuid(null);
 				}
@@ -306,14 +299,14 @@ public class ResourceManagerImpl extends BaseManager implements ResourceManager 
 	}
 
 	@Override
-	public int updateResource(String uuid, String xsiType, String content, Long userId) {
+	public int updateResource(UUID id, String xsiType, String content, Long userId) {
 		if (xsiType != null) {
-			resourceTableRepository.deleteById(UUID.fromString(uuid));
+			resourceTableRepository.deleteById(id);
 
 			Date now = JavaTimeUtil.toJavaDate(LocalDateTime.now(JavaTimeUtil.date_default_timezone));
 
 			ResourceTable rt = new ResourceTable(
-				UUID.fromString(uuid),
+				id,
 				xsiType,
 				content,
 				new Credential(userId),
@@ -323,7 +316,7 @@ public class ResourceManagerImpl extends BaseManager implements ResourceManager 
 
 			resourceTableRepository.save(rt);
 		} else {
-			Optional<ResourceTable> resourceTable = resourceTableRepository.findById(UUID.fromString(uuid));
+			Optional<ResourceTable> resourceTable = resourceTableRepository.findById(id);
 
 			if (resourceTable.isPresent()) {
 				ResourceTable rt = resourceTable.get();

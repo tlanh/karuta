@@ -24,6 +24,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -78,12 +79,13 @@ public class FileManagerImpl implements FileManager {
 		return true;
 	}
 
-	public boolean rewriteFile(String sessionid, String backend, String user, String uuid, String lang, File file)
+	@Override
+	public boolean rewriteFile(String sessionid, String backend, String user, UUID id, String lang, File file)
 			throws Exception {
 		CloseableHttpClient httpclient = HttpClients.createDefault();
 
 		try {
-			String url = backend + "/resources/resource/file/" + uuid + "?lang=" + lang;
+			String url = backend + "/resources/resource/file/" + id.toString() + "?lang=" + lang;
 			HttpPut put = new HttpPut(url);
 			put.setHeader("Cookie", "JSESSIONID=" + sessionid); // So that the receiving servlet allow us
 

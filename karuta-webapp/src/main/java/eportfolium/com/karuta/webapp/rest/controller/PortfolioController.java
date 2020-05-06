@@ -25,7 +25,8 @@ import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.io.StringWriter;
 import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.util.*;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -116,7 +117,7 @@ public class PortfolioController extends AbstractController {
      * @param user
      * @param token
      * @param groupId
-     * @param portfolioUuid
+     * @param portfolioId
      * @param accept
      * @param userId
      * @param group
@@ -140,7 +141,7 @@ public class PortfolioController extends AbstractController {
     public Object getPortfolio(@CookieValue("user") String user,
                                @CookieValue("credential") String token,
                                @RequestParam("group") int groupId,
-                               @PathVariable("portfolio-id") String portfolioUuid,
+                               @PathVariable("portfolio-id") UUID portfolioId,
                                @RequestHeader("Accept") String accept,
                                @RequestParam("user") Integer userId,
                                @RequestParam("group") Integer group,
@@ -150,14 +151,11 @@ public class PortfolioController extends AbstractController {
                                @RequestParam("lang") String lang,
                                @RequestParam("level") Integer cutoff,
                                HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(portfolioUuid)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
 
         UserInfo ui = checkCredential(request, user, token, null);
 
         try {
-            String portfolio = portfolioManager.getPortfolio(MimeTypeUtils.TEXT_XML, portfolioUuid, ui.userId, 0L,
+            String portfolio = portfolioManager.getPortfolio(MimeTypeUtils.TEXT_XML, portfolioId, ui.userId, 0L,
                     this.label, resource, "", ui.subId, cutoff).toString();
 
             /// Finding back code. Not really pretty
@@ -183,7 +181,7 @@ public class PortfolioController extends AbstractController {
             } else if (resource != null && files != null) {
                 //// Cas du renvoi d'un ZIP
                 HttpSession session = request.getSession(true);
-                File tempZip = getZipFile(portfolioUuid, portfolio, lang, doc, session);
+                File tempZip = getZipFile(portfolioId, portfolio, lang, doc, session);
 
                 /// Return zip file
                 RandomAccessFile f = new RandomAccessFile(tempZip.getAbsoluteFile(), "r");
@@ -211,8 +209,8 @@ public class PortfolioController extends AbstractController {
             }
             return response;
         } catch (DoesNotExistException ex) {
-            logger.info("Portfolio " + portfolioUuid + " not found");
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Portfolio " + portfolioUuid + " not found");
+            logger.info("Portfolio " + portfolioId + " not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Portfolio " + portfolioId + " not found");
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
@@ -222,21 +220,18 @@ public class PortfolioController extends AbstractController {
 
     }
 
-    private File getZipFile(String portfolioUuid, String portfolioContent, String lang, Document doc,
+    private File getZipFile(UUID portfolioId, String portfolioContent, String lang, Document doc,
                             HttpSession session) throws IOException, XPathExpressionException, RestWebApplicationException {
-        if (!isUUID(portfolioUuid)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
 
         /// Temp file in temp directory
         File tempDir = new File(System.getProperty("java.io.tmpdir", null));
-        File tempZip = File.createTempFile(portfolioUuid, ".zip", tempDir);
+        File tempZip = File.createTempFile(portfolioId.toString(), ".zip", tempDir);
 
         FileOutputStream fos = new FileOutputStream(tempZip);
         ZipOutputStream zos = new ZipOutputStream(fos);
 
         /// Write XML file to zip
-        ZipEntry ze = new ZipEntry(portfolioUuid + ".xml");
+        ZipEntry ze = new ZipEntry(portfolioId.toString() + ".xml");
         zos.putNextEntry(ze);
 
         byte[] bytes = portfolioContent.getBytes("UTF-8");
@@ -333,7 +328,7 @@ public class PortfolioController extends AbstractController {
      * Return the portfolio from its code. <br>
      * GET /rest/api/portfolios/code/{code}
      *
-     * @see #putPortfolio(String, String, String, String, String, HttpServletRequest)
+     * @see #putPortfolio(String, String, String, UUID, String, HttpServletRequest)
      *
      * @param user
      * @param token
@@ -389,7 +384,7 @@ public class PortfolioController extends AbstractController {
      * @param active             false/0 (also show inactive portoflios)
      * @param userId             for this user (only with root)
      * @param code
-     * @param portfolioUuid
+     * @param portfolioId
      * @param cutoff
      * @param public_var
      * @param project
@@ -412,7 +407,7 @@ public class PortfolioController extends AbstractController {
                                 @RequestParam("active") String active,
                                 @RequestParam("userid") Integer userId,
                                 @RequestParam("code") String code,
-                                @RequestParam("portfolio") String portfolioUuid,
+                                @RequestParam("portfolio") UUID portfolioId,
                                 @RequestParam("level") Integer cutoff,
                                 @RequestParam("public") String public_var,
                                 @RequestParam("project") String project,
@@ -423,8 +418,8 @@ public class PortfolioController extends AbstractController {
         UserInfo ui = checkCredential(request, user, token, null);
 
         try {
-            if (portfolioUuid != null) {
-                String returnValue = portfolioManager.getPortfolio(MimeTypeUtils.TEXT_XML, portfolioUuid, ui.userId,
+            if (portfolioId != null) {
+                String returnValue = portfolioManager.getPortfolio(MimeTypeUtils.TEXT_XML, portfolioId, ui.userId,
                         groupId, this.label, null, null, ui.subId, cutoff).toString();
                 if (accept.equals("application/json"))
                     returnValue = XML.toJSONObject(returnValue).toString();
@@ -512,7 +507,7 @@ public class PortfolioController extends AbstractController {
      *                           and/or the asm format
      * @param user
      * @param token
-     * @param portfolioUuid
+     * @param portfolioId
      * @param active
      * @param request
      * @return
@@ -521,12 +516,9 @@ public class PortfolioController extends AbstractController {
     public String putPortfolio(@RequestBody String xmlPortfolio,
                                @CookieValue("user") String user,
                                @CookieValue("credential") String token,
-                               @PathVariable("portfolio-id") String portfolioUuid, 
+                               @PathVariable("portfolio-id") UUID portfolioId,
                                @RequestParam("active") String active,
                                HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(portfolioUuid)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
 
         UserInfo ui = checkCredential(request, user, token, null);
 
@@ -538,7 +530,7 @@ public class PortfolioController extends AbstractController {
 
         try {
             portfolioManager.rewritePortfolioContent(MimeTypeUtils.TEXT_XML, MimeTypeUtils.TEXT_XML, xmlPortfolio,
-                    portfolioUuid, ui.userId, portfolioActive);
+                    portfolioId, ui.userId, portfolioActive);
 
             return "";
 
@@ -552,12 +544,12 @@ public class PortfolioController extends AbstractController {
      * Reparse portfolio rights. <br>
      * POST /rest/api/portfolios/portfolios/{portfolio-id}/parserights
      *
-     * @param portfolioUuid
+     * @param portfolioId
      * @param request
      * @return
      */
     @PostMapping("/portfolio/{portfolio-id}/parserights")
-    public ResponseEntity<String> postPortfolio(@PathVariable("portfolio-id") String portfolioUuid,
+    public ResponseEntity<String> postPortfolio(@PathVariable("portfolio-id") UUID portfolioId,
                                                 HttpServletRequest request) throws RestWebApplicationException {
 
         UserInfo ui = checkCredential(request, null, null, null);
@@ -566,7 +558,7 @@ public class PortfolioController extends AbstractController {
             if (!securityManager.isAdmin(ui.userId))
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
 
-            portfolioManager.postPortfolioParserights(portfolioUuid, ui.userId);
+            portfolioManager.postPortfolioParserights(portfolioId, ui.userId);
 
             return ResponseEntity.ok().build();
         } catch (Exception ex) {
@@ -581,7 +573,7 @@ public class PortfolioController extends AbstractController {
      *
      * @param user
      * @param token
-     * @param portfolioUuid      portfolio-id
+     * @param portfolioId      portfolio-id
      * @param newOwner           newOwnerId
      * @param request
      * @return
@@ -590,7 +582,7 @@ public class PortfolioController extends AbstractController {
         produces = "application/xml")
     public String putPortfolioOwner(@CookieValue("user") String user,
                                     @CookieValue("credential") String token,
-                                    @PathVariable("portfolio-id") String portfolioUuid,
+                                    @PathVariable("portfolio-id") UUID portfolioId,
                                     @PathVariable("newOwnerId") long newOwner, 
                                     HttpServletRequest request) throws RestWebApplicationException {
 
@@ -600,8 +592,8 @@ public class PortfolioController extends AbstractController {
         try {
             // Vérifie si l'utilisateur connecté est administrateur ou propriétaire du
             // portfolio actuel.
-            if (securityManager.isAdmin(ui.userId) || portfolioManager.isOwner(ui.userId, portfolioUuid)) {
-                retval = portfolioManager.changePortfolioOwner(portfolioUuid, newOwner);
+            if (securityManager.isAdmin(ui.userId) || portfolioManager.isOwner(ui.userId, portfolioId)) {
+                retval = portfolioManager.changePortfolioOwner(portfolioId, newOwner);
             }
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -618,7 +610,7 @@ public class PortfolioController extends AbstractController {
      * @param user
      * @param token
      * @param groupId
-     * @param portfolioUuid
+     * @param portfolioId
      * @param portfolioActive    0/1, true/false
      * @param request
      * @return
@@ -627,19 +619,16 @@ public class PortfolioController extends AbstractController {
     public String putPortfolioConfiguration(@CookieValue("user") String user,
                                             @CookieValue("credential") String token,
                                             @RequestParam("group") int groupId,
-                                            @RequestParam("portfolio") String portfolioUuid,
+                                            @RequestParam("portfolio") UUID portfolioId,
                                             @RequestParam("active") Boolean portfolioActive,
                                             HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(portfolioUuid)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
 
         UserInfo ui = checkCredential(request, user, token, null);
 
         try {
             String returnValue = "";
-            if (portfolioUuid != null && portfolioActive != null) {
-                portfolioManager.changePortfolioConfiguration(portfolioUuid, portfolioActive, ui.userId);
+            if (portfolioId != null && portfolioActive != null) {
+                portfolioManager.changePortfolioConfiguration(portfolioId, portfolioActive, ui.userId);
             }
             return returnValue;
         } catch (BusinessException ex) {
@@ -734,7 +723,7 @@ public class PortfolioController extends AbstractController {
      * @param user
      * @param token
      * @param groupId
-     * @param portfolioUuid
+     * @param portfolioId
      * @param srccode
      * @param tgtcode
      * @param setowner
@@ -745,13 +734,13 @@ public class PortfolioController extends AbstractController {
     public ResponseEntity<String> postCopyPortfolio(@CookieValue("user") String user,
                                       @CookieValue("credential") String token,
                                       @RequestParam("group") int groupId,
-                                      @PathVariable("portfolio-id") String portfolioUuid,
+                                      @PathVariable("portfolio-id") UUID portfolioId,
                                       @RequestParam("sourcecode") String srccode,
                                       @RequestParam("targetcode") String tgtcode,
                                       @RequestParam("owner") String setowner,
                                       HttpServletRequest request) throws RestWebApplicationException {
 
-        String value = "Instanciate: " + portfolioUuid;
+        String value = "Instanciate: " + portfolioId;
 
         UserInfo ui = checkCredential(request, user, token, null);
 
@@ -774,7 +763,7 @@ public class PortfolioController extends AbstractController {
             tgtcode = newcode;
 
             String returnValue = portfolioManager
-                    .copyPortfolio(MimeTypeUtils.TEXT_XML, portfolioUuid, srccode, tgtcode, ui.userId, setOwner)
+                    .copyPortfolio(MimeTypeUtils.TEXT_XML, portfolioId, srccode, tgtcode, ui.userId, setOwner)
                     .toString();
             logger.debug("Status " + HttpStatus.OK + " : " + value + " to: " + returnValue);
             return ResponseEntity.ok().body(returnValue);
@@ -810,7 +799,7 @@ public class PortfolioController extends AbstractController {
                                     @CookieValue("credential") String token,
                                     @RequestParam("group") int groupId,
                                     @RequestParam("user") Integer userId,
-                                    @RequestParam("model") String modelId,
+                                    @RequestParam("model") UUID modelId,
                                     @RequestParam("srce") String srceType,
                                     @RequestParam("srceurl") String srceUrl,
                                     @RequestParam("xsl") String xsl,
@@ -879,17 +868,20 @@ public class PortfolioController extends AbstractController {
 
         try {
             HttpSession session = request.getSession(false);
-            String[] list = portfolioList.split(",");
-            File[] files = new File[list.length];
+            List<UUID> uuids = Arrays.asList(portfolioList.split(","))
+                                .stream()
+                                .map(UUID::fromString)
+                                .collect(Collectors.toList());
+
+            List<File> files = new ArrayList<>();
 
             /// Suppose the first portfolio has the right name to be used
             String name = "";
 
             /// Create all the zip files
-            for (int i = 0; i < list.length; ++i) {
-                String portfolioUuid = list[i];
-                String portfolio = portfolioManager.getPortfolio(MimeTypeUtils.TEXT_XML, portfolioUuid, ui.userId, 0L,
-                        this.label, "true", "", ui.subId, null).toString();
+            for (UUID portfolioId : uuids) {
+                String portfolio = portfolioManager.getPortfolio(MimeTypeUtils.TEXT_XML, portfolioId, ui.userId, 0L,
+                        this.label, "true", "", ui.subId, null);
 
                 // No name yet
                 if ("".equals(name)) {
@@ -905,8 +897,7 @@ public class PortfolioController extends AbstractController {
 
                 Document doc = DomUtils.xmlString2Document(portfolio, new StringBuffer());
 
-                files[i] = getZipFile(portfolioUuid, portfolio, lang, doc, session);
-
+                files.add(getZipFile(portfolioId, portfolio, lang, doc, session));
             }
 
             // Make a big zip of it
@@ -919,8 +910,7 @@ public class PortfolioController extends AbstractController {
 
             byte[] buffer = new byte[0x1000];
 
-            for (int i = 0; i < files.length; ++i) {
-                File file = files[i];
+            for (File file : files) {
                 FileInputStream fis = new FileInputStream(file);
                 String filename = file.getName();
 
@@ -953,8 +943,7 @@ public class PortfolioController extends AbstractController {
                     .body(b);
 
             // Delete all zipped file
-            for (int i = 0; i < files.length; ++i)
-                files[i].delete();
+            files.forEach(File::delete);
 
             // And the over-arching zip.
             bigZip.delete();
@@ -1024,7 +1013,7 @@ public class PortfolioController extends AbstractController {
      * @param user
      * @param token
      * @param groupId
-     * @param portfolioUuid
+     * @param portfolioId
      * @param request
      * @return
      */
@@ -1032,20 +1021,18 @@ public class PortfolioController extends AbstractController {
     public String deletePortfolio(@CookieValue("user") String user,
                                   @CookieValue("credential") String token,
                                   @RequestParam("group") long groupId,
-                                  @PathVariable("portfolio-id") String portfolioUuid,
+                                  @PathVariable("portfolio-id") UUID portfolioId,
                                   HttpServletRequest request) throws RestWebApplicationException {
 
-        if (!isUUID(portfolioUuid)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
         UserInfo ui = checkCredential(request, user, token, null);
+
         try {
-            portfolioManager.removePortfolio(portfolioUuid, ui.userId, groupId);
-            logger.debug("Portfolio " + portfolioUuid + " found");
+            portfolioManager.removePortfolio(portfolioId, ui.userId, groupId);
+            logger.debug("Portfolio " + portfolioId + " found");
             return "";
         } catch (BusinessException ex) {
-            logger.debug("Portfolio " + portfolioUuid + " not found");
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Portfolio " + portfolioUuid + " not found");
+            logger.debug("Portfolio " + portfolioId + " not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Portfolio " + portfolioId + " not found");
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.debug(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
@@ -1080,7 +1067,7 @@ public class PortfolioController extends AbstractController {
                                 @CookieValue("credential") String token,
                                 @RequestParam("group") int groupId,
                                 @RequestParam("user") Integer userId,
-                                @RequestParam("model") String modelId,
+                                @RequestParam("model") UUID modelId,
                                 @RequestParam("srce") String srceType,
                                 @RequestParam("srceurl") String srceUrl,
                                 @RequestParam("xsl") String xsl,
@@ -1174,7 +1161,6 @@ public class PortfolioController extends AbstractController {
      * @param user
      * @param token
      * @param groupId
-     * @param userId
      * @param modelId
      * @param uploadedInputStream
      * @param instance

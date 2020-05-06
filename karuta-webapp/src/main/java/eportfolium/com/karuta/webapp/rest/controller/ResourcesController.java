@@ -32,6 +32,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpServletRequest;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.UUID;
 
 /**
  * @author mlengagne
@@ -54,7 +55,7 @@ public class ResourcesController extends AbstractController {
      * @param user
      * @param token
      * @param groupId
-     * @param nodeParentUuid
+     * @param nodeParentId
      * @param accept
      * @param request
      * @return
@@ -64,23 +65,19 @@ public class ResourcesController extends AbstractController {
     public String getResource(@CookieValue("user") String user,
                               @CookieValue("credential") String token,
                               @RequestParam("group") long groupId,
-                              @PathVariable("node-parent-id") String nodeParentUuid,
+                              @PathVariable("node-parent-id") UUID nodeParentId,
                               @RequestHeader("Accept") String accept,
                               HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(nodeParentUuid)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
-
         UserInfo ui = checkCredential(request, user, token, null);
 
         try {
-            String returnValue = resourceManager.getResource(MimeTypeUtils.TEXT_XML, nodeParentUuid, ui.userId, groupId)
+            String returnValue = resourceManager.getResource(MimeTypeUtils.TEXT_XML, nodeParentId, ui.userId, groupId)
                     .toString();
             if (accept.equals("application/json"))
                 returnValue = XML.toJSONObject(returnValue).toString();
             return returnValue;
         } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Resource " + nodeParentUuid + " not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Resource " + nodeParentId + " not found");
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
@@ -95,7 +92,7 @@ public class ResourcesController extends AbstractController {
      * @param user
      * @param token
      * @param groupId
-     * @param portfolioUuid      portfolio-id
+     * @param portfolioId      portfolio-id
      * @param accept
      * @param request
      * @return
@@ -104,17 +101,14 @@ public class ResourcesController extends AbstractController {
     public String getResources(@CookieValue("user") String user,
                                @CookieValue("credential") String token,
                                @RequestParam("group") long groupId,
-                               @PathVariable("portfolio-id") String portfolioUuid,
+                               @PathVariable("portfolio-id") UUID portfolioId,
                                @RequestHeader("Accept") String accept,
                                HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(portfolioUuid)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
 
         UserInfo ui = checkCredential(request, user, token, null);
 
         try {
-            String returnValue = resourceManager.getResources(MimeTypeUtils.TEXT_XML, portfolioUuid, ui.userId, groupId);
+            String returnValue = resourceManager.getResources(MimeTypeUtils.TEXT_XML, portfolioId, ui.userId, groupId);
             if (accept.equals("application/json"))
                 returnValue = XML.toJSONObject(returnValue).toString();
             return returnValue;
@@ -134,7 +128,7 @@ public class ResourcesController extends AbstractController {
      * @param token
      * @param groupId
      * @param info
-     * @param nodeParentUuid
+     * @param parentNodeId
      * @param request
      * @return
      */
@@ -144,11 +138,8 @@ public class ResourcesController extends AbstractController {
                               @CookieValue("credential") String token,
                               @RequestParam("group") long groupId,
                               @RequestParam("info") String info,
-                              @PathVariable("node-parent-uuid") String nodeParentUuid,
+                              @PathVariable("node-parent-uuid") UUID parentNodeId,
                               HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(nodeParentUuid)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
 
         UserInfo ui = checkCredential(request, user, token, null);
 
@@ -163,14 +154,14 @@ public class ResourcesController extends AbstractController {
 
         try {
             String returnValue = resourceManager
-                    .changeResource(MimeTypeUtils.TEXT_XML, nodeParentUuid, xmlResource, ui.userId, groupId).toString();
-            logger.info(String.format(logformat, "OK", nodeParentUuid, "resource", ui.userId, timeFormat,
+                    .changeResource(MimeTypeUtils.TEXT_XML, parentNodeId, xmlResource, ui.userId, groupId).toString();
+            logger.info(String.format(logformat, "OK", parentNodeId, "resource", ui.userId, timeFormat,
                     request.getRemoteAddr(), xmlResource));
             return returnValue;
         } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Resource " + nodeParentUuid + " not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Resource " + parentNodeId + " not found");
         } catch (BusinessException ex) {
-            logger.info(String.format(logformat, "ERR", nodeParentUuid, "resource", ui.userId, timeFormat,
+            logger.info(String.format(logformat, "ERR", parentNodeId, "resource", ui.userId, timeFormat,
                     request.getRemoteAddr(), xmlResource));
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
@@ -188,7 +179,7 @@ public class ResourcesController extends AbstractController {
      * @param user
      * @param token
      * @param groupId
-     * @param nodeParentUuid
+     * @param parentNodeId
      * @param request
      * @return
      */
@@ -197,17 +188,14 @@ public class ResourcesController extends AbstractController {
                                @CookieValue("user") String user,
                                @CookieValue("credential") String token,
                                @RequestParam("group") long groupId,
-                               @PathVariable("node-parent-uuid") String nodeParentUuid,
+                               @PathVariable("node-parent-uuid") UUID parentNodeId,
                                HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(nodeParentUuid)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
 
         UserInfo ui = checkCredential(request, user, token, null);
 
         try {
             String returnValue = resourceManager
-                    .addResource(MimeTypeUtils.TEXT_XML, nodeParentUuid, xmlResource, ui.userId, groupId).toString();
+                    .addResource(MimeTypeUtils.TEXT_XML, parentNodeId, xmlResource, ui.userId, groupId);
             return returnValue;
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
@@ -234,7 +222,7 @@ public class ResourcesController extends AbstractController {
                                @CookieValue("user") String user,
                                @CookieValue("credential") String token,
                                @RequestParam("group") long groupId,
-                               @RequestParam("resource") String resource,
+                               @RequestParam("resource") UUID resource,
                                HttpServletRequest request) throws RestWebApplicationException {
         UserInfo ui = checkCredential(request, user, token, null);
 
@@ -258,7 +246,7 @@ public class ResourcesController extends AbstractController {
      * @param user
      * @param token
      * @param groupId
-     * @param resourceUuid
+     * @param resourceId
      * @param request
      * @return
      */
@@ -266,18 +254,16 @@ public class ResourcesController extends AbstractController {
     public String deleteResource(@CookieValue("user") String user,
                                  @CookieValue("credential") String token,
                                  @RequestParam("group") long groupId,
-                                 @PathVariable("resource-id") String resourceUuid,
+                                 @PathVariable("resource-id") UUID resourceId,
                                  HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(resourceUuid)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
+
         UserInfo ui = checkCredential(request, user, token, null);
 
         try {
-            resourceManager.removeResource(resourceUuid, ui.userId, groupId);
+            resourceManager.removeResource(resourceId, ui.userId, groupId);
             return "";
         } catch (DoesNotExistException e) {
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Resource " + resourceUuid + " not found");
+            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Resource " + resourceId + " not found");
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {

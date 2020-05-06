@@ -63,10 +63,9 @@ public abstract class BaseManager {
 	/**
 	 * test pour l'affichage des différentes méthodes de Node
 	 */
-	public GroupRights getRights(Long userId, Long groupId, String nodeUuid) {
+	public GroupRights getRights(Long userId, Long groupId, UUID nodeId) {
 
 		GroupRights rights = null;
-		UUID nodeId = UUID.fromString(nodeUuid);
 
 		if (credentialRepository.isAdmin(userId)) {
 			rights = new GroupRights(new GroupRightsId(new GroupRightInfo(), null), true, true, true, true, false);
@@ -97,8 +96,8 @@ public abstract class BaseManager {
 		return rights;
 	}
 
-	protected boolean hasRight(Long userId, Long groupId, String nodeUuid, String right) {
-		GroupRights rights = getRights(userId, groupId, nodeUuid);
+	protected boolean hasRight(Long userId, Long groupId, UUID nodeId, String right) {
+		GroupRights rights = getRights(userId, groupId, nodeId);
 		if (right.equals(GroupRights.READ))
 			return rights.isRead();
 		else if (right.equals(GroupRights.WRITE))

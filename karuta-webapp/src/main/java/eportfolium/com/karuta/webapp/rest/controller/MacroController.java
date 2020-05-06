@@ -27,6 +27,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.UUID;
 
 /**
  * Partie utilisation des macro-commandes et gestion
@@ -61,12 +62,9 @@ public class MacroController extends AbstractController {
                             @CookieValue("user") String user,
                             @CookieValue("credential") String token,
                             @CookieValue("group") String group,
-                            @PathVariable("uuid") String uuid,
+                            @PathVariable("uuid") UUID uuid,
                             @PathVariable("macro-name") String macroName,
                             HttpServletRequest httpServletRequest) throws RestWebApplicationException {
-        if (!isUUID(uuid)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
 
         UserInfo ui = checkCredential(httpServletRequest, user, token, group);
 

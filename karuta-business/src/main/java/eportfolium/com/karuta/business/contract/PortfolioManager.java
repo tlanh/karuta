@@ -36,17 +36,17 @@ import eportfolium.com.karuta.model.exception.DoesNotExistException;
  */
 public interface PortfolioManager {
 
-	int addPortfolioInGroup(String portfolioUuid, Long portfolioGroupId, String label, Long userId);
+	int addPortfolioInGroup(UUID portfolioUuid, Long portfolioGroupId, String label, Long userId);
 
 	Long addPortfolioGroup(String groupname, String type, Long parentId, Long userId);
 
-	void removePortfolio(String portfolioUuid, Long userId, Long groupId) throws Exception;
+	void removePortfolio(UUID portfolioId, Long userId, Long groupId) throws Exception;
 
-	boolean removePortfolioFromPortfolioGroups(String portfolioUuid, Long portfolioGroupId);
+	boolean removePortfolioFromPortfolioGroups(UUID portfolioId, Long portfolioGroupId);
 
 	boolean removePortfolioGroups(Long portfolioGroupId);
 
-	String getPortfolio(MimeType outMimeType, String portfolioUuid, Long userId, Long groupId, String label,
+	String getPortfolio(MimeType outMimeType, UUID portfolioId, Long userId, Long groupId, String label,
 			String resource, String files, long substid, Integer cutoff)
 			throws DoesNotExistException, BusinessException, Exception;
 
@@ -59,22 +59,22 @@ public interface PortfolioManager {
 
 	String getPortfolioGroupList();
 
-	String getPortfolioGroupListFromPortfolio(String portfolioUuid);
+	String getPortfolioGroupListFromPortfolio(UUID portfolioId);
 
 	String getPortfolios(MimeType outMimeType, long userId, long groupId, Boolean portfolioActive,
 			long substid, Boolean portfolioProject, String projectId, Boolean countOnly, String search);
 
 	String getPortfolioShared(Long userId);
 
-	GroupRights getRightsOnPortfolio(Long userId, Long groupId, String portfolioUuid);
+	GroupRights getRightsOnPortfolio(Long userId, Long groupId, UUID portfolioId);
 
-	int changePortfolioActive(String portfolioUuid, Boolean active);
+	int changePortfolioActive(UUID portfolioId, Boolean active);
 
-	String postPortfolioParserights(String portfolioUuid, Long userId);
+	UUID postPortfolioParserights(UUID portfolioId, Long userId);
 
-	boolean changePortfolioDate(final String fromNodeuuid, final String fromPortuuid);
+	boolean changePortfolioDate(final UUID nodeId, final UUID portfolioId);
 
-	boolean isOwner(Long userId, String portfolioUuid);
+	boolean isOwner(Long userId, UUID portfolioId);
 
 	/**
 	 * Has rights, whether ownership, or given by someone
@@ -83,15 +83,15 @@ public interface PortfolioManager {
 	 * @param portfolioUuid
 	 * @return
 	 */
-	boolean hasRights(Long userId, String portfolioUuid);
+	boolean hasRights(Long userId, UUID portfolioUuid);
 
-	boolean changePortfolioOwner(String portfolioUuid, long newOwner);
+	boolean changePortfolioOwner(UUID portfolioId, long newOwner);
 
-	Portfolio changePortfolioConfiguration(String portfolioUuid, Boolean portfolioActive, Long userId)
+	Portfolio changePortfolioConfiguration(UUID portfolioId, Boolean portfolioActive, Long userId)
 			throws BusinessException;
 
 	boolean rewritePortfolioContent(MimeType inMimeType, MimeType outMimeType, String xmlPortfolio,
-			String portfolioUuid, Long userId, Boolean portfolioActive) throws BusinessException, Exception;
+			UUID portfolioId, Long userId, Boolean portfolioActive) throws BusinessException, Exception;
 
 	String instanciatePortfolio(MimeType mimeType, String portfolioId, String srccode, String tgtcode, Long id,
 			int groupId, boolean copyshared, String groupname, boolean setOwner);
@@ -101,21 +101,21 @@ public interface PortfolioManager {
 			boolean instantiate, String projectName) throws BusinessException, FileNotFoundException, Exception;
 
 	String addPortfolio(MimeType inMimeType, MimeType outMimeType, String xmlPortfolio, long userId, long groupId,
-			String portfolioModelId, long substid, boolean parseRights, String projectName)
+			UUID portfolioModelId, long substid, boolean parseRights, String projectName)
 			throws BusinessException, Exception;
 
-	String getGroupRightsInfos(Long id, String portfolioId) throws BusinessException;
+	String getGroupRightsInfos(Long id, UUID portfolioId) throws BusinessException;
 
-	String addRoleInPortfolio(Long userId, String portfolioUuid, String data) throws BusinessException;
+	String addRoleInPortfolio(Long userId, UUID portfolioUuid, String data) throws BusinessException;
 
-	String getRoleByPortfolio(MimeType mimeType, String role, String portfolioUuid, Long userId);
+	String getRoleByPortfolio(MimeType mimeType, String role, UUID portfolioId, Long userId);
 
-	String getRolesByPortfolio(String portfolioUuid, Long userId);
+	String getRolesByPortfolio(UUID portfolioId, Long userId);
 
-	String copyPortfolio(MimeType mimeType, String portfolioUuid, String srccode, String tgtcode, Long userId,
+	UUID copyPortfolio(MimeType mimeType, UUID portfolioId, String srccode, String tgtcode, Long userId,
 			boolean setOwner) throws Exception;
 
-	String getPortfolioUuidFromNode(String nodeUuid);
+	UUID getPortfolioUuidFromNode(UUID nodeId);
 
 	void updateTime(UUID portfolioId);
 

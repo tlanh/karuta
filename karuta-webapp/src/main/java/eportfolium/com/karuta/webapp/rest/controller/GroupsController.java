@@ -27,6 +27,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/groups")
@@ -73,7 +74,7 @@ public class GroupsController extends AbstractController {
      * @param user
      * @param token
      * @param groupId
-     * @param portfolioUuid
+     * @param portfolioId
      * @param request
      * @return
      */
@@ -81,14 +82,13 @@ public class GroupsController extends AbstractController {
     public String getGroupsPortfolio(@CookieValue("user") String user,
                                      @CookieValue("credential") String token,
                                      @RequestParam("group") int groupId,
-                                     @PathVariable("portfolio-id") String portfolioUuid,
+                                     @PathVariable("portfolio-id") UUID portfolioId,
                                      HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(portfolioUuid)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
+
         UserInfo ui = checkCredential(request, user, token, null);
+
         try {
-            return portfolioManager.getRolesByPortfolio(portfolioUuid, ui.userId);
+            return portfolioManager.getRolesByPortfolio(portfolioId, ui.userId);
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));

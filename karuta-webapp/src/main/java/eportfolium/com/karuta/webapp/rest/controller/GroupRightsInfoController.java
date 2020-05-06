@@ -28,6 +28,8 @@ import eportfolium.com.karuta.webapp.util.javaUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/groupRightsInfos")
 public class GroupRightsInfoController extends AbstractController {
@@ -55,11 +57,8 @@ public class GroupRightsInfoController extends AbstractController {
     public String getGroupRightsInfos(@CookieValue("user") String user,
                                       @CookieValue("credential") String token,
                                       @RequestParam("group") int groupId,
-                                      @RequestParam("portfolioId") String portfolioId,
+                                      @RequestParam("portfolioId") UUID portfolioId,
                                       HttpServletRequest request) throws RestWebApplicationException {
-        if (!isUUID(portfolioId)) {
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, "Not UUID");
-        }
         UserInfo ui = checkCredential(request, user, token, null);
 
         try {
