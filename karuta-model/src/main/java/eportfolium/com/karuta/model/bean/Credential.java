@@ -14,7 +14,6 @@
    ======================================================= */
 
 package eportfolium.com.karuta.model.bean;
-// Generated 13 juin 2019 19:14:13 by Hibernate Tools 5.2.10.Final
 
 import java.io.Serializable;
 import java.util.HashSet;
@@ -32,16 +31,6 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 import javax.persistence.UniqueConstraint;
 
-/**
- * @author mlengagne
- *         <p>
- *         A qualification, achievement, personal quality, or aspect of a
- *         person's background, typically when used to indicate that they are
- *         suitable for something. recruitment is based mainly on academic
- *         credentials
- *         </p>
- *
- */
 @Entity
 @Table(name = "credential", uniqueConstraints = @UniqueConstraint(columnNames = "login"))
 public class Credential implements Serializable {
