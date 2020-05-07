@@ -21,7 +21,6 @@ import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import eportfolium.com.karuta.webapp.rest.provider.mapper.exception.RestWebApplicationException;
 import eportfolium.com.karuta.webapp.util.UserInfo;
 import eportfolium.com.karuta.webapp.util.javaUtils;
-import org.json.XML;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -55,7 +54,6 @@ public class ResourcesController extends AbstractController {
      * @param token
      * @param groupId
      * @param nodeParentId
-     * @param accept
      * @param request
      * @return
      */
@@ -65,16 +63,11 @@ public class ResourcesController extends AbstractController {
                               @CookieValue("credential") String token,
                               @RequestParam("group") long groupId,
                               @PathVariable("node-parent-id") UUID nodeParentId,
-                              @RequestHeader("Accept") String accept,
                               HttpServletRequest request) throws RestWebApplicationException {
         UserInfo ui = checkCredential(request, user, token, null);
 
         try {
-            String returnValue = resourceManager.getResource(MimeTypeUtils.TEXT_XML, nodeParentId, ui.userId, groupId)
-                    .toString();
-            if (accept.equals("application/json"))
-                returnValue = XML.toJSONObject(returnValue).toString();
-            return returnValue;
+            return resourceManager.getResource(MimeTypeUtils.TEXT_XML, nodeParentId, ui.userId, groupId);
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
@@ -90,7 +83,6 @@ public class ResourcesController extends AbstractController {
      * @param token
      * @param groupId
      * @param portfolioId      portfolio-id
-     * @param accept
      * @param request
      * @return
      */
@@ -99,16 +91,12 @@ public class ResourcesController extends AbstractController {
                                @CookieValue("credential") String token,
                                @RequestParam("group") long groupId,
                                @PathVariable("portfolio-id") UUID portfolioId,
-                               @RequestHeader("Accept") String accept,
                                HttpServletRequest request) throws RestWebApplicationException {
 
         UserInfo ui = checkCredential(request, user, token, null);
 
         try {
-            String returnValue = resourceManager.getResources(MimeTypeUtils.TEXT_XML, portfolioId, ui.userId, groupId);
-            if (accept.equals("application/json"))
-                returnValue = XML.toJSONObject(returnValue).toString();
-            return returnValue;
+            return resourceManager.getResources(MimeTypeUtils.TEXT_XML, portfolioId, ui.userId, groupId);
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));

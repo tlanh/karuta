@@ -22,7 +22,6 @@ import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import eportfolium.com.karuta.webapp.rest.provider.mapper.exception.RestWebApplicationException;
 import eportfolium.com.karuta.webapp.util.UserInfo;
 import eportfolium.com.karuta.webapp.util.javaUtils;
-import org.json.XML;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -67,7 +66,6 @@ public class NodesController extends AbstractController {
      * @param token
      * @param groupId
      * @param nodeId
-     * @param accept
      * @param cutoff
      * @param request
      * @return nodes in the ASM format
@@ -78,24 +76,14 @@ public class NodesController extends AbstractController {
                           @CookieValue("credential") String token,
                           @RequestParam("group") long groupId,
                           @PathVariable("node-id") UUID nodeId,
-                          @RequestHeader("Accept") String accept,
                           @RequestParam("level") Integer cutoff,
                           HttpServletRequest request) throws RestWebApplicationException {
 
         UserInfo ui = checkCredential(request, user, token, null);
 
         try {
-
-            String returnValue = nodeManager
+            return nodeManager
                     .getNode(MimeTypeUtils.TEXT_XML, nodeId, false, ui.userId, groupId, null, cutoff);
-            if (returnValue.length() != 0) {
-                if (accept.equals(MediaType.APPLICATION_JSON))
-                    returnValue = XML.toJSONObject(returnValue).toString();
-            }
-            return returnValue;
-        } catch (NullPointerException ex) {
-            ex.printStackTrace();
-            throw new RestWebApplicationException(HttpStatus.NOT_ACCEPTABLE, "Incorrect Mime Type");
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
@@ -112,7 +100,6 @@ public class NodesController extends AbstractController {
      * @param token
      * @param groupId
      * @param nodeId
-     * @param accept
      * @param cutoff
      * @param request
      * @return nodes in the ASM format
@@ -123,26 +110,16 @@ public class NodesController extends AbstractController {
                                       @CookieValue("credential") String token,
                                       @RequestParam("group") long groupId,
                                       @PathVariable("node-id") UUID nodeId,
-                                      @RequestHeader("Accept") String accept,
                                       @RequestParam("level") Integer cutoff,
                                       HttpServletRequest request) throws RestWebApplicationException {
 
         UserInfo ui = checkCredential(request, user, token, null);
 
         try {
-            String returnValue = nodeManager
+            return nodeManager
                     .getNode(MimeTypeUtils.TEXT_XML, nodeId, true, ui.userId, groupId, null, cutoff);
-            if (returnValue.length() != 0) {
-                if (accept.equals(MediaType.APPLICATION_JSON)) {
-                    returnValue = XML.toJSONObject(returnValue).toString();
-                }
-            }
-            return returnValue;
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
-        } catch (NullPointerException ex) {
-            ex.printStackTrace();
-            throw new RestWebApplicationException(HttpStatus.NOT_ACCEPTABLE, "Incorrect Mime Type");
         } catch (Exception ex) {
             ex.printStackTrace();
             throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
@@ -157,7 +134,6 @@ public class NodesController extends AbstractController {
      * @param token
      * @param groupId
      * @param nodeId
-     * @param accept
      * @param request
      * @return <metadata-wad/>
      */
@@ -167,20 +143,12 @@ public class NodesController extends AbstractController {
                                      @CookieValue("credential") String token,
                                      @RequestParam("group") long groupId,
                                      @PathVariable("nodeid") UUID nodeId,
-                                     @RequestHeader("Accept") String accept,
                                      HttpServletRequest request) throws RestWebApplicationException {
 
         UserInfo ui = checkCredential(request, user, token, null);
 
         try {
-
-            String returnValue = nodeManager.getNodeMetadataWad(MimeTypeUtils.TEXT_XML, nodeId, ui.userId, groupId)
-                    .toString();
-            if (returnValue.length() != 0) {
-                if (accept.equals(MediaType.APPLICATION_JSON))
-                    returnValue = XML.toJSONObject(returnValue).toString();
-            }
-            return returnValue;
+            return nodeManager.getNodeMetadataWad(MimeTypeUtils.TEXT_XML, nodeId, ui.userId, groupId);
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
@@ -198,7 +166,6 @@ public class NodesController extends AbstractController {
      * @param token
      * @param groupId
      * @param nodeId
-     * @param accept
      * @param request
      * @return <node uuid=""> <role name=""> <right RD="" WR="" DL="" /> </role>
      *         </node>
@@ -209,24 +176,20 @@ public class NodesController extends AbstractController {
                                 @CookieValue("credential") String token,
                                 @RequestParam("group") long groupId,
                                 @PathVariable("node-id") UUID nodeId,
-                                @RequestHeader("Accept") String accept,
                                 HttpServletRequest request) throws RestWebApplicationException {
 
         UserInfo ui = checkCredential(request, user, token, null);
 
         try {
-
+            // TODO: Check with original code ; implementation is wrong for sure
             GroupRights gr = nodeManager.getRights(ui.userId, groupId, nodeId);
-            String returnValue = null;
-            if (gr != null) {
-                if (accept.equals(MediaType.APPLICATION_JSON))
-                    returnValue = XML.toJSONObject(returnValue).toString();
-            } else {
+
+            if (gr == null) {
                 throw new RestWebApplicationException(HttpStatus.FORBIDDEN,
                         "Vous n'avez pas les droits necessaires");
             }
 
-            return returnValue;
+            return gr.toString();
         } catch (RestWebApplicationException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (NullPointerException ex) {
@@ -1023,7 +986,6 @@ public class NodesController extends AbstractController {
      * @param nodeId
      * @param lang
      * @param xslFile
-     * @param accept
      * @param request
      * @return
      */
@@ -1034,7 +996,6 @@ public class NodesController extends AbstractController {
                                  @PathVariable("node-id") UUID nodeId,
                                  @RequestParam("lang") String lang,
                                  @RequestParam("xsl-file") String xslFile,
-                                 @RequestHeader("Accept") String accept,
                                  HttpServletRequest request) throws RestWebApplicationException {
 
         UserInfo ui = checkCredential(request, user, token, null);
@@ -1050,14 +1011,8 @@ public class NodesController extends AbstractController {
             /// webapps...
             ppath = ppath.substring(0, ppath.lastIndexOf(File.separator, ppath.length() - 2) + 1);
             xslFile = ppath + xslFile;
-            String returnValue = nodeManager
+            return nodeManager
                     .getNodeWithXSL(MimeTypeUtils.TEXT_XML, nodeId, xslFile, parameters, ui.userId, groupId);
-            if (returnValue.length() != 0) {
-                if (MediaType.APPLICATION_JSON.equals(accept))
-                    returnValue = XML.toJSONObject(returnValue).toString();
-            }
-
-            return returnValue;
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (NullPointerException ex) {

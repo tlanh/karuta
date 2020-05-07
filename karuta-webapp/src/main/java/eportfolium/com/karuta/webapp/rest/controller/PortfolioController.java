@@ -59,7 +59,6 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.util.EntityUtils;
-import org.json.XML;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -116,7 +115,6 @@ public class PortfolioController extends AbstractController {
      * @param token
      * @param groupId
      * @param portfolioId
-     * @param accept
      * @param userId
      * @param group
      * @param resource
@@ -140,7 +138,6 @@ public class PortfolioController extends AbstractController {
                                @CookieValue("credential") String token,
                                @RequestParam("group") int groupId,
                                @PathVariable("portfolio-id") UUID portfolioId,
-                               @RequestHeader("Accept") String accept,
                                @RequestParam("user") Integer userId,
                                @RequestParam("group") Integer group,
                                @RequestParam("resources") String resource,
@@ -158,7 +155,6 @@ public class PortfolioController extends AbstractController {
 
             /// Finding back code. Not really pretty
             Date time = new Date();
-            ResponseEntity response = null;
             SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
             String timeFormat = dt.format(time);
             Document doc = DomUtils.xmlString2Document(portfolio, new StringBuffer());
@@ -172,7 +168,7 @@ public class PortfolioController extends AbstractController {
             code = code.replace("_", "");
 
             if (export != null) {
-                response = ResponseEntity
+                return ResponseEntity
                         .ok()
                         .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename = \"" + code + "-" + timeFormat + ".xml\"")
                         .body(portfolio);
@@ -187,25 +183,18 @@ public class PortfolioController extends AbstractController {
                 f.read(b);
                 f.close();
 
-                response = ResponseEntity.ok()
+                // Temp file cleanup
+                tempZip.delete();
+
+                return ResponseEntity.ok()
                         .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE)
                         .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename = \"" + code + "-" + timeFormat + ".zip")
                         .build();
-
-                // Temp file cleanup
-                tempZip.delete();
             } else {
-                if (accept.equals("application/json")) {
-                    portfolio = XML.toJSONObject(portfolio).toString();
-                    response = ResponseEntity.ok()
-                                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                                .body(portfolio);
-                } else
-                    response = ResponseEntity.ok()
-                                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_XML_VALUE)
-                                .body(portfolio);
+                return ResponseEntity.ok()
+                            .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_XML_VALUE)
+                            .body(portfolio);
             }
-            return response;
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
@@ -375,7 +364,6 @@ public class PortfolioController extends AbstractController {
      * @param user
      * @param token
      * @param groupId
-     * @param accept
      * @param active             false/0 (also show inactive portoflios)
      * @param userId             for this user (only with root)
      * @param code
@@ -398,7 +386,6 @@ public class PortfolioController extends AbstractController {
     public String getPortfolios(@CookieValue("user") String user,
                                 @CookieValue("credential") String token,
                                 @RequestParam("group") long groupId,
-                                @RequestHeader("Accept") String accept,
                                 @RequestParam("active") String active,
                                 @RequestParam("userid") Integer userId,
                                 @RequestParam("code") String code,
@@ -414,13 +401,8 @@ public class PortfolioController extends AbstractController {
 
         try {
             if (portfolioId != null) {
-                String returnValue = portfolioManager.getPortfolio(MimeTypeUtils.TEXT_XML, portfolioId, ui.userId,
-                        groupId, this.label, null, null, ui.subId, cutoff).toString();
-                if (accept.equals("application/json"))
-                    returnValue = XML.toJSONObject(returnValue).toString();
-
-                return returnValue;
-
+                return portfolioManager.getPortfolio(MimeTypeUtils.TEXT_XML, portfolioId, ui.userId,
+                        groupId, this.label, null, null, ui.subId, cutoff);
             } else {
                 String portfolioCode = null;
                 String returnValue = "";
@@ -478,9 +460,6 @@ public class PortfolioController extends AbstractController {
                         returnValue = portfolioManager.getPortfolios(MimeTypeUtils.TEXT_XML, ui.userId, groupId,
                                 portfolioActive, ui.subId, portfolioProject, portfolioProjectId, countOnly, search);
                     }
-
-                    if (accept.equals("application/json"))
-                        returnValue = XML.toJSONObject(returnValue).toString();
                 }
                 return returnValue;
             }
