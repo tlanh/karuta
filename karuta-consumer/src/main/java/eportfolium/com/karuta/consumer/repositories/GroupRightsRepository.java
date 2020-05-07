@@ -5,16 +5,18 @@ import eportfolium.com.karuta.model.bean.GroupRightsId;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.UUID;
 
+@Repository
 public interface GroupRightsRepository extends CrudRepository<GroupRights, GroupRightsId> {
 
     @Query("SELECT gr FROM GroupRights gr " +
             "INNER JOIN FETCH gr.id.groupRightInfo gri " +
             "INNER JOIN FETCH gri.groupInfo gi " +
-            "INNER JOIN gi.groupUser gu WITH gu.id.credential.id = :userId" +
+            "INNER JOIN gi.groupUser gu WITH gu.id.credential.id = :userId " +
             "WHERE gr.id.id = :id")
     GroupRights getRightsByIdAndUser(@Param("id") UUID id,
                                      @Param("userId") Long userId);
@@ -41,7 +43,7 @@ public interface GroupRightsRepository extends CrudRepository<GroupRights, Group
                                          @Param("userId") Long userId);
 
     @Query("SELECT gr FROM GroupRights gr " +
-            "WHERE gr.id.id = :nodeId " +
+            "WHERE gr.id.id = :id " +
             "AND id.groupRightInfo.id = (" +
             "SELECT gri2.id FROM GroupInfo gi, GroupRightInfo gri2 " +
             "INNER JOIN gi.groupRightInfo gri1 " +
@@ -111,6 +113,7 @@ public interface GroupRightsRepository extends CrudRepository<GroupRights, Group
                                                 @Param("id1") Long id1,
                                                 @Param("id2") Long id2,
                                                 @Param("id3") Long id3);
+
     @Query("SELECT cr.id FROM GroupRights gr, GroupInfo gi, GroupUser gu " +
             "INNER JOIN gu.id.credential cr " +
             "INNER JOIN gr.id.groupRightInfo gri " +
@@ -118,7 +121,7 @@ public interface GroupRightsRepository extends CrudRepository<GroupRights, Group
             "WHERE gr.id.id = :id " +
             "AND gri.id = gri2.id " +
             "AND gi.label LIKE gri.label " +
-            "AND gu.id.groupInfo.id = gi.id)")
+            "AND gu.id.groupInfo.id = gi.id")
     Long getUserIdFromNode(@Param("id") UUID id);
 
     @Query("SELECT gr FROM GroupRights gr " +

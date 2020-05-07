@@ -4,10 +4,12 @@ import eportfolium.com.karuta.model.bean.Credential;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.UUID;
 
+@Repository
 public interface CredentialRepository extends CrudRepository<Credential, Long> {
     public static final int PASSWORD_LENGTH = 5;
 
@@ -21,7 +23,8 @@ public interface CredentialRepository extends CrudRepository<Credential, Long> {
     @Query("SELECT c FROM Credential c WHERE c.id = :id AND c.active = 1")
     Credential findActiveById(@Param("id") Long id);
 
-    @Query("FROM c.isAdmin WHERE c.id = :id")
+    @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END " +
+            "FROM Credential c WHERE c.id = :id AND c.isAdmin = 1")
     boolean isAdmin(@Param("id") Long id);
 
     @Query("SELECT c.isDesigner FROM Credential c WHERE c.id = :id")
@@ -54,7 +57,7 @@ public interface CredentialRepository extends CrudRepository<Credential, Long> {
             "LEFT JOIN FETCH c.credentialSubstitution cs " +
             "WHERE lower(c.login) LIKE %:username% " +
             "AND lower(c.displayFirstname) LIKE %:firstname% " +
-            "AND lower(cs.displayLastname) LIKE %:lastname% " +
+            "AND lower(c.displayLastname) LIKE %:lastname% " +
             "ORDER BY c.id")
     List<Credential> getUsers(@Param("username") String username,
                               @Param("firstname") String firstname,
@@ -64,7 +67,7 @@ public interface CredentialRepository extends CrudRepository<Credential, Long> {
             "WHERE c.id = gu.id.credential.id " +
             "AND gu.id.groupInfo.id = gi.id " +
             "AND gi.groupRightInfo.id = gri.id " +
-            "AND gri.portfolio.id = :portfolioUuid " +
+            "AND gri.portfolio.id = :portfolioId " +
             "AND gri.label = :role")
     List<Credential> getUsersByRole(@Param("portfolioId") UUID portfolioId,
                                     @Param("role") String role);

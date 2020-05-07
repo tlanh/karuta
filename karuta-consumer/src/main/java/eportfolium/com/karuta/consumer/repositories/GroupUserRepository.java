@@ -6,10 +6,12 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.UUID;
 
+@Repository
 public interface GroupUserRepository extends CrudRepository<GroupUser, GroupUserId> {
     @Query("SELECT gu FROM GroupUser gu " +
             "WHERE gu.id.credential.id = :userId " +
@@ -42,7 +44,7 @@ public interface GroupUserRepository extends CrudRepository<GroupUser, GroupUser
     @Query("SELECT gu FROM GroupUser gu " +
             "INNER JOIN FETCH gu.id.credential cr " +
             "INNER JOIN FETCH gu.id.groupInfo gi " +
-            "INNER JOIN FETCH gi.groupRightInfo gri" +
+            "INNER JOIN FETCH gi.groupRightInfo gri " +
             "WHERE gri.id = :grid")
     List<GroupUser> getByRole(@Param("grid") Long grid);
 
@@ -69,9 +71,9 @@ public interface GroupUserRepository extends CrudRepository<GroupUser, GroupUser
             ")")
     void deleteByPortfolio(@Param("portfolioId") UUID portfolioId);
 
-    @Query("SELECT CASE WHEN COUNT(gu) > 0 THEN true ELSE false FROM GroupUser gu " +
+    @Query("SELECT CASE WHEN COUNT(gu) > 0 THEN true ELSE false END FROM GroupUser gu " +
             "INNER JOIN gu.id.groupInfo gi " +
-            "WHERE gu.id.credential.id = :userid " +
+            "WHERE gu.id.credential.id = :userId " +
             "AND gi.groupRightInfo.id = :grid")
     boolean hasRole(@Param("userId") Long userId, @Param("grid") Long grid);
 }

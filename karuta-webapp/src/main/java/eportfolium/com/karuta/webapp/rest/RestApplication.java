@@ -15,36 +15,17 @@
 
 package eportfolium.com.karuta.webapp.rest;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.SpringApplication;
-import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder;
-import org.springframework.context.annotation.Bean;
+import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.orm.jpa.JpaTransactionManager;
-import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 @SpringBootApplication
 @ComponentScan(basePackages = "eportfolium.com.karuta")
+@EntityScan(basePackages= "eportfolium.com.karuta.model.bean")
+@EnableJpaRepositories(basePackages = "eportfolium.com.karuta.consumer.repositories")
 public class RestApplication {
-	@Autowired
-	private JdbcTemplate jdbcTemplate;
-
-	@Bean
-	public LocalContainerEntityManagerFactoryBean entityManagerFactoryManager(EntityManagerFactoryBuilder builder) {
-		return builder
-				.dataSource(jdbcTemplate.getDataSource())
-				.packages("eportfolium.com.karuta.model")
-				.persistenceUnit("karuta-backend")
-				.build();
-	}
-
-	@Bean
-	public JpaTransactionManager transactionManager() {
-		return new JpaTransactionManager();
-	}
-
 
 	public static void main(String[] args) {
 		SpringApplication.run(RestApplication.class, args);

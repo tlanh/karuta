@@ -6,11 +6,13 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+@Repository
 public interface PortfolioRepository extends CrudRepository<Portfolio, UUID>,
         JpaSpecificationExecutor<Portfolio> {
     @Query("SELECT p FROM PortfolioGroupMembers pgm " +
@@ -26,7 +28,7 @@ public interface PortfolioRepository extends CrudRepository<Portfolio, UUID>,
     @Query("SELECT p.modifUserId FROM Portfolio p WHERE p.id = :id")
     Long getOwner(@Param("id") UUID id);
 
-    @Query("SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false FROM Portfolio p " +
+    @Query("SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END FROM Portfolio p " +
             "INNER JOIN p.groupRightInfo gri WITH gri.label='all' " +
             "INNER JOIN gri.groupInfo gi " +
             "INNER JOIN gi.groupUser gu " +
@@ -34,14 +36,14 @@ public interface PortfolioRepository extends CrudRepository<Portfolio, UUID>,
             "WHERE p.id = :id")
     boolean isPublic(@Param("id") UUID id);
 
-    @Query("SELECT CASE WHEN COUNT(n) > 0 THEN true ELSE false FROM Node n " +
+    @Query("SELECT CASE WHEN COUNT(n) > 0 THEN true ELSE false END FROM Node n " +
             "INNER JOIN n.portfolio p " +
             "WHERE n.modifUserId = :userId " +
             "AND p.id = :id")
     boolean isOwner(@Param("id") UUID id,
                     @Param("userId") Long userId);
 
-    @Query("SELECT CASE WHEN COUNT(n) > 0 THEN true ELSE false FROM Node n " +
+    @Query("SELECT CASE WHEN COUNT(n) > 0 THEN true ELSE false END FROM Node n " +
             "WHERE n.portfolio.id = :id " +
             "AND n.sharedNode = TRUE")
     boolean hasSharedNodes(@Param("id") UUID id);

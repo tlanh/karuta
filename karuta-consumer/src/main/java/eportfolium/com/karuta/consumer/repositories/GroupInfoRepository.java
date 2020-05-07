@@ -4,10 +4,12 @@ import eportfolium.com.karuta.model.bean.GroupInfo;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.UUID;
 
+@Repository
 public interface GroupInfoRepository extends CrudRepository<GroupInfo, Long> {
 
     List<GroupInfo> findByLabelAndOwner(String label, String owner);

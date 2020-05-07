@@ -4,15 +4,17 @@ import eportfolium.com.karuta.model.bean.Node;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.UUID;
 
+@Repository
 public interface NodeRepository extends CrudRepository<Node, UUID> {
 
     Node findByIdAndSemantictag(UUID id, String semantictag);
 
-    @Query("SELECT SELECT CASE WHEN COUNT(n) > 0 THEN true ELSE false FROM Node n " +
+    @Query("SELECT CASE WHEN COUNT(n) > 0 THEN true ELSE false END FROM Node n " +
             "INNER JOIN n.portfolio p " +
             "INNER JOIN p.groupRightInfo gri WITH gri.label='all' " +
             "INNER JOIN gri.groupInfo gi " +
@@ -64,7 +66,7 @@ public interface NodeRepository extends CrudRepository<Node, UUID> {
     @Query("SELECT p.id FROM Node n1 " +
             "INNER JOIN n1.portfolio p " +
             "WHERE n1.asmType = 'asmRoot' " +
-            "AND n1.code = :code" +
+            "AND n1.code = :code " +
             "AND n1.id != :nodeId " +
             "AND p.id = (SELECT n2.portfolio.id FROM Node n2 WHERE n2.id = :nodeId)")
     boolean isCodeExist(@Param("code") String code, @Param("nodeId") UUID nodeId);
@@ -83,7 +85,7 @@ public interface NodeRepository extends CrudRepository<Node, UUID> {
                                 @Param("code") String code);
 
     @Query("SELECT n FROM Node n " +
-            "INNER JOIN n.portfolio p WITH p.id = :portfolioUuid " +
+            "INNER JOIN n.portfolio p WITH p.id = :portfolioId " +
             "WHERE n.semantictag LIKE CONCAT('%', :semantictag, '%') " +
             "ORDER BY n.code, n.nodeOrder")
     List<Node> getNodesBySemanticTag(@Param("portfolioId") UUID portfolioId,
@@ -97,8 +99,8 @@ public interface NodeRepository extends CrudRepository<Node, UUID> {
     List<Node> getDirectChildren(@Param("ids") List<UUID> ids);
 
     @Query("SELECT n FROM Node n " +
-            "AND n.semantictag LIKE CONCAT('%', :semantictag, '%') " +
-            "AND n.parent.id = :parentId")
+            "WHERE n.semantictag LIKE CONCAT('%', :semantictag, '%') " +
+            "AND n.parentNode.id = :parentId")
     Node getParentNode(@Param("parentId") UUID parentId,
                        @Param("semantictag") String semantictag);
 

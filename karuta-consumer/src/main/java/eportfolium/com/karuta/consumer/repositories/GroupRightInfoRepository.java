@@ -4,11 +4,13 @@ import eportfolium.com.karuta.model.bean.GroupRightInfo;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+@Repository
 public interface GroupRightInfoRepository extends CrudRepository<GroupRightInfo, Long> {
     @Query("SELECT gri FROM GroupRightInfo gri " +
             "INNER JOIN FETCH gri.portfolio p " +
@@ -36,7 +38,7 @@ public interface GroupRightInfoRepository extends CrudRepository<GroupRightInfo,
             "INNER JOIN n.portfolio p2 " +
             "INNER JOIN gri.groupInfo gi " +
             "WHERE p1.id = p2.id " +
-            "AND n.id = :nodeUuid " +
+            "AND n.id = :nodeId " +
             "AND gri.label = :label")
     Long getIdByNodeAndLabel(@Param("nodeId") UUID nodeId, @Param("label") String label);
 
@@ -50,7 +52,7 @@ public interface GroupRightInfoRepository extends CrudRepository<GroupRightInfo,
 
     @Query("SELECT new map(portfolio.id as portfolioUUID, gr.notifyRoles AS notifyRoles) " +
             "FROM GroupUser gu " +
-            "INNER JOIN gu.id.groupInfo gi WITH gi.id = :groupId " +
+            "INNER JOIN gu.id.groupInfo gi WITH gi.id = :groupInfoId " +
             "INNER JOIN gi.groupRightInfo gri " +
             "INNER JOIN gri.portfolio portfolio " +
             "INNER JOIN gri.groupRights gr WITH gr.id.id = :groupRightId " +

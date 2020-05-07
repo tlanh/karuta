@@ -4,10 +4,12 @@ import eportfolium.com.karuta.model.bean.ResourceTable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.UUID;
 
+@Repository
 public interface ResourceTableRepository extends CrudRepository<ResourceTable, UUID> {
     @Query("SELECT r FROM ResourceTable r " +
             "INNER JOIN r.contextNode n WITH n.portfolio.id = :portfolioId")
@@ -26,7 +28,7 @@ public interface ResourceTableRepository extends CrudRepository<ResourceTable, U
             "AND r.id = :id")
     ResourceTable getResourceByXsiType(@Param("id") UUID id, @Param("xsiType") String xsiType);
 
-    @Query("SELECT r FROM ResourceTable r" +
+    @Query("SELECT r FROM ResourceTable r " +
             "INNER JOIN r.node n WITH n.id = :parentNodeId")
     ResourceTable getResourceByParentNodeUuid(@Param("parentNodeId") UUID parentNodeId);
 
