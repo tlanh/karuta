@@ -435,7 +435,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		/// partagés)
 		else if (hasRights(userId, portfolioId)) {
 			time2 = System.currentTimeMillis();
-			Map<String, GroupRights> t_rights_22 = new HashMap<String, GroupRights>();
+			Map<UUID, GroupRights> t_rights_22 = new HashMap<>();
 			time3 = System.currentTimeMillis();
 
 			String login = credentialRepository.getLoginById(userId);
@@ -443,15 +443,15 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 			List<GroupRights> grList = groupRightsRepository.getPortfolioAndUserRights(portfolioId, login,
 					groupId);
 			for (GroupRights gr : grList) {
-				if (t_rights_22.containsKey(gr.getGroupRightsId().toString())) {
-					GroupRights original = t_rights_22.get(gr.getGroupRightsId().toString());
+				if (t_rights_22.containsKey(gr.getGroupRightsId())) {
+					GroupRights original = t_rights_22.get(gr.getGroupRightsId());
 					original.setRead(Boolean.logicalOr(gr.isRead(), original.isRead()));
 					original.setWrite(Boolean.logicalOr(gr.isWrite(), original.isWrite()));
 					original.setDelete(Boolean.logicalOr(gr.isDelete(), original.isDelete()));
 					original.setSubmit(Boolean.logicalOr(gr.isSubmit(), original.isSubmit()));
 					original.setAdd(Boolean.logicalOr(gr.isAdd(), original.isAdd()));
 				} else {
-					t_rights_22.put(gr.getGroupRightsId().toString(), gr);
+					t_rights_22.put(gr.getGroupRightsId(), gr);
 				}
 			}
 
@@ -461,8 +461,8 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 
 			// Sélectionne les données selon la filtration
 			for (Node node : nodes) {
-				if (t_rights_22.containsKey(node.getId().toString())) { // Verification des droits
-					rights = t_rights_22.get(node.getId().toString());
+				if (t_rights_22.containsKey(node.getId())) { // Verification des droits
+					rights = t_rights_22.get(node.getId());
 					if (rights.isRead()) { // On doit au moins avoir le droit de lecture
 						portfolioStructure.add(Pair.of(node, rights));
 					}
@@ -514,11 +514,12 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 
 		if (portfolioRepository.hasSharedNodes(portfolioId)) {
 			List<Node> t_nodes = nodeRepository.getSharedNodes(portfolioId);
-			Map<Integer, Set<String>> t_map_parentid = new HashMap<Integer, Set<String>>();
-			Set<String> t_set_parentid = new HashSet<String>();
+
+			Map<Integer, Set<UUID>> t_map_parentid = new HashMap<>();
+			Set<UUID> t_set_parentid = new HashSet<>();
 
 			for (Node t_node : t_nodes) {
-				t_set_parentid.add(t_node.getSharedNodeUuid().toString());
+				t_set_parentid.add(t_node.getSharedNodeUuid());
 			}
 
 			t_map_parentid.put(0, t_set_parentid);
@@ -526,14 +527,15 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 			/// Les tours de boucle seront toujours <= au nombre de noeud du portfolio.
 			int level = 0;
 			boolean added = true;
-			Set<String> t_struc_parentid_2 = null;
+			Set<UUID> t_struc_parentid_2 = null;
 			while (added && (cutoff == null ? true : level < cutoff)) {
-				t_struc_parentid_2 = new HashSet<String>();
+				t_struc_parentid_2 = new HashSet<>();
+
 				for (Node t_node : t_nodes) {
-					for (String t_parent_node : t_map_parentid.get(level)) {
+					for (UUID t_parent_node : t_map_parentid.get(level)) {
 						if (t_node.getPortfolio().getId().equals(portfolioId)
-								&& t_node.getParentNode().getId().toString().equals(t_parent_node)) {
-							t_struc_parentid_2.add(t_node.getId().toString());
+								&& t_node.getParentNode().getId().equals(t_parent_node)) {
+							t_struc_parentid_2.add(t_node.getId());
 							break;
 						}
 					}

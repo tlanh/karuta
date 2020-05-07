@@ -1158,12 +1158,12 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 				// Récupération asmContext contenant l'action
 				final Node n3 = nodeRepository.getParentNode(nodeId, "action");
 				final String[] children = StringUtils.split(n3.getChildrenStr(), ",");
-				final Set<String> childrenSet = new LinkedHashSet<String>(children.length);
+				final Set<UUID> childrenSet = new LinkedHashSet<>(children.length);
 				for (String child : children) {
-					childrenSet.add(child);
+					childrenSet.add(UUID.fromString(child));
 				}
 
-				final List<Node> contextActionNode = nodeRepository.getNodes(new ArrayList<String>(childrenSet));
+				final List<Node> contextActionNode = nodeRepository.getNodes(new ArrayList<>(childrenSet));
 				UUID contextActionNodeUuid = contextActionNode.isEmpty() ? null
 						: contextActionNode.get(0).getId();
 
