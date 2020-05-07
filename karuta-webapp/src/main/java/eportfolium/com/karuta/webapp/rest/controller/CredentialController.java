@@ -47,7 +47,6 @@ import eportfolium.com.karuta.business.contract.UserManager;
 import eportfolium.com.karuta.config.Consts;
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
-import eportfolium.com.karuta.webapp.eventbus.KEvent;
 import eportfolium.com.karuta.webapp.rest.provider.mapper.exception.RestWebApplicationException;
 import eportfolium.com.karuta.webapp.util.DomUtils;
 
@@ -171,9 +170,7 @@ public class CredentialController extends AbstractController {
     public ResponseEntity<String> postCredentialFromXml(@RequestBody String xmlCredential,
                                                         HttpServletRequest request) throws RestWebApplicationException {
         HttpSession session = request.getSession(true);
-        KEvent event = new KEvent();
-        event.eventType = KEvent.EventType.LOGIN;
-        event.inputData = xmlCredential;
+
         String retVal = "";
         int status = 0;
 
@@ -206,7 +203,7 @@ public class CredentialController extends AbstractController {
             // 1,2 : username, uid
             // 3,4 : substitute name, substitute id
             if (resultCredential == null) {
-                event.status = 403;
+                status = 403;
                 retVal = "invalid credential";
 
                 if (authLog != null)
@@ -240,14 +237,13 @@ public class CredentialController extends AbstractController {
                                 new Date()));
                 }
 
-                event.status = 200;
+                status = 200;
                 retVal = resultCredential[0];
             }
-            // eventbus.processEvent(event);
 
             return ResponseEntity
-                        .status(event.status)
-                        .header(HttpHeaders.CONTENT_TYPE, event.mediaType)
+                        .status(status)
+                        .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_XML_VALUE)
                         .body(retVal);
         } catch (RestWebApplicationException ex) {
             ex.printStackTrace();

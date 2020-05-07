@@ -19,7 +19,6 @@ import eportfolium.com.karuta.business.contract.NodeManager;
 import eportfolium.com.karuta.model.bean.GroupRights;
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
-import eportfolium.com.karuta.webapp.eventbus.KEvent;
 import eportfolium.com.karuta.webapp.rest.provider.mapper.exception.RestWebApplicationException;
 import eportfolium.com.karuta.webapp.util.UserInfo;
 import eportfolium.com.karuta.webapp.util.javaUtils;
@@ -849,12 +848,6 @@ public class NodesController extends AbstractController {
                                            HttpServletRequest request) throws RestWebApplicationException {
         UserInfo ui = checkCredential(request, user, token, null);
 
-        KEvent event = new KEvent();
-        event.eventType = KEvent.EventType.NODE;
-        event.requestType = KEvent.RequestType.POST;
-        event.uuid = parentId;
-        event.inputData = xmlNode;
-
         try {
 
             if (ui.userId == 0) {
@@ -864,13 +857,11 @@ public class NodesController extends AbstractController {
             } else {
                 String returnValue = nodeManager
                         .addNode(MimeTypeUtils.TEXT_XML, parentId, xmlNode, ui.userId, groupId, false);
-                ResponseEntity<String> response = ResponseEntity
-                                                    .status(event.status)
-                                                    .header(HttpHeaders.CONTENT_TYPE, event.mediaType)
-                                                    .body(returnValue);
-                event.status = 200;
-                // eventbus.processEvent(event); ???
-                return response;
+
+                return ResponseEntity
+                        .status(200)
+                        .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_XML_VALUE)
+                        .body(returnValue);
             }
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, "Vous n'avez pas les droits d'acces");
