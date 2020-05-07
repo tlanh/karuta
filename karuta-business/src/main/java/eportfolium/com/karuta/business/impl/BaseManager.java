@@ -112,7 +112,7 @@ public abstract class BaseManager {
 
 	protected void processQuery(List<Pair<Node, GroupRights>> nodes, Map<String, Object[]> resolve,
 			Map<String, t_tree> entries, Document document, DocumentBuilder documentBuilder, String role)
-			throws UnsupportedEncodingException, DOMException, SQLException, SAXException, IOException {
+			throws DOMException {
 
 		StringBuilder data = new StringBuilder(256);
 		Node node = null;

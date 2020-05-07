@@ -20,7 +20,6 @@ import java.util.UUID;
 
 import eportfolium.com.karuta.model.bean.Credential;
 import eportfolium.com.karuta.model.exception.BusinessException;
-import eportfolium.com.karuta.model.exception.DoesNotExistException;
 
 public interface UserManager {
 
@@ -46,9 +45,9 @@ public interface UserManager {
 
 	String getUsersByRole(Long userId, UUID portfolioId, String role);
 
-	String getRole(Long groupRightInfoId) throws BusinessException;
+	String getRole(Long groupRightInfoId);
 
-	String getUserInfos(Long userId) throws DoesNotExistException;
+	String getUserInfos(Long userId);
 
 	Long getUserId(String userLogin);
 
@@ -77,6 +76,6 @@ public interface UserManager {
 
 	Set<String[]> getNotificationUserList(Long userId, Long groupId, UUID groupRightId);
 
-	Credential getUser(Long userId) throws DoesNotExistException;
+	Credential getUser(Long userId);
 
 }

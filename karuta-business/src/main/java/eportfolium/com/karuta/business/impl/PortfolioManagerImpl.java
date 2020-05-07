@@ -27,7 +27,6 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.StringReader;
 import java.io.StringWriter;
-import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.Map.Entry;
@@ -37,7 +36,6 @@ import java.util.zip.Deflater;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import javax.activation.MimeTypeParseException;
 import javax.persistence.criteria.Join;
 import javax.persistence.criteria.ListJoin;
 import javax.xml.parsers.DocumentBuilder;
@@ -74,11 +72,9 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
-import org.xml.sax.SAXException;
 
 import eportfolium.com.karuta.consumer.util.DomUtils;
 import eportfolium.com.karuta.model.exception.BusinessException;
-import eportfolium.com.karuta.model.exception.DoesNotExistException;
 import eportfolium.com.karuta.model.exception.GenericBusinessException;
 import eportfolium.com.karuta.util.JavaTimeUtil;
 
@@ -255,7 +251,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 	@Override
 	public String getPortfolio(MimeType outMimeType, UUID portfolioId, Long userId, Long groupId, String label,
 			String resource, String files, long substid, Integer cutoff)
-			throws DoesNotExistException, BusinessException, Exception {
+			throws BusinessException, ParserConfigurationException {
 
 		Node rootNode = portfolioRepository.getPortfolioRootNode(portfolioId);
 		String header = "";
@@ -324,10 +320,8 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 						file.delete();
 
 						return adresseduzip;
-					} catch (FileNotFoundException fileNotFound) {
+					} catch (IOException fileNotFound) {
 						fileNotFound.printStackTrace();
-					} catch (IOException io) {
-						io.printStackTrace();
 					}
 				}
 			}
@@ -345,7 +339,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 
 	private String getLinearXml(UUID portfolioId, String rootuuid, Node portfolio, boolean withChildren,
 			String withChildrenOfXsiType, Long userId, Long groupId, String role, Integer cutoff)
-			throws SQLException, SAXException, IOException, ParserConfigurationException {
+			throws ParserConfigurationException {
 		DocumentBuilderFactory newInstance = DocumentBuilderFactory.newInstance();
 		DocumentBuilder parse = newInstance.newDocumentBuilder();
 
@@ -522,23 +516,19 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 	}
 
 	public String getPortfolioByCode(MimeType mimeType, String portfolioCode, Long userId, Long groupId,
-			String resources, long substid) throws DoesNotExistException, BusinessException, Exception {
+			String resources, long substid) throws BusinessException, ParserConfigurationException {
 		Portfolio portfolio = portfolioRepository.getPortfolioFromNodeCode(portfolioCode);
 
 		if (portfolio == null) {
-			throw new DoesNotExistException(Portfolio.class, portfolioCode);
+			return "";
 		}
 
 		boolean withResources = BooleanUtils.toBoolean(resources);
 		String result = "";
 
 		if (withResources) {
-			try {
-				return getPortfolio(mimeType, portfolio.getId(), userId, groupId, null, null, null, substid,
-						null);
-			} catch (MimeTypeParseException e) {
-				e.printStackTrace();
-			}
+			return getPortfolio(mimeType, portfolio.getId(), userId, groupId, null, null, null, substid,
+					null);
 		} else {
 			result += "<portfolio ";
 			result += DomUtils.getXmlAttributeOutput("id", portfolio.getId().toString()) + " ";
@@ -1887,7 +1877,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		return new String(Base64.encodeBase64(bytes)).replaceAll("\\s+$", "").substring(0, length);
 	}
 
-	private Portfolio add(UUID rootNodeId, UUID modelId, Long userId, Portfolio portfolio) throws DoesNotExistException {
+	private Portfolio add(UUID rootNodeId, UUID modelId, Long userId, Portfolio portfolio) {
 		if (portfolio.getRootNode() != null) {
 			throw new IllegalArgumentException();
 		}
@@ -1903,12 +1893,8 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		Optional<Node> rootNode = nodeRepository.findById(rootNodeId);
 		Optional<Credential> credential = credentialRepository.findById(userId);
 
-		if (!rootNode.isPresent()) {
-			throw new DoesNotExistException(Node.class, null);
-		}
-
-		if (!credential.isPresent()) {
-			throw new DoesNotExistException(Credential.class, null);
+		if (!rootNode.isPresent() || !credential.isPresent()) {
+			throw new IllegalArgumentException();
 		}
 
 		Node node = rootNode.get();

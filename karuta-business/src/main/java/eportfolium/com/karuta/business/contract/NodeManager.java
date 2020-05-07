@@ -26,12 +26,11 @@ import org.springframework.util.MimeType;
 import eportfolium.com.karuta.model.bean.GroupRights;
 import eportfolium.com.karuta.model.bean.Node;
 import eportfolium.com.karuta.model.exception.BusinessException;
-import eportfolium.com.karuta.model.exception.DoesNotExistException;
 
 public interface NodeManager {
 
 	String getNode(MimeType outMimeType, UUID nodeId, boolean withChildren, Long userId, Long groupId, String label,
-			Integer cutoff) throws DoesNotExistException, BusinessException, Exception;
+			Integer cutoff) throws BusinessException, ParserConfigurationException;
 
 	String getChildNodes(String parentNodeCode, String parentSemtag, String semtag) throws Exception;
 
@@ -59,7 +58,7 @@ public interface NodeManager {
 
 	String changeRights(Long userId, UUID nodeId, String role, GroupRights rights) throws BusinessException;
 
-	UUID getPortfolioIdFromNode(Long userId, UUID nodeId) throws DoesNotExistException, BusinessException;
+	UUID getPortfolioIdFromNode(Long userId, UUID nodeId) throws BusinessException;
 
 	String getNodeXmlOutput(UUID nodeId, boolean withChildren, String withChildrenOfXsiType, Long userId,
 			Long groupId, String label, boolean checkSecurity);
@@ -100,7 +99,7 @@ public interface NodeManager {
 	String executeMacroOnNode(long userId, UUID nodeId, String macroName) throws BusinessException;
 
 	String getNodeMetadataWad(MimeType mimeType, UUID nodeId, Long userId, Long groupId)
-			throws DoesNotExistException, BusinessException;
+			throws BusinessException;
 
 	Integer changeNode(MimeType inMimeType, UUID nodeId, String xmlNode, Long userId, Long groupId)
 			throws Exception;
@@ -114,7 +113,7 @@ public interface NodeManager {
 
 	boolean changeParentNode(Long userid, UUID id, UUID parentId) throws BusinessException;
 
-	Long moveNodeUp(UUID nodeId) throws BusinessException;
+	Long moveNodeUp(UUID nodeId);
 
 	String addNodeFromModelBySemanticTag(MimeType inMimeType, UUID nodeId, String semanticTag, Long userId,
 			Long groupId) throws Exception;
@@ -123,7 +122,7 @@ public interface NodeManager {
 			throws Exception;
 
 	String changeNodeMetadata(MimeType mimeType, UUID nodeId, String xmlNode, Long id, long groupId)
-			throws DoesNotExistException, BusinessException, Exception;
+			throws Exception;
 
 	String changeNodeContext(MimeType mimeType, UUID nodeId, String xmlNode, Long userId, Long groupId)
 			throws BusinessException, Exception;
@@ -135,7 +134,7 @@ public interface NodeManager {
 			boolean forcedUuid) throws Exception;
 
 	String getNodeWithXSL(MimeType textXml, UUID nodeId, String xslFile, String parameters, Long id, Long groupId)
-			throws BusinessException, Exception;
+			throws Exception;
 
 	String getNodes(MimeType mimeType, String rootNodeCode, String childSemtag, Long userId, Long groupId,
 			String parentSemtag, String parentNodeCode, Integer cutoff) throws BusinessException;

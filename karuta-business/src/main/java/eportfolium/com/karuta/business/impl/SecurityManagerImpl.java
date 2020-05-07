@@ -64,7 +64,6 @@ import eportfolium.com.karuta.model.bean.Node;
 import eportfolium.com.karuta.model.bean.Portfolio;
 import eportfolium.com.karuta.model.exception.AuthenticationException;
 import eportfolium.com.karuta.model.exception.BusinessException;
-import eportfolium.com.karuta.model.exception.DoesNotExistException;
 import eportfolium.com.karuta.model.exception.GenericBusinessException;
 import eportfolium.com.karuta.model.exception.ValueRequiredException;
 
@@ -341,7 +340,7 @@ public class SecurityManagerImpl implements SecurityManager {
 		credentialRepository.deleteById(forUser);
 	}
 
-	public void removeUsers(Long byUser, Long forUser) throws DoesNotExistException, BusinessException {
+	public void removeUsers(Long byUser, Long forUser) throws BusinessException {
 		if (!credentialRepository.isAdmin(byUser) && byUser != forUser)
 			throw new GenericBusinessException("FORBIDDEN : No admin right");
 
@@ -943,7 +942,7 @@ public class SecurityManagerImpl implements SecurityManager {
 	}
 
 	public Long changeRole(Long userId, Long rrgId, String xmlRole)
-			throws DoesNotExistException, BusinessException, Exception {
+			throws Exception {
 		if (!credentialRepository.isAdmin(userId) && !groupRightInfoRepository.isOwner(userId, rrgId))
 			throw new GenericBusinessException("403 FORBIDDEN, no admin rights");
 

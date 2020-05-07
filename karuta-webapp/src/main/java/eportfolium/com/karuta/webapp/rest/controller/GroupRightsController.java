@@ -17,7 +17,6 @@ package eportfolium.com.karuta.webapp.rest.controller;
 
 import eportfolium.com.karuta.business.contract.GroupManager;
 import eportfolium.com.karuta.model.exception.BusinessException;
-import eportfolium.com.karuta.model.exception.DoesNotExistException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import eportfolium.com.karuta.webapp.rest.provider.mapper.exception.RestWebApplicationException;
 import eportfolium.com.karuta.webapp.util.UserInfo;
@@ -87,8 +86,6 @@ public class GroupRightsController extends AbstractController {
         try {
             groupManager.removeRights(groupId, ui.userId);
             return "supprimé";
-        } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Group " + groupId + " not found");
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {

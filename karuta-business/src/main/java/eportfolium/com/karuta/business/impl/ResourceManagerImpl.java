@@ -40,7 +40,6 @@ import eportfolium.com.karuta.model.bean.GroupRights;
 import eportfolium.com.karuta.model.bean.Node;
 import eportfolium.com.karuta.model.bean.ResourceTable;
 import eportfolium.com.karuta.model.exception.BusinessException;
-import eportfolium.com.karuta.model.exception.DoesNotExistException;
 import eportfolium.com.karuta.model.exception.GenericBusinessException;
 
 @Service
@@ -181,8 +180,7 @@ public class ResourceManagerImpl extends BaseManager implements ResourceManager 
 		return "";
 	}
 
-	public void removeResource(UUID resourceId, Long userId, Long groupId)
-			throws DoesNotExistException, BusinessException {
+	public void removeResource(UUID resourceId, Long userId, Long groupId) throws BusinessException {
 		if (!credentialRepository.isAdmin(userId))
 			throw new GenericBusinessException("403 FORBIDDEN : No admin right");
 

@@ -21,7 +21,6 @@ import java.util.UUID;
 import eportfolium.com.karuta.model.bean.Credential;
 import eportfolium.com.karuta.model.exception.AuthenticationException;
 import eportfolium.com.karuta.model.exception.BusinessException;
-import eportfolium.com.karuta.model.exception.DoesNotExistException;
 
 /**
  * Cette classe rassemble la gestion et la modification des utilisateurs, des
@@ -127,7 +126,7 @@ public interface SecurityManager {
 
 	void removeRole(Long userId, Long groupRightInfoId) throws Exception;
 
-	Long changeRole(Long userId, Long rrgId, String xmlRole) throws DoesNotExistException, BusinessException, Exception;
+	Long changeRole(Long userId, Long rrgId, String xmlRole) throws Exception;
 
 	String addUsersToRole(Long id, Long rrgId, String xmlUser) throws BusinessException;
 

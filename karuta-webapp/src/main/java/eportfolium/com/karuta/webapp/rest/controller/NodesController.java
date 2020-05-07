@@ -18,7 +18,6 @@ package eportfolium.com.karuta.webapp.rest.controller;
 import eportfolium.com.karuta.business.contract.NodeManager;
 import eportfolium.com.karuta.model.bean.GroupRights;
 import eportfolium.com.karuta.model.exception.BusinessException;
-import eportfolium.com.karuta.model.exception.DoesNotExistException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import eportfolium.com.karuta.webapp.eventbus.KEvent;
 import eportfolium.com.karuta.webapp.rest.provider.mapper.exception.RestWebApplicationException;
@@ -95,9 +94,6 @@ public class NodesController extends AbstractController {
                     returnValue = XML.toJSONObject(returnValue).toString();
             }
             return returnValue;
-        } catch (DoesNotExistException ex) {
-            ex.printStackTrace();
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeId + " not found");
         } catch (NullPointerException ex) {
             ex.printStackTrace();
             throw new RestWebApplicationException(HttpStatus.NOT_ACCEPTABLE, "Incorrect Mime Type");
@@ -143,8 +139,6 @@ public class NodesController extends AbstractController {
                 }
             }
             return returnValue;
-        } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeId + " not found");
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (NullPointerException ex) {
@@ -188,8 +182,6 @@ public class NodesController extends AbstractController {
                     returnValue = XML.toJSONObject(returnValue).toString();
             }
             return returnValue;
-        } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeId + " not found");
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
@@ -267,9 +259,6 @@ public class NodesController extends AbstractController {
         UserInfo ui = checkCredential(request, user, token, null);
         try {
             return nodeManager.getPortfolioIdFromNode(ui.userId, nodeId).toString();
-        } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND,
-                    "Error, this shouldn't happen. No Portfolio related to node : '" + nodeId + "' was found");
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
@@ -393,8 +382,6 @@ public class NodesController extends AbstractController {
         try {
             return nodeManager
                     .getNodeBySemanticTag(MimeTypeUtils.TEXT_XML, portfolioId, semantictag, ui.userId, groupId);
-        } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "no node found for tag :" + semantictag);
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
@@ -464,8 +451,6 @@ public class NodesController extends AbstractController {
             String returnValue = nodeManager.changeNode(MimeTypeUtils.TEXT_XML, nodeId, xmlNode, ui.userId, groupId)
                     .toString();
             return returnValue;
-        } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeId + " not found");
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
@@ -514,8 +499,6 @@ public class NodesController extends AbstractController {
             logger.info(String.format(logformat, "OK", nodeId, "metadata", ui.userId, timeFormat,
                     request.getRemoteAddr(), xmlNode));
             return returnValue;
-        } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeId + " not found");
         } catch (BusinessException ex) {
             logger.error(String.format(logformat, "ERR", nodeId, "metadata", ui.userId, timeFormat,
                     request.getRemoteAddr(), xmlNode));
@@ -566,8 +549,6 @@ public class NodesController extends AbstractController {
             logger.info(String.format(logformat, "OK", nodeId, "metadatawad", ui.userId, timeFormat,
                     request.getRemoteAddr(), xmlNode));
             return returnValue;
-        } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeId + " not found");
         } catch (BusinessException ex) {
             logger.error(String.format(logformat, "ERR", nodeId, "metadatawad", ui.userId, timeFormat,
                     request.getRemoteAddr(), xmlNode));
@@ -614,8 +595,6 @@ public class NodesController extends AbstractController {
             logger.info(String.format(logformat, "OK", nodeId, "metadataepm", ui.userId, timeFormat,
                     request.getRemoteAddr(), xmlNode));
             return returnValue;
-        } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Node " + nodeId + " not found");
         } catch (BusinessException ex) {
             logger.error(String.format(logformat, "ERR", nodeId, "metadataepm", ui.userId, timeFormat,
                     request.getRemoteAddr(), xmlNode));
@@ -838,8 +817,6 @@ public class NodesController extends AbstractController {
         try {
             return nodeManager.getNodes(MimeTypeUtils.TEXT_XML, portfoliocode, semtag, ui.userId, groupId,
                     semtag_parent, code_parent, cutoff);
-        } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Portfolio inexistant");
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, "Vous n'avez pas les droits d'acces");
         } catch (Exception ex) {
@@ -936,8 +913,6 @@ public class NodesController extends AbstractController {
                     response = ResponseEntity.status(HttpStatus.NO_CONTENT).build();
                 }
             }
-        } catch (BusinessException ex) {
-            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
             throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
@@ -1092,9 +1067,6 @@ public class NodesController extends AbstractController {
             }
 
             return returnValue;
-        } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND,
-                    "Node " + nodeId + " not found or xsl not found :" + ex.getMessage());
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (NullPointerException ex) {

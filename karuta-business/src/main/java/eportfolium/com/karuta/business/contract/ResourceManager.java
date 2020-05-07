@@ -20,7 +20,6 @@ import java.util.UUID;
 import org.springframework.util.MimeType;
 
 import eportfolium.com.karuta.model.exception.BusinessException;
-import eportfolium.com.karuta.model.exception.DoesNotExistException;
 
 public interface ResourceManager {
 
@@ -36,7 +35,7 @@ public interface ResourceManager {
 	String addResource(MimeType inMimeType, UUID parentNodeId, String in, Long userId, Long groupId)
 			throws BusinessException, Exception;
 
-	void removeResource(UUID resourceId, Long userId, Long groupId) throws DoesNotExistException, BusinessException;
+	void removeResource(UUID resourceId, Long userId, Long groupId) throws BusinessException;
 
 	void changeResourceByXsiType(UUID nodeId, String xsiType, String content, Long userId) throws Exception;
 

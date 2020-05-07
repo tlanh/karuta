@@ -17,10 +17,7 @@ package eportfolium.com.karuta.business.contract;
 
 import java.io.FileNotFoundException;
 import java.io.InputStream;
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.util.MimeType;
@@ -28,7 +25,8 @@ import org.springframework.util.MimeType;
 import eportfolium.com.karuta.model.bean.GroupRights;
 import eportfolium.com.karuta.model.bean.Portfolio;
 import eportfolium.com.karuta.model.exception.BusinessException;
-import eportfolium.com.karuta.model.exception.DoesNotExistException;
+
+import javax.xml.parsers.ParserConfigurationException;
 
 /**
  * @author mlengagne
@@ -48,10 +46,10 @@ public interface PortfolioManager {
 
 	String getPortfolio(MimeType outMimeType, UUID portfolioId, Long userId, Long groupId, String label,
 			String resource, String files, long substid, Integer cutoff)
-			throws DoesNotExistException, BusinessException, Exception;
+			throws BusinessException, ParserConfigurationException;
 
 	String getPortfolioByCode(MimeType mimeType, String portfolioCode, Long userId, Long groupId, String resources,
-			long substid) throws DoesNotExistException, BusinessException, Exception;
+			long substid) throws BusinessException, ParserConfigurationException;
 
 	String getPortfoliosByPortfolioGroup(Long portfolioGroupId);
 

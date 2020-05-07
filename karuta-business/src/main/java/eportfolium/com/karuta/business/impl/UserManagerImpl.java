@@ -29,6 +29,7 @@ import eportfolium.com.karuta.consumer.repositories.CredentialGroupMembersReposi
 import eportfolium.com.karuta.consumer.repositories.CredentialRepository;
 import eportfolium.com.karuta.consumer.repositories.GroupRightInfoRepository;
 import eportfolium.com.karuta.consumer.repositories.GroupUserRepository;
+import eportfolium.com.karuta.model.bean.*;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -40,13 +41,7 @@ import org.w3c.dom.Element;
 
 import eportfolium.com.karuta.business.contract.UserManager;
 import eportfolium.com.karuta.consumer.util.DomUtils;
-import eportfolium.com.karuta.model.bean.Credential;
-import eportfolium.com.karuta.model.bean.CredentialGroupMembers;
-import eportfolium.com.karuta.model.bean.CredentialSubstitution;
-import eportfolium.com.karuta.model.bean.GroupRightInfo;
-import eportfolium.com.karuta.model.bean.GroupUser;
 import eportfolium.com.karuta.model.exception.BusinessException;
-import eportfolium.com.karuta.model.exception.DoesNotExistException;
 
 @Service
 @Transactional
@@ -214,9 +209,15 @@ public class UserManagerImpl implements UserManager {
 		return result;
 	}
 
-	public String getRole(Long groupRightInfoId) throws BusinessException {
-		GroupRightInfo res = groupRightInfoRepository.findById(groupRightInfoId)
-								.orElseThrow(() -> new DoesNotExistException(GroupRightInfo.class, groupRightInfoId));
+	@Override
+	public String getRole(Long groupRightInfoId) {
+		Optional<GroupRightInfo> groupRightInfo = groupRightInfoRepository.findById(groupRightInfoId);
+
+		if (!groupRightInfo.isPresent())
+			return "";
+
+		GroupRightInfo res = groupRightInfo.get();
+
 		String result = "<role ";
 		result += DomUtils.getXmlAttributeOutput("id", String.valueOf(res.getId())) + " ";
 		result += DomUtils.getXmlAttributeOutput("owner", String.valueOf(res.getOwner())) + " ";
@@ -227,7 +228,8 @@ public class UserManagerImpl implements UserManager {
 		return result;
 	}
 
-	public String getUserInfos(Long userId) throws DoesNotExistException {
+	@Override
+	public String getUserInfos(Long userId) {
 		String result = "";
 
 		Credential cr = credentialRepository.getUserInfos(userId);
@@ -255,7 +257,7 @@ public class UserManagerImpl implements UserManager {
 			result += "</user>";
 
 		} else {
-			throw new DoesNotExistException(Credential.class, userId);
+			return "";
 		}
 
 		return result;
@@ -587,9 +589,9 @@ public class UserManagerImpl implements UserManager {
 		return retval;
 	}
 
-	public Credential getUser(Long userId) throws DoesNotExistException {
+	public Credential getUser(Long userId) {
 		return credentialRepository.findById(userId)
-				.orElseThrow(() -> new DoesNotExistException(Credential.class, userId));
+				.orElseGet(null);
 	}
 
 }

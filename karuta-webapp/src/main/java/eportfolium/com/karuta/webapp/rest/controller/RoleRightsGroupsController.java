@@ -19,7 +19,6 @@ import eportfolium.com.karuta.business.contract.PortfolioManager;
 import eportfolium.com.karuta.business.contract.SecurityManager;
 import eportfolium.com.karuta.business.contract.UserManager;
 import eportfolium.com.karuta.model.exception.BusinessException;
-import eportfolium.com.karuta.model.exception.DoesNotExistException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import eportfolium.com.karuta.webapp.rest.provider.mapper.exception.RestWebApplicationException;
 import eportfolium.com.karuta.webapp.util.UserInfo;
@@ -341,8 +340,6 @@ public class RoleRightsGroupsController extends AbstractController {
                 securityManager.changeRole(ui.userId, rrgId, xmlNode);
             }
             return "";
-        } catch (DoesNotExistException e) {
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Role with id " + rrgId + " not found");
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {

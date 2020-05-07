@@ -61,7 +61,6 @@ import org.apache.http.message.BasicHeader;
 import org.apache.http.util.EntityUtils;
 import org.json.XML;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -80,7 +79,6 @@ import eportfolium.com.karuta.business.contract.PortfolioManager;
 import eportfolium.com.karuta.business.contract.SecurityManager;
 import eportfolium.com.karuta.business.contract.UserManager;
 import eportfolium.com.karuta.model.exception.BusinessException;
-import eportfolium.com.karuta.model.exception.DoesNotExistException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import eportfolium.com.karuta.webapp.rest.provider.mapper.exception.RestWebApplicationException;
 import eportfolium.com.karuta.webapp.util.DomUtils;
@@ -208,9 +206,6 @@ public class PortfolioController extends AbstractController {
                                 .body(portfolio);
             }
             return response;
-        } catch (DoesNotExistException ex) {
-            logger.info("Portfolio " + portfolioId + " not found");
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Portfolio " + portfolioId + " not found");
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
@@ -489,8 +484,6 @@ public class PortfolioController extends AbstractController {
                 }
                 return returnValue;
             }
-        } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Portfolio(s) not found");
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {

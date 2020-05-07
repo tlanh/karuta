@@ -74,7 +74,6 @@ import eportfolium.com.karuta.business.contract.ResourceManager;
 import eportfolium.com.karuta.business.contract.SecurityManager;
 import eportfolium.com.karuta.consumer.util.DomUtils;
 import eportfolium.com.karuta.model.exception.BusinessException;
-import eportfolium.com.karuta.model.exception.DoesNotExistException;
 import eportfolium.com.karuta.model.exception.GenericBusinessException;
 import eportfolium.com.karuta.util.InMemoryCache;
 
@@ -126,7 +125,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 	private InMemoryCache<UUID, List<Node>> cachedNodes = new InMemoryCache<>(600, 1500, 6);
 
 	public String getNode(MimeType outMimeType, UUID nodeId, boolean withChildren, Long userId, Long groupId,
-			String label, Integer cutoff) throws DoesNotExistException, BusinessException, Exception {
+			String label, Integer cutoff) throws BusinessException, ParserConfigurationException {
 		final GroupRights rights = getRights(userId, groupId, nodeId);
 
 		if (!rights.isRead()) {
@@ -875,28 +874,28 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 	}
 
 	public String getNodeBySemanticTag(MimeType outMimeType, UUID portfolioId, String semantictag, Long userId,
-			Long groupId) throws DoesNotExistException, BusinessException {
+			Long groupId) throws BusinessException {
 
 		final List<Node> nodes = nodeRepository.getNodesBySemanticTag(portfolioId, semantictag);
 
-		try {
-			// On récupère d'abord l'uuid du premier noeud trouve correspondant au
-			// semantictag
-			UUID nodeId = nodes.get(0).getId();
+		if (nodes.isEmpty()) {
+			return null;
+		}
 
-			if (!hasRight(userId, groupId, nodeId, GroupRights.READ)) {
-				throw new GenericBusinessException("Vous n'avez pas les droits nécessaires.");
-			}
+		// On récupère d'abord l'uuid du premier noeud trouve correspondant au
+		// semantictag
+		UUID nodeId = nodes.get(0).getId();
 
-			if (outMimeType.getSubtype().equals("xml")) {
-				return getNodeXmlOutput(nodeId, true, null, userId, groupId, null, true).toString();
-			} else if (outMimeType.getSubtype().equals("json")) {
-				return "{" + getNodeJsonOutput(nodeId, true, null, userId, groupId, null, true) + "}";
-			} else {
-				return null;
-			}
-		} catch (IndexOutOfBoundsException e) {
-			throw new DoesNotExistException(Node.class, semantictag);
+		if (!hasRight(userId, groupId, nodeId, GroupRights.READ)) {
+			throw new GenericBusinessException("Vous n'avez pas les droits nécessaires.");
+		}
+
+		if (outMimeType.getSubtype().equals("xml")) {
+			return getNodeXmlOutput(nodeId, true, null, userId, groupId, null, true).toString();
+		} else if (outMimeType.getSubtype().equals("json")) {
+			return "{" + getNodeJsonOutput(nodeId, true, null, userId, groupId, null, true) + "}";
+		} else {
+			return null;
 		}
 	}
 
@@ -945,7 +944,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		return nodeRepository.isCodeExist(code);
 	}
 
-	public UUID getPortfolioIdFromNode(Long userId, UUID nodeId) throws DoesNotExistException, BusinessException {
+	public UUID getPortfolioIdFromNode(Long userId, UUID nodeId) throws BusinessException {
 		// Admin, or if user has a right to read can fetch this information
 		if (!credentialRepository.isAdmin(userId) && !hasRight(userId, 0L, nodeId, GroupRights.READ)) {
 			throw new GenericBusinessException("403 FORBIDDEN : No READ credential");
@@ -1514,7 +1513,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 	}
 
 	public String getNodeMetadataWad(MimeType mimeType, UUID nodeId, Long userId, Long groupId)
-			throws DoesNotExistException, BusinessException {
+			throws BusinessException {
 		StringBuffer result = new StringBuffer();
 
 		// Vérification de sécurité
@@ -1829,7 +1828,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 	}
 
 	@Override
-	public Long moveNodeUp(UUID nodeId) throws DoesNotExistException {
+	public Long moveNodeUp(UUID nodeId) {
 		Long status = -1L;
 
 		Node n = nodeRepository.findById(nodeId).get();
@@ -1867,7 +1866,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 
 	@Override
 	public String changeNodeMetadataEpm(MimeType mimeType, UUID nodeId, String xmlMetadataEpm, Long userId,
-			long groupId) throws Exception, BusinessException, DoesNotExistException {
+			long groupId) throws Exception {
 		if (!hasRight(userId, groupId, nodeId, GroupRights.WRITE))
 			throw new GenericBusinessException("FORBIDDEN 403 : No WRITE credential ");
 
@@ -1891,7 +1890,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 
 	@Override
 	public String changeNodeMetadata(MimeType mimeType, UUID nodeId, String xmlNode, Long userId, long groupId)
-			throws DoesNotExistException, BusinessException, Exception {
+			throws Exception {
 		String metadata = "";
 
 		boolean sharedRes = false;
@@ -2042,7 +2041,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 
 	@Override
 	public String getNodeWithXSL(MimeType mimeType, UUID nodeId, String xslFile, String parameters, Long userId,
-			Long groupId) throws DoesNotExistException, BusinessException, Exception {
+			Long groupId) throws Exception {
 		String result = null;
 		/// Préparation des paramètres pour les besoins futurs, format:
 		/// "par1:par1val;par2:par2val;..."
@@ -2234,7 +2233,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		UUID pid = portfolioRepository.getPortfolioUuidFromNodeCode(rootNodeCode);
 
 		if (pid == null)
-			throw new DoesNotExistException(Portfolio.class, "Not found with node code " + rootNodeCode);
+			return "";
 
 		GroupRights rights = portfolioManager.getRightsOnPortfolio(userId, groupId, pid);
 		if (!rights.isRead()
@@ -2370,8 +2369,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		return val;
 	}
 
-	private List<Pair<Node, GroupRights>> getNodePerLevel(UUID nodeId, Long userId, Long rrgId, Integer cutoff)
-			throws DoesNotExistException, Exception {
+	private List<Pair<Node, GroupRights>> getNodePerLevel(UUID nodeId, Long userId, Long rrgId, Integer cutoff) {
 
 		Node n = nodeRepository.findById(nodeId).get();
 

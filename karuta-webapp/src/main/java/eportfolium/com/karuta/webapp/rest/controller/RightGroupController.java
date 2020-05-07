@@ -23,7 +23,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import eportfolium.com.karuta.business.contract.GroupManager;
 import eportfolium.com.karuta.model.exception.BusinessException;
-import eportfolium.com.karuta.model.exception.DoesNotExistException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import eportfolium.com.karuta.webapp.rest.provider.mapper.exception.RestWebApplicationException;
 import eportfolium.com.karuta.webapp.util.javaUtils;
@@ -64,8 +63,6 @@ public class RightGroupController extends AbstractController {
             groupManager.changeUserGroup(groupRightId, groupId, ui.userId);
             logger.info("modifié");
             return ResponseEntity.ok().build();
-        } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "User group not found");
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {

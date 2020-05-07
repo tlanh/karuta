@@ -25,7 +25,6 @@ import eportfolium.com.karuta.business.contract.GroupManager;
 import eportfolium.com.karuta.business.contract.SecurityManager;
 import eportfolium.com.karuta.business.contract.UserManager;
 import eportfolium.com.karuta.model.exception.BusinessException;
-import eportfolium.com.karuta.model.exception.DoesNotExistException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import eportfolium.com.karuta.webapp.rest.provider.mapper.exception.RestWebApplicationException;
 import eportfolium.com.karuta.webapp.util.javaUtils;
@@ -164,8 +163,6 @@ public class UserController extends AbstractController {
                           HttpServletRequest request) throws RestWebApplicationException {
         try {
             return userManager.getUserInfos(Long.valueOf(userid));
-        } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, ex.getMessage());
         } catch (Exception ex) {
             ex.printStackTrace();
             throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
@@ -287,8 +284,6 @@ public class UserController extends AbstractController {
         try {
             securityManager.removeUsers(ui.userId, userId);
             return "user " + userId + " deleted";
-        } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "user " + userId + " not found");
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
@@ -319,8 +314,6 @@ public class UserController extends AbstractController {
         try {
             securityManager.removeUsers(ui.userId, userid);
             return "user " + userid + " deleted";
-        } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "user " + userid + " not found");
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));

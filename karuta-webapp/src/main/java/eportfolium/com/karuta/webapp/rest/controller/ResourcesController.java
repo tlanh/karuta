@@ -17,7 +17,6 @@ package eportfolium.com.karuta.webapp.rest.controller;
 
 import eportfolium.com.karuta.business.contract.ResourceManager;
 import eportfolium.com.karuta.model.exception.BusinessException;
-import eportfolium.com.karuta.model.exception.DoesNotExistException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import eportfolium.com.karuta.webapp.rest.provider.mapper.exception.RestWebApplicationException;
 import eportfolium.com.karuta.webapp.util.UserInfo;
@@ -76,8 +75,6 @@ public class ResourcesController extends AbstractController {
             if (accept.equals("application/json"))
                 returnValue = XML.toJSONObject(returnValue).toString();
             return returnValue;
-        } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Resource " + nodeParentId + " not found");
         } catch (Exception ex) {
             ex.printStackTrace();
             logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
@@ -158,8 +155,6 @@ public class ResourcesController extends AbstractController {
             logger.info(String.format(logformat, "OK", parentNodeId, "resource", ui.userId, timeFormat,
                     request.getRemoteAddr(), xmlResource));
             return returnValue;
-        } catch (DoesNotExistException ex) {
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Resource " + parentNodeId + " not found");
         } catch (BusinessException ex) {
             logger.info(String.format(logformat, "ERR", parentNodeId, "resource", ui.userId, timeFormat,
                     request.getRemoteAddr(), xmlResource));
@@ -262,8 +257,6 @@ public class ResourcesController extends AbstractController {
         try {
             resourceManager.removeResource(resourceId, ui.userId, groupId);
             return "";
-        } catch (DoesNotExistException e) {
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Resource " + resourceId + " not found");
         } catch (BusinessException ex) {
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
         } catch (Exception ex) {
