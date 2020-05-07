@@ -349,19 +349,8 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		DocumentBuilderFactory newInstance = DocumentBuilderFactory.newInstance();
 		DocumentBuilder parse = newInstance.newDocumentBuilder();
 
-		long time0 = 0;
-		long time1 = 0;
-		long time2 = 0;
-		long time3 = 0;
-		long time4 = 0;
-		long time5 = 0;
-
-		time0 = System.currentTimeMillis();
-
 		List<Pair<Node, GroupRights>> portfolioStructure = getPortfolioStructure(portfolioId, userId, groupId,
 				cutoff);
-
-		time1 = System.currentTimeMillis();
 
 		Map<String, Object[]> resolve = new HashMap<String, Object[]>();
 		/// Node -> parent
@@ -369,17 +358,11 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 
 		processQuery(portfolioStructure, resolve, entries, null, parse, role);
 
-		time2 = System.currentTimeMillis();
-
 		portfolioStructure = getSharedStructure(portfolioId, userId, groupId, cutoff);
-
-		time3 = System.currentTimeMillis();
 
 		if (portfolioStructure != null) {
 			processQuery(portfolioStructure, resolve, entries, null, parse, role);
 		}
-
-		time4 = System.currentTimeMillis();
 
 		/// Reconstruct functional tree
 		t_tree root = entries.get(rootuuid);
@@ -387,36 +370,15 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		if (root != null)
 			reconstructTree(out, root, entries);
 
-		time5 = System.currentTimeMillis();
-
-		System.out.println("---- Portfolio ---");
-		System.out.println("Query Main: " + (time1 - time0));
-		System.out.println("Parsing Main: " + (time2 - time1));
-		System.out.println("Query shared: " + (time3 - time2));
-		System.out.println("Parsing shared: " + (time4 - time3));
-		System.out.println("Reconstruction a: " + (time5 - time4));
-		System.out.println("------------------"); //
-
 		return out.toString();
 	}
 
 	private List<Pair<Node, GroupRights>> getPortfolioStructure(UUID portfolioId, Long userId, Long groupId,
 			Integer cutoff) {
 
-		long time0 = 0;
-		long time1 = 0;
-		long time2 = 0;
-		long time3 = 0;
-		long time4 = 0;
-		long time5 = 0;
-		long time6 = 0;
-
 		List<Pair<Node, GroupRights>> portfolioStructure = new ArrayList<Pair<Node, GroupRights>>();
 
-		time0 = System.currentTimeMillis();
-
 		Node rootNode = portfolioRepository.getPortfolioRootNode(portfolioId);
-		time1 = System.currentTimeMillis();
 		GroupRights rights = null;
 
 		// Cas admin, designer, owner
@@ -434,9 +396,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		/// les bonnes données : Cas propriétaire OU cas general (via les droits
 		/// partagés)
 		else if (hasRights(userId, portfolioId)) {
-			time2 = System.currentTimeMillis();
 			Map<UUID, GroupRights> t_rights_22 = new HashMap<>();
-			time3 = System.currentTimeMillis();
 
 			String login = credentialRepository.getLoginById(userId);
 //				FIXME: Devrait peut-être verifier si la personne a les droits d'y accéder?
@@ -455,8 +415,6 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 				}
 			}
 
-			time4 = System.currentTimeMillis();
-
 			List<Node> nodes = nodeRepository.getNodes(new ArrayList<>(t_rights_22.keySet()));
 
 			// Sélectionne les données selon la filtration
@@ -468,7 +426,6 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 					}
 				}
 			}
-			time5 = System.currentTimeMillis();
 
 		} else if (portfolioRepository.isPublic(portfolioId)) // Public case, looks like previous query, but with
 		{
@@ -478,18 +435,6 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 				portfolioStructure.add(Pair.of(node, rights));
 			}
 		}
-
-		time6 = System.currentTimeMillis();
-
-		System.out.println((time1 - time0) + "," + (time2 - time1) + "," + (time3 - time2) + "," + (time4 - time3) + ","
-				+ (time5 - time4));
-		System.out.println("---- Query Portfolio ----");
-		System.out.println("Fetch root: " + (time1 - time0));
-		System.out.println("Check rights: " + (time2 - time1));
-		System.out.println("Create temp: " + (time3 - time2));
-		System.out.println("Fetch rights all/group: " + (time4 - time3));
-		System.out.println("Fetch user rights: " + (time5 - time4));
-		System.out.println("Actual query: " + (time6 - time5)); //
 
 		return portfolioStructure;
 	}
