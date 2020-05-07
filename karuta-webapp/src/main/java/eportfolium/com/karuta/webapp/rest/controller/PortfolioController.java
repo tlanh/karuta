@@ -111,12 +111,7 @@ public class PortfolioController extends AbstractController {
      * Get a portfolio from uuid. <br>
      * GET /rest/api/portfolios/portfolio/{portfolio-id}
      *
-     * @param user
-     * @param token
-     * @param groupId
      * @param portfolioId
-     * @param userId
-     * @param group
      * @param resource
      * @param files              if set with resource, return a zip file
      * @param export             if set, return XML as a file download
@@ -134,12 +129,7 @@ public class PortfolioController extends AbstractController {
      */
     @GetMapping(value = "/portfolio/{portfolio-id}", produces = {"application/xml", "application/json",
         "application/zip", "application/octet-stream"})
-    public Object getPortfolio(@CookieValue("user") String user,
-                               @CookieValue("credential") String token,
-                               @RequestParam("group") int groupId,
-                               @PathVariable("portfolio-id") UUID portfolioId,
-                               @RequestParam("user") Integer userId,
-                               @RequestParam("group") Integer group,
+    public Object getPortfolio(@PathVariable("portfolio-id") UUID portfolioId,
                                @RequestParam("resources") String resource,
                                @RequestParam("files") String files,
                                @RequestParam("export") String export,
@@ -147,7 +137,7 @@ public class PortfolioController extends AbstractController {
                                @RequestParam("level") Integer cutoff,
                                HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             String portfolio = portfolioManager.getPortfolio(MimeTypeUtils.TEXT_XML, portfolioId, ui.userId, 0L,
@@ -312,26 +302,20 @@ public class PortfolioController extends AbstractController {
      * Return the portfolio from its code. <br>
      * GET /rest/api/portfolios/code/{code}
      *
-     * @see #putPortfolio(String, String, String, UUID, String, HttpServletRequest)
+     * @see #putPortfolio(String, UUID, String, HttpServletRequest)
      *
-     * @param user
-     * @param token
      * @param groupId
      * @param code
-     * @param group
      * @param resources
      * @param request
      * @return
      */
     @GetMapping(value = "/portfolio/code/{code}", produces = {"application/json", "application/xml"})
-    public Object getPortfolioByCode(@CookieValue("user") String user,
-                                     @CookieValue("credential") String token,
-                                     @RequestParam("group") long groupId,
+    public Object getPortfolioByCode(@RequestParam("group") long groupId,
                                      @PathVariable("code") String code,
-                                     @RequestParam("group") Integer group,
                                      @RequestParam("resources") String resources,
                                      HttpServletRequest request) throws RestWebApplicationException {
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             if (ui.userId == 0) {
@@ -341,8 +325,7 @@ public class PortfolioController extends AbstractController {
             if (resources == null)
                 resources = "false";
             String returnValue = portfolioManager
-                    .getPortfolioByCode(MimeTypeUtils.TEXT_XML, code, ui.userId, groupId, resources, ui.subId)
-                    .toString();
+                    .getPortfolioByCode(MimeTypeUtils.TEXT_XML, code, ui.userId, groupId, resources, ui.subId);
             if ("".equals(returnValue)) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body("");
             }
@@ -361,8 +344,6 @@ public class PortfolioController extends AbstractController {
      * removed). <br>
      * GET /rest/api/portfolios.
      *
-     * @param user
-     * @param token
      * @param groupId
      * @param active             false/0 (also show inactive portoflios)
      * @param userId             for this user (only with root)
@@ -383,9 +364,7 @@ public class PortfolioController extends AbstractController {
      *         </portfolios>
      */
     @GetMapping(consumes = "application/xml", produces = {"application/json", "application/xml"})
-    public String getPortfolios(@CookieValue("user") String user,
-                                @CookieValue("credential") String token,
-                                @RequestParam("group") long groupId,
+    public String getPortfolios(@RequestParam("group") long groupId,
                                 @RequestParam("active") String active,
                                 @RequestParam("userid") Integer userId,
                                 @RequestParam("code") String code,
@@ -397,7 +376,7 @@ public class PortfolioController extends AbstractController {
                                 @RequestParam("search") String search,
                                 HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             if (portfolioId != null) {
@@ -477,8 +456,6 @@ public class PortfolioController extends AbstractController {
      *
      * @param xmlPortfolio       GET /rest/api/portfolios/portfolio/{portfolio-id}
      *                           and/or the asm format
-     * @param user
-     * @param token
      * @param portfolioId
      * @param active
      * @param request
@@ -486,13 +463,11 @@ public class PortfolioController extends AbstractController {
      */
     @PutMapping(value = "/portfolio/{portfolio-id}", consumes = "application/xml", produces = "application/xml")
     public String putPortfolio(@RequestBody String xmlPortfolio,
-                               @CookieValue("user") String user,
-                               @CookieValue("credential") String token,
                                @PathVariable("portfolio-id") UUID portfolioId,
                                @RequestParam("active") String active,
                                HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         Boolean portfolioActive;
         if ("false".equals(active) || "0".equals(active))
@@ -524,7 +499,7 @@ public class PortfolioController extends AbstractController {
     public ResponseEntity<String> postPortfolio(@PathVariable("portfolio-id") UUID portfolioId,
                                                 HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, null, null, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             if (!securityManager.isAdmin(ui.userId))
@@ -543,8 +518,6 @@ public class PortfolioController extends AbstractController {
      * Change portfolio owner. <br>
      * PUT /rest/api/portfolios/portfolios/{portfolio-id}/setOwner/{newOwnerId}
      *
-     * @param user
-     * @param token
      * @param portfolioId      portfolio-id
      * @param newOwner           newOwnerId
      * @param request
@@ -552,13 +525,11 @@ public class PortfolioController extends AbstractController {
      */
     @PutMapping(value = "/portfolio/{portfolio-id}/setOwner/{newOwnerId}", consumes = "application/xml",
         produces = "application/xml")
-    public String putPortfolioOwner(@CookieValue("user") String user,
-                                    @CookieValue("credential") String token,
-                                    @PathVariable("portfolio-id") UUID portfolioId,
+    public String putPortfolioOwner(@PathVariable("portfolio-id") UUID portfolioId,
                                     @PathVariable("newOwnerId") long newOwner, 
                                     HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
         boolean retval = false;
 
         try {
@@ -579,23 +550,17 @@ public class PortfolioController extends AbstractController {
      * Modify some portfolio option. <br>
      * PUT /rest/api/portfolios/portfolios/{portfolio-id}
      *
-     * @param user
-     * @param token
-     * @param groupId
      * @param portfolioId
      * @param portfolioActive    0/1, true/false
      * @param request
      * @return
      */
     @PutMapping(consumes = "application/xml", produces = "application/xml")
-    public String putPortfolioConfiguration(@CookieValue("user") String user,
-                                            @CookieValue("credential") String token,
-                                            @RequestParam("group") int groupId,
-                                            @RequestParam("portfolio") UUID portfolioId,
+    public String putPortfolioConfiguration(@RequestParam("portfolio") UUID portfolioId,
                                             @RequestParam("active") Boolean portfolioActive,
                                             HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             String returnValue = "";
@@ -613,8 +578,6 @@ public class PortfolioController extends AbstractController {
      * From a base portfolio, make an instance with parsed rights in the attributes.
      * POST /rest/api/portfolios/instanciate/{portfolio-id}
      *
-     * @param user
-     * @param token
      * @param groupId
      * @param portfolioId
      * @param srccode            if set, rather than use the provided portfolio
@@ -631,9 +594,7 @@ public class PortfolioController extends AbstractController {
      * @return instanciated portfolio uuid
      */
     @PostMapping("/instanciate/{portfolio-id}")
-    public Object postInstanciatePortfolio(@CookieValue("user") String user,
-                                           @CookieValue("credential") String token,
-                                           @RequestParam("group") int groupId,
+    public Object postInstanciatePortfolio(@RequestParam("group") int groupId,
                                            @PathVariable("portfolio-id") String portfolioId,
                                            @RequestParam("sourcecode") String srccode,
                                            @RequestParam("targetcode") String tgtcode,
@@ -642,7 +603,7 @@ public class PortfolioController extends AbstractController {
                                            @RequestParam("owner") String setowner,
                                            HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         //// TODO: IF user is creator and has parameter owner -> change ownership
         try {
@@ -689,12 +650,9 @@ public class PortfolioController extends AbstractController {
      * From a base portfolio, just make a direct copy without rights parsing. <br>
      * POST /rest/api/portfolios/copy/{portfolio-id}
      *
-     * @see #postInstanciatePortfolio(String, String, int, String,
+     * @see #postInstanciatePortfolio(int, String,
      *      String, String, String, String, String, HttpServletRequest)
      *
-     * @param user
-     * @param token
-     * @param groupId
      * @param portfolioId
      * @param srccode
      * @param tgtcode
@@ -703,10 +661,7 @@ public class PortfolioController extends AbstractController {
      * @return
      */
     @PostMapping("/copy/{portfolio-id}")
-    public ResponseEntity<String> postCopyPortfolio(@CookieValue("user") String user,
-                                      @CookieValue("credential") String token,
-                                      @RequestParam("group") int groupId,
-                                      @PathVariable("portfolio-id") UUID portfolioId,
+    public ResponseEntity<String> postCopyPortfolio(@PathVariable("portfolio-id") UUID portfolioId,
                                       @RequestParam("sourcecode") String srccode,
                                       @RequestParam("targetcode") String tgtcode,
                                       @RequestParam("owner") String setowner,
@@ -714,7 +669,7 @@ public class PortfolioController extends AbstractController {
 
         String value = "Instanciate: " + portfolioId;
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         //// TODO: Si l'utilisateur est créateur et est le propriétaire -> changer la
         //// propriété
@@ -752,10 +707,7 @@ public class PortfolioController extends AbstractController {
      * POST /rest/api/portfolios
      *
      * @param xmlPortfolio
-     * @param user
-     * @param token
      * @param groupId
-     * @param userId
      * @param modelId
      * @param srceType
      * @param srceUrl
@@ -767,10 +719,7 @@ public class PortfolioController extends AbstractController {
      */
     @PostMapping(consumes = "multipart/form-data", produces = "application/xml")
     public String postFormPortfolio(@RequestParam("uploadfile") String xmlPortfolio,
-                                    @CookieValue("user") String user,
-                                    @CookieValue("credential") String token,
                                     @RequestParam("group") int groupId,
-                                    @RequestParam("user") Integer userId,
                                     @RequestParam("model") UUID modelId,
                                     @RequestParam("srce") String srceType,
                                     @RequestParam("srceurl") String srceUrl,
@@ -779,7 +728,7 @@ public class PortfolioController extends AbstractController {
                                     @RequestParam("project") String projectName,
                                     ServletConfig sc,
                                     HttpServletRequest request) throws RestWebApplicationException {
-        return postPortfolio(xmlPortfolio, user, token, groupId, userId, modelId, srceType,
+        return postPortfolio(xmlPortfolio, groupId, modelId, srceType,
                 srceUrl, xsl, instance, projectName, sc, request);
     }
 
@@ -787,20 +736,14 @@ public class PortfolioController extends AbstractController {
      * Return a list of portfolio shared to a user. <br>
      * GET /portfolios/shared/{userid}
      *
-     * @param user
-     * @param token
-     * @param groupId
      * @param userid
      * @param request
      * @return
      */
     @PostMapping(value = "/shared/{userid}", produces = "application/xml")
-    public ResponseEntity<String> getPortfolioShared(@CookieValue("user") String user,
-                                                     @CookieValue("credential") String token,
-                                                     @RequestParam("group") int groupId,
-                                                     @PathVariable("userid") long userid,
+    public ResponseEntity<String> getPortfolioShared(@PathVariable("userid") long userid,
                                                      HttpServletRequest request) throws RestWebApplicationException {
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             if (securityManager.isAdmin(ui.userId)) {
@@ -821,8 +764,6 @@ public class PortfolioController extends AbstractController {
      * zip Fetching multiple portfolio in a zip. <br>
      * GET /rest/api/portfolios
      *
-     * @param user
-     * @param token
      * @param portfolioList      list of portfolios, separated with ','
      * @param modelId
      * @param lang
@@ -830,13 +771,11 @@ public class PortfolioController extends AbstractController {
      * @return zipped portfolio (with files) inside zip file
      */
     @GetMapping(value = "/zip", consumes = "application/zip")
-    public Object getPortfolioZip(@CookieValue("user") String user,
-                                  @CookieValue("credential") String token,
-                                  @RequestParam("portfolios") String portfolioList,
+    public Object getPortfolioZip(@RequestParam("portfolios") String portfolioList,
                                   @RequestParam("model") String modelId,
                                   @RequestParam("lang") String lang,
                                   HttpServletRequest request) throws RestWebApplicationException {
-        UserInfo ui = checkCredential(request, user, token, null); // FIXME
+        UserInfo ui = checkCredential(request);
 
         try {
             HttpSession session = request.getSession(false);
@@ -935,8 +874,6 @@ public class PortfolioController extends AbstractController {
      * <br>
      * POST /rest/api/portfolios From a zip export of the system
      *
-     * @param user
-     * @param token
      * @param groupId
      * @param fileInputStream
      * @param modelId
@@ -946,16 +883,14 @@ public class PortfolioController extends AbstractController {
      * @return portfolio uuid
      */
     @PostMapping(value = "/zip", consumes = "multipart/form-data")
-    public String postPortfolioZip(@CookieValue("user") String user,
-                                   @CookieValue("credential") String token,
-                                   @RequestParam("group") long groupId,
+    public String postPortfolioZip(@RequestParam("group") long groupId,
                                    @RequestParam("fileupload") InputStream fileInputStream,
                                    @RequestParam("model") String modelId,
                                    @RequestParam("instance") String instance,
                                    @RequestParam("project") String projectName,
                                    HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
         javax.servlet.ServletContext servletContext = request.getSession().getServletContext();
         String path = servletContext.getRealPath("/");
 
@@ -982,21 +917,17 @@ public class PortfolioController extends AbstractController {
      * Delete portfolio. <br>
      * DELETE /rest/api/portfolios/portfolio/{portfolio-id}
      *
-     * @param user
-     * @param token
      * @param groupId
      * @param portfolioId
      * @param request
      * @return
      */
     @DeleteMapping(value = "/portfolio/{portfolio-id}", produces = "application/xml")
-    public String deletePortfolio(@CookieValue("user") String user,
-                                  @CookieValue("credential") String token,
-                                  @RequestParam("group") long groupId,
+    public String deletePortfolio(@RequestParam("group") long groupId,
                                   @PathVariable("portfolio-id") UUID portfolioId,
                                   HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             portfolioManager.removePortfolio(portfolioId, ui.userId, groupId);
@@ -1017,10 +948,7 @@ public class PortfolioController extends AbstractController {
      * POST /rest/api/portfolios
      *
      * @param xmlPortfolio
-     * @param user
-     * @param token
      * @param groupId
-     * @param userId
      * @param modelId            another uuid, not sure why it's here
      * @param srceType           sakai/null Need to be logged in on sakai first
      * @param srceUrl            url part of the sakai system to fetch
@@ -1035,10 +963,7 @@ public class PortfolioController extends AbstractController {
      */
     @PostMapping(consumes = "application/xml", produces = "application/xml")
     public String postPortfolio(@RequestBody String xmlPortfolio,
-                                @CookieValue("user") String user,
-                                @CookieValue("credential") String token,
                                 @RequestParam("group") int groupId,
-                                @RequestParam("user") Integer userId,
                                 @RequestParam("model") UUID modelId,
                                 @RequestParam("srce") String srceType,
                                 @RequestParam("srceurl") String srceUrl,
@@ -1048,7 +973,7 @@ public class PortfolioController extends AbstractController {
                                 ServletConfig sc,
                                 HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null); // FIXME
+        UserInfo ui = checkCredential(request);
 
         if ("sakai".equals(srceType)) {
             /// Session Sakai
@@ -1130,8 +1055,6 @@ public class PortfolioController extends AbstractController {
      * Import zip file. <br>
      * POST /rest/api/portfolios/zip
      *
-     * @param user
-     * @param token
      * @param groupId
      * @param modelId
      * @param uploadedInputStream
@@ -1141,16 +1064,14 @@ public class PortfolioController extends AbstractController {
      * @return
      */
     @PostMapping(value = "/zip2", consumes = "multipart/form-data", produces = "text/plain")
-    public String postPortfolioByForm(@CookieValue("user") String user,
-                                      @CookieValue("credential") String token,
-                                      @RequestParam("group") long groupId,
+    public String postPortfolioByForm(@RequestParam("group") long groupId,
                                       @RequestParam("model") String modelId,
                                       @RequestParam("uploadfile") InputStream uploadedInputStream,
                                       @RequestParam("instance") String instance,
                                       @RequestParam("project") String projectName,
                                       HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null); // FIXME
+        UserInfo ui = checkCredential(request);
         String returnValue = "";
 
         boolean instantiate = false;

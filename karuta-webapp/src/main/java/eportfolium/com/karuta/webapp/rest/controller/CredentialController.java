@@ -73,8 +73,6 @@ public class CredentialController extends AbstractController {
      * Fetch current user info. <br>
      * GET /rest/api/credential
      *
-     * @param user
-     * @param token
      * @param groupId
      * @param request
      * @return <user id="uid"> <username></username> <firstname></firstname>
@@ -84,11 +82,9 @@ public class CredentialController extends AbstractController {
      */
 
     @GetMapping(produces = "application/xml")
-    public ResponseEntity<String> getCredential(@CookieValue("user") String user,
-                                                @CookieValue("credential") String token,
-                                                @RequestParam("group") int groupId,
+    public ResponseEntity<String> getCredential(@RequestParam("group") int groupId,
                                                 HttpServletRequest request) throws RestWebApplicationException {
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         if (ui.userId == 0) // userid not valid -- id de l'utilisateur non valide.
         {

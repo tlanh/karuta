@@ -64,19 +64,13 @@ public class UserController extends AbstractController {
      *                           <admin>1/0</admin> <designer>1/0</designer>
      *                           <email></email> <active>1/0</active>
      *                           <substitute>1/0</substitute> </user> ... </users>
-     * @param user
-     * @param token
-     * @param groupId
      * @param request
      * @return
      */
     @PostMapping(consumes = "application/xml", produces = "application/xml")
     public ResponseEntity<String> postUser(@RequestBody String xmluser,
-                                           @CookieValue("user") String user,
-                                           @CookieValue("credential") String token,
-                                           @RequestParam("group") int groupId,
                                            HttpServletRequest request) throws RestWebApplicationException {
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             String xmlUser = securityManager.addUsers(xmluser, ui.userId);
@@ -99,8 +93,6 @@ public class UserController extends AbstractController {
      * Get user list. <br>
      * GET/rest/api/users*parameters:*return:
      *
-     * @param user
-     * @param token
      * @param username
      * @param firstname
      * @param lastname
@@ -111,14 +103,12 @@ public class UserController extends AbstractController {
      *         <substitute>1/0</substitute> </user> ... </users>
      */
     @GetMapping(produces = "application/xml")
-    public String getUsers(@CookieValue("user") String user,
-                           @CookieValue("credential") String token,
-                           @RequestParam("username") String username,
+    public String getUsers(@RequestParam("username") String username,
                            @RequestParam("firstname") String firstname,
                            @RequestParam("lastname") String lastname,
                            HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         if (ui.userId == 0)
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, "Not logged in");
@@ -230,23 +220,17 @@ public class UserController extends AbstractController {
      * Fetch userlist from a role and portfolio id. <br>
      * GET /rest/api/users/Portfolio/{portfolio-id}/Role/{role}/users
      *
-     * @param user
-     * @param token
-     * @param group
      * @param portfolioId
      * @param role
      * @param request
      * @return
      */
     @GetMapping(value = "/Portfolio/{portfolio-id}/Role/{role}/users", produces = "application/xml")
-    public String getUsersByRole(@CookieValue("user") String user,
-                                 @CookieValue("credential") String token,
-                                 @CookieValue("group") String group,
-                                 @PathVariable("portfolio-id") UUID portfolioId,
+    public String getUsersByRole(@PathVariable("portfolio-id") UUID portfolioId,
                                  @PathVariable("role") String role,
                                  HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, group); // FIXME
+        UserInfo ui = checkCredential(request);
 
         try {
             return userManager.getUsersByRole(ui.userId, portfolioId, role);
@@ -260,23 +244,19 @@ public class UserController extends AbstractController {
      * Delete users. <br>
      * DELETE /rest/api/users
      *
-     * @see #deleteUser(String, String, long, Long, HttpServletRequest)
+     * @see #deleteUser(Long, HttpServletRequest)
      *
-     * @param user
-     * @param token
      * @param groupId
      * @param userId
      * @param request
      * @return
      */
     @DeleteMapping(produces = "application/xml")
-    public String deleteUsers(@CookieValue("user") String user,
-                              @CookieValue("credential") String token,
-                              @RequestParam("group") int groupId,
+    public String deleteUsers(@RequestParam("group") int groupId,
                               @RequestParam("userId") Long userId,
                               HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         if (!securityManager.isAdmin(ui.userId) && ui.userId != userId)
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, "No admin right");
@@ -295,21 +275,15 @@ public class UserController extends AbstractController {
      * Delete specific user. <br>
      * DELETE /rest/api/users/user/{user-id}
      *
-     * @param user
-     * @param token
-     * @param groupId
      * @param userid
      * @param request
      * @return
      */
     @DeleteMapping(value = "/user/{user-id}", produces = "application/xml")
-    public String deleteUser(@CookieValue("user") String user,
-                             @CookieValue("credential") String token,
-                             @RequestParam("group") long groupId,
-                             @PathVariable("user-id") Long userid,
+    public String deleteUser(@PathVariable("user-id") Long userid,
                              HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             securityManager.removeUsers(ui.userId, userid);
@@ -329,9 +303,6 @@ public class UserController extends AbstractController {
      * <active>1/0</active> <substitute>1/0</substitute> </user>
      *
      * @param xmlInfUser
-     * @param user
-     * @param token
-     * @param groupId
      * @param userid
      * @param request
      * @return <user id="uid"> <username></username> <firstname></firstname>
@@ -341,13 +312,10 @@ public class UserController extends AbstractController {
      */
     @PutMapping(value = "/user/{user-id}", produces = "application/xml")
     public String putUser(@RequestBody String xmlInfUser,
-                          @CookieValue("user") String user,
-                          @CookieValue("credential") String token,
-                          @RequestParam("group") int groupId,
                           @PathVariable("user-id") long userid,
                           HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
 
@@ -375,19 +343,13 @@ public class UserController extends AbstractController {
      * Fetch groups from a role and portfolio id <br>
      * GET /rest/api/users/Portfolio/{portfolio-id}/Role/{role}/groups.
      *
-     * @param user
-     * @param token
-     * @param group
      * @param portfolioId
      * @param role
      * @param request
      * @return
      */
     @GetMapping(value = "/Portfolio/{portfolio-id}/Role/{role}/groups", produces = "application/xml")
-    public String getGroupsByRole(@CookieValue("user") String user,
-                                  @CookieValue("credential") String token,
-                                  @CookieValue("group") String group,
-                                  @PathVariable("portfolio-id") UUID portfolioId,
+    public String getGroupsByRole(@PathVariable("portfolio-id") UUID portfolioId,
                                   @PathVariable("role") String role,
                                   HttpServletRequest request) throws RestWebApplicationException {
         // FIXME: Authentication ?

@@ -61,7 +61,7 @@ public class PortfolioGroupController extends AbstractController {
                                        @RequestParam("type") String type,
                                        @RequestParam("parent") Long parent,
                                        HttpServletRequest request) throws RestWebApplicationException {
-        UserInfo ui = checkCredential(request, null, null, null); // FIXME
+        UserInfo ui = checkCredential(request);
         Long response = -1L;
 
         // Check type value
@@ -96,7 +96,7 @@ public class PortfolioGroupController extends AbstractController {
                                                  @RequestParam("uuid") UUID uuid,
                                                  @RequestParam("label") String label,
                                                  HttpServletRequest request) throws RestWebApplicationException {
-        UserInfo ui = checkCredential(request, null, null, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             int response = -1;
@@ -131,7 +131,7 @@ public class PortfolioGroupController extends AbstractController {
                                                @RequestParam("uuid") UUID portfolioId,
                                                @RequestParam("label") String groupLabel,
                                                HttpServletRequest request) throws RestWebApplicationException {
-        UserInfo ui = checkCredential(request, null, null, null);
+        UserInfo ui = checkCredential(request);
         String xmlUsers = "";
 
         try {

@@ -48,21 +48,17 @@ public class UserGroupController extends AbstractController {
      * Insert a user in a user group. <br>
      * POST /rest/api/groupsUsers
      *
-     * @param user
-     * @param token
      * @param groupId            group: gid
      * @param userId             userId
      * @param request
      * @return <ok/>
      */
     @PostMapping(produces = "application/xml")
-    public String postGroupsUsers(@CookieValue("user") String user,
-                                  @CookieValue("credential") String token,
-                                  @RequestParam("group") long groupId,
+    public String postGroupsUsers(@RequestParam("group") long groupId,
                                   @RequestParam("userId") long userId,
                                   HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             securityManager.addUserToGroup(ui.userId, userId, groupId);

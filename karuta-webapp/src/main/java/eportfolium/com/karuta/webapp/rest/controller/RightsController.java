@@ -53,7 +53,7 @@ public class RightsController extends AbstractController {
     public String postChangeRights(@RequestBody String xmlNode,
                                    HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, null, null, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             nodeManager.changeRights(xmlNode, ui.userId, ui.subId, "");

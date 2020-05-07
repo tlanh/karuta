@@ -51,9 +51,6 @@ public class RoleRightsGroupsController extends AbstractController {
      * List roles. <br>
      * GET /rest/api/rolerightsgroups
      *
-     * @param user
-     * @param token
-     * @param group
      * @param portfolio
      * @param queryuser
      * @param role
@@ -61,15 +58,12 @@ public class RoleRightsGroupsController extends AbstractController {
      * @return
      */
     @GetMapping(produces = "application/xml")
-    public String getRightsGroup(@CookieValue("user") String user,
-                                 @CookieValue("credential") String token,
-                                 @CookieValue("group") String group,
-                                 @RequestParam("portfolio") UUID portfolio,
+    public String getRightsGroup(@RequestParam("portfolio") UUID portfolio,
                                  @RequestParam("user") Long queryuser,
                                  @RequestParam("role") String role,
                                  HttpServletRequest request) throws RestWebApplicationException {
 
-        checkCredential(request, user, token, group); // FIXME ?
+        checkCredential(request);
 
         try {
             // Retourne le contenu du type
@@ -87,21 +81,15 @@ public class RoleRightsGroupsController extends AbstractController {
      * List all users in a specified roles. <br>
      * GET /rest/api/rolerightsgroups/all/users
      *
-     * @param user
-     * @param token
-     * @param group
      * @param portfolioId
      * @param request
      * @return
      */
     @GetMapping(value = "/all/users", produces = "application/xml")
-    public String getPortfolioRightInfo(@CookieValue("user") String user,
-                                        @CookieValue("credential") String token,
-                                        @CookieValue("group") String group,
-                                        @RequestParam("portfolio") UUID portfolioId,
+    public String getPortfolioRightInfo(@RequestParam("portfolio") UUID portfolioId,
                                         HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, group); // FIXME
+        UserInfo ui = checkCredential(request);
         String returnValue = "";
 
         try {
@@ -123,20 +111,14 @@ public class RoleRightsGroupsController extends AbstractController {
      * List rights in the specified role <br>
      * GET /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}
      *
-     * @param user
-     * @param token
-     * @param group
      * @param rrgId
      * @param request
      * @return
      */
     @GetMapping(value = "/rolerightsgroup/{rolerightsgroup-id}", produces = "application/xml")
-    public String getRightInfo(@CookieValue("user") String user,
-                               @CookieValue("credential") String token,
-                               @CookieValue("group") String group,
-                               @PathVariable("rolerightsgroup-id") Long rrgId,
+    public String getRightInfo(@PathVariable("rolerightsgroup-id") Long rrgId,
                                HttpServletRequest request) throws RestWebApplicationException {
-        UserInfo ui = checkCredential(request, user, token, group);
+        UserInfo ui = checkCredential(request);
 
         String returnValue = "";
 
@@ -158,9 +140,6 @@ public class RoleRightsGroupsController extends AbstractController {
      * POST
      * /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}/users/user/{user-id}
      *
-     * @param user
-     * @param token
-     * @param group
      * @param rrgId
      * @param queryuser
      * @param request
@@ -168,13 +147,10 @@ public class RoleRightsGroupsController extends AbstractController {
      */
     @PostMapping(value = "/rolerightsgroup/{rolerightsgroup-id}/users/user/{user-id}",
             produces = "application/xml")
-    public String postRightGroupUsers(@CookieValue("user") String user,
-                                      @CookieValue("credential") String token,
-                                      @CookieValue("group") String group,
-                                      @PathVariable("rolerightsgroup-id") Long rrgId,
+    public String postRightGroupUsers(@PathVariable("rolerightsgroup-id") Long rrgId,
                                       @PathVariable("user-id") Long queryuser,
                                       HttpServletRequest request) throws RestWebApplicationException {
-        UserInfo ui = checkCredential(request, user, token, group);
+        UserInfo ui = checkCredential(request);
         try {
             return securityManager.addUserRole(ui.userId, rrgId, queryuser);
         } catch (BusinessException ex) {
@@ -191,21 +167,15 @@ public class RoleRightsGroupsController extends AbstractController {
      * POST /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}/users
      *
      * @param xmlNode
-     * @param user
-     * @param token
-     * @param group
      * @param rrgId
      * @param request
      * @return
      */
     @PostMapping(value = "/rolerightsgroup/{rolerightsgroup-id}/users", produces = "application/xml")
     public String postRightGroupUser(@RequestBody String xmlNode,
-                                     @CookieValue("user") String user,
-                                     @CookieValue("credential") String token,
-                                     @CookieValue("group") String group,
                                      @PathVariable("rolerightsgroup-id") Long rrgId,
                                      HttpServletRequest request) throws RestWebApplicationException {
-        UserInfo ui = checkCredential(request, user, token, group);
+        UserInfo ui = checkCredential(request);
 
         try {
             return securityManager.addUsersToRole(ui.userId, rrgId, xmlNode);
@@ -222,20 +192,14 @@ public class RoleRightsGroupsController extends AbstractController {
      * Delete a role. <br>
      * DELETE /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}
      *
-     * @param user
-     * @param token
-     * @param group
      * @param groupRightInfoId
      * @param request
      * @return
      */
     @DeleteMapping(value = "/rolerightsgroup/{rolerightsgroup-id}", produces = "application/xml")
-    public String deleteRightGroup(@CookieValue("user") String user,
-                                   @CookieValue("credential") String token,
-                                   @CookieValue("group") String group,
-                                   @PathVariable("rolerightsgroup-id") Long groupRightInfoId,
+    public String deleteRightGroup(@PathVariable("rolerightsgroup-id") Long groupRightInfoId,
                                    HttpServletRequest request) throws RestWebApplicationException {
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             securityManager.removeRole(ui.userId, groupRightInfoId);
@@ -257,13 +221,10 @@ public class RoleRightsGroupsController extends AbstractController {
      **/
     @DeleteMapping(value = "/rolerightsgroup/{rolerightsgroup-id}/users/user/{user-id}",
             produces = "application/xml")
-    public String deleteRightGroupUser(@CookieValue("user") String user,
-                                       @CookieValue("credential") String token,
-                                       @CookieValue("group") String group,
-                                       @PathVariable("rolerightsgroup-id") Long rrgId,
+    public String deleteRightGroupUser(@PathVariable("rolerightsgroup-id") Long rrgId,
                                        @PathVariable("user-id") Integer queryuser,
                                        HttpServletRequest httpServletRequest) throws RestWebApplicationException {
-        UserInfo ui = checkCredential(httpServletRequest, user, token, null);
+        UserInfo ui = checkCredential(httpServletRequest);
 
         try {
             securityManager.removeUserRole(ui.userId, rrgId);
@@ -281,20 +242,14 @@ public class RoleRightsGroupsController extends AbstractController {
      * Remove all users from a role. <br>
      * DELETE /rest/api/rolerightsgroups/all/users
      *
-     * @param user
-     * @param token
-     * @param group
      * @param portfolioId
      * @param request
      * @return
      */
     @DeleteMapping(value = "/all/users", produces = "application/xml")
-    public String deletePortfolioRightInfo(@CookieValue("user") String user,
-                                           @CookieValue("credential") String token,
-                                           @CookieValue("group") String group,
-                                           @RequestParam("portfolio") UUID portfolioId,
+    public String deletePortfolioRightInfo(@RequestParam("portfolio") UUID portfolioId,
                                            HttpServletRequest request) throws RestWebApplicationException {
-        UserInfo ui = checkCredential(request, user, token, group);
+        UserInfo ui = checkCredential(request);
 
         String returnValue = "";
         try {
@@ -317,22 +272,16 @@ public class RoleRightsGroupsController extends AbstractController {
      * PUT /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}
      *
      * @param xmlNode
-     * @param user
-     * @param token
-     * @param group
      * @param rrgId
      * @param request
      * @return
      */
     @PutMapping(value = "/rolerightsgroup/{rolerightsgroup-id}", produces = "application/xml")
     public String putRightInfo(@RequestBody String xmlNode,
-                               @CookieValue("user") String user,
-                               @CookieValue("credential") String token,
-                               @CookieValue("group") String group,
                                @PathVariable("rolerightsgroup-id") Long rrgId,
                                HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, group);
+        UserInfo ui = checkCredential(request);
 
         try {
             // Retourne le contenu du type
@@ -354,22 +303,16 @@ public class RoleRightsGroupsController extends AbstractController {
      * POST /rest/api/rolerightsgroups/{portfolio-id}
      *
      * @param xmlNode
-     * @param user
-     * @param token
-     * @param group
      * @param portfolioId
      * @param request
      * @return
      */
     @PostMapping(value = "/{portfolio-id}", produces = "application/xml")
     public String postRightGroups(@RequestBody String xmlNode,
-                                  @CookieValue("user") String user,
-                                  @CookieValue("credential") String token,
-                                  @CookieValue("group") String group,
                                   @PathVariable("portfolio-id") UUID portfolioId,
                                   HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, group);
+        UserInfo ui = checkCredential(request);
 
         try {
             return portfolioManager.addRoleInPortfolio(ui.userId, portfolioId, xmlNode);

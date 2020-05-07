@@ -81,23 +81,17 @@ public class RoleController extends AbstractController {
      * Fetch a role in a portfolio. <br>
      * GET /rest/api/roles/portfolio/{portfolio-id}
      *
-     * @param user
-     * @param token
-     * @param groupId
      * @param role
      * @param portfolioId
      * @param request
      * @return
      */
     @GetMapping(value = "/portfolio/{portfolio-id}", produces = {"application/json", "application/xml"})
-    public String getRolePortfolio(@CookieValue("user") String user,
-                                   @CookieValue("credential") String token,
-                                   @RequestParam("group") int groupId,
-                                   @RequestParam("role") String role,
+    public String getRolePortfolio(@RequestParam("role") String role,
                                    @RequestParam("portfolio-id") UUID portfolioId,
                                    HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             String returnValue = portfolioManager
@@ -116,22 +110,16 @@ public class RoleController extends AbstractController {
      * PUT /rest/api/roles/role/{role-id}
      *
      * @param xmlRole
-     * @param user
-     * @param token
-     * @param groupId
      * @param roleId
      * @param request
      * @return
      */
     @PutMapping(value = "/role/{role-id}", produces = "application/xml")
     public String putRole(@RequestBody String xmlRole,
-                          @CookieValue("user") String user,
-                          @CookieValue("credential") String token,
-                          @RequestParam("group") int groupId,
                           @PathVariable("role-id") long roleId,
                           HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
         try {
             return securityManager.changeRole(ui.userId, roleId, xmlRole).toString();
         } catch (BusinessException ex) {

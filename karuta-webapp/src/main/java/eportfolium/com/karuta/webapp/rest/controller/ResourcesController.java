@@ -50,8 +50,6 @@ public class ResourcesController extends AbstractController {
      * Fetch resource from node uuid. <br>
      * GET /rest/api/resources/resource/{node-parent-id}
      *
-     * @param user
-     * @param token
      * @param groupId
      * @param nodeParentId
      * @param request
@@ -59,12 +57,10 @@ public class ResourcesController extends AbstractController {
      */
     @GetMapping(value = "/resource/{node-parent-id}", consumes = "application/xml",
             produces = {"application/json", "application/xml"})
-    public String getResource(@CookieValue("user") String user,
-                              @CookieValue("credential") String token,
-                              @RequestParam("group") long groupId,
+    public String getResource(@RequestParam("group") long groupId,
                               @PathVariable("node-parent-id") UUID nodeParentId,
                               HttpServletRequest request) throws RestWebApplicationException {
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             return resourceManager.getResource(MimeTypeUtils.TEXT_XML, nodeParentId, ui.userId, groupId);
@@ -79,21 +75,17 @@ public class ResourcesController extends AbstractController {
      * Fetch all resource in a portfolio. <br>
      * GET /rest/api/resources/portfolios/{portfolio-id}
      *
-     * @param user
-     * @param token
      * @param groupId
      * @param portfolioId      portfolio-id
      * @param request
      * @return
      */
     @GetMapping(value = "/portfolios/{portfolio-id}", produces = {"application/json", "application/xml"})
-    public String getResources(@CookieValue("user") String user,
-                               @CookieValue("credential") String token,
-                               @RequestParam("group") long groupId,
+    public String getResources(@RequestParam("group") long groupId,
                                @PathVariable("portfolio-id") UUID portfolioId,
                                HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             return resourceManager.getResources(MimeTypeUtils.TEXT_XML, portfolioId, ui.userId, groupId);
@@ -109,8 +101,6 @@ public class ResourcesController extends AbstractController {
      * PUT /rest/api/resources/resource/{node-parent-uuid}
      *
      * @param xmlResource
-     * @param user
-     * @param token
      * @param groupId
      * @param info
      * @param parentNodeId
@@ -119,14 +109,12 @@ public class ResourcesController extends AbstractController {
      */
     @PutMapping(value = "/resource/{node-parent-uuid}", produces = "application/xml")
     public String putResource(@RequestBody String xmlResource,
-                              @CookieValue("user") String user,
-                              @CookieValue("credential") String token,
                               @RequestParam("group") long groupId,
                               @RequestParam("info") String info,
                               @PathVariable("node-parent-uuid") UUID parentNodeId,
                               HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         Date time = new Date();
         SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
@@ -159,8 +147,6 @@ public class ResourcesController extends AbstractController {
      * POST /rest/api/resources/{node-parent-uuid}
      *
      * @param xmlResource
-     * @param user
-     * @param token
      * @param groupId
      * @param parentNodeId
      * @param request
@@ -168,13 +154,11 @@ public class ResourcesController extends AbstractController {
      */
     @PostMapping(value = "/{node-parent-uuid}", produces = "application/xml")
     public String postResource(@RequestBody String xmlResource,
-                               @CookieValue("user") String user,
-                               @CookieValue("credential") String token,
                                @RequestParam("group") long groupId,
                                @PathVariable("node-parent-uuid") UUID parentNodeId,
                                HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             String returnValue = resourceManager
@@ -193,8 +177,6 @@ public class ResourcesController extends AbstractController {
      * (?) POST /rest/api/resources
      *
      * @param xmlResource
-     * @param user
-     * @param token
      * @param groupId
      * @param resource
      * @param request
@@ -202,12 +184,10 @@ public class ResourcesController extends AbstractController {
      */
     @PostMapping(produces = "application/xml")
     public String postResources(@RequestBody String xmlResource,
-                               @CookieValue("user") String user,
-                               @CookieValue("credential") String token,
                                @RequestParam("group") long groupId,
                                @RequestParam("resource") UUID resource,
                                HttpServletRequest request) throws RestWebApplicationException {
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             String returnValue = resourceManager
@@ -226,21 +206,17 @@ public class ResourcesController extends AbstractController {
      * Delete a resource <br>
      * DELETE /rest/api/resources/{resource-id}
      *
-     * @param user
-     * @param token
      * @param groupId
      * @param resourceId
      * @param request
      * @return
      */
     @DeleteMapping(value = "/{resource-id}", produces = "application/xml")
-    public String deleteResource(@CookieValue("user") String user,
-                                 @CookieValue("credential") String token,
-                                 @RequestParam("group") long groupId,
+    public String deleteResource(@RequestParam("group") long groupId,
                                  @PathVariable("resource-id") UUID resourceId,
                                  HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             resourceManager.removeResource(resourceId, ui.userId, groupId);

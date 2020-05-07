@@ -42,8 +42,6 @@ public class GroupRightsController extends AbstractController {
      * Get rights in a role from a groupid <br>
      * GET /rest/api/groupRights
      *
-     * @param user
-     * @param token
      * @param groupId            role id
      * @param request
      * @return <groupRights> <groupRight gid="groupid" templateId="grouprightid>
@@ -52,12 +50,10 @@ public class GroupRightsController extends AbstractController {
      *         WR="True/False"/>"; </groupRight> </groupRights>
      */
     @GetMapping(produces = "application/xml")
-    public String getGroupRights(@CookieValue("user") String user,
-                                 @CookieValue("credential") String token,
-                                 @RequestParam("group") long groupId,
+    public String getGroupRights(@RequestParam("group") long groupId,
                                  HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
         try {
             return groupManager.getGroupRights(ui.userId, groupId);
         } catch (Exception ex) {
@@ -71,18 +67,14 @@ public class GroupRightsController extends AbstractController {
      * Delete a right definition. <br>
      * DELETE /rest/api/groupRights
      *
-     * @param user
-     * @param token
      * @param groupId
      * @param request
      * @return
      */
     @DeleteMapping(produces = "application/xml")
-    public String deleteGroupRights(@CookieValue("user") String user,
-                                    @CookieValue("credential") String token,
-                                    @RequestParam("group") long groupId,
+    public String deleteGroupRights(@RequestParam("group") long groupId,
                                     HttpServletRequest request) throws RestWebApplicationException {
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
         try {
             groupManager.removeRights(groupId, ui.userId);
             return "supprimé";

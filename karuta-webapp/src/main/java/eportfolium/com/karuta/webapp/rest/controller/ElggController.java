@@ -42,20 +42,12 @@ public class ElggController extends AbstractController {
      * elgg related. <br>
      * GET /rest/api/elgg/site/river_feed
      *
-     * @param user
-     * @param token
-     * @param group
-     * @param type
      * @param limit
      * @param request
      * @return
      */
     @GetMapping(value = "/site/river_feed", produces = "text/html")
-    public String getElggSiteRiverFeed(@CookieValue("user") String user,
-                                       @CookieValue("credential") String token,
-                                       @CookieValue("group") String group,
-                                       @RequestParam("type") Integer type,
-                                       @RequestParam("limit") String limit,
+    public String getElggSiteRiverFeed(@RequestParam("limit") String limit,
                                        HttpServletRequest request) throws RestWebApplicationException {
         int iLimit;
         try {
@@ -63,7 +55,7 @@ public class ElggController extends AbstractController {
         } catch (Exception ex) {
             iLimit = 20;
         }
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
         System.out.println(ui.User);
 
         // Elgg variables
@@ -87,21 +79,13 @@ public class ElggController extends AbstractController {
      * POST /rest/api/elgg/wire
      *
      * @param message
-     * @param user
-     * @param token
-     * @param group
-     * @param type
      * @param request
      * @return
      */
     @PostMapping(value = "/wire", produces = "application/xml")
-    public String getElggSiteRiverFeed(@RequestBody String message,
-                                       @CookieValue("user") String user,
-                                       @CookieValue("credential") String token,
-                                       @CookieValue("group") String group,
-                                       @RequestParam("type") Integer type,
+    public String wireElggSiteRiverFeed(@RequestBody String message,
                                        HttpServletRequest request) throws RestWebApplicationException {
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         // Elgg variables
         String elggDefaultApiUrl = configurationManager.get("elggDefaultApiUrl");

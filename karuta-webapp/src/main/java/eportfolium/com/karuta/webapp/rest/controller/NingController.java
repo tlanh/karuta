@@ -33,20 +33,12 @@ public class NingController extends AbstractController {
      * Ning related. <br>
      * GET /rest/api/ning/activities
      *
-     * @param user
-     * @param token
-     * @param group
-     * @param type
      * @param request
      * @return
      */
     @GetMapping(value = "/activities", produces = "application/xml")
-    public String getNingActivities(@CookieValue("user") String user,
-                                    @CookieValue("credential") String token,
-                                    @CookieValue("group") String group,
-                                    @RequestParam("type") Integer type,
-                                    HttpServletRequest request) {
-        checkCredential(request, user, token, group);
+    public String getNingActivities(HttpServletRequest request) {
+        checkCredential(request);
 
         Ning ning = new Ning();
         return ning.getXhtmlActivites();

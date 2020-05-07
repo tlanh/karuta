@@ -44,9 +44,6 @@ public class GroupRightsInfoController extends AbstractController {
      * Get role list from portfolio from uuid. <br>
      * GET /rest/api/groupRightsInfos
      *
-     * @param user
-     * @param token
-     * @param groupId
      * @param portfolioId        portfolio uuid
      * @param request
      * @return <groupRightsInfos> <groupRightInfo grid="grouprightid">
@@ -54,12 +51,9 @@ public class GroupRightsInfoController extends AbstractController {
      *         </groupRightsInfos>
      */
     @GetMapping(produces = "application/xml")
-    public String getGroupRightsInfos(@CookieValue("user") String user,
-                                      @CookieValue("credential") String token,
-                                      @RequestParam("group") int groupId,
-                                      @RequestParam("portfolioId") UUID portfolioId,
+    public String getGroupRightsInfos(@RequestParam("portfolioId") UUID portfolioId,
                                       HttpServletRequest request) throws RestWebApplicationException {
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             return portfolioManager.getGroupRightsInfos(ui.userId, portfolioId);

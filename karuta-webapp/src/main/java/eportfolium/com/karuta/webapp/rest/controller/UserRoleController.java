@@ -43,22 +43,16 @@ public class UserRoleController extends AbstractController {
      * Add user to a role. <br>
      * POST /rest/api/roleUser
      *
-     * @param user
-     * @param token
-     * @param groupId
      * @param grid
      * @param userid
      * @param request
      * @return
      */
     @PostMapping(value = "/roleUser", produces = "application/xml")
-    public String postRoleUser(@CookieValue("user") String user,
-                               @CookieValue("credential") String token,
-                               @RequestParam("group") long groupId,
-                               @RequestParam("grid") long grid,
+    public String postRoleUser(@RequestParam("grid") long grid,
                                @RequestParam("user-id") Long userid,
                                HttpServletRequest request) throws RestWebApplicationException {
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             return securityManager.addUserRole(ui.userId, grid, userid);

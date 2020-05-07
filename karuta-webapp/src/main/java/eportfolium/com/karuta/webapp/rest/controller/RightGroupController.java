@@ -44,20 +44,16 @@ public class RightGroupController extends AbstractController {
      * Change the group right associated to a user group. <br>
      * POST /rest/api/RightGroup
      *
-     * @param user
-     * @param token
      * @param groupId            user group id
      * @param groupRightId       group right
      * @param request
      * @return
      */
     @PostMapping(produces = "application/xml")
-    public ResponseEntity<String> postRightGroup(@CookieValue("user") String user,
-                                                 @CookieValue("credential") String token,
-                                                 @RequestParam("group") Long groupId,
+    public ResponseEntity<String> postRightGroup(@RequestParam("group") Long groupId,
                                                  @RequestParam("groupRightId") Long groupRightId,
                                                  HttpServletRequest request) throws RestWebApplicationException {
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             groupManager.changeUserGroup(groupRightId, groupId, ui.userId);

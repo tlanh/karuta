@@ -47,26 +47,17 @@ public class MacroController extends AbstractController {
      * Executing pre-defined macro command on a node. <br>
      * POST /rest/api/action/{uuid}/{macro-name}
      *
-     * @param xmlNode
-     * @param user
-     * @param token
-     * @param group
      * @param uuid
      * @param macroName
      * @param httpServletRequest
      * @return
      */
-    @PostMapping(value = "/action/{uuid}/{macro-name}",
-            consumes = {"text/plain", "application/xml"}, produces = "text/plain")
-    public String postMacro(@RequestBody String xmlNode,
-                            @CookieValue("user") String user,
-                            @CookieValue("credential") String token,
-                            @CookieValue("group") String group,
-                            @PathVariable("uuid") UUID uuid,
+    @PostMapping(value = "/action/{uuid}/{macro-name}", produces = "text/plain")
+    public String postMacro(@PathVariable("uuid") UUID uuid,
                             @PathVariable("macro-name") String macroName,
                             HttpServletRequest httpServletRequest) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(httpServletRequest, user, token, group);
+        UserInfo ui = checkCredential(httpServletRequest);
 
         try {
             // On exécute l'action sur le noeud uuid.

@@ -46,19 +46,13 @@ public class GroupsController extends AbstractController {
      * Get groups from a user id <br>
      * GET /rest/api/groups
      *
-     * @param user
-     * @param token
-     * @param groupId            group id
      * @param request
      * @return <groups> <group id="gid" owner="uid" templateId="rrgid">GROUP
      *         LABEL</group> ... </groups>
      */
     @GetMapping(produces = "application/xml")
-    public String getGroups(@CookieValue("user") String user,
-                            @CookieValue("credential") String token,
-                            @RequestParam("group") int groupId,
-                            HttpServletRequest request) throws RestWebApplicationException {
-        UserInfo ui = checkCredential(request, user, token, null);
+    public String getGroups(HttpServletRequest request) throws RestWebApplicationException {
+        UserInfo ui = checkCredential(request);
         try {
             return groupManager.getUserGroups(ui.userId);
         } catch (Exception ex) {
@@ -71,21 +65,15 @@ public class GroupsController extends AbstractController {
      * Get roles in a portfolio <br>
      * GET /rest/api/groups/{portfolio-id}
      *
-     * @param user
-     * @param token
-     * @param groupId
      * @param portfolioId
      * @param request
      * @return
      */
     @GetMapping(value = "/{portfolio-id}", produces = "application/xml")
-    public String getGroupsPortfolio(@CookieValue("user") String user,
-                                     @CookieValue("credential") String token,
-                                     @RequestParam("group") int groupId,
-                                     @PathVariable("portfolio-id") UUID portfolioId,
+    public String getGroupsPortfolio(@PathVariable("portfolio-id") UUID portfolioId,
                                      HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             return portfolioManager.getRolesByPortfolio(portfolioId, ui.userId);

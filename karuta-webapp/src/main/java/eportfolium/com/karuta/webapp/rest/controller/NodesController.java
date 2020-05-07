@@ -62,8 +62,6 @@ public class NodesController extends AbstractController {
      * Get a node without children. <br>
      * GET /rest/api/nodes/node/{node-id}
      *
-     * @param user
-     * @param token
      * @param groupId
      * @param nodeId
      * @param cutoff
@@ -72,14 +70,12 @@ public class NodesController extends AbstractController {
      */
     @GetMapping(value = "/node/{node-id}", produces = {"application/json", "application/xml"},
         consumes = "application/xml")
-    public String getNode(@CookieValue("user") String user,
-                          @CookieValue("credential") String token,
-                          @RequestParam("group") long groupId,
+    public String getNode(@RequestParam("group") long groupId,
                           @PathVariable("node-id") UUID nodeId,
                           @RequestParam("level") Integer cutoff,
                           HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             return nodeManager
@@ -96,8 +92,6 @@ public class NodesController extends AbstractController {
      * Fetch nodes and children from node uuid <br>
      * GET /rest/api/nodes/node/{node-id}/children
      *
-     * @param user
-     * @param token
      * @param groupId
      * @param nodeId
      * @param cutoff
@@ -106,14 +100,12 @@ public class NodesController extends AbstractController {
      */
     @GetMapping(value = "/node/{node-id}/children", consumes = "application/xml",
             produces = {"application/json", "application/xml"})
-    public String getNodeWithChildren(@CookieValue("user") String user,
-                                      @CookieValue("credential") String token,
-                                      @RequestParam("group") long groupId,
+    public String getNodeWithChildren(@RequestParam("group") long groupId,
                                       @PathVariable("node-id") UUID nodeId,
                                       @RequestParam("level") Integer cutoff,
                                       HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             return nodeManager
@@ -130,22 +122,18 @@ public class NodesController extends AbstractController {
      * Fetch nodes metdata <br>
      * GET /rest/api/nodes/node/{node-id}/metadatawad
      *
-     * @param user
-     * @param token
      * @param groupId
      * @param nodeId
      * @param request
      * @return <metadata-wad/>
      */
-    @GetMapping(value = "/node/{nodeid}/metadatawad", consumes = "application/xml",
+    @GetMapping(value = "/node/{nodeid}/metadatawad",
             produces = {"application/json", "application/xml"})
-    public String getNodeMetadataWad(@CookieValue("user") String user,
-                                     @CookieValue("credential") String token,
-                                     @RequestParam("group") long groupId,
+    public String getNodeMetadataWad(@RequestParam("group") long groupId,
                                      @PathVariable("nodeid") UUID nodeId,
                                      HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             return nodeManager.getNodeMetadataWad(MimeTypeUtils.TEXT_XML, nodeId, ui.userId, groupId);
@@ -162,8 +150,6 @@ public class NodesController extends AbstractController {
      * Fetch rights per role for a node. <br>
      * GET /rest/api/nodes/node/{node-id}/rights
      *
-     * @param user
-     * @param token
      * @param groupId
      * @param nodeId
      * @param request
@@ -172,13 +158,11 @@ public class NodesController extends AbstractController {
      */
     @GetMapping(value = "/node/{node-id}/rights", consumes = "application/xml",
             produces = { "application/json", "application/xml"})
-    public String getNodeRights(@CookieValue("user") String user,
-                                @CookieValue("credential") String token,
-                                @RequestParam("group") long groupId,
+    public String getNodeRights(@RequestParam("group") long groupId,
                                 @PathVariable("node-id") UUID nodeId,
                                 HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             // TODO: Check with original code ; implementation is wrong for sure
@@ -205,20 +189,14 @@ public class NodesController extends AbstractController {
      * Fetch portfolio id from a given node id. <br>
      * GET /rest/api/nodes/node/{node-id}/portfolioid
      *
-     * @param user
-     * @param token
      * @param nodeId
-     * @param accept
      * @param request
      * @return portfolioid
      */
     @GetMapping(value = "/node/{node-id}/portfolioid", produces = "text/plain")
-    public String getNodePortfolioId(@CookieValue("user") String user,
-                                     @CookieValue("credential") String token,
-                                     @PathVariable("node-id") UUID nodeId,
-                                     @RequestHeader("Accept") String accept,
+    public String getNodePortfolioId(@PathVariable("node-id") UUID nodeId,
                                      HttpServletRequest request) throws RestWebApplicationException {
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
         try {
             return nodeManager.getPortfolioIdFromNode(ui.userId, nodeId).toString();
         } catch (BusinessException ex) {
@@ -235,25 +213,17 @@ public class NodesController extends AbstractController {
      *
      * @param xmlNode            <node uuid=""> <role name="">
      *                           <right RD="" WR="" DL="" /> </role> </node>
-     * @param user
-     * @param token
-     * @param groupId
      * @param nodeId
-     * @param accept
      * @param request
      * @return
      */
     @PostMapping(value = "/node/{node-id}/rights", consumes = "application/xml",
             produces = {"application/json", "application/xml"})
     public String postNodeRights(@RequestBody String xmlNode,
-                                 @CookieValue("user") String user,
-                                 @CookieValue("credential") String token,
-                                 @RequestParam("group") int groupId,
                                  @PathVariable("node-id") UUID nodeId,
-                                 @RequestHeader("Accept") String accept,
                                  HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
@@ -322,8 +292,6 @@ public class NodesController extends AbstractController {
      * Get the single first semantic tag node inside specified portfolio <br>
      * GET /rest/api/nodes/firstbysemantictag/{portfolio-uuid}/{semantictag}
      *
-     * @param user
-     * @param token
      * @param groupId
      * @param portfolioId
      * @param semantictag
@@ -332,14 +300,12 @@ public class NodesController extends AbstractController {
      */
     @GetMapping(value = "/firstbysemantictag/{portfolio-uuid}/{semantictag}", consumes = "application/xml",
         produces = "application/xml")
-    public String getNodeBySemanticTag(@CookieValue("user") String user,
-                                       @CookieValue("credential") String token,
-                                       @RequestParam("group") long groupId,
+    public String getNodeBySemanticTag(@RequestParam("group") long groupId,
                                        @PathVariable("portfolio-uuid") UUID portfolioId,
                                        @PathVariable("semantictag") String semantictag,
                                        HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             return nodeManager
@@ -357,8 +323,6 @@ public class NodesController extends AbstractController {
      * Get multiple semantic tag nodes inside specified portfolio. <br>
      * GET /rest/api/nodes/nodes/bysemantictag/{portfolio-uuid}/{semantictag}
      *
-     * @param user
-     * @param token
      * @param groupId
      * @param portfolioId
      * @param semantictag
@@ -367,14 +331,12 @@ public class NodesController extends AbstractController {
      */
     @GetMapping(value = "/bysemantictag/{portfolio-uuid}/{semantictag}", consumes = "application/xml",
         produces = "application/xml")
-    public String getNodesBySemanticTag(@CookieValue("user") String user,
-                                        @CookieValue("credential") String token,
-                                        @RequestParam("group") long groupId,
+    public String getNodesBySemanticTag(@RequestParam("group") long groupId,
                                         @PathVariable("portfolio-uuid") UUID portfolioId,
                                         @PathVariable("semantictag") String semantictag,
                                         HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             return nodeManager
@@ -393,8 +355,6 @@ public class NodesController extends AbstractController {
      * PUT /rest/api/nodes/node/{node-id}
      *
      * @param xmlNode
-     * @param user
-     * @param token
      * @param groupId
      * @param nodeId
      * @param request
@@ -402,13 +362,11 @@ public class NodesController extends AbstractController {
      */
     @PutMapping(value = "/node/{node-id}", produces = "application/xml")
     public String putNode(@RequestBody String xmlNode,
-                          @CookieValue("user") String user,
-                          @CookieValue("credential") String token,
                           @RequestParam("group") long groupId,
                           @PathVariable("node-id") UUID nodeId,
                           HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
         try {
             String returnValue = nodeManager.changeNode(MimeTypeUtils.TEXT_XML, nodeId, xmlNode, ui.userId, groupId)
                     .toString();
@@ -427,8 +385,6 @@ public class NodesController extends AbstractController {
      * PUT /rest/api/nodes/node/{node-id}/metadata
      *
      * @param xmlNode
-     * @param user
-     * @param token
      * @param groupId
      * @param info
      * @param nodeId
@@ -437,14 +393,12 @@ public class NodesController extends AbstractController {
      */
     @PutMapping(value = "/node/{nodeid}/metadata", produces = "application/xml")
     public String putNodeMetadata(@RequestBody String xmlNode,
-                                  @CookieValue("user") String user,
-                                  @CookieValue("credential") String token,
                                   @RequestParam("group") int groupId,
                                   @RequestParam("info") String info,
                                   @PathVariable("nodeid") UUID nodeId,
                                   HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         Date time = new Date();
         SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
@@ -477,8 +431,6 @@ public class NodesController extends AbstractController {
      * PUT /rest/api/nodes/node/{node-id}/metadatawas
      *
      * @param xmlNode
-     * @param user
-     * @param token
      * @param groupId
      * @param info
      * @param nodeId
@@ -487,14 +439,12 @@ public class NodesController extends AbstractController {
      */
     @PutMapping(value = "/node/{nodeid}/metadatawad", produces = "application/xml")
     public String putNodeMetadataWad(@RequestBody String xmlNode,
-                                     @CookieValue("user") String user,
-                                     @CookieValue("credential") String token,
                                      @RequestParam("group") Long groupId,
                                      @RequestParam("info") String info,
                                      @PathVariable("nodeid") UUID nodeId,
                                      HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         Date time = new Date();
         SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
@@ -540,7 +490,7 @@ public class NodesController extends AbstractController {
                                      @RequestParam("info") String info,
                                      HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, null, null, null);
+        UserInfo ui = checkCredential(request);
 
         Date time = new Date();
         SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
@@ -573,8 +523,6 @@ public class NodesController extends AbstractController {
      * PUT /rest/api/nodes/node/{node-id}/nodecontext parameters: return:
      *
      * @param xmlNode
-     * @param user
-     * @param token
      * @param groupId
      * @param info
      * @param nodeId
@@ -583,14 +531,12 @@ public class NodesController extends AbstractController {
      */
     @PutMapping(value = "/node/{nodeid}/nodecontext", produces = "application/xml")
     public String putNodeNodeContext(@RequestBody String xmlNode,
-                                     @CookieValue("user") String user,
-                                     @CookieValue("credential") String token,
                                      @RequestParam("group") long groupId,
                                      @RequestParam("info") String info,
                                      @PathVariable("nodeid") UUID nodeId,
                                      HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         Date time = new Date();
         SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
@@ -623,8 +569,6 @@ public class NodesController extends AbstractController {
      * PUT /rest/api/nodes/node/{node-id}/noderesource
      *
      * @param xmlNode
-     * @param user
-     * @param token
      * @param groupId
      * @param info
      * @param nodeId
@@ -633,14 +577,12 @@ public class NodesController extends AbstractController {
      */
     @PutMapping(value = "/node/{nodeid}/noderesource", produces = "application/xml")
     public String putNodeNodeResource(@RequestBody String xmlNode,
-                                      @CookieValue("user") String user,
-                                      @CookieValue("credential") String token,
                                       @RequestParam("group") long groupId,
                                       @RequestParam("info") String info,
                                       @PathVariable("nodeid") UUID nodeId,
                                       HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         Date time = new Date();
         SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
@@ -671,8 +613,6 @@ public class NodesController extends AbstractController {
      * Instanciate a node with right parsing <br>
      * POST /rest/api/nodes/node/import/{dest-id}
      *
-     * @param user
-     * @param token
      * @param groupId
      * @param parentId
      * @param semtag
@@ -682,16 +622,14 @@ public class NodesController extends AbstractController {
      * @return
      */
     @PostMapping("/node/import/{dest-id}")
-    public String postImportNode(@CookieValue("user") String user,
-                                 @CookieValue("credential") String token,
-                                 @RequestParam("group") long groupId,
+    public String postImportNode(@RequestParam("group") long groupId,
                                  @PathVariable("dest-id") UUID parentId,
                                  @RequestParam("srcetag") String semtag,
                                  @RequestParam("srcecode") String code,
                                  @RequestParam("uuid") UUID sourceId,
                                  HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         if (ui.userId == 0)
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, "Vous n'êtes pas connecté");
@@ -710,8 +648,6 @@ public class NodesController extends AbstractController {
      * Raw copy a node. <br>
      * POST /rest/api/nodes/node/copy/{dest-id}
      *
-     * @param user
-     * @param token
      * @param groupId
      * @param parentId
      * @param semtag
@@ -721,16 +657,14 @@ public class NodesController extends AbstractController {
      * @return
      */
     @PostMapping("/node/copy/{dest-id}")
-    public String postCopyNode(@CookieValue("user") String user,
-                               @CookieValue("credential") String token,
-                               @RequestParam("group") long groupId,
+    public String postCopyNode(@RequestParam("group") long groupId,
                                @PathVariable("dest-id") UUID parentId,
                                @RequestParam("srcetag") String semtag,
                                @RequestParam("srcecode") String code,
                                @RequestParam("uuid") UUID sourceId,
                                HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         if (ui.userId == 0)
             throw new RestWebApplicationException(HttpStatus.FORBIDDEN, "Vous n'êtes pas connecté");
@@ -749,10 +683,7 @@ public class NodesController extends AbstractController {
      * Fetch nodes. <br>
      * GET /rest/api/nodes
      *
-     * @param user
-     * @param token
      * @param groupId
-     * @param parentId
      * @param portfoliocode      mandatory
      * @param semtag             mandatory, find the semtag under portfoliocode, or
      *                           the selection from semtag_parent/code_parent
@@ -764,17 +695,14 @@ public class NodesController extends AbstractController {
      * @return
      */
     @GetMapping(consumes = "application/xml", produces = "application/xml")
-    public String getNodes(@CookieValue("user") String user,
-                           @CookieValue("credential") String token,
-                           @RequestParam("group") long groupId,
-                           @PathVariable("dest-id") String parentId,
+    public String getNodes(@RequestParam("group") long groupId,
                            @RequestParam("portfoliocode") String portfoliocode,
                            @RequestParam("semtag") String semtag,
                            @RequestParam("semtag_parent") String semtag_parent,
                            @RequestParam("code_parent") String code_parent,
                            @RequestParam("level") Integer cutoff,
                            HttpServletRequest request) throws RestWebApplicationException {
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             return nodeManager.getNodes(MimeTypeUtils.TEXT_XML, portfoliocode, semtag, ui.userId, groupId,
@@ -794,22 +722,16 @@ public class NodesController extends AbstractController {
      * POST /rest/api/nodes/node/{parent-id}
      *
      * @param xmlNode
-     * @param user
-     * @param token
-     * @param group
      * @param parentId
      * @param groupId
      * @return
      */
     @PostMapping(value = "/node/{parent-id}", consumes = "application/xml", produces = "application/xml")
     public ResponseEntity<String> postNode(@RequestBody String xmlNode,
-                                           @CookieValue("user") String user,
-                                           @CookieValue("credential") String token,
-                                           @RequestParam("group") Integer group,
                                            @PathVariable("parent-id") UUID parentId,
                                            @RequestParam("group") long groupId,
                                            HttpServletRequest request) throws RestWebApplicationException {
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
 
@@ -846,7 +768,7 @@ public class NodesController extends AbstractController {
     public ResponseEntity<String> postMoveNodeUp(@PathVariable("node-id") UUID nodeId,
                                                  HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, null, null, null); // FIXME
+        UserInfo ui = checkCredential(request);
         ResponseEntity<String> response = null;
 
         try {
@@ -860,8 +782,7 @@ public class NodesController extends AbstractController {
 
                 if (returnValue == -1L) {
                     response = ResponseEntity.status(HttpStatus.NOT_FOUND).body("Non-existing node");
-                }
-                if (returnValue == -2L) {
+                } else if (returnValue == -2L) {
                     response = ResponseEntity.status(HttpStatus.CONFLICT).body("Cannot move first node");
                 } else {
                     response = ResponseEntity.status(HttpStatus.NO_CONTENT).build();
@@ -889,7 +810,7 @@ public class NodesController extends AbstractController {
                                                        @PathVariable("parent-id") UUID parentId,
                                                        HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, null, null, null); // FIXME
+        UserInfo ui = checkCredential(request);
         try {
             boolean returnValue = nodeManager.changeParentNode(ui.userId, nodeId, parentId);
 
@@ -910,9 +831,6 @@ public class NodesController extends AbstractController {
      * Execute a macro command on a node, changing rights related. <br>
      * POST /rest/api/nodes/node/{node-id}/action/{action-name} *
      *
-     * @param user
-     * @param token
-     * @param groupId
      * @param nodeId
      * @param macro
      * @param request
@@ -920,14 +838,11 @@ public class NodesController extends AbstractController {
      */
     @PostMapping(value = "/node/{node-id}/action/{action-name}", consumes = "application/xml",
         produces = "application/xml")
-    public String postActionNode(@CookieValue("user") String user,
-                                 @CookieValue("credential") String token,
-                                 @RequestParam("group") int groupId,
-                                 @PathVariable("node-id") UUID nodeId,
+    public String postActionNode(@PathVariable("node-id") UUID nodeId,
                                  @PathVariable("action-name") String macro,
                                  HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
 
@@ -949,21 +864,17 @@ public class NodesController extends AbstractController {
      * Delete a node<br>
      * DELETE /rest/api/nodes/node/{node-uuid}
      *
-     * @param user
-     * @param token
      * @param groupId
      * @param nodeId
      * @param request
      * @return
      */
     @DeleteMapping(value = "/node/{node-uuid}", produces = "application/xml")
-    public String deleteNode(@CookieValue("user") String user,
-                             @CookieValue("credential") String token,
-                             @RequestParam("group") long groupId,
+    public String deleteNode(@RequestParam("group") long groupId,
                              @PathVariable("node-uuid") UUID nodeId,
                              HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             nodeManager.removeNode(nodeId, ui.userId, groupId);
@@ -980,8 +891,6 @@ public class NodesController extends AbstractController {
      * Fetch node content. <br>
      * GET /rest/api/nodes/{node-id}
      *
-     * @param user
-     * @param token
      * @param groupId
      * @param nodeId
      * @param lang
@@ -990,15 +899,13 @@ public class NodesController extends AbstractController {
      * @return
      */
     @GetMapping(value = "/{node-id}", consumes = "application/xml")
-    public String getNodeWithXSL(@CookieValue("user") String user,
-                                 @CookieValue("credential") String token,
-                                 @RequestParam("group") long groupId,
+    public String getNodeWithXSL(@RequestParam("group") long groupId,
                                  @PathVariable("node-id") UUID nodeId,
                                  @RequestParam("lang") String lang,
                                  @RequestParam("xsl-file") String xslFile,
                                  HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             // When we need more parameters, arrange this with format
@@ -1029,8 +936,6 @@ public class NodesController extends AbstractController {
      *
      * POST /rest/api/nodes/{node-id}/frommodelbysemantictag/{semantic-tag}
      *
-     * @param user
-     * @param token
      * @param groupId
      * @param nodeId
      * @param semantictag
@@ -1039,14 +944,12 @@ public class NodesController extends AbstractController {
      */
     @PostMapping(value = "/{node-id}/frommodelbysemantictag/{semantic-tag}", consumes = "application/xml",
         produces = "application/xml")
-    public String postNodeFromModelBySemanticTag(@CookieValue("user") String user,
-                                                 @CookieValue("credential") String token,
-                                                 @RequestParam("group") long groupId,
+    public String postNodeFromModelBySemanticTag(@RequestParam("group") long groupId,
                                                  @PathVariable("node-id") UUID nodeId,
                                                  @PathVariable("semantic-tag") String semantictag,
                                                  HttpServletRequest request) throws RestWebApplicationException {
 
-        UserInfo ui = checkCredential(request, user, token, null);
+        UserInfo ui = checkCredential(request);
 
         try {
             String returnValue = nodeManager
