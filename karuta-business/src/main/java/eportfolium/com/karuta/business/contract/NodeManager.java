@@ -21,15 +21,13 @@ import java.util.UUID;
 
 import javax.xml.parsers.ParserConfigurationException;
 
-import org.springframework.util.MimeType;
-
 import eportfolium.com.karuta.model.bean.GroupRights;
 import eportfolium.com.karuta.model.bean.Node;
 import eportfolium.com.karuta.model.exception.BusinessException;
 
 public interface NodeManager {
 
-	String getNode(MimeType outMimeType, UUID nodeId, boolean withChildren, Long userId, Long groupId, String label,
+	String getNode(UUID nodeId, boolean withChildren, Long userId, Long groupId, String label,
 			Integer cutoff) throws BusinessException, ParserConfigurationException;
 
 	String getChildNodes(String parentNodeCode, String parentSemtag, String semtag) throws Exception;
@@ -47,8 +45,6 @@ public interface NodeManager {
 	 * <action>reset</action> </role> </portfoliogroup>
 	 * 
 	 * @param xmlNode
-	 * @param userId
-	 * @param subId
 	 * @param label
 	 * @throws BusinessException
 	 * @throws Exception
@@ -63,10 +59,10 @@ public interface NodeManager {
 	String getNodeXmlOutput(UUID nodeId, boolean withChildren, String withChildrenOfXsiType, Long userId,
 			Long groupId, String label, boolean checkSecurity);
 
-	String getNodeBySemanticTag(MimeType textXml, UUID portfolioId, String semantictag, Long userId, Long groupId)
+	String getNodeBySemanticTag(UUID portfolioId, String semantictag, Long userId, Long groupId)
 			throws BusinessException;
 
-	String getNodesBySemanticTag(MimeType outMimeType, Long userId, Long groupId, UUID portfolioId,
+	String getNodesBySemanticTag(Long userId, Long groupId, UUID portfolioId,
 			String semanticTag) throws BusinessException;
 
 	/**
@@ -74,7 +70,7 @@ public interface NodeManager {
 	 * du noeud fourni
 	 *
 	 * @param node
-	 * @param portfolioUuid
+	 * @param portfolioId
 	 * @param portfolioModelId
 	 * @param userId
 	 * @param ordrer
@@ -98,53 +94,53 @@ public interface NodeManager {
 
 	String executeMacroOnNode(long userId, UUID nodeId, String macroName);
 
-	String getNodeMetadataWad(MimeType mimeType, UUID nodeId, Long userId, Long groupId)
+	String getNodeMetadataWad(UUID nodeId, Long userId, Long groupId)
 			throws BusinessException;
 
-	Integer changeNode(MimeType inMimeType, UUID nodeId, String xmlNode, Long userId, Long groupId)
+	Integer changeNode(UUID nodeId, String xmlNode, Long userId, Long groupId)
 			throws Exception;
 
 	void removeNode(UUID nodeId, Long userId, long groupId) throws BusinessException;
 
 	long getRoleByNode(Long userId, UUID nodeUuid, String role) throws BusinessException;
 
-	String changeNodeMetadataWad(MimeType mimeType, UUID nodeId, String xmlMetawad, Long userId, Long groupId)
+	String changeNodeMetadataWad(UUID nodeId, String xmlMetawad, Long userId, Long groupId)
 			throws Exception;
 
 	boolean changeParentNode(Long userid, UUID id, UUID parentId) throws BusinessException;
 
 	Long moveNodeUp(UUID nodeId);
 
-	String addNodeFromModelBySemanticTag(MimeType inMimeType, UUID nodeId, String semanticTag, Long userId,
+	String addNodeFromModelBySemanticTag(UUID nodeId, String semanticTag, Long userId,
 			Long groupId) throws Exception;
 
-	String changeNodeMetadataEpm(MimeType mimeType, UUID nodeId, String xmlMetadataEpm, Long id, long groupId)
+	String changeNodeMetadataEpm(UUID nodeId, String xmlMetadataEpm, Long id, long groupId)
 			throws Exception;
 
-	String changeNodeMetadata(MimeType mimeType, UUID nodeId, String xmlNode, Long id, long groupId)
+	String changeNodeMetadata(UUID nodeId, String xmlNode, Long id, long groupId)
 			throws Exception;
 
-	String changeNodeContext(MimeType mimeType, UUID nodeId, String xmlNode, Long userId, Long groupId)
+	String changeNodeContext(UUID nodeId, String xmlNode, Long userId, Long groupId)
 			throws BusinessException, Exception;
 
-	String changeNodeResource(MimeType mimeType, UUID nodeId, String xmlNode, Long id, Long groupId)
+	String changeNodeResource(UUID nodeId, String xmlNode, Long id, Long groupId)
 			throws BusinessException, Exception;
 
-	String addNode(MimeType inMimeType, UUID parentNodeId, String xmlNode, Long userId, Long groupId,
+	String addNode(UUID parentNodeId, String xmlNode, Long userId, Long groupId,
 			boolean forcedUuid) throws Exception;
 
-	String getNodeWithXSL(MimeType textXml, UUID nodeId, String xslFile, String parameters, Long id, Long groupId)
+	String getNodeWithXSL(UUID nodeId, String xslFile, String parameters, Long id, Long groupId)
 			throws Exception;
 
-	String getNodes(MimeType mimeType, String rootNodeCode, String childSemtag, Long userId, Long groupId,
+	String getNodes(String rootNodeCode, String childSemtag, Long userId, Long groupId,
 			String parentSemtag, String parentNodeCode, Integer cutoff) throws BusinessException;
 
 	String executeAction(Long userId, UUID nodeId, String action, String role);
 
-	String copyNode(MimeType inMimeType, UUID destId, String tag, String code, UUID sourceId, Long userId,
-			Long groupId) throws Exception;
+	String copyNode(UUID destId, String tag, String code, UUID sourceId, Long userId,
+			Long groupId);
 
-	UUID importNode(MimeType mimeType, UUID parentId, String semtag, String code, UUID sourceId, Long id,
+	UUID importNode(UUID parentId, String semtag, String code, UUID sourceId, Long id,
 			long groupId) throws BusinessException, Exception;
 
 	int updateNodeCode(UUID nodeId, String code);

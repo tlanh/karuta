@@ -29,7 +29,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.MimeType;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 
@@ -55,7 +54,8 @@ public class ResourceManagerImpl extends BaseManager implements ResourceManager 
 	@Autowired
 	private ResourceTableRepository resourceTableRepository;
 
-	public String getResource(MimeType outMimeType, UUID parentNodeId, Long userId, Long groupId)
+	@Override
+	public String getResource(UUID parentNodeId, Long userId, Long groupId)
 			throws BusinessException {
 
 		if (!hasRight(userId, groupId, parentNodeId, GroupRights.READ)) {
@@ -113,35 +113,22 @@ public class ResourceManagerImpl extends BaseManager implements ResourceManager 
 	}
 
 	@Override
-	public String getResources(MimeType outMimeType, UUID portfolioId, Long userId, Long groupId) throws Exception {
+	public String getResources(UUID portfolioId, Long userId, Long groupId) throws Exception {
 		List<ResourceTable> res = resourceTableRepository.getResourcesByPortfolioUUID(portfolioId);
 
-		String returnValue = "";
+		String returnValue = "<resources>";
 
-		if (outMimeType.getSubtype().equals("xml")) {
-			returnValue += "<resources>";
-			for (ResourceTable rt : res) {
-				returnValue += "<resource " + DomUtils.getXmlAttributeOutput("id", rt.getNode().getId().toString())
-						+ " />";
-			}
-			returnValue += "</resources>";
-		} else {
-			returnValue += "{";
-			boolean firstNode = true;
-			for (ResourceTable rt : res) {
-				if (firstNode)
-					firstNode = false;
-				else
-					returnValue += " , ";
-				returnValue += "resource: { " + DomUtils.getJsonAttributeOutput("id", rt.getNode().getId().toString())
-						+ " } ";
-			}
-			returnValue += "}";
+		for (ResourceTable rt : res) {
+			returnValue += "<resource " + DomUtils.getXmlAttributeOutput("id", rt.getNode().getId().toString())
+					+ " />";
 		}
+		returnValue += "</resources>";
+
 		return returnValue;
 	}
 
-	public Integer changeResource(MimeType inMimeType, UUID parentNodeId, String xmlResource, Long userId,
+	@Override
+	public Integer changeResource(UUID parentNodeId, String xmlResource, Long userId,
 			Long groupId) throws BusinessException, Exception {
 
 		int retVal = -1;
@@ -165,7 +152,7 @@ public class ResourceManagerImpl extends BaseManager implements ResourceManager 
 
 	}
 
-	public String addResource(MimeType inMimeType, UUID parentNodeId, String in, Long userId, Long groupId)
+	public String addResource(UUID parentNodeId, String in, Long userId, Long groupId)
 			throws BusinessException, Exception {
 		if (!credentialRepository.isAdmin(userId))
 			throw new GenericBusinessException("403 FORBIDDEN : No ADMIN right");
@@ -175,7 +162,7 @@ public class ResourceManagerImpl extends BaseManager implements ResourceManager 
 		if (!hasRight(userId, groupId, parentNodeId, GroupRights.WRITE)) {
 			throw new GenericBusinessException("403 FORBIDDEN : No WRITE credential");
 		} else
-			nodeManager.addNode(inMimeType, parentNodeId, in, userId, groupId, true);
+			nodeManager.addNode(parentNodeId, in, userId, groupId, true);
 
 		return "";
 	}

@@ -27,7 +27,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.bind.annotation.*;
 import org.w3c.dom.Document;
 import org.w3c.dom.NamedNodeMap;
@@ -77,8 +76,7 @@ public class NodesController extends AbstractController {
 
         UserInfo ui = checkCredential(request);
 
-        return nodeManager
-                .getNode(MimeTypeUtils.TEXT_XML, nodeId, false, ui.userId, groupId, null, cutoff);
+        return nodeManager.getNode(nodeId, false, ui.userId, groupId, null, cutoff);
     }
 
     /**
@@ -100,8 +98,7 @@ public class NodesController extends AbstractController {
 
         UserInfo ui = checkCredential(request);
 
-        return nodeManager
-                .getNode(MimeTypeUtils.TEXT_XML, nodeId, true, ui.userId, groupId, null, cutoff);
+        return nodeManager.getNode(nodeId, true, ui.userId, groupId, null, cutoff);
     }
 
     /**
@@ -121,7 +118,7 @@ public class NodesController extends AbstractController {
 
         UserInfo ui = checkCredential(request);
 
-        return nodeManager.getNodeMetadataWad(MimeTypeUtils.TEXT_XML, nodeId, ui.userId, groupId);
+        return nodeManager.getNodeMetadataWad(nodeId, ui.userId, groupId);
     }
 
     /**
@@ -262,7 +259,7 @@ public class NodesController extends AbstractController {
         UserInfo ui = checkCredential(request);
 
         return nodeManager
-                .getNodeBySemanticTag(MimeTypeUtils.TEXT_XML, portfolioId, semantictag, ui.userId, groupId);
+                .getNodeBySemanticTag(portfolioId, semantictag, ui.userId, groupId);
     }
 
     /**
@@ -284,8 +281,7 @@ public class NodesController extends AbstractController {
 
         UserInfo ui = checkCredential(request);
 
-        return nodeManager
-                .getNodesBySemanticTag(MimeTypeUtils.TEXT_XML, ui.userId, groupId, portfolioId, semantictag);
+        return nodeManager.getNodesBySemanticTag(ui.userId, groupId, portfolioId, semantictag);
 
     }
 
@@ -307,7 +303,7 @@ public class NodesController extends AbstractController {
 
         UserInfo ui = checkCredential(request);
 
-        return nodeManager.changeNode(MimeTypeUtils.TEXT_XML, nodeId, xmlNode, ui.userId, groupId)
+        return nodeManager.changeNode(nodeId, xmlNode, ui.userId, groupId)
                     .toString();
     }
 
@@ -330,7 +326,7 @@ public class NodesController extends AbstractController {
         UserInfo ui = checkCredential(request);
 
         return nodeManager
-                .changeNodeMetadata(MimeTypeUtils.TEXT_XML, nodeId, xmlNode, ui.userId, groupId);
+                .changeNodeMetadata(nodeId, xmlNode, ui.userId, groupId);
     }
 
     /**
@@ -352,7 +348,7 @@ public class NodesController extends AbstractController {
         UserInfo ui = checkCredential(request);
 
         return nodeManager
-                .changeNodeMetadataWad(MimeTypeUtils.TEXT_XML, nodeId, xmlNode, ui.userId, groupId);
+                .changeNodeMetadataWad(nodeId, xmlNode, ui.userId, groupId);
     }
 
     /**
@@ -373,10 +369,7 @@ public class NodesController extends AbstractController {
 
         UserInfo ui = checkCredential(request);
 
-        String returnValue = nodeManager
-                .changeNodeMetadataEpm(MimeTypeUtils.TEXT_XML, nodeId, xmlNode, ui.userId, groupId);
-
-        return returnValue;
+        return nodeManager.changeNodeMetadataEpm(nodeId, xmlNode, ui.userId, groupId);
     }
 
     /**
@@ -397,8 +390,7 @@ public class NodesController extends AbstractController {
 
         UserInfo ui = checkCredential(request);
 
-        return nodeManager
-                .changeNodeContext(MimeTypeUtils.TEXT_XML, nodeId, xmlNode, ui.userId, groupId);
+        return nodeManager.changeNodeContext(nodeId, xmlNode, ui.userId, groupId);
     }
 
     /**
@@ -419,8 +411,7 @@ public class NodesController extends AbstractController {
 
         UserInfo ui = checkCredential(request);
 
-        return nodeManager
-                .changeNodeResource(MimeTypeUtils.TEXT_XML, nodeId, xmlNode, ui.userId, groupId);
+        return nodeManager.changeNodeResource(nodeId, xmlNode, ui.userId, groupId);
     }
 
     /**
@@ -445,7 +436,7 @@ public class NodesController extends AbstractController {
 
         UserInfo ui = checkCredential(request);
 
-        return nodeManager.importNode(MimeTypeUtils.TEXT_XML, parentId, semtag, code, sourceId, ui.userId, groupId).toString();
+        return nodeManager.importNode(parentId, semtag, code, sourceId, ui.userId, groupId).toString();
     }
 
     /**
@@ -466,11 +457,11 @@ public class NodesController extends AbstractController {
                                @RequestParam("srcetag") String semtag,
                                @RequestParam("srcecode") String code,
                                @RequestParam("uuid") UUID sourceId,
-                               HttpServletRequest request) throws Exception {
+                               HttpServletRequest request) {
 
         UserInfo ui = checkCredential(request);
 
-        return nodeManager.copyNode(MimeTypeUtils.TEXT_XML, parentId, semtag, code, sourceId, ui.userId, groupId);
+        return nodeManager.copyNode(parentId, semtag, code, sourceId, ui.userId, groupId);
     }
 
     /**
@@ -498,7 +489,7 @@ public class NodesController extends AbstractController {
                            HttpServletRequest request) throws BusinessException {
         UserInfo ui = checkCredential(request);
 
-        return nodeManager.getNodes(MimeTypeUtils.TEXT_XML, portfoliocode, semtag, ui.userId, groupId,
+        return nodeManager.getNodes(portfoliocode, semtag, ui.userId, groupId,
                     semtag_parent, code_parent, cutoff);
 
     }
@@ -521,7 +512,7 @@ public class NodesController extends AbstractController {
         UserInfo ui = checkCredential(request);
 
         String returnValue = nodeManager
-                .addNode(MimeTypeUtils.TEXT_XML, parentId, xmlNode, ui.userId, groupId, false);
+                .addNode(parentId, xmlNode, ui.userId, groupId, false);
 
         return ResponseEntity
                 .status(200)
@@ -661,8 +652,7 @@ public class NodesController extends AbstractController {
         ppath = ppath.substring(0, ppath.lastIndexOf(File.separator, ppath.length() - 2) + 1);
         xslFile = ppath + xslFile;
 
-        return nodeManager
-                .getNodeWithXSL(MimeTypeUtils.TEXT_XML, nodeId, xslFile, parameters, ui.userId, groupId);
+        return nodeManager.getNodeWithXSL(nodeId, xslFile, parameters, ui.userId, groupId);
     }
 
     /**
@@ -684,8 +674,7 @@ public class NodesController extends AbstractController {
 
         UserInfo ui = checkCredential(request);
 
-        return nodeManager
-                .addNodeFromModelBySemanticTag(MimeTypeUtils.TEXT_XML, nodeId, semantictag, ui.userId, groupId);
+        return nodeManager.addNodeFromModelBySemanticTag(nodeId, semantictag, ui.userId, groupId);
     }
 
 }

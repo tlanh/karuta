@@ -20,7 +20,6 @@ import javax.servlet.http.HttpServletRequest;
 import eportfolium.com.karuta.webapp.util.UserInfo;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.util.MimeTypeUtils;
 
 import eportfolium.com.karuta.business.contract.PortfolioManager;
 import eportfolium.com.karuta.business.contract.SecurityManager;
@@ -53,7 +52,7 @@ public class RoleController extends AbstractController {
      * @param roleId
      * @return
      */
-    @GetMapping(value = "/role/{role-id}", produces = {"application/json", "application/xml"})
+    @GetMapping(value = "/role/{role-id}", produces = {"application/xml"})
     public String getRole(@PathVariable("role-id") Long roleId) {
         return userManager.getRole(roleId);
     }
@@ -67,15 +66,14 @@ public class RoleController extends AbstractController {
      * @param request
      * @return
      */
-    @GetMapping(value = "/portfolio/{portfolio-id}", produces = {"application/json", "application/xml"})
+    @GetMapping(value = "/portfolio/{portfolio-id}", produces = {"application/xml"})
     public String getRolePortfolio(@RequestParam("role") String role,
                                    @RequestParam("portfolio-id") UUID portfolioId,
                                    HttpServletRequest request) {
 
         UserInfo ui = checkCredential(request);
 
-        return portfolioManager
-                .getRoleByPortfolio(MimeTypeUtils.TEXT_XML, role, portfolioId, ui.userId);
+        return portfolioManager.getRoleByPortfolio(role, portfolioId, ui.userId);
     }
 
     /**

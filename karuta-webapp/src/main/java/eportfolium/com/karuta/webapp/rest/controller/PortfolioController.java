@@ -137,7 +137,7 @@ public class PortfolioController extends AbstractController {
 
         UserInfo ui = checkCredential(request);
 
-        String portfolio = portfolioManager.getPortfolio(MimeTypeUtils.TEXT_XML, portfolioId, ui.userId, 0L,
+        String portfolio = portfolioManager.getPortfolio(portfolioId, ui.userId, 0L,
                 this.label, resource, "", ui.subId, cutoff);
 
         /// Finding back code. Not really pretty
@@ -316,7 +316,7 @@ public class PortfolioController extends AbstractController {
             resources = "false";
 
         String returnValue = portfolioManager
-                .getPortfolioByCode(MimeTypeUtils.TEXT_XML, code, ui.userId, groupId, resources, ui.subId);
+                .getPortfolioByCode(code, ui.userId, groupId, resources, ui.subId);
 
         if ("".equals(returnValue)) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("");
@@ -365,7 +365,7 @@ public class PortfolioController extends AbstractController {
         UserInfo ui = checkCredential(request);
 
         if (portfolioId != null) {
-            return portfolioManager.getPortfolio(MimeTypeUtils.TEXT_XML, portfolioId, ui.userId,
+            return portfolioManager.getPortfolio(portfolioId, ui.userId,
                     groupId, this.label, null, null, ui.subId, cutoff);
         } else {
             String portfolioCode = null;
@@ -399,21 +399,21 @@ public class PortfolioController extends AbstractController {
             portfolioCode = code;
 
             if (portfolioCode != null) {
-                return portfolioManager.getPortfolioByCode(MimeTypeUtils.TEXT_XML, portfolioCode, ui.userId,
+                return portfolioManager.getPortfolioByCode(portfolioCode, ui.userId,
                         groupId, null, ui.subId).toString();
             } else {
                 if (public_var != null) {
                     long publicid = userManager.getUserId("public");
 
-                    return portfolioManager.getPortfolios(MimeTypeUtils.TEXT_XML, publicid, groupId,
+                    return portfolioManager.getPortfolios(publicid, groupId,
                             portfolioActive, 0, portfolioProject, portfolioProjectId, countOnly, search);
 
                 } else if (userId != null && securityManager.isAdmin(ui.userId)) {
-                    return portfolioManager.getPortfolios(MimeTypeUtils.TEXT_XML, userId, groupId,
+                    return portfolioManager.getPortfolios(userId, groupId,
                             portfolioActive, ui.subId, portfolioProject, portfolioProjectId, countOnly, search);
 
                 } else { /// For user logged in
-                    return portfolioManager.getPortfolios(MimeTypeUtils.TEXT_XML, ui.userId, groupId,
+                    return portfolioManager.getPortfolios(ui.userId, groupId,
                             portfolioActive, ui.subId, portfolioProject, portfolioProjectId, countOnly, search);
                 }
             }
@@ -447,8 +447,7 @@ public class PortfolioController extends AbstractController {
             portfolioActive = true;
 
 
-        portfolioManager.rewritePortfolioContent(MimeTypeUtils.TEXT_XML, MimeTypeUtils.TEXT_XML, xmlPortfolio,
-                portfolioId, ui.userId, portfolioActive);
+        portfolioManager.rewritePortfolioContent(xmlPortfolio, portfolioId, ui.userId, portfolioActive);
 
         return "";
     }
@@ -574,7 +573,7 @@ public class PortfolioController extends AbstractController {
             newcode = tgtcode + " (" + num++ + ")";
         tgtcode = newcode;
 
-        String returnValue = portfolioManager.instanciatePortfolio(MimeTypeUtils.TEXT_XML, portfolioId, srccode,
+        String returnValue = portfolioManager.instanciatePortfolio(portfolioId, srccode,
                 tgtcode, ui.userId, groupId, copyshared, groupname, setOwner);
 
         if (returnValue.startsWith("no rights"))
@@ -630,7 +629,7 @@ public class PortfolioController extends AbstractController {
             setOwner = true;
 
         String returnValue = portfolioManager
-                .copyPortfolio(MimeTypeUtils.TEXT_XML, portfolioId, srccode, tgtcode, ui.userId, setOwner)
+                .copyPortfolio(portfolioId, srccode, tgtcode, ui.userId, setOwner)
                 .toString();
 
         return ResponseEntity.ok().body(returnValue);
@@ -717,7 +716,7 @@ public class PortfolioController extends AbstractController {
 
         /// Create all the zip files
         for (UUID portfolioId : uuids) {
-            String portfolio = portfolioManager.getPortfolio(MimeTypeUtils.TEXT_XML, portfolioId, ui.userId, 0L,
+            String portfolio = portfolioManager.getPortfolio(portfolioId, ui.userId, 0L,
                     this.label, "true", "", ui.subId, null);
 
             // No name yet
@@ -820,8 +819,8 @@ public class PortfolioController extends AbstractController {
             instantiate = true;
 
         return portfolioManager
-                .importZippedPortfolio(MimeTypeUtils.TEXT_XML, MimeTypeUtils.TEXT_XML, path, userName,
-                        fileInputStream, ui.userId, groupId, modelId, ui.subId, instantiate, projectName);
+                .importZippedPortfolio(path, userName, fileInputStream, ui.userId, groupId, modelId,
+                        ui.subId, instantiate, projectName);
     }
 
     /**
@@ -934,8 +933,8 @@ public class PortfolioController extends AbstractController {
         if ("true".equals(instance))
             instantiate = true;
 
-        return portfolioManager.addPortfolio(MimeTypeUtils.TEXT_XML, MimeTypeUtils.TEXT_XML,
-                xmlPortfolio, ui.userId, groupId, modelId, ui.subId, instantiate, projectName);
+        return portfolioManager.addPortfolio(xmlPortfolio, ui.userId, groupId, modelId,
+                ui.subId, instantiate, projectName);
     }
 
     /**
@@ -971,7 +970,7 @@ public class PortfolioController extends AbstractController {
         final String userName = ui.User;
 
         return portfolioManager
-                    .importZippedPortfolio(MimeTypeUtils.TEXT_XML, MimeTypeUtils.TEXT_XML, path, userName,
-                            uploadedInputStream, credentialId, groupId, modelId, ui.subId, instantiate, projectName);
+                    .importZippedPortfolio(path, userName, uploadedInputStream, credentialId, groupId, modelId,
+                            ui.subId, instantiate, projectName);
     }
 }

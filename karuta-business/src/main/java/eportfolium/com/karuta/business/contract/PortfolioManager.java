@@ -20,8 +20,6 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.UUID;
 
-import org.springframework.util.MimeType;
-
 import eportfolium.com.karuta.model.bean.GroupRights;
 import eportfolium.com.karuta.model.bean.Portfolio;
 import eportfolium.com.karuta.model.exception.BusinessException;
@@ -44,11 +42,11 @@ public interface PortfolioManager {
 
 	boolean removePortfolioGroups(Long portfolioGroupId);
 
-	String getPortfolio(MimeType outMimeType, UUID portfolioId, Long userId, Long groupId, String label,
+	String getPortfolio(UUID portfolioId, Long userId, Long groupId, String label,
 			String resource, String files, long substid, Integer cutoff)
 			throws BusinessException, ParserConfigurationException;
 
-	String getPortfolioByCode(MimeType mimeType, String portfolioCode, Long userId, Long groupId, String resources,
+	String getPortfolioByCode(String portfolioCode, Long userId, Long groupId, String resources,
 			long substid) throws BusinessException, ParserConfigurationException;
 
 	String getPortfoliosByPortfolioGroup(Long portfolioGroupId);
@@ -59,7 +57,7 @@ public interface PortfolioManager {
 
 	String getPortfolioGroupListFromPortfolio(UUID portfolioId);
 
-	String getPortfolios(MimeType outMimeType, long userId, long groupId, Boolean portfolioActive,
+	String getPortfolios(long userId, long groupId, Boolean portfolioActive,
 			long substid, Boolean portfolioProject, String projectId, Boolean countOnly, String search);
 
 	String getPortfolioShared(Long userId);
@@ -88,17 +86,17 @@ public interface PortfolioManager {
 	Portfolio changePortfolioConfiguration(UUID portfolioId, Boolean portfolioActive, Long userId)
 			throws BusinessException;
 
-	boolean rewritePortfolioContent(MimeType inMimeType, MimeType outMimeType, String xmlPortfolio,
-			UUID portfolioId, Long userId, Boolean portfolioActive) throws BusinessException, Exception;
+	boolean rewritePortfolioContent(String xmlPortfolio, UUID portfolioId, Long userId, Boolean portfolioActive)
+			throws BusinessException, Exception;
 
-	String instanciatePortfolio(MimeType mimeType, String portfolioId, String srccode, String tgtcode, Long id,
+	String instanciatePortfolio(String portfolioId, String srccode, String tgtcode, Long id,
 			int groupId, boolean copyshared, String groupname, boolean setOwner);
 
-	String importZippedPortfolio(MimeType mimeType, MimeType mimeType2, String path, String userName,
-			InputStream fileInputStream, Long id, Long groupId, String modelId, Long credentialSubstitutionId,
-			boolean instantiate, String projectName) throws BusinessException, FileNotFoundException, Exception;
+	String importZippedPortfolio(String path, String userName, InputStream fileInputStream, Long id, Long groupId,
+								 String modelId, Long credentialSubstitutionId, boolean instantiate, String projectName)
+			throws BusinessException, FileNotFoundException, Exception;
 
-	String addPortfolio(MimeType inMimeType, MimeType outMimeType, String xmlPortfolio, long userId, long groupId,
+	String addPortfolio(String xmlPortfolio, long userId, long groupId,
 			UUID portfolioModelId, long substid, boolean parseRights, String projectName)
 			throws BusinessException, Exception;
 
@@ -106,12 +104,12 @@ public interface PortfolioManager {
 
 	String addRoleInPortfolio(Long userId, UUID portfolioUuid, String data) throws BusinessException;
 
-	String getRoleByPortfolio(MimeType mimeType, String role, UUID portfolioId, Long userId);
+	String getRoleByPortfolio(String role, UUID portfolioId, Long userId);
 
 	String getRolesByPortfolio(UUID portfolioId, Long userId);
 
-	UUID copyPortfolio(MimeType mimeType, UUID portfolioId, String srccode, String tgtcode, Long userId,
-			boolean setOwner) throws Exception;
+	UUID copyPortfolio(UUID portfolioId, String srccode, String tgtcode, Long userId, boolean setOwner)
+			throws Exception;
 
 	UUID getPortfolioUuidFromNode(UUID nodeId);
 

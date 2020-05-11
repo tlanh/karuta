@@ -21,7 +21,6 @@ import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import eportfolium.com.karuta.webapp.util.UserInfo;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
@@ -57,7 +56,7 @@ public class ResourcesController extends AbstractController {
                               HttpServletRequest request) throws BusinessException {
         UserInfo ui = checkCredential(request);
 
-        return resourceManager.getResource(MimeTypeUtils.TEXT_XML, nodeParentId, ui.userId, groupId);
+        return resourceManager.getResource(nodeParentId, ui.userId, groupId);
     }
 
     /**
@@ -69,14 +68,14 @@ public class ResourcesController extends AbstractController {
      * @param request
      * @return
      */
-    @GetMapping(value = "/portfolios/{portfolio-id}", produces = {"application/json", "application/xml"})
+    @GetMapping(value = "/portfolios/{portfolio-id}", produces = {"application/xml"})
     public String getResources(@RequestParam("group") long groupId,
                                @PathVariable("portfolio-id") UUID portfolioId,
                                HttpServletRequest request) throws Exception {
 
         UserInfo ui = checkCredential(request);
 
-        return resourceManager.getResources(MimeTypeUtils.TEXT_XML, portfolioId, ui.userId, groupId);
+        return resourceManager.getResources(portfolioId, ui.userId, groupId);
     }
 
     /**
@@ -97,8 +96,8 @@ public class ResourcesController extends AbstractController {
 
         UserInfo ui = checkCredential(request);
 
-        return resourceManager
-                .changeResource(MimeTypeUtils.TEXT_XML, parentNodeId, xmlResource, ui.userId, groupId).toString();
+        return resourceManager.changeResource(parentNodeId, xmlResource, ui.userId, groupId)
+                    .toString();
     }
 
     /**
@@ -119,8 +118,7 @@ public class ResourcesController extends AbstractController {
 
         UserInfo ui = checkCredential(request);
 
-        return resourceManager
-                    .addResource(MimeTypeUtils.TEXT_XML, parentNodeId, xmlResource, ui.userId, groupId);
+        return resourceManager.addResource(parentNodeId, xmlResource, ui.userId, groupId);
     }
 
     /**
@@ -139,8 +137,7 @@ public class ResourcesController extends AbstractController {
                                HttpServletRequest request) throws Exception {
         UserInfo ui = checkCredential(request);
 
-        return resourceManager
-                    .addResource(MimeTypeUtils.TEXT_XML, resource, xmlResource, ui.userId, groupId);
+        return resourceManager.addResource(resource, xmlResource, ui.userId, groupId);
     }
 
     /**

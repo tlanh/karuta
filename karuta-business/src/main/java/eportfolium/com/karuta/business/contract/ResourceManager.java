@@ -17,22 +17,20 @@ package eportfolium.com.karuta.business.contract;
 
 import java.util.UUID;
 
-import org.springframework.util.MimeType;
-
 import eportfolium.com.karuta.model.exception.BusinessException;
 
 public interface ResourceManager {
 
-	String getResource(MimeType outMimeType, UUID parentNodeId, Long userId, Long groupId) throws BusinessException;
+	String getResource(UUID parentNodeId, Long userId, Long groupId) throws BusinessException;
 
 	String getResource(UUID nodeId);
 
-	String getResources(MimeType outMimeType, UUID portfolioId, Long userId, Long groupId) throws Exception;
+	String getResources(UUID portfolioId, Long userId, Long groupId) throws Exception;
 
-	Integer changeResource(MimeType inMimeType, UUID parentNodeId, String in, Long userId, Long groupId)
+	Integer changeResource(UUID parentNodeId, String in, Long userId, Long groupId)
 			throws BusinessException, Exception;
 
-	String addResource(MimeType inMimeType, UUID parentNodeId, String in, Long userId, Long groupId)
+	String addResource(UUID parentNodeId, String in, Long userId, Long groupId)
 			throws BusinessException, Exception;
 
 	void removeResource(UUID resourceId, Long userId, Long groupId) throws BusinessException;

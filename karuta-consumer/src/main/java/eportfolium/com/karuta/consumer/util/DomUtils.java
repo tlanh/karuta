@@ -230,24 +230,11 @@ public class DomUtils {
 		return attributeName + "=\"" + attributeValue + "\"";
 	}
 
-	public static String getJsonAttributeOutput(String attributeName, String attributeValue) {
-		if (attributeValue == null)
-			attributeValue = "";
-		return "'-" + attributeName + "': '" + attributeValue + "'";
-	}
-
 	public static String getXmlElementOutput(String tagName, String value) {
 		if (value == null)
 			return "<" + tagName + "/>";
 		else
 			return "<" + tagName + ">" + value + "</" + tagName + ">";
-	}
-
-	public static String getJsonElementOutput(String tagName, String value) {
-		if (value == null)
-			return "'" + tagName + "': ''";
-		else
-			return "'" + tagName + "': '" + value + "'";
 	}
 
 	public static String getNodeAttributesString(Node node) {

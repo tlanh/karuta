@@ -66,7 +66,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.MimeType;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
@@ -250,7 +249,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 	}
 
 	@Override
-	public String getPortfolio(MimeType outMimeType, UUID portfolioId, Long userId, Long groupId, String label,
+	public String getPortfolio(UUID portfolioId, Long userId, Long groupId, String label,
 			String resource, String files, long substid, Integer cutoff)
 			throws BusinessException, ParserConfigurationException {
 
@@ -269,73 +268,64 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 			}
 		}
 
-		if (outMimeType.getSubtype().equals("xml")) {
-			Long ownerId = portfolioRepository.getOwner(portfolioId);
-			boolean isOwner = ownerId == userId;
+		Long ownerId = portfolioRepository.getOwner(portfolioId);
+		boolean isOwner = ownerId == userId;
 
-			String headerXML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><portfolio code=\"0\" id=\"" + portfolioId
-					+ "\" owner=\"" + isOwner + "\"><version>4</version>";
+		String headerXML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><portfolio code=\"0\" id=\"" + portfolioId
+				+ "\" owner=\"" + isOwner + "\"><version>4</version>";
 
-			String data = getLinearXml(portfolioId, rootNode.getId().toString(), null, true, null, userId,
-					rights.getGroupRightInfo().getId(), rights.getGroupRightInfo().getLabel(), cutoff);
+		String data = getLinearXml(portfolioId, rootNode.getId().toString(), null, true, null, userId,
+				rights.getGroupRightInfo().getId(), rights.getGroupRightInfo().getLabel(), cutoff);
 
-			StringWriter stw = new StringWriter();
-			stw.append(headerXML + data + "</portfolio>");
+		StringWriter stw = new StringWriter();
+		stw.append(headerXML + data + "</portfolio>");
 
-			if (resource != null && files != null) {
-				if (resource.equals("true") && files.equals("true")) {
-					String adressedufichier = System.getProperty("user.dir") + "/tmp_getPortfolio_" + new Date()
-							+ ".xml";
-					String adresseduzip = System.getProperty("user.dir") + "/tmp_getPortfolio_" + new Date() + ".zip";
+		if (resource != null && files != null) {
+			if (resource.equals("true") && files.equals("true")) {
+				String adressedufichier = System.getProperty("user.dir") + "/tmp_getPortfolio_" + new Date()
+						+ ".xml";
+				String adresseduzip = System.getProperty("user.dir") + "/tmp_getPortfolio_" + new Date() + ".zip";
 
-					File file = null;
-					PrintWriter ecrire;
-					try {
-						file = new File(adressedufichier);
-						ecrire = new PrintWriter(new FileOutputStream(adressedufichier));
-						ecrire.println(stw.toString());
-						ecrire.flush();
-						ecrire.close();
-						System.out.print("fichier cree ");
-					} catch (IOException ioe) {
-						System.out.print("Erreur : ");
-						ioe.printStackTrace();
-					}
+				File file = null;
+				PrintWriter ecrire;
+				try {
+					file = new File(adressedufichier);
+					ecrire = new PrintWriter(new FileOutputStream(adressedufichier));
+					ecrire.println(stw.toString());
+					ecrire.flush();
+					ecrire.close();
+					System.out.print("fichier cree ");
+				} catch (IOException ioe) {
+					System.out.print("Erreur : ");
+					ioe.printStackTrace();
+				}
 
-					try {
-						ZipOutputStream zip = new ZipOutputStream(new FileOutputStream(adresseduzip));
-						zip.setMethod(ZipOutputStream.DEFLATED);
-						zip.setLevel(Deflater.BEST_COMPRESSION);
-						File dataDirectories = new File(file.getName());
-						FileInputStream fis = new FileInputStream(dataDirectories);
-						byte[] bytes = new byte[fis.available()];
-						fis.read(bytes);
+				try {
+					ZipOutputStream zip = new ZipOutputStream(new FileOutputStream(adresseduzip));
+					zip.setMethod(ZipOutputStream.DEFLATED);
+					zip.setLevel(Deflater.BEST_COMPRESSION);
+					File dataDirectories = new File(file.getName());
+					FileInputStream fis = new FileInputStream(dataDirectories);
+					byte[] bytes = new byte[fis.available()];
+					fis.read(bytes);
 
-						ZipEntry entry = new ZipEntry(file.getName());
-						entry.setTime(dataDirectories.lastModified());
-						zip.putNextEntry(entry);
-						zip.write(bytes);
-						zip.closeEntry();
-						fis.close();
-						zip.close();
-						file.delete();
+					ZipEntry entry = new ZipEntry(file.getName());
+					entry.setTime(dataDirectories.lastModified());
+					zip.putNextEntry(entry);
+					zip.write(bytes);
+					zip.closeEntry();
+					fis.close();
+					zip.close();
+					file.delete();
 
-						return adresseduzip;
-					} catch (IOException fileNotFound) {
-						fileNotFound.printStackTrace();
-					}
+					return adresseduzip;
+				} catch (IOException fileNotFound) {
+					fileNotFound.printStackTrace();
 				}
 			}
-
-			return stw.toString();
-		} else if (outMimeType.getSubtype().equals("json")) {
-			header = "{\"portfolio\": { \"-xmlns:xsi\": \"http://www.w3.org/2001/XMLSchema-instance\",\"-schemaVersion\": \"1.0\",";
-			footer = "}}";
 		}
 
-		return header + nodeManager
-				.getNode(outMimeType, rootNode.getId(), true, userId, groupId, label, cutoff)
-				+ footer;
+		return stw.toString();
 	}
 
 	private String getLinearXml(UUID portfolioId, String rootuuid, Node portfolio, boolean withChildren,
@@ -516,7 +506,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		return out.toString();
 	}
 
-	public String getPortfolioByCode(MimeType mimeType, String portfolioCode, Long userId, Long groupId,
+	public String getPortfolioByCode(String portfolioCode, Long userId, Long groupId,
 			String resources, long substid) throws BusinessException, ParserConfigurationException {
 		Portfolio portfolio = portfolioRepository.getPortfolioFromNodeCode(portfolioCode);
 
@@ -528,7 +518,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		String result = "";
 
 		if (withResources) {
-			return getPortfolio(mimeType, portfolio.getId(), userId, groupId, null, null, null, substid,
+			return getPortfolio(portfolio.getId(), userId, groupId, null, null, null, substid,
 					null);
 		} else {
 			result += "<portfolio ";
@@ -669,7 +659,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		}
 	}
 
-	public String getPortfolios(MimeType outMimeType, long userId, long groupId, Boolean portfolioActive,
+	public String getPortfolios(long userId, long groupId, Boolean portfolioActive,
 			long substid, Boolean portfolioProject, String projectId, Boolean countOnly, String search) {
 		StringBuilder result = new StringBuilder();
 		List<Portfolio> portfolios = getPortfolios(userId, substid, portfolioActive, portfolioProject);
@@ -792,8 +782,8 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 	}
 
 	@Override
-	public boolean rewritePortfolioContent(MimeType inMimeType, MimeType outMimeType, String xmlPortfolio,
-			UUID portfolioId, Long userId, Boolean portfolioActive) throws Exception {
+	public boolean rewritePortfolioContent(String xmlPortfolio, UUID portfolioId, Long userId,
+										   Boolean portfolioActive) throws Exception {
 		StringBuffer outTrace = new StringBuffer();
 		UUID portfolioModelId = null;
 
@@ -1149,8 +1139,8 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 	}
 
 	@Override
-	public String addPortfolio(MimeType inMimeType, MimeType outMimeType, String xmlPortfolio, long userId,
-			long groupId, UUID portfolioModelId, long substid, boolean parseRights, String projectName)
+	public String addPortfolio(String xmlPortfolio, long userId, long groupId, UUID portfolioModelId,
+							   long substid, boolean parseRights, String projectName)
 			throws BusinessException, Exception {
 		if (!credentialRepository.isAdmin(userId) && !credentialRepository.isCreator(userId))
 			throw new GenericBusinessException("FORBIDDEN : No admin right");
@@ -1161,7 +1151,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		// du modèle a la place
 		// FIXME Inutilisé, nous instancions / copions un portfolio
 		if (portfolioModelId != null)
-			xmlPortfolio = getPortfolio(inMimeType, portfolioModelId, userId, groupId, null, null, null, substid, null);
+			xmlPortfolio = getPortfolio(portfolioModelId, userId, groupId, null, null, null, substid, null);
 
 		Portfolio portfolio = null;
 		if (xmlPortfolio.length() > 0) {
@@ -1229,9 +1219,9 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		return result;
 	}
 
-	public String importZippedPortfolio(MimeType mimeType, MimeType mimeType2, String path, String userName,
-			InputStream inputStream, Long userId, Long groupId, String modelId, Long credentialSubstitutionId,
-			boolean parseRights, String projectName) throws BusinessException, FileNotFoundException, Exception {
+	public String importZippedPortfolio(String path, String userName, InputStream inputStream, Long userId, Long groupId,
+										String modelId, Long credentialSubstitutionId,
+										boolean parseRights, String projectName) throws BusinessException, FileNotFoundException, Exception {
 		if (!credentialRepository.isAdmin(userId) && !credentialRepository.isCreator(userId))
 			throw new GenericBusinessException("403 FORBIDDEN : No admin right");
 
@@ -1439,7 +1429,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		return portfolio.getId().toString();
 	}
 
-	public String instanciatePortfolio(MimeType mimeType, String portfolioId, String srccode, String tgtcode, Long id,
+	public String instanciatePortfolio(String portfolioId, String srccode, String tgtcode, Long id,
 			int groupId, boolean copyshared, String groupname, boolean setOwner) {
 		// TODO Auto-generated method stub
 		return null;
@@ -1607,7 +1597,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 
 	}
 
-	public String getRoleByPortfolio(MimeType mimeType, String role, UUID portfolioId, Long userId) {
+	public String getRoleByPortfolio(String role, UUID portfolioId, Long userId) {
 		GroupRightInfo gri = groupRightInfoRepository.getByPortfolioAndLabel(portfolioId, role);
 		Long grid = null;
 		if (gri != null) {
@@ -1728,8 +1718,8 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 	}
 
 	@Override
-	public UUID copyPortfolio(MimeType inMimeType, UUID portfolioId, String srcCode, String newCode, Long userId,
-			boolean setOwner) throws Exception {
+	public UUID copyPortfolio(UUID portfolioId, String srcCode, String newCode, Long userId,
+							  boolean setOwner) throws Exception {
 		Portfolio originalPortfolio = null;
 
 		try {
