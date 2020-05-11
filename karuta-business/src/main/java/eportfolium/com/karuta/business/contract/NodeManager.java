@@ -140,8 +140,7 @@ public interface NodeManager {
 	String copyNode(UUID destId, String tag, String code, UUID sourceId, Long userId,
 			Long groupId);
 
-	UUID importNode(UUID parentId, String semtag, String code, UUID sourceId, Long id,
-			long groupId) throws BusinessException, Exception;
+	UUID importNode(UUID parentId, String semtag, String code, UUID sourceId, Long id, long groupId);
 
 	int updateNodeCode(UUID nodeId, String code);
 

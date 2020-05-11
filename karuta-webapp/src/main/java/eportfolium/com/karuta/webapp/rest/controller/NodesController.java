@@ -432,7 +432,7 @@ public class NodesController extends AbstractController {
                                  @RequestParam("srcetag") String semtag,
                                  @RequestParam("srcecode") String code,
                                  @RequestParam("uuid") UUID sourceId,
-                                 HttpServletRequest request) throws Exception {
+                                 HttpServletRequest request) {
 
         UserInfo ui = checkCredential(request);
 

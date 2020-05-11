@@ -581,7 +581,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		}
 
 		if (nodeId != null && !node.getNodeName().equals("portfolio") && !node.getNodeName().equals("asmResource"))
-			nodeId = add(nodeId, parentUuid, "", asmType, xsiType, sharedRes, sharedNode, sharedNodeRes,
+			nodeId = add(nodeId, "", asmType, xsiType, sharedRes, sharedNode, sharedNodeRes,
 					sharedResUuid, sharedNodeUuid, sharedNodeResUuid, metadata, metadataWad, metadataEpm, semtag,
 					semanticTag, label, code, descr, format, ordrer, userId, portfolioId);
 
@@ -2733,8 +2733,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 	}
 
 	@Override
-	public UUID importNode(UUID destId, String tag, String code, UUID sourceId, Long userId,
-			long groupId) throws BusinessException, Exception {
+	public UUID importNode(UUID destId, String tag, String code, UUID sourceId, Long userId, long groupId) {
 
 		if (StringUtils.isEmpty(tag) || StringUtils.isEmpty(code)) {
 			if (sourceId == null) {
@@ -3480,7 +3479,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		nodeRepository.save(n);
 	}
 
-	private UUID add(UUID nodeId, UUID parentNodeId, String nodeChildrenUuid, String asmType, String xsiType,
+	private UUID add(UUID nodeId, String nodeChildrenUuid, String asmType, String xsiType,
 					 boolean sharedRes, boolean sharedNode, boolean sharedNodeRes, UUID sharedResUuid, UUID sharedNodeUuid,
 					 UUID sharedNodeResUuid, String metadata, String metadataWad, String metadataEpm, String semtag,
 					 String semanticTag, String label, String code, String descr, String format, int order, Long modifUserId,
