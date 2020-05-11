@@ -33,11 +33,10 @@ import java.util.zip.ZipOutputStream;
 import javax.servlet.ServletConfig;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
+import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.Result;
 import javax.xml.transform.Source;
 import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerConfigurationException;
-import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
@@ -46,6 +45,7 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
+import eportfolium.com.karuta.model.exception.GenericBusinessException;
 import eportfolium.com.karuta.webapp.util.UserInfo;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.Header;
@@ -79,9 +79,7 @@ import eportfolium.com.karuta.business.contract.SecurityManager;
 import eportfolium.com.karuta.business.contract.UserManager;
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
-import eportfolium.com.karuta.webapp.rest.provider.mapper.exception.RestWebApplicationException;
 import eportfolium.com.karuta.webapp.util.DomUtils;
-import eportfolium.com.karuta.webapp.util.javaUtils;
 
 @RestController
 @RequestMapping("/portfolios")
@@ -135,67 +133,60 @@ public class PortfolioController extends AbstractController {
                                @RequestParam("export") String export,
                                @RequestParam("lang") String lang,
                                @RequestParam("level") Integer cutoff,
-                               HttpServletRequest request) throws RestWebApplicationException {
+                               HttpServletRequest request) throws Exception {
 
         UserInfo ui = checkCredential(request);
 
-        try {
-            String portfolio = portfolioManager.getPortfolio(MimeTypeUtils.TEXT_XML, portfolioId, ui.userId, 0L,
-                    this.label, resource, "", ui.subId, cutoff).toString();
+        String portfolio = portfolioManager.getPortfolio(MimeTypeUtils.TEXT_XML, portfolioId, ui.userId, 0L,
+                this.label, resource, "", ui.subId, cutoff);
 
-            /// Finding back code. Not really pretty
-            Date time = new Date();
-            SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
-            String timeFormat = dt.format(time);
-            Document doc = DomUtils.xmlString2Document(portfolio, new StringBuffer());
-            NodeList codes = doc.getDocumentElement().getElementsByTagName("code");
-            // Le premier c'est celui du root
-            Node codenode = codes.item(0);
-            String code = "";
-            if (codenode != null)
-                code = codenode.getTextContent();
-            // Sanitize code
-            code = code.replace("_", "");
+        /// Finding back code. Not really pretty
+        Date time = new Date();
+        SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
+        String timeFormat = dt.format(time);
+        Document doc = DomUtils.xmlString2Document(portfolio, new StringBuffer());
+        NodeList codes = doc.getDocumentElement().getElementsByTagName("code");
+        // Le premier c'est celui du root
+        Node codenode = codes.item(0);
+        String code = "";
+        if (codenode != null)
+            code = codenode.getTextContent();
+        // Sanitize code
+        code = code.replace("_", "");
 
-            if (export != null) {
-                return ResponseEntity
-                        .ok()
-                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename = \"" + code + "-" + timeFormat + ".xml\"")
+        if (export != null) {
+            return ResponseEntity
+                    .ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename = \"" + code + "-" + timeFormat + ".xml\"")
+                    .body(portfolio);
+        } else if (resource != null && files != null) {
+            //// Cas du renvoi d'un ZIP
+            HttpSession session = request.getSession(true);
+            File tempZip = getZipFile(portfolioId, portfolio, lang, doc, session);
+
+            /// Return zip file
+            RandomAccessFile f = new RandomAccessFile(tempZip.getAbsoluteFile(), "r");
+            byte[] b = new byte[(int) f.length()];
+            f.read(b);
+            f.close();
+
+            // Temp file cleanup
+            tempZip.delete();
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename = \"" + code + "-" + timeFormat + ".zip")
+                    .build();
+        } else {
+            return ResponseEntity.ok()
+                        .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_XML_VALUE)
                         .body(portfolio);
-            } else if (resource != null && files != null) {
-                //// Cas du renvoi d'un ZIP
-                HttpSession session = request.getSession(true);
-                File tempZip = getZipFile(portfolioId, portfolio, lang, doc, session);
-
-                /// Return zip file
-                RandomAccessFile f = new RandomAccessFile(tempZip.getAbsoluteFile(), "r");
-                byte[] b = new byte[(int) f.length()];
-                f.read(b);
-                f.close();
-
-                // Temp file cleanup
-                tempZip.delete();
-
-                return ResponseEntity.ok()
-                        .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE)
-                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename = \"" + code + "-" + timeFormat + ".zip")
-                        .build();
-            } else {
-                return ResponseEntity.ok()
-                            .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_XML_VALUE)
-                            .body(portfolio);
-            }
-        } catch (BusinessException ex) {
-            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
 
     }
 
     private File getZipFile(UUID portfolioId, String portfolioContent, String lang, Document doc,
-                            HttpSession session) throws IOException, XPathExpressionException, RestWebApplicationException {
+                            HttpSession session) throws IOException, XPathExpressionException {
 
         /// Temp file in temp directory
         File tempDir = new File(System.getProperty("java.io.tmpdir", null));
@@ -314,29 +305,24 @@ public class PortfolioController extends AbstractController {
     public Object getPortfolioByCode(@RequestParam("group") long groupId,
                                      @PathVariable("code") String code,
                                      @RequestParam("resources") String resources,
-                                     HttpServletRequest request) throws RestWebApplicationException {
+                                     HttpServletRequest request) throws Exception {
         UserInfo ui = checkCredential(request);
 
-        try {
-            if (ui.userId == 0) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-            }
-
-            if (resources == null)
-                resources = "false";
-            String returnValue = portfolioManager
-                    .getPortfolioByCode(MimeTypeUtils.TEXT_XML, code, ui.userId, groupId, resources, ui.subId);
-            if ("".equals(returnValue)) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("");
-            }
-
-            return returnValue;
-        } catch (BusinessException ex) {
-            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
+        if (ui.userId == 0) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
+
+        if (resources == null)
+            resources = "false";
+
+        String returnValue = portfolioManager
+                .getPortfolioByCode(MimeTypeUtils.TEXT_XML, code, ui.userId, groupId, resources, ui.subId);
+
+        if ("".equals(returnValue)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("");
+        }
+
+        return returnValue;
     }
 
     /**
@@ -374,79 +360,63 @@ public class PortfolioController extends AbstractController {
                                 @RequestParam("project") String project,
                                 @RequestParam("count") String count,
                                 @RequestParam("search") String search,
-                                HttpServletRequest request) throws RestWebApplicationException {
+                                HttpServletRequest request) throws ParserConfigurationException, BusinessException {
 
         UserInfo ui = checkCredential(request);
 
-        try {
-            if (portfolioId != null) {
-                return portfolioManager.getPortfolio(MimeTypeUtils.TEXT_XML, portfolioId, ui.userId,
-                        groupId, this.label, null, null, ui.subId, cutoff);
+        if (portfolioId != null) {
+            return portfolioManager.getPortfolio(MimeTypeUtils.TEXT_XML, portfolioId, ui.userId,
+                    groupId, this.label, null, null, ui.subId, cutoff);
+        } else {
+            String portfolioCode = null;
+            Boolean countOnly = false;
+            Boolean portfolioActive;
+            Boolean portfolioProject = null;
+            String portfolioProjectId = null;
+
+
+            if (active != null && (active.equals("false") || active.equals("0")))
+                portfolioActive = false;
+            else
+                portfolioActive = true;
+
+            if (project != null && (project.equals("false") || project.equals("0")))
+                portfolioProject = false;
+            else if (project != null && (project.equals("true") || project.equals("1")))
+                portfolioProject = true;
+            else if (project != null && project.length() > 0)
+                portfolioProjectId = project;
+            else
+                portfolioProject = null;
+
+
+            if (count != null && (count.equals("true") || count.equals("1")))
+                countOnly = true;
+            else
+                countOnly = false;
+
+
+            portfolioCode = code;
+
+            if (portfolioCode != null) {
+                return portfolioManager.getPortfolioByCode(MimeTypeUtils.TEXT_XML, portfolioCode, ui.userId,
+                        groupId, null, ui.subId).toString();
             } else {
-                String portfolioCode = null;
-                String returnValue = "";
-                Boolean countOnly = false;
-                Boolean portfolioActive;
-                Boolean portfolioProject = null;
-                String portfolioProjectId = null;
+                if (public_var != null) {
+                    long publicid = userManager.getUserId("public");
 
-                try {
-                    if (active.equals("false") || active.equals("0"))
-                        portfolioActive = false;
-                    else
-                        portfolioActive = true;
-                } catch (Exception ex) {
-                    portfolioActive = true;
-                }
+                    return portfolioManager.getPortfolios(MimeTypeUtils.TEXT_XML, publicid, groupId,
+                            portfolioActive, 0, portfolioProject, portfolioProjectId, countOnly, search);
 
-                try {
-                    if (project.equals("false") || project.equals("0"))
-                        portfolioProject = false;
-                    else if (project.equals("true") || project.equals("1"))
-                        portfolioProject = true;
-                    else if (project.length() > 0)
-                        portfolioProjectId = project;
-                } catch (Exception ex) {
-                    portfolioProject = null;
-                }
+                } else if (userId != null && securityManager.isAdmin(ui.userId)) {
+                    return portfolioManager.getPortfolios(MimeTypeUtils.TEXT_XML, userId, groupId,
+                            portfolioActive, ui.subId, portfolioProject, portfolioProjectId, countOnly, search);
 
-                try {
-                    if (count.equals("true") || count.equals("1"))
-                        countOnly = true;
-                    else
-                        countOnly = false;
-                } catch (Exception ex) {
-                    countOnly = false;
+                } else { /// For user logged in
+                    return portfolioManager.getPortfolios(MimeTypeUtils.TEXT_XML, ui.userId, groupId,
+                            portfolioActive, ui.subId, portfolioProject, portfolioProjectId, countOnly, search);
                 }
-
-                try {
-                    portfolioCode = code;
-                } catch (Exception ex) {
-                }
-                if (portfolioCode != null) {
-                    returnValue = portfolioManager.getPortfolioByCode(MimeTypeUtils.TEXT_XML, portfolioCode, ui.userId,
-                            groupId, null, ui.subId).toString();
-                } else {
-                    if (public_var != null) {
-                        long publicid = userManager.getUserId("public");
-                        returnValue = portfolioManager.getPortfolios(MimeTypeUtils.TEXT_XML, publicid, groupId,
-                                portfolioActive, 0, portfolioProject, portfolioProjectId, countOnly, search);
-                    } else if (userId != null && securityManager.isAdmin(ui.userId)) {
-                        returnValue = portfolioManager.getPortfolios(MimeTypeUtils.TEXT_XML, userId, groupId,
-                                portfolioActive, ui.subId, portfolioProject, portfolioProjectId, countOnly, search);
-                    } else /// For user logged in
-                    {
-                        returnValue = portfolioManager.getPortfolios(MimeTypeUtils.TEXT_XML, ui.userId, groupId,
-                                portfolioActive, ui.subId, portfolioProject, portfolioProjectId, countOnly, search);
-                    }
-                }
-                return returnValue;
             }
-        } catch (BusinessException ex) {
-            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
         }
     }
 
@@ -465,26 +435,22 @@ public class PortfolioController extends AbstractController {
     public String putPortfolio(@RequestBody String xmlPortfolio,
                                @PathVariable("portfolio-id") UUID portfolioId,
                                @RequestParam("active") String active,
-                               HttpServletRequest request) throws RestWebApplicationException {
+                               HttpServletRequest request) throws Exception {
 
         UserInfo ui = checkCredential(request);
 
         Boolean portfolioActive;
+
         if ("false".equals(active) || "0".equals(active))
             portfolioActive = false;
         else
             portfolioActive = true;
 
-        try {
-            portfolioManager.rewritePortfolioContent(MimeTypeUtils.TEXT_XML, MimeTypeUtils.TEXT_XML, xmlPortfolio,
-                    portfolioId, ui.userId, portfolioActive);
 
-            return "";
+        portfolioManager.rewritePortfolioContent(MimeTypeUtils.TEXT_XML, MimeTypeUtils.TEXT_XML, xmlPortfolio,
+                portfolioId, ui.userId, portfolioActive);
 
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
+        return "";
     }
 
     /**
@@ -497,21 +463,16 @@ public class PortfolioController extends AbstractController {
      */
     @PostMapping("/portfolio/{portfolio-id}/parserights")
     public ResponseEntity<String> postPortfolio(@PathVariable("portfolio-id") UUID portfolioId,
-                                                HttpServletRequest request) throws RestWebApplicationException {
+                                                HttpServletRequest request) {
 
         UserInfo ui = checkCredential(request);
 
-        try {
-            if (!securityManager.isAdmin(ui.userId))
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        if (!securityManager.isAdmin(ui.userId))
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
 
-            portfolioManager.postPortfolioParserights(portfolioId, ui.userId);
+        portfolioManager.postPortfolioParserights(portfolioId, ui.userId);
 
-            return ResponseEntity.ok().build();
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
+        return ResponseEntity.ok().build();
     }
 
     /**
@@ -525,25 +486,19 @@ public class PortfolioController extends AbstractController {
      */
     @PutMapping(value = "/portfolio/{portfolio-id}/setOwner/{newOwnerId}", consumes = "application/xml",
         produces = "application/xml")
-    public String putPortfolioOwner(@PathVariable("portfolio-id") UUID portfolioId,
+    public Boolean putPortfolioOwner(@PathVariable("portfolio-id") UUID portfolioId,
                                     @PathVariable("newOwnerId") long newOwner, 
-                                    HttpServletRequest request) throws RestWebApplicationException {
+                                    HttpServletRequest request) {
 
         UserInfo ui = checkCredential(request);
-        boolean retval = false;
 
-        try {
-            // Vérifie si l'utilisateur connecté est administrateur ou propriétaire du
-            // portfolio actuel.
-            if (securityManager.isAdmin(ui.userId) || portfolioManager.isOwner(ui.userId, portfolioId)) {
-                retval = portfolioManager.changePortfolioOwner(portfolioId, newOwner);
-            }
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
+        // Vérifie si l'utilisateur connecté est administrateur ou propriétaire du
+        // portfolio actuel.
+        if (securityManager.isAdmin(ui.userId) || portfolioManager.isOwner(ui.userId, portfolioId)) {
+            return portfolioManager.changePortfolioOwner(portfolioId, newOwner);
+        } else {
+            return false;
         }
-
-        return Boolean.toString(retval);
     }
 
     /**
@@ -558,20 +513,15 @@ public class PortfolioController extends AbstractController {
     @PutMapping(consumes = "application/xml", produces = "application/xml")
     public String putPortfolioConfiguration(@RequestParam("portfolio") UUID portfolioId,
                                             @RequestParam("active") Boolean portfolioActive,
-                                            HttpServletRequest request) throws RestWebApplicationException {
+                                            HttpServletRequest request) throws BusinessException {
 
         UserInfo ui = checkCredential(request);
 
-        try {
-            String returnValue = "";
-            if (portfolioId != null && portfolioActive != null) {
-                portfolioManager.changePortfolioConfiguration(portfolioId, portfolioActive, ui.userId);
-            }
-            return returnValue;
-        } catch (BusinessException ex) {
-            ex.printStackTrace();
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
+        if (portfolioId != null && portfolioActive != null) {
+            portfolioManager.changePortfolioConfiguration(portfolioId, portfolioActive, ui.userId);
         }
+
+        return "";
     }
 
     /**
@@ -594,56 +544,49 @@ public class PortfolioController extends AbstractController {
      * @return instanciated portfolio uuid
      */
     @PostMapping("/instanciate/{portfolio-id}")
-    public Object postInstanciatePortfolio(@RequestParam("group") int groupId,
-                                           @PathVariable("portfolio-id") String portfolioId,
-                                           @RequestParam("sourcecode") String srccode,
-                                           @RequestParam("targetcode") String tgtcode,
-                                           @RequestParam("copyshared") String copy,
-                                           @RequestParam("groupname") String groupname,
-                                           @RequestParam("owner") String setowner,
-                                           HttpServletRequest request) throws RestWebApplicationException {
+    public ResponseEntity<String> postInstanciatePortfolio(@RequestParam("group") int groupId,
+                                                           @PathVariable("portfolio-id") String portfolioId,
+                                                           @RequestParam("sourcecode") String srccode,
+                                                           @RequestParam("targetcode") String tgtcode,
+                                                           @RequestParam("copyshared") String copy,
+                                                           @RequestParam("groupname") String groupname,
+                                                           @RequestParam("owner") String setowner,
+                                                           HttpServletRequest request) throws BusinessException {
 
         UserInfo ui = checkCredential(request);
 
         //// TODO: IF user is creator and has parameter owner -> change ownership
-        try {
-            if (!securityManager.isAdmin(ui.userId) && !securityManager.isCreator(ui.userId)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("403");
-            }
-
-            boolean setOwner = false;
-            if ("true".equals(setowner))
-                setOwner = true;
-            boolean copyshared = false;
-            if ("y".equalsIgnoreCase(copy))
-                copyshared = true;
-
-            /// Vérifiez si le code existe, trouvez-en un qui convient, sinon. Eh.
-            String newcode = tgtcode;
-            int num = 0;
-            while (nodeManager.isCodeExist(newcode))
-                newcode = tgtcode + " (" + num++ + ")";
-            tgtcode = newcode;
-
-            String returnValue = portfolioManager.instanciatePortfolio(MimeTypeUtils.TEXT_XML, portfolioId, srccode,
-                    tgtcode, ui.userId, groupId, copyshared, groupname, setOwner).toString();
-
-            if (returnValue.startsWith("no rights"))
-                throw new RestWebApplicationException(HttpStatus.FORBIDDEN, returnValue);
-            else if (returnValue.startsWith("erreur"))
-                throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, returnValue);
-            else if ("".equals(returnValue)) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-            }
-
-            return returnValue;
-        } catch (RestWebApplicationException rwe) {
-            throw rwe;
-        } catch (Exception ex) {
-            logger.error(ex.getMessage());
-            ex.printStackTrace();
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
+        if (!securityManager.isAdmin(ui.userId) && !securityManager.isCreator(ui.userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("403");
         }
+
+        boolean setOwner = false;
+        if ("true".equals(setowner))
+            setOwner = true;
+        boolean copyshared = false;
+        if ("y".equalsIgnoreCase(copy))
+            copyshared = true;
+
+        /// Vérifiez si le code existe, trouvez-en un qui convient, sinon. Eh.
+        String newcode = tgtcode;
+        int num = 0;
+        while (nodeManager.isCodeExist(newcode))
+            newcode = tgtcode + " (" + num++ + ")";
+        tgtcode = newcode;
+
+        String returnValue = portfolioManager.instanciatePortfolio(MimeTypeUtils.TEXT_XML, portfolioId, srccode,
+                tgtcode, ui.userId, groupId, copyshared, groupname, setOwner);
+
+        if (returnValue.startsWith("no rights"))
+            throw new GenericBusinessException(returnValue);
+        else if (returnValue.startsWith("erreur"))
+            throw new GenericBusinessException(returnValue);
+        else if ("".equals(returnValue)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+
+        return ResponseEntity.ok()
+                    .body(returnValue);
     }
 
     /**
@@ -665,41 +608,32 @@ public class PortfolioController extends AbstractController {
                                       @RequestParam("sourcecode") String srccode,
                                       @RequestParam("targetcode") String tgtcode,
                                       @RequestParam("owner") String setowner,
-                                      HttpServletRequest request) throws RestWebApplicationException {
-
-        String value = "Instanciate: " + portfolioId;
+                                      HttpServletRequest request) throws Exception {
 
         UserInfo ui = checkCredential(request);
 
         //// TODO: Si l'utilisateur est créateur et est le propriétaire -> changer la
         //// propriété
-        try {
-            if (!securityManager.isAdmin(ui.userId) && !securityManager.isCreator(ui.userId)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("403");
-            }
-
-            /// Check if code exist, find a suitable one otherwise. Eh.
-            String newcode = tgtcode;
-            if (nodeManager.isCodeExist(newcode)) {
-                return ResponseEntity.status(HttpStatus.CONFLICT).body("code exist");
-            }
-
-            boolean setOwner = false;
-            if ("true".equals(setowner))
-                setOwner = true;
-            tgtcode = newcode;
-
-            String returnValue = portfolioManager
-                    .copyPortfolio(MimeTypeUtils.TEXT_XML, portfolioId, srccode, tgtcode, ui.userId, setOwner)
-                    .toString();
-            logger.debug("Status " + HttpStatus.OK + " : " + value + " to: " + returnValue);
-            return ResponseEntity.ok().body(returnValue);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error(value + " --> Error", ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
+        if (!securityManager.isAdmin(ui.userId) && !securityManager.isCreator(ui.userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("403");
         }
+
+        /// Check if code exist, find a suitable one otherwise. Eh.
+        // FIXME : Check original Karuta version ; no new code found.
+        if (nodeManager.isCodeExist(tgtcode)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("code exist");
+        }
+
+        boolean setOwner = false;
+
+        if ("true".equals(setowner))
+            setOwner = true;
+
+        String returnValue = portfolioManager
+                .copyPortfolio(MimeTypeUtils.TEXT_XML, portfolioId, srccode, tgtcode, ui.userId, setOwner)
+                .toString();
+
+        return ResponseEntity.ok().body(returnValue);
     }
 
     /**
@@ -727,7 +661,7 @@ public class PortfolioController extends AbstractController {
                                     @RequestParam("instance") String instance,
                                     @RequestParam("project") String projectName,
                                     ServletConfig sc,
-                                    HttpServletRequest request) throws RestWebApplicationException {
+                                    HttpServletRequest request) throws Exception {
         return postPortfolio(xmlPortfolio, groupId, modelId, srceType,
                 srceUrl, xsl, instance, projectName, sc, request);
     }
@@ -742,20 +676,14 @@ public class PortfolioController extends AbstractController {
      */
     @PostMapping(value = "/shared/{userid}", produces = "application/xml")
     public ResponseEntity<String> getPortfolioShared(@PathVariable("userid") long userid,
-                                                     HttpServletRequest request) throws RestWebApplicationException {
+                                                     HttpServletRequest request) {
         UserInfo ui = checkCredential(request);
 
-        try {
-            if (securityManager.isAdmin(ui.userId)) {
-                String res = portfolioManager.getPortfolioShared(userid);
-                return ResponseEntity.ok(res);
-            } else {
-                return ResponseEntity.status(403).build();
-            }
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
+        if (securityManager.isAdmin(ui.userId)) {
+            return ResponseEntity.ok()
+                    .body(portfolioManager.getPortfolioShared(userid));
+        } else {
+            return ResponseEntity.status(403).build();
         }
     }
 
@@ -765,108 +693,99 @@ public class PortfolioController extends AbstractController {
      * GET /rest/api/portfolios
      *
      * @param portfolioList      list of portfolios, separated with ','
-     * @param modelId
      * @param lang
      * @param request
      * @return zipped portfolio (with files) inside zip file
      */
     @GetMapping(value = "/zip", consumes = "application/zip")
     public Object getPortfolioZip(@RequestParam("portfolios") String portfolioList,
-                                  @RequestParam("model") String modelId,
                                   @RequestParam("lang") String lang,
-                                  HttpServletRequest request) throws RestWebApplicationException {
+                                  HttpServletRequest request) throws Exception {
         UserInfo ui = checkCredential(request);
 
-        try {
-            HttpSession session = request.getSession(false);
-            List<UUID> uuids = Arrays.asList(portfolioList.split(","))
-                                .stream()
-                                .map(UUID::fromString)
-                                .collect(Collectors.toList());
+        HttpSession session = request.getSession(false);
 
-            List<File> files = new ArrayList<>();
+        List<UUID> uuids = Arrays.asList(portfolioList.split(","))
+                            .stream()
+                            .map(UUID::fromString)
+                            .collect(Collectors.toList());
 
-            /// Suppose the first portfolio has the right name to be used
-            String name = "";
+        List<File> files = new ArrayList<>();
 
-            /// Create all the zip files
-            for (UUID portfolioId : uuids) {
-                String portfolio = portfolioManager.getPortfolio(MimeTypeUtils.TEXT_XML, portfolioId, ui.userId, 0L,
-                        this.label, "true", "", ui.subId, null);
+        /// Suppose the first portfolio has the right name to be used
+        String name = "";
 
-                // No name yet
-                if ("".equals(name)) {
-                    StringBuffer outTrace = new StringBuffer();
-                    Document doc = DomUtils.xmlString2Document(portfolio, outTrace);
-                    XPath xPath = XPathFactory.newInstance().newXPath();
-                    String filterRes = "//*[local-name()='asmRoot']/*[local-name()='asmResource']/*[local-name()='code']";
-                    NodeList nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
+        /// Create all the zip files
+        for (UUID portfolioId : uuids) {
+            String portfolio = portfolioManager.getPortfolio(MimeTypeUtils.TEXT_XML, portfolioId, ui.userId, 0L,
+                    this.label, "true", "", ui.subId, null);
 
-                    if (nodelist.getLength() > 0)
-                        name = nodelist.item(0).getTextContent();
-                }
+            // No name yet
+            if ("".equals(name)) {
+                StringBuffer outTrace = new StringBuffer();
+                Document doc = DomUtils.xmlString2Document(portfolio, outTrace);
+                XPath xPath = XPathFactory.newInstance().newXPath();
+                String filterRes = "//*[local-name()='asmRoot']/*[local-name()='asmResource']/*[local-name()='code']";
+                NodeList nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
 
-                Document doc = DomUtils.xmlString2Document(portfolio, new StringBuffer());
-
-                files.add(getZipFile(portfolioId, portfolio, lang, doc, session));
+                if (nodelist.getLength() > 0)
+                    name = nodelist.item(0).getTextContent();
             }
 
-            // Make a big zip of it
-            File tempDir = new File(System.getProperty("java.io.tmpdir", null));
-            File bigZip = File.createTempFile("project_", ".zip", tempDir);
+            Document doc = DomUtils.xmlString2Document(portfolio, new StringBuffer());
 
-            // Add content to it
-            FileOutputStream fos = new FileOutputStream(bigZip);
-            ZipOutputStream zos = new ZipOutputStream(fos);
-
-            byte[] buffer = new byte[0x1000];
-
-            for (File file : files) {
-                FileInputStream fis = new FileInputStream(file);
-                String filename = file.getName();
-
-                /// Write XML file to zip
-                ZipEntry ze = new ZipEntry(filename + ".zip");
-                zos.putNextEntry(ze);
-                int read = 1;
-                while (read > 0) {
-                    read = fis.read(buffer);
-                    zos.write(buffer);
-                }
-                fis.close();
-                zos.closeEntry();
-            }
-            zos.close();
-
-            /// Return zip file
-            RandomAccessFile f = new RandomAccessFile(bigZip.getAbsoluteFile(), "r");
-            byte[] b = new byte[(int) f.length()];
-            f.read(b);
-            f.close();
-
-            Date time = new Date();
-            SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
-            String timeFormat = dt.format(time);
-
-            ResponseEntity response = ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename = \"" + name + "-" + timeFormat + ".zip\"")
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE)
-                    .body(b);
-
-            // Delete all zipped file
-            files.forEach(File::delete);
-
-            // And the over-arching zip.
-            bigZip.delete();
-
-            return response;
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex), modelId,
-                    HttpStatus.INTERNAL_SERVER_ERROR);
-
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
+            files.add(getZipFile(portfolioId, portfolio, lang, doc, session));
         }
+
+        // Make a big zip of it
+        File tempDir = new File(System.getProperty("java.io.tmpdir", null));
+        File bigZip = File.createTempFile("project_", ".zip", tempDir);
+
+        // Add content to it
+        FileOutputStream fos = new FileOutputStream(bigZip);
+        ZipOutputStream zos = new ZipOutputStream(fos);
+
+        byte[] buffer = new byte[0x1000];
+
+        for (File file : files) {
+            FileInputStream fis = new FileInputStream(file);
+            String filename = file.getName();
+
+            /// Write XML file to zip
+            ZipEntry ze = new ZipEntry(filename + ".zip");
+            zos.putNextEntry(ze);
+            int read = 1;
+            while (read > 0) {
+                read = fis.read(buffer);
+                zos.write(buffer);
+            }
+            fis.close();
+            zos.closeEntry();
+        }
+        zos.close();
+
+        /// Return zip file
+        RandomAccessFile f = new RandomAccessFile(bigZip.getAbsoluteFile(), "r");
+        byte[] b = new byte[(int) f.length()];
+        f.read(b);
+        f.close();
+
+        Date time = new Date();
+        SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
+        String timeFormat = dt.format(time);
+
+        ResponseEntity response = ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename = \"" + name + "-" + timeFormat + ".zip\"")
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE)
+                .body(b);
+
+        // Delete all zipped file
+        files.forEach(File::delete);
+
+        // And the over-arching zip.
+        bigZip.delete();
+
+        return response;
     }
 
     /**
@@ -888,7 +807,7 @@ public class PortfolioController extends AbstractController {
                                    @RequestParam("model") String modelId,
                                    @RequestParam("instance") String instance,
                                    @RequestParam("project") String projectName,
-                                   HttpServletRequest request) throws RestWebApplicationException {
+                                   HttpServletRequest request) throws Exception {
 
         UserInfo ui = checkCredential(request);
         javax.servlet.ServletContext servletContext = request.getSession().getServletContext();
@@ -896,21 +815,13 @@ public class PortfolioController extends AbstractController {
 
         final String userName = ui.User;
 
-        try {
-            boolean instantiate = false;
-            if ("true".equals(instance))
-                instantiate = true;
-            String returnValue = portfolioManager
-                    .importZippedPortfolio(MimeTypeUtils.TEXT_XML, MimeTypeUtils.TEXT_XML, path, userName,
-                            fileInputStream, ui.userId, groupId, modelId, ui.subId, instantiate, projectName);
-            return returnValue;
-        } catch (RestWebApplicationException e) {
-            throw e;
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
+        boolean instantiate = false;
+        if ("true".equals(instance))
+            instantiate = true;
+
+        return portfolioManager
+                .importZippedPortfolio(MimeTypeUtils.TEXT_XML, MimeTypeUtils.TEXT_XML, path, userName,
+                        fileInputStream, ui.userId, groupId, modelId, ui.subId, instantiate, projectName);
     }
 
     /**
@@ -925,22 +836,13 @@ public class PortfolioController extends AbstractController {
     @DeleteMapping(value = "/portfolio/{portfolio-id}", produces = "application/xml")
     public String deletePortfolio(@RequestParam("group") long groupId,
                                   @PathVariable("portfolio-id") UUID portfolioId,
-                                  HttpServletRequest request) throws RestWebApplicationException {
+                                  HttpServletRequest request) throws Exception {
 
         UserInfo ui = checkCredential(request);
 
-        try {
-            portfolioManager.removePortfolio(portfolioId, ui.userId, groupId);
-            logger.debug("Portfolio " + portfolioId + " found");
-            return "";
-        } catch (BusinessException ex) {
-            logger.debug("Portfolio " + portfolioId + " not found");
-            throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "Portfolio " + portfolioId + " not found");
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.debug(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
+        portfolioManager.removePortfolio(portfolioId, ui.userId, groupId);
+
+        return "";
     }
 
     /**
@@ -971,7 +873,7 @@ public class PortfolioController extends AbstractController {
                                 @RequestParam("instance") String instance,
                                 @RequestParam("project") String projectName,
                                 ServletConfig sc,
-                                HttpServletRequest request) throws RestWebApplicationException {
+                                HttpServletRequest request) throws Exception {
 
         UserInfo ui = checkCredential(request);
 
@@ -989,66 +891,51 @@ public class PortfolioController extends AbstractController {
                 Header header = new BasicHeader("JSESSIONID", sakai_session);
                 get.addHeader(header);
 
-                try {
-                    HttpResponse response = client.execute(get);
-                    StatusLine status = response.getStatusLine();
-                    if (status.getStatusCode() != 200) {
-                        System.err.println("Method failed: " + status.getStatusCode());
-                    }
 
-                    // Retrieve data
-                    InputStream retrieve = response.getEntity().getContent();
-                    String sakaiData = IOUtils.toString(retrieve, "UTF-8");
-
-                    //// Convert it via XSL
-                    /// Path to XSL
-                    String servletDir = sc.getServletContext().getRealPath("/");
-                    int last = servletDir.lastIndexOf(File.separator);
-                    last = servletDir.lastIndexOf(File.separator, last - 1);
-                    String baseDir = servletDir.substring(0, last);
-
-                    String basepath = xsl.substring(0, xsl.indexOf(File.separator));
-                    String firstStage = baseDir + File.separator + basepath + File.separator + "karuta" + File.separator
-                            + "xsl" + File.separator + "html2xml.xsl";
-                    System.out.println("FIRST: " + firstStage);
-
-                    /// Storing transformed data
-                    StringWriter dataTransformed = new StringWriter();
-
-                    /// Apply change
-                    Source xsltSrc1 = new StreamSource(new File(firstStage));
-                    TransformerFactory transFactory = TransformerFactory.newInstance();
-                    Transformer transformer1 = transFactory.newTransformer(xsltSrc1);
-                    StreamSource stageSource = new StreamSource(new ByteArrayInputStream(sakaiData.getBytes()));
-                    Result stageRes = new StreamResult(dataTransformed);
-                    transformer1.transform(stageSource, stageRes);
-
-                    /// Result as portfolio data to be imported
-                    xmlPortfolio = dataTransformed.toString();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } catch (TransformerConfigurationException e) {
-                    e.printStackTrace();
-                } catch (TransformerException e) {
-                    e.printStackTrace();
+                HttpResponse response = client.execute(get);
+                StatusLine status = response.getStatusLine();
+                if (status.getStatusCode() != 200) {
+                    System.err.println("Method failed: " + status.getStatusCode());
                 }
+
+                // Retrieve data
+                InputStream retrieve = response.getEntity().getContent();
+                String sakaiData = IOUtils.toString(retrieve, "UTF-8");
+
+                //// Convert it via XSL
+                /// Path to XSL
+                String servletDir = sc.getServletContext().getRealPath("/");
+                int last = servletDir.lastIndexOf(File.separator);
+                last = servletDir.lastIndexOf(File.separator, last - 1);
+                String baseDir = servletDir.substring(0, last);
+
+                String basepath = xsl.substring(0, xsl.indexOf(File.separator));
+                String firstStage = baseDir + File.separator + basepath + File.separator + "karuta" + File.separator
+                        + "xsl" + File.separator + "html2xml.xsl";
+                System.out.println("FIRST: " + firstStage);
+
+                /// Storing transformed data
+                StringWriter dataTransformed = new StringWriter();
+
+                /// Apply change
+                Source xsltSrc1 = new StreamSource(new File(firstStage));
+                TransformerFactory transFactory = TransformerFactory.newInstance();
+                Transformer transformer1 = transFactory.newTransformer(xsltSrc1);
+                StreamSource stageSource = new StreamSource(new ByteArrayInputStream(sakaiData.getBytes()));
+                Result stageRes = new StreamResult(dataTransformed);
+                transformer1.transform(stageSource, stageRes);
+
+                /// Result as portfolio data to be imported
+                xmlPortfolio = dataTransformed.toString();
             }
         }
 
-        try {
-            boolean instantiate = false;
-            if ("true".equals(instance))
-                instantiate = true;
-            String returnValue = portfolioManager.addPortfolio(MimeTypeUtils.TEXT_XML, MimeTypeUtils.TEXT_XML,
-                    xmlPortfolio, ui.userId, groupId, modelId, ui.subId, instantiate, projectName).toString();
-            return returnValue;
-        } catch (BusinessException ex) {
-            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
+        boolean instantiate = false;
+        if ("true".equals(instance))
+            instantiate = true;
+
+        return portfolioManager.addPortfolio(MimeTypeUtils.TEXT_XML, MimeTypeUtils.TEXT_XML,
+                xmlPortfolio, ui.userId, groupId, modelId, ui.subId, instantiate, projectName);
     }
 
     /**
@@ -1069,10 +956,9 @@ public class PortfolioController extends AbstractController {
                                       @RequestParam("uploadfile") InputStream uploadedInputStream,
                                       @RequestParam("instance") String instance,
                                       @RequestParam("project") String projectName,
-                                      HttpServletRequest request) throws RestWebApplicationException {
+                                      HttpServletRequest request) throws Exception {
 
         UserInfo ui = checkCredential(request);
-        String returnValue = "";
 
         boolean instantiate = false;
         if ("true".equals(instance))
@@ -1084,17 +970,8 @@ public class PortfolioController extends AbstractController {
         final Long credentialId = ui.userId;
         final String userName = ui.User;
 
-        try {
-            returnValue = portfolioManager
+        return portfolioManager
                     .importZippedPortfolio(MimeTypeUtils.TEXT_XML, MimeTypeUtils.TEXT_XML, path, userName,
-                            uploadedInputStream, credentialId, groupId, modelId, ui.subId, instantiate, projectName)
-                    .toString();
-        } catch (RestWebApplicationException e) {
-            throw e;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return returnValue;
+                            uploadedInputStream, credentialId, groupId, modelId, ui.subId, instantiate, projectName);
     }
 }

@@ -18,12 +18,9 @@ package eportfolium.com.karuta.webapp.rest.controller;
 import eportfolium.com.karuta.business.contract.NodeManager;
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
-import eportfolium.com.karuta.webapp.rest.provider.mapper.exception.RestWebApplicationException;
 import eportfolium.com.karuta.webapp.util.UserInfo;
-import eportfolium.com.karuta.webapp.util.javaUtils;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
@@ -55,25 +52,14 @@ public class MacroController extends AbstractController {
     @PostMapping(value = "/action/{uuid}/{macro-name}", produces = "text/plain")
     public String postMacro(@PathVariable("uuid") UUID uuid,
                             @PathVariable("macro-name") String macroName,
-                            HttpServletRequest httpServletRequest) throws RestWebApplicationException {
+                            HttpServletRequest httpServletRequest) throws BusinessException {
 
         UserInfo ui = checkCredential(httpServletRequest);
 
-        try {
-            // On exécute l'action sur le noeud uuid.
-            if (uuid != null && macroName != null) {
-                return nodeManager.executeMacroOnNode(ui.userId, uuid, macroName);
-            }
-            // Erreur de requête
-            else {
-                return "";
-            }
-        } catch (BusinessException ex) {
-            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
+        if (uuid != null && macroName != null) {
+            return nodeManager.executeMacroOnNode(ui.userId, uuid, macroName);
+        } else {
+            return "";
         }
     }
 }

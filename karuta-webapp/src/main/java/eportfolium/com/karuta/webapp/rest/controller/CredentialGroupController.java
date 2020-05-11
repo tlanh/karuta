@@ -20,8 +20,6 @@ import eportfolium.com.karuta.business.contract.SecurityManager;
 import eportfolium.com.karuta.business.contract.UserManager;
 import eportfolium.com.karuta.model.bean.CredentialGroup;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
-import eportfolium.com.karuta.webapp.rest.provider.mapper.exception.RestWebApplicationException;
-import eportfolium.com.karuta.webapp.util.javaUtils;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -60,17 +58,8 @@ public class CredentialGroupController {
      * @return groupid
      */
     @PostMapping()
-    public String postUserGroup(@RequestParam("label") String groupName) throws RestWebApplicationException {
-
-        try {
-            Long response = groupManager.addCredentialGroup(groupName);
-            logger.debug("Group " + groupName + " successfully added");
-            return Long.toString(response);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(HttpStatus.NOT_MODIFIED, "Error in creation");
-        }
+    public String postUserGroup(@RequestParam("label") String groupName) {
+        return Long.toString(groupManager.addCredentialGroup(groupName));
     }
 
     /**
@@ -85,28 +74,24 @@ public class CredentialGroupController {
     @PutMapping
     public ResponseEntity<String> putUserInUserGroup(@RequestParam("group") Long groupId,
                                        @RequestParam("user") Long user,
-                                       @RequestParam String label) throws RestWebApplicationException {
-        try {
-            boolean isOK = false;
-            if (label != null) {
-                isOK = groupManager.renameCredentialGroup(groupId, label);
-            } else {
-                isOK = securityManager.addUserInCredentialGroups(user, Arrays.asList(groupId));
-                logger.debug("putUserInUserGroup successful, user was correctly added to the group " + groupId);
-            }
-            if (isOK)
-                return ResponseEntity
-                            .status(HttpStatus.OK)
-                            .body("Changed");
-            else
-                return ResponseEntity
-                        .status(HttpStatus.OK)
-                        .body("Not OK");
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
+                                       @RequestParam String label) {
+        boolean isOK;
+
+        if (label != null) {
+            isOK = groupManager.renameCredentialGroup(groupId, label);
+        } else {
+            isOK = securityManager.addUserInCredentialGroups(user, Arrays.asList(groupId));
+            logger.debug("putUserInUserGroup successful, user was correctly added to the group " + groupId);
         }
+
+        if (isOK)
+            return ResponseEntity
+                        .status(HttpStatus.OK)
+                        .body("Changed");
+        else
+            return ResponseEntity
+                    .status(HttpStatus.OK)
+                    .body("Not OK");
     }
 
     /**
@@ -124,32 +109,29 @@ public class CredentialGroupController {
      *         </group>
      */
     @GetMapping
-    public String getUsersByUserGroup(@RequestParam("group") Long cgId,
+    public ResponseEntity<String> getUsersByUserGroup(@RequestParam("group") Long cgId,
                                       @RequestParam("user") Long userId,
-                                      @RequestParam("label") String groupName) throws RestWebApplicationException {
-        String xmlUsers = "";
+                                      @RequestParam("label") String groupName) {
 
-        try {
-            if (groupName != null) {
-                CredentialGroup crGroup = groupManager.getCredentialGroupByName(groupName);
-                if (crGroup == null) {
-                    throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "");
-                }
-                xmlUsers = Long.toString(crGroup.getId());
-            } else if (userId != null)
-                xmlUsers = groupManager.getCredentialGroupByUser(userId);
-            else if (cgId == null)
-                xmlUsers = groupManager.getCredentialGroupList();
-            else
-                xmlUsers = userManager.getUsersByCredentialGroup(cgId);
-        } catch (RestWebApplicationException ex) {
-            throw ex;
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
+        if (groupName != null) {
+            CredentialGroup crGroup = groupManager.getCredentialGroupByName(groupName);
+
+            if (crGroup == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            return ResponseEntity.ok()
+                        .body(Long.toString(crGroup.getId()));
+        } else if (userId != null) {
+            return ResponseEntity.ok()
+                        .body(groupManager.getCredentialGroupByUser(userId));
+        } else if (cgId == null) {
+            return ResponseEntity.ok()
+                        .body(groupManager.getCredentialGroupList());
+        } else {
+            return ResponseEntity.ok()
+                        .body(userManager.getUsersByCredentialGroup(cgId));
         }
-        return xmlUsers;
     }
 
     /**

@@ -221,6 +221,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		return result;
 	}
 
+	@Override
 	public String getPortfoliosByPortfolioGroup(Long portfolioGroupId) {
 		StringBuilder result = new StringBuilder();
 		result.append("<group id=\"").append(portfolioGroupId).append("\">");

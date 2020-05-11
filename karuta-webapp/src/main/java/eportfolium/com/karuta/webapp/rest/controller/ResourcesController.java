@@ -18,18 +18,13 @@ package eportfolium.com.karuta.webapp.rest.controller;
 import eportfolium.com.karuta.business.contract.ResourceManager;
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
-import eportfolium.com.karuta.webapp.rest.provider.mapper.exception.RestWebApplicationException;
 import eportfolium.com.karuta.webapp.util.UserInfo;
-import eportfolium.com.karuta.webapp.util.javaUtils;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.UUID;
 
 /**
@@ -59,16 +54,10 @@ public class ResourcesController extends AbstractController {
             produces = {"application/json", "application/xml"})
     public String getResource(@RequestParam("group") long groupId,
                               @PathVariable("node-parent-id") UUID nodeParentId,
-                              HttpServletRequest request) throws RestWebApplicationException {
+                              HttpServletRequest request) throws BusinessException {
         UserInfo ui = checkCredential(request);
 
-        try {
-            return resourceManager.getResource(MimeTypeUtils.TEXT_XML, nodeParentId, ui.userId, groupId);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
+        return resourceManager.getResource(MimeTypeUtils.TEXT_XML, nodeParentId, ui.userId, groupId);
     }
 
     /**
@@ -83,17 +72,11 @@ public class ResourcesController extends AbstractController {
     @GetMapping(value = "/portfolios/{portfolio-id}", produces = {"application/json", "application/xml"})
     public String getResources(@RequestParam("group") long groupId,
                                @PathVariable("portfolio-id") UUID portfolioId,
-                               HttpServletRequest request) throws RestWebApplicationException {
+                               HttpServletRequest request) throws Exception {
 
         UserInfo ui = checkCredential(request);
 
-        try {
-            return resourceManager.getResources(MimeTypeUtils.TEXT_XML, portfolioId, ui.userId, groupId);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
+        return resourceManager.getResources(MimeTypeUtils.TEXT_XML, portfolioId, ui.userId, groupId);
     }
 
     /**
@@ -102,7 +85,6 @@ public class ResourcesController extends AbstractController {
      *
      * @param xmlResource
      * @param groupId
-     * @param info
      * @param parentNodeId
      * @param request
      * @return
@@ -110,36 +92,13 @@ public class ResourcesController extends AbstractController {
     @PutMapping(value = "/resource/{node-parent-uuid}", produces = "application/xml")
     public String putResource(@RequestBody String xmlResource,
                               @RequestParam("group") long groupId,
-                              @RequestParam("info") String info,
                               @PathVariable("node-parent-uuid") UUID parentNodeId,
-                              HttpServletRequest request) throws RestWebApplicationException {
+                              HttpServletRequest request) throws Exception {
 
         UserInfo ui = checkCredential(request);
 
-        Date time = new Date();
-        SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
-        String timeFormat = dt.format(time);
-        String logformat = "";
-        if ("false".equals(info))
-            logformat = logFormatShort;
-        else
-            logformat = logFormat;
-
-        try {
-            String returnValue = resourceManager
-                    .changeResource(MimeTypeUtils.TEXT_XML, parentNodeId, xmlResource, ui.userId, groupId).toString();
-            logger.info(String.format(logformat, "OK", parentNodeId, "resource", ui.userId, timeFormat,
-                    request.getRemoteAddr(), xmlResource));
-            return returnValue;
-        } catch (BusinessException ex) {
-            logger.info(String.format(logformat, "ERR", parentNodeId, "resource", ui.userId, timeFormat,
-                    request.getRemoteAddr(), xmlResource));
-            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
+        return resourceManager
+                .changeResource(MimeTypeUtils.TEXT_XML, parentNodeId, xmlResource, ui.userId, groupId).toString();
     }
 
     /**
@@ -156,21 +115,12 @@ public class ResourcesController extends AbstractController {
     public String postResource(@RequestBody String xmlResource,
                                @RequestParam("group") long groupId,
                                @PathVariable("node-parent-uuid") UUID parentNodeId,
-                               HttpServletRequest request) throws RestWebApplicationException {
+                               HttpServletRequest request) throws Exception {
 
         UserInfo ui = checkCredential(request);
 
-        try {
-            String returnValue = resourceManager
+        return resourceManager
                     .addResource(MimeTypeUtils.TEXT_XML, parentNodeId, xmlResource, ui.userId, groupId);
-            return returnValue;
-        } catch (BusinessException ex) {
-            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
     }
 
     /**
@@ -186,20 +136,11 @@ public class ResourcesController extends AbstractController {
     public String postResources(@RequestBody String xmlResource,
                                @RequestParam("group") long groupId,
                                @RequestParam("resource") UUID resource,
-                               HttpServletRequest request) throws RestWebApplicationException {
+                               HttpServletRequest request) throws Exception {
         UserInfo ui = checkCredential(request);
 
-        try {
-            String returnValue = resourceManager
-                    .addResource(MimeTypeUtils.TEXT_XML, resource, xmlResource, ui.userId, groupId).toString();
-            return returnValue;
-        } catch (BusinessException ex) {
-            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
+        return resourceManager
+                    .addResource(MimeTypeUtils.TEXT_XML, resource, xmlResource, ui.userId, groupId);
     }
 
     /**
@@ -214,20 +155,13 @@ public class ResourcesController extends AbstractController {
     @DeleteMapping(value = "/{resource-id}", produces = "application/xml")
     public String deleteResource(@RequestParam("group") long groupId,
                                  @PathVariable("resource-id") UUID resourceId,
-                                 HttpServletRequest request) throws RestWebApplicationException {
+                                 HttpServletRequest request) throws BusinessException {
 
         UserInfo ui = checkCredential(request);
 
-        try {
-            resourceManager.removeResource(resourceId, ui.userId, groupId);
-            return "";
-        } catch (BusinessException ex) {
-            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
+        resourceManager.removeResource(resourceId, ui.userId, groupId);
+
+        return "";
     }
 
 }

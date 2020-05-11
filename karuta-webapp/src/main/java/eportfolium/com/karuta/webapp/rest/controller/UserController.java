@@ -17,6 +17,7 @@ package eportfolium.com.karuta.webapp.rest.controller;
 
 import javax.servlet.http.HttpServletRequest;
 
+import eportfolium.com.karuta.model.exception.GenericBusinessException;
 import eportfolium.com.karuta.webapp.util.UserInfo;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,8 +27,6 @@ import eportfolium.com.karuta.business.contract.SecurityManager;
 import eportfolium.com.karuta.business.contract.UserManager;
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
-import eportfolium.com.karuta.webapp.rest.provider.mapper.exception.RestWebApplicationException;
-import eportfolium.com.karuta.webapp.util.javaUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -69,23 +68,17 @@ public class UserController extends AbstractController {
      */
     @PostMapping(consumes = "application/xml", produces = "application/xml")
     public ResponseEntity<String> postUser(@RequestBody String xmluser,
-                                           HttpServletRequest request) throws RestWebApplicationException {
+                                           HttpServletRequest request) throws Exception {
         UserInfo ui = checkCredential(request);
+        String xmlUser = securityManager.addUsers(xmluser, ui.userId);
 
-        try {
-            String xmlUser = securityManager.addUsers(xmluser, ui.userId);
-            if (xmlUser == null) {
-                return ResponseEntity.status(HttpStatus.CONFLICT).body("Existing user or invalid input");
-            }
-
-            return ResponseEntity.ok(xmlUser);
-        } catch (BusinessException ex) {
-            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(HttpStatus.BAD_REQUEST, ex.getMessage());
+        if (xmlUser == null) {
+            return ResponseEntity
+                    .status(HttpStatus.CONFLICT)
+                    .body("Existing user or invalid input");
         }
+
+        return ResponseEntity.ok(xmlUser);
     }
 
     /***
@@ -106,86 +99,52 @@ public class UserController extends AbstractController {
     public String getUsers(@RequestParam("username") String username,
                            @RequestParam("firstname") String firstname,
                            @RequestParam("lastname") String lastname,
-                           HttpServletRequest request) throws RestWebApplicationException {
+                           HttpServletRequest request) throws BusinessException {
 
         UserInfo ui = checkCredential(request);
 
         if (ui.userId == 0)
-            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, "Not logged in");
+            throw new GenericBusinessException("Not logged in");
 
-        try {
-            String xmlGroups = "";
-            if (securityManager.isAdmin(ui.userId) || securityManager.isCreator(ui.userId))
-                xmlGroups = userManager.getUserList(ui.userId, username, firstname, lastname);
-            else if (ui.userId != 0)
-                xmlGroups = userManager.getUserInfos(ui.userId);
-            else
-                throw new RestWebApplicationException(HttpStatus.FORBIDDEN, "Not authorized");
-
-            return xmlGroups;
-        } catch (RestWebApplicationException ex) {
-            throw ex;
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
+        if (securityManager.isAdmin(ui.userId) || securityManager.isCreator(ui.userId))
+            return userManager.getUserList(ui.userId, username, firstname, lastname);
+        else if (ui.userId != 0)
+            return userManager.getUserInfos(ui.userId);
+        else
+            throw new GenericBusinessException("Not authorized");
     }
 
     /**
      * Get a specific user info. <br>
      * GET /rest/api/users/user/{user-id}
      *
-     * @param user
-     * @param token
-     * @param groupId
      * @param userid
-     * @param request
      * @return <user id="uid"> <username></username> <firstname></firstname>
      *         <lastname></lastname> <admin>1/0</admin> <designer>1/0</designer>
      *         <email></email> <active>1/0</active> <substitute>1/0</substitute>
      *         </user>
      */
     @GetMapping(value = "/user/{user-id}", produces = "application/xml")
-    public String getUser(@CookieValue("user") String user,
-                          @CookieValue("credential") String token,
-                          @RequestParam("group") int groupId,
-                          @PathVariable("user-id") int userid,
-                          HttpServletRequest request) throws RestWebApplicationException {
-        try {
-            return userManager.getUserInfos(Long.valueOf(userid));
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
+    public String getUser(@PathVariable("user-id") int userid) {
+        return userManager.getUserInfos(Long.valueOf(userid));
     }
 
     /**
      * Get user id from username. <br>
      * GET /rest/api/users/user/username/{username}
      *
-     * @param user
-     * @param token
      * @param username
      * @return userid (long)
      */
     @GetMapping(value = "/user/username/{username}", produces = "application/xml")
-    public String getUserId(@CookieValue("user") String user,
-                            @CookieValue("credential") String token,
-                            @PathVariable("username") String username) throws RestWebApplicationException {
-        // FIXME : Authentication ?
+    public String getUserId(@PathVariable("username") String username) throws BusinessException {
+        Long userid = userManager.getUserId(username);
 
-        try {
-            Long userid = userManager.getUserId(username);
-            if (userid == null || userid == 0) {
-                throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "User not found");
-            } else {
-                return userid.toString();
-            }
-        } catch (RestWebApplicationException ex) {
-            throw ex;
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, "Error : " + ex.getMessage());
+        if (userid == null || userid == 0) {
+            // FIXME: Should we return 404 ?
+            throw new GenericBusinessException("User not found");
+        } else {
+            return userid.toString();
         }
     }
 
@@ -193,27 +152,13 @@ public class UserController extends AbstractController {
      * Get a list of role/group for this user. <br>
      * GET /rest/api/users/user/{user-id}/groups
      *
-     * @param user
-     * @param token
-     * @param groupId
      * @param userIdCible
      * @return <profiles> <profile> <group id="gid"> <label></label> <role></role>
      *         </group> </profile> </profiles>
      */
     @GetMapping(value = "/user/{user-id}/groups", produces = "application/xml")
-    public String getGroupsUser(@CookieValue("user") String user,
-                                @CookieValue("credential") String token,
-                                @RequestParam("group") int groupId,
-                                @PathVariable("user-id") long userIdCible) throws RestWebApplicationException {
-        // FIXME : Authentication ?
-
-        try {
-            String xmlgroupsUser = userManager.getUserRolesByUserId(userIdCible);
-            return xmlgroupsUser;
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
+    public String getGroupsUser(@PathVariable("user-id") long userIdCible) {
+        return userManager.getUserRolesByUserId(userIdCible);
     }
 
     /**
@@ -228,16 +173,11 @@ public class UserController extends AbstractController {
     @GetMapping(value = "/Portfolio/{portfolio-id}/Role/{role}/users", produces = "application/xml")
     public String getUsersByRole(@PathVariable("portfolio-id") UUID portfolioId,
                                  @PathVariable("role") String role,
-                                 HttpServletRequest request) throws RestWebApplicationException {
+                                 HttpServletRequest request) {
 
         UserInfo ui = checkCredential(request);
 
-        try {
-            return userManager.getUsersByRole(ui.userId, portfolioId, role);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
+        return userManager.getUsersByRole(ui.userId, portfolioId, role);
     }
 
     /**
@@ -246,29 +186,22 @@ public class UserController extends AbstractController {
      *
      * @see #deleteUser(Long, HttpServletRequest)
      *
-     * @param groupId
      * @param userId
      * @param request
      * @return
      */
     @DeleteMapping(produces = "application/xml")
-    public String deleteUsers(@RequestParam("group") int groupId,
-                              @RequestParam("userId") Long userId,
-                              HttpServletRequest request) throws RestWebApplicationException {
+    public String deleteUsers(@RequestParam("userId") Long userId,
+                              HttpServletRequest request) throws BusinessException {
 
         UserInfo ui = checkCredential(request);
 
         if (!securityManager.isAdmin(ui.userId) && ui.userId != userId)
-            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, "No admin right");
+            throw new GenericBusinessException("No admin right");
 
-        try {
-            securityManager.removeUsers(ui.userId, userId);
-            return "user " + userId + " deleted";
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
+        securityManager.removeUsers(ui.userId, userId);
+
+        return "user " + userId + " deleted";
     }
 
     /**
@@ -281,18 +214,13 @@ public class UserController extends AbstractController {
      */
     @DeleteMapping(value = "/user/{user-id}", produces = "application/xml")
     public String deleteUser(@PathVariable("user-id") Long userid,
-                             HttpServletRequest request) throws RestWebApplicationException {
+                             HttpServletRequest request) throws BusinessException {
 
         UserInfo ui = checkCredential(request);
 
-        try {
-            securityManager.removeUsers(ui.userId, userid);
-            return "user " + userid + " deleted";
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
+        securityManager.removeUsers(ui.userId, userid);
+
+        return "user " + userid + " deleted";
     }
 
     /**
@@ -313,29 +241,21 @@ public class UserController extends AbstractController {
     @PutMapping(value = "/user/{user-id}", produces = "application/xml")
     public String putUser(@RequestBody String xmlInfUser,
                           @PathVariable("user-id") long userid,
-                          HttpServletRequest request) throws RestWebApplicationException {
+                          HttpServletRequest request) throws BusinessException {
 
         UserInfo ui = checkCredential(request);
 
-        try {
+        if (securityManager.isAdmin(ui.userId) || securityManager.isCreator(ui.userId)) {
+            return securityManager.changeUser(ui.userId, userid, xmlInfUser);
 
-            String queryUser = "";
-            if (securityManager.isAdmin(ui.userId) || securityManager.isCreator(ui.userId)) {
-                queryUser = securityManager.changeUser(ui.userId, userid, xmlInfUser);
-            } else if (ui.userId == userid) /// Changing self
-            {
-                String ip = request.getRemoteAddr();
-                logger.info(String.format("[%s] ", ip));
-                queryUser = securityManager.changeUserInfo(ui.userId, userid, xmlInfUser);
-            } else
-                throw new RestWebApplicationException(HttpStatus.FORBIDDEN, "Not authorized");
+        } else if (ui.userId == userid) { /// Changing self
+            String ip = request.getRemoteAddr();
+            logger.info(String.format("[%s] ", ip));
 
-            return queryUser;
-        } catch (RestWebApplicationException ex) {
-            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, "Error : " + ex.getMessage());
+            return securityManager.changeUserInfo(ui.userId, userid, xmlInfUser);
+
+        } else {
+            throw new GenericBusinessException("Not authorized");
         }
     }
 
@@ -345,20 +265,11 @@ public class UserController extends AbstractController {
      *
      * @param portfolioId
      * @param role
-     * @param request
      * @return
      */
     @GetMapping(value = "/Portfolio/{portfolio-id}/Role/{role}/groups", produces = "application/xml")
     public String getGroupsByRole(@PathVariable("portfolio-id") UUID portfolioId,
-                                  @PathVariable("role") String role,
-                                  HttpServletRequest request) throws RestWebApplicationException {
-        // FIXME: Authentication ?
-
-        try {
-            return groupManager.getGroupsByRole(portfolioId, role);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
+                                  @PathVariable("role") String role) {
+        return groupManager.getGroupsByRole(portfolioId, role);
     }
 }

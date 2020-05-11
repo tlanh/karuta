@@ -954,7 +954,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		return n.getPortfolio().getId();
 	}
 
-	public String executeMacroOnNode(long userId, UUID nodeId, String macroName) throws BusinessException {
+	public String executeMacroOnNode(long userId, UUID nodeId, String macroName) {
 		String val = "erreur";
 
 		try {

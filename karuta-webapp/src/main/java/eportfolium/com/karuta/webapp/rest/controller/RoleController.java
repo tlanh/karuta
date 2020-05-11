@@ -20,16 +20,12 @@ import javax.servlet.http.HttpServletRequest;
 import eportfolium.com.karuta.webapp.util.UserInfo;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.util.MimeTypeUtils;
 
 import eportfolium.com.karuta.business.contract.PortfolioManager;
 import eportfolium.com.karuta.business.contract.SecurityManager;
 import eportfolium.com.karuta.business.contract.UserManager;
-import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
-import eportfolium.com.karuta.webapp.rest.provider.mapper.exception.RestWebApplicationException;
-import eportfolium.com.karuta.webapp.util.javaUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -54,27 +50,12 @@ public class RoleController extends AbstractController {
      * Fetch rights in a role. <br>
      * GET /rest/api/roles/role/{role-id}
      *
-     * @param user
-     * @param token
-     * @param groupId
      * @param roleId
-     * @param request
      * @return
      */
     @GetMapping(value = "/role/{role-id}", produces = {"application/json", "application/xml"})
-    public String getRole(@CookieValue("user") String user,
-                          @CookieValue("credential") String token,
-                          @RequestParam("group") int groupId,
-                          @PathVariable("role-id") Long roleId,
-                          HttpServletRequest request) throws RestWebApplicationException {
-        // checkCredential(httpServletRequest, user, token, null); FIXME
-        try {
-            return userManager.getRole(roleId);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
+    public String getRole(@PathVariable("role-id") Long roleId) {
+        return userManager.getRole(roleId);
     }
 
     /**
@@ -89,20 +70,12 @@ public class RoleController extends AbstractController {
     @GetMapping(value = "/portfolio/{portfolio-id}", produces = {"application/json", "application/xml"})
     public String getRolePortfolio(@RequestParam("role") String role,
                                    @RequestParam("portfolio-id") UUID portfolioId,
-                                   HttpServletRequest request) throws RestWebApplicationException {
+                                   HttpServletRequest request) {
 
         UserInfo ui = checkCredential(request);
 
-        try {
-            String returnValue = portfolioManager
-                    .getRoleByPortfolio(MimeTypeUtils.TEXT_XML, role, portfolioId, ui.userId);
-            return returnValue;
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
-
+        return portfolioManager
+                .getRoleByPortfolio(MimeTypeUtils.TEXT_XML, role, portfolioId, ui.userId);
     }
 
     /**
@@ -117,17 +90,10 @@ public class RoleController extends AbstractController {
     @PutMapping(value = "/role/{role-id}", produces = "application/xml")
     public String putRole(@RequestBody String xmlRole,
                           @PathVariable("role-id") long roleId,
-                          HttpServletRequest request) throws RestWebApplicationException {
+                          HttpServletRequest request) throws Exception {
 
         UserInfo ui = checkCredential(request);
-        try {
-            return securityManager.changeRole(ui.userId, roleId, xmlRole).toString();
-        } catch (BusinessException ex) {
-            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
+
+        return securityManager.changeRole(ui.userId, roleId, xmlRole).toString();
     }
 }

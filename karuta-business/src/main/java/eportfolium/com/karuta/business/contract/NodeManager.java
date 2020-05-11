@@ -96,7 +96,7 @@ public interface NodeManager {
 
 	boolean isCodeExist(String code);
 
-	String executeMacroOnNode(long userId, UUID nodeId, String macroName) throws BusinessException;
+	String executeMacroOnNode(long userId, UUID nodeId, String macroName);
 
 	String getNodeMetadataWad(MimeType mimeType, UUID nodeId, Long userId, Long groupId)
 			throws BusinessException;

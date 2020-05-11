@@ -18,12 +18,9 @@ package eportfolium.com.karuta.webapp.rest.controller;
 import eportfolium.com.karuta.business.contract.SecurityManager;
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
-import eportfolium.com.karuta.webapp.rest.provider.mapper.exception.RestWebApplicationException;
 import eportfolium.com.karuta.webapp.util.UserInfo;
-import eportfolium.com.karuta.webapp.util.javaUtils;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
@@ -56,20 +53,12 @@ public class UserGroupController extends AbstractController {
     @PostMapping(produces = "application/xml")
     public String postGroupsUsers(@RequestParam("group") long groupId,
                                   @RequestParam("userId") long userId,
-                                  HttpServletRequest request) throws RestWebApplicationException {
+                                  HttpServletRequest request) throws BusinessException {
 
         UserInfo ui = checkCredential(request);
 
-        try {
-            securityManager.addUserToGroup(ui.userId, userId, groupId);
-            return "<ok/>";
-        } catch (BusinessException ex) {
-            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
+        securityManager.addUserToGroup(ui.userId, userId, groupId);
+        return "<ok/>";
     }
 
 }

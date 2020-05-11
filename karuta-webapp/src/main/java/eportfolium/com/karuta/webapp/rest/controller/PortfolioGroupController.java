@@ -17,12 +17,9 @@ package eportfolium.com.karuta.webapp.rest.controller;
 
 import eportfolium.com.karuta.business.contract.PortfolioManager;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
-import eportfolium.com.karuta.webapp.rest.provider.mapper.exception.RestWebApplicationException;
 import eportfolium.com.karuta.webapp.util.UserInfo;
-import eportfolium.com.karuta.webapp.util.javaUtils;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -57,28 +54,15 @@ public class PortfolioGroupController extends AbstractController {
      */
 
     @PostMapping
-    public ResponseEntity<String> postPortfolioGroup(@RequestParam("label") String groupname,
+    public ResponseEntity<Long> postPortfolioGroup(@RequestParam("label") String groupname,
                                        @RequestParam("type") String type,
                                        @RequestParam("parent") Long parent,
-                                       HttpServletRequest request) throws RestWebApplicationException {
+                                       HttpServletRequest request) {
         UserInfo ui = checkCredential(request);
-        Long response = -1L;
 
-        // Check type value
-        try {
-            response = portfolioManager.addPortfolioGroup(groupname, type, parent, ui.userId);
-            logger.debug("Portfolio group " + groupname + " created");
+        return ResponseEntity.ok()
+                    .body(portfolioManager.addPortfolioGroup(groupname, type, parent, ui.userId));
 
-            if (response == -1) {
-                return ResponseEntity.status(HttpStatus.NOT_MODIFIED).body("Error in creation");
-            }
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
-
-        return ResponseEntity.ok(Long.toString(response));
     }
 
     /**
@@ -92,22 +76,14 @@ public class PortfolioGroupController extends AbstractController {
      * @return Code 200
      */
     @PutMapping
-    public ResponseEntity<String> putPortfolioInPortfolioGroup(@RequestParam("group") Long group,
+    public ResponseEntity<Integer> putPortfolioInPortfolioGroup(@RequestParam("group") Long group,
                                                  @RequestParam("uuid") UUID uuid,
                                                  @RequestParam("label") String label,
-                                                 HttpServletRequest request) throws RestWebApplicationException {
+                                                 HttpServletRequest request) {
         UserInfo ui = checkCredential(request);
 
-        try {
-            int response = -1;
-            response = portfolioManager.addPortfolioInGroup(uuid, group, label, ui.userId); // FIXME
-            logger.debug("Portfolio added  in group " + label);
-            return ResponseEntity.ok(Integer.toString(response));
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
+        return ResponseEntity.ok()
+                .body(portfolioManager.addPortfolioInGroup(uuid, group, label, ui.userId));
     }
 
     /**
@@ -127,33 +103,31 @@ public class PortfolioGroupController extends AbstractController {
      * @return group id or empty str if group id not found
      */
     @GetMapping
-    public String getPortfolioByPortfolioGroup(@RequestParam("group") Long group,
+    public ResponseEntity<String> getPortfolioByPortfolioGroup(@RequestParam("group") Long group,
                                                @RequestParam("uuid") UUID portfolioId,
                                                @RequestParam("label") String groupLabel,
-                                               HttpServletRequest request) throws RestWebApplicationException {
+                                               HttpServletRequest request) {
         UserInfo ui = checkCredential(request);
-        String xmlUsers = "";
 
-        try {
-            if (groupLabel != null) {
-                Long groupid = portfolioManager.getPortfolioGroupIdFromLabel(groupLabel, ui.userId);
-                if (groupid == -1) {
-                    throw new RestWebApplicationException(HttpStatus.NOT_FOUND, "");
-                }
-                xmlUsers = Long.toString(groupid);
-            } else if (portfolioId != null) {
-                xmlUsers = portfolioManager.getPortfolioGroupListFromPortfolio(portfolioId);
-            } else if (group == null)
-                xmlUsers = portfolioManager.getPortfolioGroupList();
-            else
-                xmlUsers = portfolioManager.getPortfoliosByPortfolioGroup(group);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
+        if (groupLabel != null) {
+            Long groupid = portfolioManager.getPortfolioGroupIdFromLabel(groupLabel, ui.userId);
+
+            if (groupid == -1) {
+                return ResponseEntity.notFound().build();
+            } else {
+                return ResponseEntity.ok()
+                        .body(Long.toString(groupid));
+            }
+        } else if (portfolioId != null) {
+            return ResponseEntity.ok()
+                    .body(portfolioManager.getPortfolioGroupListFromPortfolio(portfolioId));
+        } else if (group == null) {
+            return ResponseEntity.ok()
+                    .body(portfolioManager.getPortfolioGroupList());
+        } else {
+            return ResponseEntity.ok()
+                    .body(portfolioManager.getPortfoliosByPortfolioGroup(group));
         }
-
-        return xmlUsers;
     }
 
     /**
@@ -162,28 +136,18 @@ public class PortfolioGroupController extends AbstractController {
      *
      * @param groupId            group id
      * @param uuid               portfolio id
-     * @param request
      * @return Code 200
      */
     @DeleteMapping
-    public String deletePortfolioByPortfolioGroup(@RequestParam("group") long groupId,
-                                                  @RequestParam("uuid") UUID uuid,
-                                                  HttpServletRequest request) throws RestWebApplicationException {
-//		checkCredential(httpServletRequest, null, null, null); //FIXME
-        boolean response = false;
-        try {
-            if (uuid == null)
-                response = portfolioManager.removePortfolioGroups(groupId);
-            else
-                response = portfolioManager.removePortfolioFromPortfolioGroups(uuid, groupId);
-
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
+    public ResponseEntity<Boolean> deletePortfolioByGroup(@RequestParam("group") long groupId,
+                                                          @RequestParam("uuid") UUID uuid) {
+        if (uuid == null) {
+            return ResponseEntity.ok()
+                    .body(portfolioManager.removePortfolioGroups(groupId));
+        } else {
+            return ResponseEntity.ok()
+                    .body(portfolioManager.removePortfolioFromPortfolioGroups(uuid, groupId));
         }
-        return String.valueOf(response);
     }
-
 }
 

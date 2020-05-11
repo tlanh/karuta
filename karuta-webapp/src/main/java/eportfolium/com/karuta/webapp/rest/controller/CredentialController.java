@@ -15,12 +15,14 @@
 
 package eportfolium.com.karuta.webapp.rest.controller;
 
+import java.io.IOException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
+import javax.xml.parsers.ParserConfigurationException;
 
 import eportfolium.com.karuta.webapp.util.UserInfo;
 import org.apache.commons.lang3.StringUtils;
@@ -47,8 +49,8 @@ import eportfolium.com.karuta.business.contract.UserManager;
 import eportfolium.com.karuta.config.Consts;
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
-import eportfolium.com.karuta.webapp.rest.provider.mapper.exception.RestWebApplicationException;
 import eportfolium.com.karuta.webapp.util.DomUtils;
+import org.xml.sax.SAXException;
 
 @RestController
 @RequestMapping("/credential")
@@ -83,7 +85,7 @@ public class CredentialController extends AbstractController {
 
     @GetMapping(produces = "application/xml")
     public ResponseEntity<String> getCredential(@RequestParam("group") int groupId,
-                                                HttpServletRequest request) throws RestWebApplicationException {
+                                                HttpServletRequest request) throws BusinessException {
         UserInfo ui = checkCredential(request);
 
         if (ui.userId == 0) // userid not valid -- id de l'utilisateur non valide.
@@ -91,53 +93,49 @@ public class CredentialController extends AbstractController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        try {
-            String xmluser = userManager.getUserInfos(ui.userId);
+        String xmluser = userManager.getUserInfos(ui.userId);
 
-            /// Add shibboleth info if needed
-            HttpSession session = request.getSession(false);
-            Integer fromshibe = (Integer) session.getAttribute("fromshibe");
-            Integer updatefromshibe = (Integer) session.getAttribute("updatefromshibe");
-            String alist = configurationManager.get("shib_attrib");
-            HashMap<String, String> updatevals = new HashMap<String, String>();
+        /// Add shibboleth info if needed
+        HttpSession session = request.getSession(false);
+        Integer fromshibe = (Integer) session.getAttribute("fromshibe");
+        Integer updatefromshibe = (Integer) session.getAttribute("updatefromshibe");
+        String alist = configurationManager.get("shib_attrib");
+        HashMap<String, String> updatevals = new HashMap<>();
 
-            if (fromshibe != null && fromshibe == 1 && alist != null) {
-                /// Fetch and construct needed data
-                String[] attriblist = alist.split(",");
-                int lastst = xmluser.lastIndexOf("<");
-                StringBuilder shibuilder = new StringBuilder(xmluser.substring(0, lastst));
+        if (fromshibe != null && fromshibe == 1 && alist != null) {
+            /// Fetch and construct needed data
+            String[] attriblist = alist.split(",");
+            int lastst = xmluser.lastIndexOf("<");
+            StringBuilder shibuilder = new StringBuilder(xmluser.substring(0, lastst));
 
-                for (String attrib : attriblist) {
-                    String value = (String) request.getAttribute(attrib);
-                    shibuilder.append("<").append(attrib).append(">").append(value).append("</").append(attrib)
-                            .append(">");
-                    /// Pre-process values
-                    if (1 == updatefromshibe) {
-                        String colname = configurationManager.get(attrib);
-                        updatevals.put(colname, value);
-                    }
-                }
-                /// Update values
+            for (String attrib : attriblist) {
+                String value = (String) request.getAttribute(attrib);
+                shibuilder.append("<").append(attrib).append(">").append(value).append("</").append(attrib)
+                        .append(">");
+                /// Pre-process values
                 if (1 == updatefromshibe) {
-                    String xmlInfUser = String.format(
-                            "<user id=\"%s\">" + "<firstname>%s</firstname>" + "<lastname>%s</lastname>"
-                                    + "<email>%s</email>" + "</user>",
-                            ui.userId, updatevals.get("display_firstname"), updatevals.get("display_lastname"),
-                            updatevals.get("email"));
-                    /// User update its own info automatically
-                    securityManager.changeUser(ui.userId, ui.userId, xmlInfUser);
-                    /// Consider it done
-                    session.removeAttribute("updatefromshibe");
+                    String colname = configurationManager.get(attrib);
+                    updatevals.put(colname, value);
                 }
-                /// Add it as last tag after "moving" the closing tag
-                shibuilder.append(xmluser.substring(lastst));
-                xmluser = shibuilder.toString();
             }
-            return ResponseEntity.ok(xmluser);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
+            /// Update values
+            if (1 == updatefromshibe) {
+                String xmlInfUser = String.format(
+                        "<user id=\"%s\">" + "<firstname>%s</firstname>" + "<lastname>%s</lastname>"
+                                + "<email>%s</email>" + "</user>",
+                        ui.userId, updatevals.get("display_firstname"), updatevals.get("display_lastname"),
+                        updatevals.get("email"));
+                /// User update its own info automatically
+                securityManager.changeUser(ui.userId, ui.userId, xmlInfUser);
+                /// Consider it done
+                session.removeAttribute("updatefromshibe");
+            }
+            /// Add it as last tag after "moving" the closing tag
+            shibuilder.append(xmluser.substring(lastst));
+            xmluser = shibuilder.toString();
         }
+
+        return ResponseEntity.ok(xmluser);
     }
 
     /**
@@ -150,7 +148,7 @@ public class CredentialController extends AbstractController {
      */
     @PutMapping(value = "/login", consumes = "application/xml", produces = "application/xml")
     public ResponseEntity<String> putCredentialFromXml(@RequestBody String xmlCredential,
-                                         HttpServletRequest request) throws RestWebApplicationException {
+                                         HttpServletRequest request) throws Exception {
         return postCredentialFromXml(xmlCredential, request);
     }
 
@@ -164,7 +162,7 @@ public class CredentialController extends AbstractController {
      */
     @PostMapping(value = "/login", consumes = "application/xml", produces = "application/xml")
     public ResponseEntity<String> postCredentialFromXml(@RequestBody String xmlCredential,
-                                                        HttpServletRequest request) throws RestWebApplicationException {
+                                                        HttpServletRequest request) throws Exception {
         HttpSession session = request.getSession(true);
 
         String retVal = "";
@@ -172,6 +170,7 @@ public class CredentialController extends AbstractController {
 
         String authlog = configurationManager.get("auth_log");
         Log authLog = null;
+
         try {
             if (!"".equals(authlog) && authlog != null)
                 authLog = LogFactory.getLog(authlog);
@@ -179,83 +178,68 @@ public class CredentialController extends AbstractController {
             logger.error("Could not create authentification log file");
         }
 
-        try {
-            Document doc = DomUtils.xmlString2Document(xmlCredential, new StringBuffer());
-            Element credentialElement = doc.getDocumentElement();
-            String login = "";
-            String password = "";
-            String substit = null;
-            if (credentialElement.getNodeName().equals("credential")) {
-                String[] templogin = DomUtils.getInnerXml(doc.getElementsByTagName("login").item(0)).split("#");
-                password = DomUtils.getInnerXml(doc.getElementsByTagName("password").item(0));
 
-                if (templogin.length > 1)
-                    substit = templogin[1];
-                login = templogin[0];
-            }
+        Document doc = DomUtils.xmlString2Document(xmlCredential, new StringBuffer());
+        Element credentialElement = doc.getDocumentElement();
+        String login = "";
+        String password = "";
+        String substit = null;
+        if (credentialElement.getNodeName().equals("credential")) {
+            String[] templogin = DomUtils.getInnerXml(doc.getElementsByTagName("login").item(0)).split("#");
+            password = DomUtils.getInnerXml(doc.getElementsByTagName("password").item(0));
 
-            String[] resultCredential = securityManager.postCredentialFromXml(login, password, substit);
-            // 0 : XML de retour
-            // 1,2 : username, uid
-            // 3,4 : substitute name, substitute id
-            if (resultCredential == null) {
-                status = 403;
-                retVal = "invalid credential";
+            if (templogin.length > 1)
+                substit = templogin[1];
+            login = templogin[0];
+        }
 
+        String[] resultCredential = securityManager.postCredentialFromXml(login, password, substit);
+        // 0 : XML de retour
+        // 1,2 : username, uid
+        // 3,4 : substitute name, substitute id
+        if (resultCredential == null) {
+            status = 403;
+            retVal = "invalid credential";
+
+            if (authLog != null)
+                authLog.info(String.format("Authentication error for user '%s' date '%s'\n", login,
+                        new Date()));
+        } else if (!"0".equals(resultCredential[2])) {
+            // String tokenID = resultCredential[2];
+
+            if (substit != null && !"0".equals(resultCredential[4])) {
+                long uid = Long.parseLong(resultCredential[2]);
+                long subid = Long.parseLong(resultCredential[4]);
+
+                session.setAttribute("user", resultCredential[3]);
+                session.setAttribute("uid", subid);
+                session.setAttribute("subuser", resultCredential[1]);
+                session.setAttribute("subuid", uid);
                 if (authLog != null)
-                    authLog.info(String.format("Authentication error for user '%s' date '%s'\n", login,
+                    authLog.info(String.format("Authentication success for user '%s' date '%s' (Substitution)\n",
+                            login, new Date()));
+            } else {
+                String login1 = resultCredential[1];
+                long userId = Long.parseLong(resultCredential[2]);
+                long subuid = 0;
+
+                session.setAttribute("user", login1);
+                session.setAttribute("uid", userId);
+                session.setAttribute("subuser", "");
+                session.setAttribute("subuid", subuid);
+                if (authLog != null)
+                    authLog.info(String.format("Authentication success for user '%s' date '%s'\n", login,
                             new Date()));
-            } else if (!"0".equals(resultCredential[2])) {
-                // String tokenID = resultCredential[2];
-
-                if (substit != null && !"0".equals(resultCredential[4])) {
-                    long uid = Long.parseLong(resultCredential[2]);
-                    long subid = Long.parseLong(resultCredential[4]);
-
-                    session.setAttribute("user", resultCredential[3]);
-                    session.setAttribute("uid", subid);
-                    session.setAttribute("subuser", resultCredential[1]);
-                    session.setAttribute("subuid", uid);
-                    if (authLog != null)
-                        authLog.info(String.format("Authentication success for user '%s' date '%s' (Substitution)\n",
-                                login, new Date()));
-                } else {
-                    String login1 = resultCredential[1];
-                    long userId = Long.parseLong(resultCredential[2]);
-                    long subuid = 0;
-
-                    session.setAttribute("user", login1);
-                    session.setAttribute("uid", userId);
-                    session.setAttribute("subuser", "");
-                    session.setAttribute("subuid", subuid);
-                    if (authLog != null)
-                        authLog.info(String.format("Authentication success for user '%s' date '%s'\n", login,
-                                new Date()));
-                }
-
-                status = 200;
-                retVal = resultCredential[0];
             }
 
-            return ResponseEntity
-                        .status(status)
-                        .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_XML_VALUE)
-                        .body(retVal);
-        } catch (RestWebApplicationException ex) {
-            ex.printStackTrace();
-            logger.error(ex.getLocalizedMessage());
-            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, "invalid Credential or invalid group member");
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            status = 500;
-            retVal = ex.getMessage();
-            logger.error(ex.getMessage());
+            status = 200;
+            retVal = resultCredential[0];
         }
 
         return ResponseEntity
-                .status(status)
-                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_XML_VALUE)
-                .body(retVal);
+                    .status(status)
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_XML_VALUE)
+                    .body(retVal);
     }
 
     /**
@@ -268,7 +252,7 @@ public class CredentialController extends AbstractController {
      */
     @PostMapping(value = "/forgot", consumes = "application/xml")
     public ResponseEntity<String> postForgotCredential(@RequestBody String xml,
-                                                       HttpServletRequest request) throws RestWebApplicationException {
+                                                       HttpServletRequest request) throws Exception {
         int retVal = 404;
         String retText = "";
         Logger securityLog = null;
@@ -281,63 +265,54 @@ public class CredentialController extends AbstractController {
         if (resetEnable != null
                 && ("y".equals(resetEnable.toLowerCase()) || "true".equals(resetEnable.toLowerCase()))) {
 
-            try {
-                Document doc = DomUtils.xmlString2Document(xml, new StringBuffer());
-                Element userInfos = doc.getDocumentElement();
+            Document doc = DomUtils.xmlString2Document(xml, new StringBuffer());
+            Element userInfos = doc.getDocumentElement();
 
-                String username = "";
-                if (userInfos.getNodeName().equals("credential")) {
-                    NodeList children2 = userInfos.getChildNodes();
-                    for (int y = 0; y < children2.getLength(); y++) {
-                        if (children2.item(y).getNodeName().equals("login")) {
-                            username = DomUtils.getInnerXml(children2.item(y));
-                            break;
-                        }
+            String username = "";
+            if (userInfos.getNodeName().equals("credential")) {
+                NodeList children2 = userInfos.getChildNodes();
+                for (int y = 0; y < children2.getLength(); y++) {
+                    if (children2.item(y).getNodeName().equals("login")) {
+                        username = DomUtils.getInnerXml(children2.item(y));
+                        break;
                     }
                 }
+            }
 
-                // Vérifier si nous avons cet email enregistré en base
-                String email = userManager.getEmailByLogin(username);
-                if (email != null && !"".equals(email)) {
+            // Vérifier si nous avons cet email enregistré en base
+            String email = userManager.getEmailByLogin(username);
+            if (email != null && !"".equals(email)) {
 
-                    // écrire les changements en base
-                    String password = securityManager.generatePassword();
-                    boolean result = securityManager.changePassword(username, password);
+                // écrire les changements en base
+                String password = securityManager.generatePassword();
+                boolean result = securityManager.changePassword(username, password);
 
-                    if (result) {
-                        if (securityLog != null) {
-                            String ip = request.getRemoteAddr();
-                            securityLog.info(String.format(
-                                    "[%s] [%s] a demandé la réinitialisation de son mot de passe\n", ip, username));
-                        }
-
-                        final Map<String, String> template_vars = new HashMap<String, String>();
-                        template_vars.put("firstname", username);
-                        template_vars.put("lastname", "");
-                        template_vars.put("email", email);
-                        template_vars.put("passwd", password);
-
-                        String cc_email = configurationManager.get("sys_email");
-                        // Envoie d'un email
-                        final Integer langId = Integer.valueOf(configurationManager.get("PS_LANG_DEFAULT"));
-                        emailManager.send(langId, "employee_password",
-                                emailManager.getTranslation("Your new password!"), template_vars, email, username, null,
-                                null, null, null, Consts._PS_MAIL_DIR_, false, cc_email, null);
-
-                        retVal = 200;
-                        retText = "sent";
+                if (result) {
+                    if (securityLog != null) {
+                        String ip = request.getRemoteAddr();
+                        securityLog.info(String.format(
+                                "[%s] [%s] a demandé la réinitialisation de son mot de passe\n", ip, username));
                     }
+
+                    final Map<String, String> template_vars = new HashMap<String, String>();
+                    template_vars.put("firstname", username);
+                    template_vars.put("lastname", "");
+                    template_vars.put("email", email);
+                    template_vars.put("passwd", password);
+
+                    String cc_email = configurationManager.get("sys_email");
+                    // Envoie d'un email
+                    final Integer langId = Integer.valueOf(configurationManager.get("PS_LANG_DEFAULT"));
+                    emailManager.send(langId, "employee_password",
+                            emailManager.getTranslation("Your new password!"), template_vars, email, username, null,
+                            null, null, null, Consts._PS_MAIL_DIR_, false, cc_email, null);
+
+                    retVal = 200;
+                    retText = "sent";
                 }
-            } catch (BusinessException ex) {
-                ex.printStackTrace();
-                logger.error(ex.getLocalizedMessage());
-                throw new RestWebApplicationException(HttpStatus.FORBIDDEN, "invalid Credential or invalid group member");
-            } catch (Exception ex) {
-                logger.error(ex.getMessage());
-                ex.printStackTrace();
-                throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
             }
         }
+
         return ResponseEntity
                     .status(retVal)
                     .body(retText);
@@ -347,33 +322,22 @@ public class CredentialController extends AbstractController {
      * Fetch current user information (CAS). <br>
      * GET /rest/api/credential/login/cas
      *
-     * @param content
-     * @param user
-     * @param token
-     * @param groupId
      * @param ticket
      * @param redir
      * @param request
      * @return
      */
     @PostMapping("/login/cas")
-    public ResponseEntity<String> postCredentialFromCas(@RequestBody String content,
-                                          @CookieValue("user") String user,
-                                          @CookieValue("credential") String token,
-                                          @RequestParam("group") int groupId,
-                                          @RequestParam("ticket") String ticket,
-                                          @RequestParam("redir") String redir,
-                                          HttpServletRequest request) throws RestWebApplicationException {
-        return getCredentialFromCas(user, token, groupId, ticket, redir, request);
+    public ResponseEntity<String> postCredentialFromCas(@RequestParam("ticket") String ticket,
+                                                        @RequestParam("redir") String redir,
+                                                        HttpServletRequest request) throws ParserConfigurationException, SAXException, IOException {
+        return getCredentialFromCas(ticket, redir, request);
     }
 
     @GetMapping("/login/cas")
-    public ResponseEntity<String> getCredentialFromCas(@CookieValue("user") String user,
-                                         @CookieValue("credential") String token,
-                                         @RequestParam("group") int groupId,
-                                         @RequestParam("ticket") String ticket,
+    public ResponseEntity<String> getCredentialFromCas(@RequestParam("ticket") String ticket,
                                          @RequestParam("redir") String redir,
-                                         HttpServletRequest httpServletRequest) throws RestWebApplicationException {
+                                         HttpServletRequest httpServletRequest) throws ParserConfigurationException, SAXException, IOException {
 
         HttpSession session = httpServletRequest.getSession(true); // FIXME
         String xmlResponse = null;
@@ -382,89 +346,76 @@ public class CredentialController extends AbstractController {
         StringBuffer requestURL;
         String casUrlValidation = configurationManager.get("casUrlValidation");
 
-        try {
-            ServiceTicketValidator sv = new ServiceTicketValidator();
+        ServiceTicketValidator sv = new ServiceTicketValidator();
 
-            if (casUrlValidation == null) {
-                ResponseEntity<String> response = null;
-                try {
-                    // formulate the response
-                    response = ResponseEntity
-                            .status(HttpStatus.PRECONDITION_FAILED)
-                            .body("CAS URL not defined");
-                } catch (Exception e) {
-                    response = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-                }
-
-                return response;
-            }
-
-            sv.setCasValidateUrl(casUrlValidation);
-
-            /// X-Forwarded-Proto is for certain setup, check config file
-            /// for some more details
-            String proto = httpServletRequest.getHeader("X-Forwarded-Proto");
-            requestURL = httpServletRequest.getRequestURL();
-            if (proto == null) {
-                System.out.println("cas usuel");
-                if (redir != null) {
-                    requestURL.append("?redir=").append(redir);
-                }
-                completeURL = requestURL.toString();
-            } else {
-                /// Keep only redir parameter
-                if (redir != null) {
-                    requestURL.append("?redir=").append(redir);
-                }
-                completeURL = requestURL.replace(0, requestURL.indexOf(":"), proto).toString();
-            }
-            /// completeURL should be the same provided in the "service" parameter
-            // System.out.println(String.format("Service: %s\n", completeURL));
-
-            sv.setService(completeURL);
-            sv.setServiceTicket(ticket);
-            // sv.setProxyCallbackUrl(urlOfProxyCallbackServlet);
-            sv.validate();
-
-            xmlResponse = sv.getResponse();
-            if (xmlResponse.contains("cas:authenticationFailure")) {
-                System.out.println(String.format("CAS response: %s\n", xmlResponse));
-                return ResponseEntity
-                        .status(HttpStatus.FORBIDDEN)
-                        .body("CAS error");
-            }
-
-            // <cas:user>vassoilm</cas:user>
-            // session.setAttribute("user", sv.getUser());
-            // session.setAttribute("uid", dataProvider.getUserId(sv.getUser()));
-            userId = String.valueOf(userManager.getUserId(sv.getUser(), null));
-            if (userId != null) {
-                session.setAttribute("user", sv.getUser()); // FIXME
-                session.setAttribute("uid", Integer.parseInt(userId)); // FIXME
-            } else {
-                return ResponseEntity
-                        .status(HttpStatus.FORBIDDEN)
-                        .body("Login " + sv.getUser() + " not found or bad CAS auth (bad ticket or bad url service : "
-                                + completeURL + ") : " + sv.getErrorMessage());
-            }
-
-            ResponseEntity response = null;
-
+        if (casUrlValidation == null) {
+            ResponseEntity<String> response = null;
             try {
                 // formulate the response
                 response = ResponseEntity
-                            .status(HttpStatus.CREATED)
-                            .header("Location", redir)
-                            .body("<script>document.location.replace('" + redir + "')</script>");
+                        .status(HttpStatus.PRECONDITION_FAILED)
+                        .body("CAS URL not defined");
             } catch (Exception e) {
-                response = ResponseEntity.status(500).build();
+                response = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
             }
+
             return response;
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            throw new RestWebApplicationException(HttpStatus.FORBIDDEN,
-                    "Vous n'avez pas les droits necessaires (ticket ?, casUrlValidation) :" + casUrlValidation);
         }
+
+        sv.setCasValidateUrl(casUrlValidation);
+
+        /// X-Forwarded-Proto is for certain setup, check config file
+        /// for some more details
+        String proto = httpServletRequest.getHeader("X-Forwarded-Proto");
+        requestURL = httpServletRequest.getRequestURL();
+        if (proto == null) {
+            System.out.println("cas usuel");
+            if (redir != null) {
+                requestURL.append("?redir=").append(redir);
+            }
+            completeURL = requestURL.toString();
+        } else {
+            /// Keep only redir parameter
+            if (redir != null) {
+                requestURL.append("?redir=").append(redir);
+            }
+            completeURL = requestURL.replace(0, requestURL.indexOf(":"), proto).toString();
+        }
+        /// completeURL should be the same provided in the "service" parameter
+        // System.out.println(String.format("Service: %s\n", completeURL));
+
+        sv.setService(completeURL);
+        sv.setServiceTicket(ticket);
+        // sv.setProxyCallbackUrl(urlOfProxyCallbackServlet);
+        sv.validate();
+
+        xmlResponse = sv.getResponse();
+        if (xmlResponse.contains("cas:authenticationFailure")) {
+            System.out.println(String.format("CAS response: %s\n", xmlResponse));
+            return ResponseEntity
+                    .status(HttpStatus.FORBIDDEN)
+                    .body("CAS error");
+        }
+
+        // <cas:user>vassoilm</cas:user>
+        // session.setAttribute("user", sv.getUser());
+        // session.setAttribute("uid", dataProvider.getUserId(sv.getUser()));
+        userId = String.valueOf(userManager.getUserId(sv.getUser(), null));
+        if (userId != null) {
+            session.setAttribute("user", sv.getUser()); // FIXME
+            session.setAttribute("uid", Integer.parseInt(userId)); // FIXME
+        } else {
+            return ResponseEntity
+                    .status(HttpStatus.FORBIDDEN)
+                    .body("Login " + sv.getUser() + " not found or bad CAS auth (bad ticket or bad url service : "
+                            + completeURL + ") : " + sv.getErrorMessage());
+        }
+
+            // formulate the response
+        return ResponseEntity
+                    .status(HttpStatus.CREATED)
+                    .header("Location", redir)
+                    .body("<script>document.location.replace('" + redir + "')</script>");
     }
 
     /**

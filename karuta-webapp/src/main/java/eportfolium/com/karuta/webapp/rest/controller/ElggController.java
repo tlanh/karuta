@@ -17,13 +17,10 @@ package eportfolium.com.karuta.webapp.rest.controller;
 
 import eportfolium.com.karuta.business.contract.ConfigurationManager;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
-import eportfolium.com.karuta.webapp.rest.provider.mapper.exception.RestWebApplicationException;
 import eportfolium.com.karuta.webapp.socialnetwork.Elgg;
 import eportfolium.com.karuta.webapp.util.UserInfo;
-import eportfolium.com.karuta.webapp.util.javaUtils;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
@@ -48,7 +45,7 @@ public class ElggController extends AbstractController {
      */
     @GetMapping(value = "/site/river_feed", produces = "text/html")
     public String getElggSiteRiverFeed(@RequestParam("limit") String limit,
-                                       HttpServletRequest request) throws RestWebApplicationException {
+                                       HttpServletRequest request) throws Exception {
         int iLimit;
         try {
             iLimit = Integer.parseInt(limit);
@@ -64,14 +61,9 @@ public class ElggController extends AbstractController {
         String elggApiKey = configurationManager.get("elggApiKey");
         String elggDefaultUserPassword = configurationManager.get("elggDefaultUserPassword");
 
-        try {
-            Elgg elgg = new Elgg(elggDefaultApiUrl, elggDefaultSiteUrl, elggApiKey, ui.User, elggDefaultUserPassword);
-            return elgg.getSiteRiverFeed(iLimit);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error(javaUtils.getCompleteStackTrace(ex) + HttpStatus.INTERNAL_SERVER_ERROR);
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
+        Elgg elgg = new Elgg(elggDefaultApiUrl, elggDefaultSiteUrl, elggApiKey, ui.User, elggDefaultUserPassword);
+
+        return elgg.getSiteRiverFeed(iLimit);
     }
 
     /**
@@ -84,7 +76,7 @@ public class ElggController extends AbstractController {
      */
     @PostMapping(value = "/wire", produces = "application/xml")
     public String wireElggSiteRiverFeed(@RequestBody String message,
-                                       HttpServletRequest request) throws RestWebApplicationException {
+                                       HttpServletRequest request) throws Exception {
         UserInfo ui = checkCredential(request);
 
         // Elgg variables
@@ -93,13 +85,7 @@ public class ElggController extends AbstractController {
         String elggApiKey = configurationManager.get("elggApiKey");
         String elggDefaultUserPassword = configurationManager.get("elggDefaultUserPassword");
 
-        try {
-            Elgg elgg = new Elgg(elggDefaultApiUrl, elggDefaultSiteUrl, elggApiKey, ui.User, elggDefaultUserPassword);
-            return elgg.postWire(message);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error(javaUtils.getCompleteStackTrace(ex) + HttpStatus.INTERNAL_SERVER_ERROR);
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
+        Elgg elgg = new Elgg(elggDefaultApiUrl, elggDefaultSiteUrl, elggApiKey, ui.User, elggDefaultUserPassword);
+        return elgg.postWire(message);
     }
 }

@@ -24,9 +24,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import eportfolium.com.karuta.business.contract.GroupManager;
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
-import eportfolium.com.karuta.webapp.rest.provider.mapper.exception.RestWebApplicationException;
-import eportfolium.com.karuta.webapp.util.javaUtils;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -52,20 +49,12 @@ public class RightGroupController extends AbstractController {
     @PostMapping(produces = "application/xml")
     public ResponseEntity<String> postRightGroup(@RequestParam("group") Long groupId,
                                                  @RequestParam("groupRightId") Long groupRightId,
-                                                 HttpServletRequest request) throws RestWebApplicationException {
+                                                 HttpServletRequest request) throws BusinessException {
         UserInfo ui = checkCredential(request);
 
-        try {
-            groupManager.changeUserGroup(groupRightId, groupId, ui.userId);
-            logger.info("modifié");
-            return ResponseEntity.ok().build();
-        } catch (BusinessException ex) {
-            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
+        groupManager.changeUserGroup(groupRightId, groupId, ui.userId);
+
+        return ResponseEntity.ok().build();
     }
 
 }

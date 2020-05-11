@@ -18,12 +18,9 @@ package eportfolium.com.karuta.webapp.rest.controller;
 import eportfolium.com.karuta.business.contract.GroupManager;
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
-import eportfolium.com.karuta.webapp.rest.provider.mapper.exception.RestWebApplicationException;
 import eportfolium.com.karuta.webapp.util.UserInfo;
-import eportfolium.com.karuta.webapp.util.javaUtils;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
@@ -51,16 +48,11 @@ public class GroupRightsController extends AbstractController {
      */
     @GetMapping(produces = "application/xml")
     public String getGroupRights(@RequestParam("group") long groupId,
-                                 HttpServletRequest request) throws RestWebApplicationException {
+                                 HttpServletRequest request) throws Exception {
 
         UserInfo ui = checkCredential(request);
-        try {
-            return groupManager.getGroupRights(ui.userId, groupId);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
+
+        return groupManager.getGroupRights(ui.userId, groupId);
     }
 
     /**
@@ -73,18 +65,12 @@ public class GroupRightsController extends AbstractController {
      */
     @DeleteMapping(produces = "application/xml")
     public String deleteGroupRights(@RequestParam("group") long groupId,
-                                    HttpServletRequest request) throws RestWebApplicationException {
+                                    HttpServletRequest request) throws BusinessException {
         UserInfo ui = checkCredential(request);
-        try {
-            groupManager.removeRights(groupId, ui.userId);
-            return "supprimé";
-        } catch (BusinessException ex) {
-            throw new RestWebApplicationException(HttpStatus.FORBIDDEN, ex.getMessage());
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
+
+        groupManager.removeRights(groupId, ui.userId);
+
+        return "supprimé";
     }
 }
 

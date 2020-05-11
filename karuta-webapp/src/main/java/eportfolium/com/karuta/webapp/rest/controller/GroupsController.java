@@ -18,12 +18,9 @@ package eportfolium.com.karuta.webapp.rest.controller;
 import eportfolium.com.karuta.business.contract.GroupManager;
 import eportfolium.com.karuta.business.contract.PortfolioManager;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
-import eportfolium.com.karuta.webapp.rest.provider.mapper.exception.RestWebApplicationException;
 import eportfolium.com.karuta.webapp.util.UserInfo;
-import eportfolium.com.karuta.webapp.util.javaUtils;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
@@ -51,14 +48,10 @@ public class GroupsController extends AbstractController {
      *         LABEL</group> ... </groups>
      */
     @GetMapping(produces = "application/xml")
-    public String getGroups(HttpServletRequest request) throws RestWebApplicationException {
+    public String getGroups(HttpServletRequest request) throws Exception {
         UserInfo ui = checkCredential(request);
-        try {
-            return groupManager.getUserGroups(ui.userId);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
+
+        return groupManager.getUserGroups(ui.userId);
     }
 
     /**
@@ -71,16 +64,10 @@ public class GroupsController extends AbstractController {
      */
     @GetMapping(value = "/{portfolio-id}", produces = "application/xml")
     public String getGroupsPortfolio(@PathVariable("portfolio-id") UUID portfolioId,
-                                     HttpServletRequest request) throws RestWebApplicationException {
+                                     HttpServletRequest request) {
 
         UserInfo ui = checkCredential(request);
 
-        try {
-            return portfolioManager.getRolesByPortfolio(portfolioId, ui.userId);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error(ex.getMessage() + "\n\n" + javaUtils.getCompleteStackTrace(ex));
-            throw new RestWebApplicationException(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
-        }
+        return portfolioManager.getRolesByPortfolio(portfolioId, ui.userId);
     }
 }
