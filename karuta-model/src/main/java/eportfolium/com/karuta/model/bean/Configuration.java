@@ -88,7 +88,7 @@ public class Configuration implements Serializable {
 	}
 
 	@Temporal(TemporalType.TIMESTAMP)
-	@Column(name = "modifDate", nullable = false, length = 26)
+	@Column(name = "modif_date", nullable = false, length = 26)
 	public Date getModifDate() {
 		return this.modifDate;
 	}
