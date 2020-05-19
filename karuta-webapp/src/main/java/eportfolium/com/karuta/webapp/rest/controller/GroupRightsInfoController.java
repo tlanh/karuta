@@ -17,6 +17,7 @@ package eportfolium.com.karuta.webapp.rest.controller;
 
 import javax.servlet.http.HttpServletRequest;
 
+import eportfolium.com.karuta.document.GroupRightInfoList;
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.webapp.util.UserInfo;
 import org.slf4j.Logger;
@@ -24,6 +25,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import eportfolium.com.karuta.business.contract.PortfolioManager;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
+import org.springframework.http.HttpEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -49,11 +51,11 @@ public class GroupRightsInfoController extends AbstractController {
      *         </groupRightsInfos>
      */
     @GetMapping(produces = "application/xml")
-    public String getGroupRightsInfos(@RequestParam("portfolioId") UUID portfolioId,
-                                      HttpServletRequest request) throws BusinessException {
+    public HttpEntity<GroupRightInfoList> getGroupRightsInfos(@RequestParam("portfolioId") UUID portfolioId,
+                                                              HttpServletRequest request) throws BusinessException {
         UserInfo ui = checkCredential(request);
 
-        return portfolioManager.getGroupRightsInfos(ui.userId, portfolioId);
+        return new HttpEntity<>(portfolioManager.getGroupRightsInfos(ui.userId, portfolioId));
     }
 }
 

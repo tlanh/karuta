@@ -20,6 +20,7 @@ import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import eportfolium.com.karuta.webapp.util.UserInfo;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -103,10 +104,10 @@ public class PortfolioGroupController extends AbstractController {
      * @return group id or empty str if group id not found
      */
     @GetMapping
-    public ResponseEntity<String> getPortfolioByPortfolioGroup(@RequestParam("group") Long group,
-                                               @RequestParam("uuid") UUID portfolioId,
-                                               @RequestParam("label") String groupLabel,
-                                               HttpServletRequest request) {
+    public HttpEntity<Object> getPortfolioByPortfolioGroup(@RequestParam("group") Long group,
+                                                           @RequestParam("uuid") UUID portfolioId,
+                                                           @RequestParam("label") String groupLabel,
+                                                           HttpServletRequest request) {
         UserInfo ui = checkCredential(request);
 
         if (groupLabel != null) {
@@ -115,13 +116,13 @@ public class PortfolioGroupController extends AbstractController {
             if (groupid == -1) {
                 return ResponseEntity.notFound().build();
             } else {
-                return ResponseEntity.ok()
-                        .body(Long.toString(groupid));
+                return new HttpEntity<>(groupid);
             }
         } else if (portfolioId != null) {
             return ResponseEntity.ok()
                     .body(portfolioManager.getPortfolioGroupListFromPortfolio(portfolioId));
         } else if (group == null) {
+            // TODO: Fix this to return a PortfolioGroupList
             return ResponseEntity.ok()
                     .body(portfolioManager.getPortfolioGroupList());
         } else {

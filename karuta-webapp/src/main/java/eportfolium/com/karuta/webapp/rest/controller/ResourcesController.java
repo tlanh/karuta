@@ -15,12 +15,16 @@
 
 package eportfolium.com.karuta.webapp.rest.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import eportfolium.com.karuta.business.contract.ResourceManager;
+import eportfolium.com.karuta.document.ResourceDocument;
+import eportfolium.com.karuta.document.ResourceList;
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import eportfolium.com.karuta.webapp.util.UserInfo;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
@@ -51,12 +55,12 @@ public class ResourcesController extends AbstractController {
      */
     @GetMapping(value = "/resource/{node-parent-id}", consumes = "application/xml",
             produces = {"application/json", "application/xml"})
-    public String getResource(@RequestParam("group") long groupId,
-                              @PathVariable("node-parent-id") UUID nodeParentId,
-                              HttpServletRequest request) throws BusinessException {
+    public HttpEntity<ResourceDocument> getResource(@RequestParam("group") long groupId,
+                                                    @PathVariable("node-parent-id") UUID nodeParentId,
+                                                    HttpServletRequest request) throws BusinessException {
         UserInfo ui = checkCredential(request);
 
-        return resourceManager.getResource(nodeParentId, ui.userId, groupId);
+        return new HttpEntity<>(resourceManager.getResource(nodeParentId, ui.userId, groupId));
     }
 
     /**
@@ -69,34 +73,34 @@ public class ResourcesController extends AbstractController {
      * @return
      */
     @GetMapping(value = "/portfolios/{portfolio-id}", produces = {"application/xml"})
-    public String getResources(@RequestParam("group") long groupId,
-                               @PathVariable("portfolio-id") UUID portfolioId,
-                               HttpServletRequest request) throws Exception {
+    public HttpEntity<ResourceList> getResources(@RequestParam("group") long groupId,
+                                                 @PathVariable("portfolio-id") UUID portfolioId,
+                                                 HttpServletRequest request) {
 
         UserInfo ui = checkCredential(request);
 
-        return resourceManager.getResources(portfolioId, ui.userId, groupId);
+        return new HttpEntity<>(resourceManager.getResources(portfolioId, ui.userId, groupId));
     }
 
     /**
      * Modify resource content. <br>
      * PUT /rest/api/resources/resource/{node-parent-uuid}
      *
-     * @param xmlResource
+     * @param resource
      * @param groupId
      * @param parentNodeId
      * @param request
      * @return
      */
     @PutMapping(value = "/resource/{node-parent-uuid}", produces = "application/xml")
-    public String putResource(@RequestBody String xmlResource,
+    public String putResource(@RequestBody ResourceDocument resource,
                               @RequestParam("group") long groupId,
                               @PathVariable("node-parent-uuid") UUID parentNodeId,
-                              HttpServletRequest request) throws Exception {
+                              HttpServletRequest request) throws BusinessException, JsonProcessingException {
 
         UserInfo ui = checkCredential(request);
 
-        return resourceManager.changeResource(parentNodeId, xmlResource, ui.userId, groupId)
+        return resourceManager.changeResource(parentNodeId, resource, ui.userId, groupId)
                     .toString();
     }
 
@@ -104,40 +108,40 @@ public class ResourcesController extends AbstractController {
      * Add a resource (?). <br>
      * POST /rest/api/resources/{node-parent-uuid}
      *
-     * @param xmlResource
+     * @param resource
      * @param groupId
      * @param parentNodeId
      * @param request
      * @return
      */
     @PostMapping(value = "/{node-parent-uuid}", produces = "application/xml")
-    public String postResource(@RequestBody String xmlResource,
+    public String postResource(@RequestBody ResourceDocument resource,
                                @RequestParam("group") long groupId,
                                @PathVariable("node-parent-uuid") UUID parentNodeId,
-                               HttpServletRequest request) throws Exception {
+                               HttpServletRequest request) throws BusinessException {
 
         UserInfo ui = checkCredential(request);
 
-        return resourceManager.addResource(parentNodeId, xmlResource, ui.userId, groupId);
+        return resourceManager.addResource(parentNodeId, resource, ui.userId, groupId);
     }
 
     /**
      * (?) POST /rest/api/resources
      *
-     * @param xmlResource
-     * @param groupId
      * @param resource
+     * @param groupId
+     * @param resourceId
      * @param request
      * @return
      */
     @PostMapping(produces = "application/xml")
-    public String postResources(@RequestBody String xmlResource,
+    public String postResources(@RequestBody ResourceDocument resource,
                                @RequestParam("group") long groupId,
-                               @RequestParam("resource") UUID resource,
-                               HttpServletRequest request) throws Exception {
+                               @RequestParam("resource") UUID resourceId,
+                               HttpServletRequest request) throws BusinessException {
         UserInfo ui = checkCredential(request);
 
-        return resourceManager.addResource(resource, xmlResource, ui.userId, groupId);
+        return resourceManager.addResource(resourceId, resource, ui.userId, groupId);
     }
 
     /**

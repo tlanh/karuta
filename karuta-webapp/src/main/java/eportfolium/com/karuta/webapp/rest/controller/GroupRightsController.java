@@ -16,11 +16,13 @@
 package eportfolium.com.karuta.webapp.rest.controller;
 
 import eportfolium.com.karuta.business.contract.GroupManager;
+import eportfolium.com.karuta.document.GroupRightsList;
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import eportfolium.com.karuta.webapp.util.UserInfo;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
@@ -47,12 +49,12 @@ public class GroupRightsController extends AbstractController {
      *         WR="True/False"/>"; </groupRight> </groupRights>
      */
     @GetMapping(produces = "application/xml")
-    public String getGroupRights(@RequestParam("group") long groupId,
-                                 HttpServletRequest request) throws Exception {
+    public HttpEntity<GroupRightsList> getGroupRights(@RequestParam("group") long groupId,
+                                                      HttpServletRequest request) throws BusinessException {
 
         UserInfo ui = checkCredential(request);
 
-        return groupManager.getGroupRights(ui.userId, groupId);
+        return new HttpEntity<>(groupManager.getGroupRights(ui.userId, groupId));
     }
 
     /**

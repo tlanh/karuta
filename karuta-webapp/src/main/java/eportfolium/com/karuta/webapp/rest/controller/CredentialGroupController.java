@@ -22,6 +22,7 @@ import eportfolium.com.karuta.model.bean.CredentialGroup;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -81,7 +82,6 @@ public class CredentialGroupController {
             isOK = groupManager.renameCredentialGroup(groupId, label);
         } else {
             isOK = securityManager.addUserInCredentialGroups(user, Arrays.asList(groupId));
-            logger.debug("putUserInUserGroup successful, user was correctly added to the group " + groupId);
         }
 
         if (isOK)
@@ -109,9 +109,9 @@ public class CredentialGroupController {
      *         </group>
      */
     @GetMapping
-    public ResponseEntity<String> getUsersByUserGroup(@RequestParam("group") Long cgId,
-                                      @RequestParam("user") Long userId,
-                                      @RequestParam("label") String groupName) {
+    public HttpEntity<Object> getUsersByUserGroup(@RequestParam("group") Long cgId,
+                                                  @RequestParam("user") Long userId,
+                                                  @RequestParam("label") String groupName) {
 
         if (groupName != null) {
             CredentialGroup crGroup = groupManager.getCredentialGroupByName(groupName);
@@ -120,17 +120,17 @@ public class CredentialGroupController {
                 return ResponseEntity.notFound().build();
             }
 
-            return ResponseEntity.ok()
-                        .body(Long.toString(crGroup.getId()));
+            // TODO: Check whether we return just a number in original implementation
+            return new HttpEntity<>(crGroup.getId());
+
         } else if (userId != null) {
-            return ResponseEntity.ok()
-                        .body(groupManager.getCredentialGroupByUser(userId));
+            return new HttpEntity<>(groupManager.getCredentialGroupByUser(userId));
+
         } else if (cgId == null) {
-            return ResponseEntity.ok()
-                        .body(groupManager.getCredentialGroupList());
+            return new HttpEntity<>(groupManager.getCredentialGroupList());
+
         } else {
-            return ResponseEntity.ok()
-                        .body(userManager.getUsersByCredentialGroup(cgId));
+            return new HttpEntity<>(userManager.getUsersByCredentialGroup(cgId));
         }
     }
 

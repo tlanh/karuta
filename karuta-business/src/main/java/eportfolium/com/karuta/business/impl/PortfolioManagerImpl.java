@@ -19,14 +19,12 @@ import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.io.StringReader;
-import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.Map.Entry;
@@ -38,20 +36,13 @@ import java.util.zip.ZipOutputStream;
 
 import javax.persistence.criteria.Join;
 import javax.persistence.criteria.ListJoin;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathFactory;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import eportfolium.com.karuta.business.contract.*;
 import eportfolium.com.karuta.business.contract.SecurityManager;
 import eportfolium.com.karuta.consumer.repositories.*;
+import eportfolium.com.karuta.document.*;
 import eportfolium.com.karuta.model.bean.*;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.collections4.CollectionUtils;
@@ -66,13 +57,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.NamedNodeMap;
-import org.w3c.dom.NodeList;
-import org.xml.sax.InputSource;
 
-import eportfolium.com.karuta.consumer.util.DomUtils;
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.model.exception.GenericBusinessException;
 import eportfolium.com.karuta.util.JavaTimeUtil;
@@ -221,22 +206,12 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 	}
 
 	@Override
-	public String getPortfoliosByPortfolioGroup(Long portfolioGroupId) {
-		StringBuilder result = new StringBuilder();
-		result.append("<group id=\"").append(portfolioGroupId).append("\">");
-
+	public PortfolioGroupDocument getPortfoliosByPortfolioGroup(Long portfolioGroupId) {
 		List<Portfolio> portfolios = portfolioRepository.findByPortfolioGroup(portfolioGroupId);
 
-		for (Portfolio portfolio : portfolios) {
-			result.append("<portfolio");
-			result.append(" id=\"");
-			result.append(portfolio.getId().toString());
-			result.append("\"");
-			result.append(">");
-			result.append("</portfolio>");
-		}
-		result.append("</group>");
-		return result.toString();
+		return new PortfolioGroupDocument(portfolioGroupId, portfolios.stream()
+				.map(p -> new PortfolioDocument(p.getId()))
+				.collect(Collectors.toList()));
 	}
 
 	@Override
@@ -249,13 +224,11 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 	}
 
 	@Override
-	public String getPortfolio(UUID portfolioId, Long userId, Long groupId, String label,
-			String resource, String files, long substid, Integer cutoff)
-			throws BusinessException, ParserConfigurationException {
+	public PortfolioDocument getPortfolio(UUID portfolioId, Long userId, Long groupId, String label,
+			boolean resource, boolean files, long substid, Integer cutoff)
+			throws BusinessException {
 
 		Node rootNode = portfolioRepository.getPortfolioRootNode(portfolioId);
-		String header = "";
-		String footer = "";
 
 		GroupRights rights = getRightsOnPortfolio(userId, groupId, portfolioId);
 
@@ -269,102 +242,81 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		}
 
 		Long ownerId = portfolioRepository.getOwner(portfolioId);
-		boolean isOwner = ownerId == userId;
+		boolean owner = ownerId == userId;
 
-		String headerXML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><portfolio code=\"0\" id=\"" + portfolioId
-				+ "\" owner=\"" + isOwner + "\"><version>4</version>";
-
-		String data = getLinearXml(portfolioId, rootNode.getId().toString(), null, true, null, userId,
-				rights.getGroupRightInfo().getId(), rights.getGroupRightInfo().getLabel(), cutoff);
-
-		StringWriter stw = new StringWriter();
-		stw.append(headerXML + data + "</portfolio>");
-
-		if (resource != null && files != null) {
-			if (resource.equals("true") && files.equals("true")) {
-				String adressedufichier = System.getProperty("user.dir") + "/tmp_getPortfolio_" + new Date()
-						+ ".xml";
-				String adresseduzip = System.getProperty("user.dir") + "/tmp_getPortfolio_" + new Date() + ".zip";
-
-				File file = null;
-				PrintWriter ecrire;
-				try {
-					file = new File(adressedufichier);
-					ecrire = new PrintWriter(new FileOutputStream(adressedufichier));
-					ecrire.println(stw.toString());
-					ecrire.flush();
-					ecrire.close();
-					System.out.print("fichier cree ");
-				} catch (IOException ioe) {
-					System.out.print("Erreur : ");
-					ioe.printStackTrace();
-				}
-
-				try {
-					ZipOutputStream zip = new ZipOutputStream(new FileOutputStream(adresseduzip));
-					zip.setMethod(ZipOutputStream.DEFLATED);
-					zip.setLevel(Deflater.BEST_COMPRESSION);
-					File dataDirectories = new File(file.getName());
-					FileInputStream fis = new FileInputStream(dataDirectories);
-					byte[] bytes = new byte[fis.available()];
-					fis.read(bytes);
-
-					ZipEntry entry = new ZipEntry(file.getName());
-					entry.setTime(dataDirectories.lastModified());
-					zip.putNextEntry(entry);
-					zip.write(bytes);
-					zip.closeEntry();
-					fis.close();
-					zip.close();
-					file.delete();
-
-					return adresseduzip;
-				} catch (IOException fileNotFound) {
-					fileNotFound.printStackTrace();
-				}
-			}
-		}
-
-		return stw.toString();
+        return getPortfolio(portfolioId, rootNode.getId(), userId,
+                rights.getGroupRightInfo().getId(), owner, rights.getGroupRightInfo().getLabel(), cutoff);
 	}
 
-	private String getLinearXml(UUID portfolioId, String rootuuid, Node portfolio, boolean withChildren,
-			String withChildrenOfXsiType, Long userId, Long groupId, String role, Integer cutoff)
-			throws ParserConfigurationException {
-		DocumentBuilderFactory newInstance = DocumentBuilderFactory.newInstance();
-		DocumentBuilder parse = newInstance.newDocumentBuilder();
+	@Override
+    public String getZippedPortfolio(PortfolioDocument portfolio) throws IOException {
+        String filePath = System.getProperty("user.dir") + "/tmp_getPortfolio_" + new Date()
+                + ".xml";
+        String zipPath = System.getProperty("user.dir") + "/tmp_getPortfolio_" + new Date() + ".zip";
 
-		List<Pair<Node, GroupRights>> portfolioStructure = getPortfolioStructure(portfolioId, userId, groupId,
-				cutoff);
+        XmlMapper xmlMapper = new XmlMapper();
 
-		Map<String, Object[]> resolve = new HashMap<String, Object[]>();
+        try (PrintWriter ecrire = new PrintWriter(new FileOutputStream(filePath));
+             ZipOutputStream zip = new ZipOutputStream(new FileOutputStream(zipPath))) {
+            File file = new File(filePath);
+
+            ecrire.println(xmlMapper.writeValueAsString(portfolio));
+            ecrire.flush();
+
+            zip.setMethod(ZipOutputStream.DEFLATED);
+            zip.setLevel(Deflater.BEST_COMPRESSION);
+            File dataDirectories = new File(file.getName());
+            FileInputStream fis = new FileInputStream(dataDirectories);
+            byte[] bytes = new byte[fis.available()];
+            fis.read(bytes);
+
+            ZipEntry entry = new ZipEntry(file.getName());
+            entry.setTime(dataDirectories.lastModified());
+            zip.putNextEntry(entry);
+            zip.write(bytes);
+            zip.closeEntry();
+            fis.close();
+            file.delete();
+
+            return zipPath;
+        }
+    }
+
+	private PortfolioDocument getPortfolio(UUID portfolioId,
+										   UUID rootuuid,
+										   Long userId,
+										   Long groupId,
+										   boolean owner,
+										   String role,
+										   Integer cutoff) {
 		/// Node -> parent
-		Map<String, t_tree> entries = new HashMap<String, t_tree>();
+		Map<UUID, Tree> entries = new HashMap<>();
+		List<Pair<Node, GroupRights>> structure = getPortfolioStructure(portfolioId, userId, groupId);
 
-		processQuery(portfolioStructure, resolve, entries, null, parse, role);
+		processQuery(structure, entries, role);
 
-		portfolioStructure = getSharedStructure(portfolioId, userId, groupId, cutoff);
+		structure = getSharedStructure(portfolioId, userId, cutoff);
 
-		if (portfolioStructure != null) {
-			processQuery(portfolioStructure, resolve, entries, null, parse, role);
+		if (structure != null) {
+			processQuery(structure, entries, role);
 		}
 
 		/// Reconstruct functional tree
-		t_tree root = entries.get(rootuuid);
-		StringBuilder out = new StringBuilder(256);
-		if (root != null)
-			reconstructTree(out, root, entries);
+		Tree root = entries.get(rootuuid);
 
-		return out.toString();
+		if (root != null)
+			reconstructTree(root, entries);
+
+		return new PortfolioDocument(portfolioId, owner, "", entries.values().stream()
+				.map(t -> t.node)
+				.collect(Collectors.toList()));
 	}
 
-	private List<Pair<Node, GroupRights>> getPortfolioStructure(UUID portfolioId, Long userId, Long groupId,
-			Integer cutoff) {
+	private List<Pair<Node, GroupRights>> getPortfolioStructure(UUID portfolioId, Long userId, Long groupId) {
 
-		List<Pair<Node, GroupRights>> portfolioStructure = new ArrayList<Pair<Node, GroupRights>>();
+		List<Pair<Node, GroupRights>> portfolioStructure = new ArrayList<>();
 
 		Node rootNode = portfolioRepository.getPortfolioRootNode(portfolioId);
-		GroupRights rights = null;
 
 		// Cas admin, designer, owner
 		if (rootNode != null
@@ -373,7 +325,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 						|| userId == portfolioRepository.getOwner(portfolioId))) {
 			List<Node> nodes = nodeRepository.getNodesWithResources(portfolioId);
 			for (Node node : nodes) {
-				rights = new GroupRights(new GroupRightsId(new GroupRightInfo(), null), true, true, true, true, true);
+				GroupRights rights = new GroupRights(new GroupRightsId(new GroupRightInfo(), null), true, true, true, true, true);
 				portfolioStructure.add(Pair.of(node, rights));
 			}
 		}
@@ -381,33 +333,33 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		/// les bonnes données : Cas propriétaire OU cas general (via les droits
 		/// partagés)
 		else if (hasRights(userId, portfolioId)) {
-			Map<UUID, GroupRights> t_rights_22 = new HashMap<>();
+			Map<UUID, GroupRights> rights = new HashMap<>();
 
 			String login = credentialRepository.getLoginById(userId);
 //				FIXME: Devrait peut-être verifier si la personne a les droits d'y accéder?
 			List<GroupRights> grList = groupRightsRepository.getPortfolioAndUserRights(portfolioId, login,
 					groupId);
 			for (GroupRights gr : grList) {
-				if (t_rights_22.containsKey(gr.getGroupRightsId())) {
-					GroupRights original = t_rights_22.get(gr.getGroupRightsId());
+				if (rights.containsKey(gr.getGroupRightsId())) {
+					GroupRights original = rights.get(gr.getGroupRightsId());
 					original.setRead(Boolean.logicalOr(gr.isRead(), original.isRead()));
 					original.setWrite(Boolean.logicalOr(gr.isWrite(), original.isWrite()));
 					original.setDelete(Boolean.logicalOr(gr.isDelete(), original.isDelete()));
 					original.setSubmit(Boolean.logicalOr(gr.isSubmit(), original.isSubmit()));
 					original.setAdd(Boolean.logicalOr(gr.isAdd(), original.isAdd()));
 				} else {
-					t_rights_22.put(gr.getGroupRightsId(), gr);
+					rights.put(gr.getGroupRightsId(), gr);
 				}
 			}
 
-			List<Node> nodes = nodeRepository.getNodes(new ArrayList<>(t_rights_22.keySet()));
+			List<Node> nodes = nodeRepository.getNodes(new ArrayList<>(rights.keySet()));
 
 			// Sélectionne les données selon la filtration
 			for (Node node : nodes) {
-				if (t_rights_22.containsKey(node.getId())) { // Verification des droits
-					rights = t_rights_22.get(node.getId());
-					if (rights.isRead()) { // On doit au moins avoir le droit de lecture
-						portfolioStructure.add(Pair.of(node, rights));
+				if (rights.containsKey(node.getId())) { // Verification des droits
+					GroupRights groupRights = rights.get(node.getId());
+					if (groupRights.isRead()) { // On doit au moins avoir le droit de lecture
+						portfolioStructure.add(Pair.of(node, groupRights));
 					}
 				}
 			}
@@ -416,8 +368,8 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		{
 			List<Node> nodes = nodeRepository.getNodesWithResources(portfolioId);
 			for (Node node : nodes) {
-				rights = new GroupRights(true, false, false, false);
-				portfolioStructure.add(Pair.of(node, rights));
+				GroupRights groupRights = new GroupRights(true, false, false, false);
+				portfolioStructure.add(Pair.of(node, groupRights));
 			}
 		}
 
@@ -433,53 +385,51 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 	 * 
 	 * @param portfolioId
 	 * @param userId
-	 * @param groupId
 	 * @param cutoff
 	 * @return
 	 */
-	private List<Pair<Node, GroupRights>> getSharedStructure(UUID portfolioId, Long userId, Long groupId,
+	private List<Pair<Node, GroupRights>> getSharedStructure(UUID portfolioId, Long userId,
 			Integer cutoff) {
 
-		List<Pair<Node, GroupRights>> portfolioStructure = new ArrayList<Pair<Node, GroupRights>>();
+		List<Pair<Node, GroupRights>> portfolioStructure = new ArrayList<>();
 
 		if (portfolioRepository.hasSharedNodes(portfolioId)) {
-			List<Node> t_nodes = nodeRepository.getSharedNodes(portfolioId);
+			List<Node> nodes = nodeRepository.getSharedNodes(portfolioId);
 
-			Map<Integer, Set<UUID>> t_map_parentid = new HashMap<>();
-			Set<UUID> t_set_parentid = new HashSet<>();
+			Map<Integer, Set<UUID>> parentIdMap = new HashMap<>();
+			Set<UUID> parentIdSet = new HashSet<>();
 
-			for (Node t_node : t_nodes) {
-				t_set_parentid.add(t_node.getSharedNodeUuid());
+			for (Node t_node : nodes) {
+				parentIdSet.add(t_node.getSharedNodeUuid());
 			}
 
-			t_map_parentid.put(0, t_set_parentid);
+			parentIdMap.put(0, parentIdSet);
 
 			/// Les tours de boucle seront toujours <= au nombre de noeud du portfolio.
 			int level = 0;
 			boolean added = true;
-			Set<UUID> t_struc_parentid_2 = null;
 			while (added && (cutoff == null ? true : level < cutoff)) {
-				t_struc_parentid_2 = new HashSet<>();
+				Set<UUID> parentIdSet2 = new HashSet<>();
 
-				for (Node t_node : t_nodes) {
-					for (UUID t_parent_node : t_map_parentid.get(level)) {
-						if (t_node.getPortfolio().getId().equals(portfolioId)
-								&& t_node.getParentNode().getId().equals(t_parent_node)) {
-							t_struc_parentid_2.add(t_node.getId());
+				for (Node node : nodes) {
+					for (UUID t_parent_node : parentIdMap.get(level)) {
+						if (node.getPortfolio().getId().equals(portfolioId)
+								&& node.getParentNode().getId().equals(t_parent_node)) {
+							parentIdSet2.add(node.getId());
 							break;
 						}
 					}
 				}
-				t_map_parentid.put(level + 1, t_struc_parentid_2);
-				t_set_parentid.addAll(t_struc_parentid_2);
-				added = CollectionUtils.isNotEmpty(t_struc_parentid_2); // On s'arrete quand rien n'a été ajouté
+				parentIdMap.put(level + 1, parentIdSet2);
+				parentIdSet.addAll(parentIdSet2);
+				added = CollectionUtils.isNotEmpty(parentIdSet2); // On s'arrete quand rien n'a été ajouté
 				level = level + 1; // Prochaine étape
 			}
 
-			List<Node> nodes = nodeRepository.getNodes(new ArrayList<>(t_set_parentid));
-			GroupRights rights = null;
+			nodes = nodeRepository.getNodes(new ArrayList<>(parentIdSet));
+
 			for (Node node : nodes) {
-				rights = groupRightsRepository.getRightsByIdAndUser(node.getId(), userId);
+				GroupRights rights = groupRightsRepository.getRightsByIdAndUser(node.getId(), userId);
 
 				if (rights != null && rights.isRead()) { // On doit au moins avoir le droit de lecture
 					portfolioStructure.add(Pair.of(node, rights));
@@ -489,48 +439,35 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		return portfolioStructure;
 	}
 
-	public String getPortfolioShared(Long userId) {
-		StringBuilder out = new StringBuilder();
-
+	@Override
+	public PortfolioList getPortfolioShared(Long userId) {
 		List<Map<String, Object>> portfolios = portfolioRepository.getPortfolioShared(userId);
-		out.append("<portfolios>");
-		Iterator<Map<String, Object>> it = portfolios.iterator();
-		Map<String, Object> current = null;
-		while (it.hasNext()) {
-			current = it.next();
-			Long gid = MapUtils.getLong(current, "gid");
-			UUID portfolioUuid = (UUID) current.get("portfolio");
-			out.append("<portfolio gid='" + gid + "' portfolio='" + portfolioUuid.toString() + "'/>");
-		}
-		out.append("</portfolios>");
-		return out.toString();
+
+		return new PortfolioList(portfolios.stream()
+				.map(current -> new PortfolioDocument(
+						(UUID)current.get("portfolio"),
+						MapUtils.getLong(current, "gid")))
+				.collect(Collectors.toList()));
 	}
 
-	public String getPortfolioByCode(String portfolioCode, Long userId, Long groupId,
-			String resources, long substid) throws BusinessException, ParserConfigurationException {
+	@Override
+	public PortfolioDocument getPortfolioByCode(String portfolioCode, Long userId, Long groupId,
+			boolean resources, long substid) throws BusinessException {
 		Portfolio portfolio = portfolioRepository.getPortfolioFromNodeCode(portfolioCode);
 
 		if (portfolio == null) {
-			return "";
+			return null;
 		}
 
-		boolean withResources = BooleanUtils.toBoolean(resources);
-		String result = "";
-
-		if (withResources) {
-			return getPortfolio(portfolio.getId(), userId, groupId, null, null, null, substid,
+		if (resources) {
+			return getPortfolio(portfolio.getId(), userId, groupId, null, false, false, substid,
 					null);
 		} else {
-			result += "<portfolio ";
-			result += DomUtils.getXmlAttributeOutput("id", portfolio.getId().toString()) + " ";
-			result += DomUtils.getXmlAttributeOutput("root_node_id", portfolio.getRootNode().getId().toString()) + " ";
-			result += ">";
-			result += nodeManager.getNodeXmlOutput(portfolio.getRootNode().getId(), false, "nodeRes", userId,
-					groupId, null, false);
-			result += "</portfolio>";
-
+			PortfolioDocument document = new PortfolioDocument(portfolio.getId());
+			document.setNodes(Collections.singletonList(nodeManager.getNode(portfolio.getRootNode().getId(), false, "nodeRes", userId,
+					groupId, null, false)));
+			return document;
 		}
-		return result;
 	}
 
 	public GroupRights getRightsOnPortfolio(Long userId, Long groupId, UUID portfolioId) {
@@ -659,184 +596,42 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		}
 	}
 
-	public String getPortfolios(long userId, long groupId, Boolean portfolioActive,
-			long substid, Boolean portfolioProject, String projectId, Boolean countOnly, String search) {
-		StringBuilder result = new StringBuilder();
-		List<Portfolio> portfolios = getPortfolios(userId, substid, portfolioActive, portfolioProject);
-		result.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?><portfolios count=\""+portfolios.size()+"\">");
-		for( Portfolio p : portfolios ) {
-			Node n = p.getRootNode();
-			ResourceTable rctx = n.getContextResource();
-			ResourceTable rnode = n.getResource();
-			ResourceTable rcontent = n.getResResource();
-			
-			String isOwner = "N";
-			String ownerId = n.getModifUserId().toString();
-			if( Integer.parseInt(ownerId) == userId )
-				isOwner = "Y";
-			
-			result.append("<portfolio id=\"").append(p.getId().toString());
-			result.append("\" root_node_id=\"").append(p.getRootNode().getId().toString());
-			result.append("\" owner=\"").append(isOwner);
-			result.append("\" ownerid=\"").append(ownerId);
-			result.append("\" modified=\"").append(p.getModifDate().toString()).append("\">");
-			
-				String nodetype = n.getAsmType().toString();
-				result.append("<").append(nodetype).append(" id=\"").append(n.getId().toString()).append("\">");
-				
-				if(!"asmResource".equals(nodetype))
-				{
-					String metawad = n.getMetadataWad();
-					if(metawad!=null && !"".equals(metawad) )
-					{
-						result.append("<metadata-wad ").append(metawad).append("/>");
-					}
-					else
-						result.append("<metadata-wad/>");
-					
-					String metaepm = n.getMetadataEpm();
-					if(metaepm!=null && !"".equals(metaepm) )
-						result.append("<metadata-epm "+metaepm+"/>");
-					else
-						result.append("<metadata-epm/>");
-					
-					String meta = n.getMetadata();
-					if(meta!=null && !"".equals(meta))
-						result.append("<metadata "+meta+"/>");
-					else
-						result.append("<metadata/>");
-					
-					String code = n.getCode();
-					if(meta!=null && !"".equals(meta))
-						result.append("<code>").append(code).append("</code>");
-					else
-						result.append("<code/>");
-					
-					String label = n.getLabel();
-					if(label!=null && !"".equals(label))
-						result.append("<label>").append(label).append("</label>");
-					else
-						result.append("<label/>");
-						
-					String descr = n.getDescr();
-					if(descr!=null && !"".equals(descr))
-						result.append("<description>").append(descr).append("</description>");
-					else
-						result.append("<description/>");
-					
-					String semantic = n.getSemantictag();
-					if(semantic!=null && !"".equals(semantic))
-						result.append("<semanticTag>").append(semantic).append("</semanticTag>");
-					else
-						result.append("<semanticTag/>");
-				
-				String nodeUuid = n.getId().toString();
-				if( rcontent != null )
-				{
-					String resresuuid = rcontent.getId().toString();
-					if( rcontent != null && resresuuid != null && !"".equals(resresuuid) )
-					{
-						String xsitype =  rcontent.getXsiType();
-						result.append("<asmResource id='").append(resresuuid).append("' contextid='").append(nodeUuid).append("' xsi_type='").append(xsitype).append("'>");
-						String resrescont = rcontent.getContent();
-						if( resrescont != null && !"".equals(resrescont) )
-							result.append(resrescont);
-						result.append("</asmResource>");
-					}
-				}
-				
-				if( rctx != null )
-				{
-					String rescontuuid =rctx.getId().toString();
-					if( rescontuuid != null && !"".equals(rescontuuid) )
-					{
-						String xsitype = rctx.getXsiType();
-						result.append("<asmResource id='").append(rescontuuid).append("' contextid='").append(nodeUuid).append("' xsi_type='").append(xsitype).append("'>");
-						String resrescont = rctx.getContent();
-						if( resrescont != null && !"".equals(resrescont) )
-							result.append(resrescont);
-						result.append("</asmResource>");
-					}
-				}
-				
-				if( rnode != null )
-				{
-					String resnodeuuid = rnode.getId().toString();
-					if( resnodeuuid != null && !"".equals(resnodeuuid) )
-					{
-						String xsitype = rnode.getXsiType().toString();
-						result.append("<asmResource id='").append(resnodeuuid).append("' contextid='").append(nodeUuid).append("' xsi_type='").append(xsitype).append("'>");
-						String resrescont = rnode.getContent();
-						if( resrescont != null && !"".equals(resrescont) )
-							result.append(resrescont);
-						result.append("</asmResource>");
-					}
-				}
-				result.append("</"+nodetype+">");
-				result.append("</portfolio>");
-			}
+	@Override
+	public PortfolioList getPortfolios(long userId, Boolean active, long substid, Boolean project) {
+		List<Portfolio> portfolios = getPortfolios(userId, substid, active, project);
 
-		}
-		result.append("</portfolios>");
-		return result.toString();
+		return new PortfolioList(portfolios.stream()
+                .map(p -> new PortfolioDocument(p, p.getModifUserId().equals(userId)))
+                .collect(Collectors.toList()));
 	}
 
 	@Override
-	public boolean rewritePortfolioContent(String xmlPortfolio, UUID portfolioId, Long userId,
-										   Boolean portfolioActive) throws Exception {
-		StringBuffer outTrace = new StringBuffer();
-		UUID portfolioModelId = null;
+	public boolean rewritePortfolioContent(PortfolioDocument portfolio, UUID portfolioId, Long userId,
+										   Boolean portfolioActive) throws BusinessException, JsonProcessingException {
 
-		Portfolio resPortfolio = portfolioRepository.findById(portfolioId).get();
+		NodeDocument rootNode = portfolio.getNodes().stream()
+				.filter(n -> n.getType().equals("asmRoot"))
+				.findFirst()
+				.orElseThrow(() -> new GenericBusinessException("No root node found"));
 
-		if (resPortfolio != null) {
-			// Le portfolio existe donc on regarde si modèle ou pas
-			if (resPortfolio.getModelId() != null) {
-				portfolioModelId = resPortfolio.getModelId();
-			}
-		}
+		UUID rootNodeUuid = portfolio.getId() != null ? portfolio.getId() : UUID.randomUUID();
+
+		Portfolio portfolioRecord = portfolioRepository.findById(portfolioId)
+										.orElse(add(rootNodeUuid, null, userId, new Portfolio()));
 
 		if (userId == null || userId == 0L) {
-			if (resPortfolio != null)
-				userId = resPortfolio.getCredential().getId();
+			userId = portfolioRecord.getCredential().getId();
 		}
 
-		if (xmlPortfolio.length() > 0) {
-			Document doc = DomUtils.xmlString2Document(xmlPortfolio, outTrace);
+		nodeManager.writeNode(rootNode, portfolioRecord.getId(), portfolioRecord.getModelId(), userId, 0, null, null, false, false,
+				true, null, false);
 
-			org.w3c.dom.Node rootNode = (doc.getElementsByTagName("portfolio")).item(0);
-			if (rootNode == null) {
-				throw new GenericBusinessException("Root Node (portfolio) not found !");
-			} else {
-				rootNode = (doc.getElementsByTagName("asmRoot")).item(0);
+		// On récupère le noeud root généré précédemment et on l'affecte au portfolio.
+		portfolioRecord.setRootNode(nodeRepository.getRootNodeByPortfolio(portfolioRecord.getId()));
+		portfolioRecord.setActive(BooleanUtils.toInteger(portfolioActive));
 
-				UUID rootNodeUuid = UUID.randomUUID();
-				org.w3c.dom.Node idAtt = rootNode.getAttributes().getNamedItem("id");
-				if (idAtt != null) {
-					String tempId = idAtt.getNodeValue();
-					if (tempId.length() > 0) {
-						rootNodeUuid = UUID.fromString(tempId);
-					}
-				}
+		portfolioRepository.save(portfolioRecord);
 
-				if (resPortfolio != null) {
-					resPortfolio = portfolioRepository.save(resPortfolio);
-				} else {
-					resPortfolio = add(rootNodeUuid, null, userId, new Portfolio());
-				}
-
-				nodeManager.writeNode(rootNode, resPortfolio.getId(), portfolioModelId, userId, 0, null, null, false, false,
-						true, null, false);
-
-				// On récupère le noeud root généré précédemment et on l'affecte au portfolio.
-				resPortfolio.setRootNode(nodeRepository.getRootNodeByPortfolio(resPortfolio.getId()));
-				resPortfolio = portfolioRepository.save(resPortfolio);
-			}
-		}
-		if (resPortfolio != null) {
-			resPortfolio.setActive(BooleanUtils.toInteger(portfolioActive));
-			portfolioRepository.save(resPortfolio);
-		}
 		return true;
 	}
 
@@ -852,256 +647,137 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 	}
 
 	@Override
-	public UUID postPortfolioParserights(UUID portfolioId, Long userId) {
+	public UUID postPortfolioParserights(UUID portfolioId, Long userId) throws JsonProcessingException, BusinessException {
 
 		if (!credentialRepository.isAdmin(userId) && !credentialRepository.isCreator(userId))
 			return null;
 
 		boolean setPublic = false;
 
-		try {
+		resolver resolve = new resolver();
 
-			resolver resolve = new resolver();
+		// Sélection des méta-données
+		List<Node> nodes = nodeRepository.getNodes(portfolioId);
 
-			// Sélection des méta-données
-			List<Node> nodes = nodeRepository.getNodes(portfolioId);
-			Iterator<Node> it = nodes.iterator();
+		for (Node current : nodes) {
+			String uuid = current.getId().toString();
+			String meta = current.getMetadataWad();
 
-			DocumentBuilder documentBuilder;
-			DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
-			documentBuilder = documentBuilderFactory.newDocumentBuilder();
-			while (it.hasNext()) {
-				Node current = it.next();
-				String uuid = current.getId().toString();
-				String meta = current.getMetadataWad();
-				// meta = meta.replaceAll("user", login);
-				String nodeString = "<?xml version='1.0' encoding='UTF-8' standalone='no'?><transfer " + meta + "/>";
+			XmlMapper mapper = new XmlMapper();
 
-				groupright role = resolve.getUuid(uuid);
+			MetadataWadDocument metadataWad = mapper
+												.readerFor(MetadataWadDocument.class)
+												.readValue("<metadata-ward " + meta + "></metadata-wad>");
 
-				try {
-					/// parse meta
-					InputSource is = new InputSource(new StringReader(nodeString));
-					Document doc = documentBuilder.parse(is);
+			groupright role = resolve.getUuid(uuid);
 
-					/// Process attributes
-					Element attribNode = doc.getDocumentElement();
-					NamedNodeMap attribMap = attribNode.getAttributes();
+			if (metadataWad.getSeenoderoles() != null) {
+				for (String nodeRole : metadataWad.getSeenoderoles().split(" ")) {
+					role.getGroup(nodeRole).rd = 1;
 
-					String nodeRole;
-					org.w3c.dom.Node att = attribMap.getNamedItem("access");
-					if (att != null) {
-						// if(access.equalsIgnoreCase("public") || access.contains("public"))
-						// credential.postGroupRight("all",uuid,Credential.READ,portfolioUuid,userId);
-					}
-					att = attribMap.getNamedItem("seenoderoles");
-					if (att != null) {
-						StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-						while (tokens.hasMoreElements()) {
-							nodeRole = tokens.nextElement().toString();
-
-							right r = role.getGroup(nodeRole);
-							r.rd = 1;
-
-							resolve.groups.put(nodeRole, 0L);
-						}
-					}
-					att = attribMap.getNamedItem("showtoroles");
-					if (att != null) {
-						StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-						while (tokens.hasMoreElements()) {
-							nodeRole = tokens.nextElement().toString();
-
-							right r = role.getGroup(nodeRole);
-							r.rd = 0;
-
-							resolve.groups.put(nodeRole, 0L);
-						}
-					}
-					att = attribMap.getNamedItem("delnoderoles");
-					if (att != null) {
-						StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-						while (tokens.hasMoreElements()) {
-
-							nodeRole = tokens.nextElement().toString();
-							right r = role.getGroup(nodeRole);
-							r.dl = 1;
-
-							resolve.groups.put(nodeRole, 0L);
-						}
-					}
-					att = attribMap.getNamedItem("editnoderoles");
-					if (att != null) {
-						StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-						while (tokens.hasMoreElements()) {
-							nodeRole = tokens.nextElement().toString();
-							right r = role.getGroup(nodeRole);
-							r.wr = 1;
-
-							resolve.groups.put(nodeRole, 0L);
-						}
-					}
-					att = attribMap.getNamedItem("submitnoderoles");
-					if (att != null) {
-						StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-						while (tokens.hasMoreElements()) {
-							nodeRole = tokens.nextElement().toString();
-							right r = role.getGroup(nodeRole);
-							r.sb = 1;
-
-							resolve.groups.put(nodeRole, 0L);
-						}
-					}
-					att = attribMap.getNamedItem("seeresroles");
-					if (att != null) {
-						StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-						while (tokens.hasMoreElements()) {
-							nodeRole = tokens.nextElement().toString();
-							right r = role.getGroup(nodeRole);
-							r.rd = 1;
-
-							resolve.groups.put(nodeRole, 0L);
-						}
-					}
-					att = attribMap.getNamedItem("delresroles");
-					if (att != null) {
-						StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-						while (tokens.hasMoreElements()) {
-							nodeRole = tokens.nextElement().toString();
-							right r = role.getGroup(nodeRole);
-							r.dl = 1;
-
-							resolve.groups.put(nodeRole, 0L);
-						}
-					}
-					att = attribMap.getNamedItem("editresroles");
-					if (att != null) {
-						StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-						while (tokens.hasMoreElements()) {
-							nodeRole = tokens.nextElement().toString();
-							right r = role.getGroup(nodeRole);
-							r.wr = 1;
-
-							resolve.groups.put(nodeRole, 0L);
-						}
-					}
-					att = attribMap.getNamedItem("submitroles");
-					if (att != null) {
-						StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-						while (tokens.hasMoreElements()) {
-							nodeRole = tokens.nextElement().toString();
-							right r = role.getGroup(nodeRole);
-							r.sb = 1;
-
-							resolve.groups.put(nodeRole, 0L);
-						}
-					}
-					org.w3c.dom.Node actionroles = attribMap.getNamedItem("actionroles");
-					if (actionroles != null) {
-						/// Format pour l'instant: actionroles="sender:1,2;responsable:4"
-						StringTokenizer tokens = new StringTokenizer(actionroles.getNodeValue(), ";");
-						while (tokens.hasMoreElements()) {
-							nodeRole = tokens.nextElement().toString();
-							StringTokenizer data = new StringTokenizer(nodeRole, ":");
-							String nrole = data.nextElement().toString();
-							String actions = data.nextElement().toString().trim();
-							right r = role.getGroup(nrole);
-							r.rules = actions;
-
-							resolve.groups.put(nrole, 0L);
-						}
-					}
-					org.w3c.dom.Node menuroles = attribMap.getNamedItem("menuroles");
-					if (menuroles != null) {
-						/// Pour les différents items du menu
-						StringTokenizer menuline = new StringTokenizer(menuroles.getNodeValue(), ";");
-
-						while (menuline.hasMoreTokens()) {
-							String line = menuline.nextToken();
-							/// Format pour l'instant:
-							/// code_portfolio,tag_semantique,label@en/libelle@fr,reles[;autre menu]
-							String[] tokens = line.split(",");
-							String menurolename = null;
-							for (int t = 0; t < 4; ++t)
-								menurolename = tokens[3];
-
-							if (menurolename != null) {
-								// Break down list of roles
-								String[] roles = menurolename.split(" ");
-								for (int i = 0; i < roles.length; ++i)
-									resolve.groups.put(roles[i].trim(), 0L);
-							}
-						}
-					}
-					org.w3c.dom.Node notifyroles = attribMap.getNamedItem("notifyroles");
-					if (notifyroles != null) {
-						/// Format pour l'instant: notifyroles="sender responsable"
-						StringTokenizer tokens = new StringTokenizer(notifyroles.getNodeValue(), " ");
-						String merge = "";
-						if (tokens.hasMoreElements())
-							merge = tokens.nextElement().toString().trim();
-						while (tokens.hasMoreElements())
-							merge += "," + tokens.nextElement().toString().trim();
-						role.setNotify(merge);
-					}
-
-					if (portfolioRepository.isPublic(portfolioId))
-						setPublic = true;
-//						/*
-					meta = current.getMetadata();
-					nodeString = "<?xml version='1.0' encoding='UTF-8' standalone='no'?><transfer " + meta + "/>";
-					is = new InputSource(new StringReader(nodeString));
-					doc = documentBuilder.parse(is);
-					attribNode = doc.getDocumentElement();
-					attribMap = attribNode.getAttributes();
-					org.w3c.dom.Node publicatt = attribMap.getNamedItem("public");
-					if (publicatt != null && "Y".equals(publicatt.getNodeValue()))
-						setPublic = true;
-					// */
-				} catch (Exception e) {
-					e.printStackTrace();
+					resolve.groups.put(nodeRole, 0L);
 				}
 			}
 
-			/// On insère les données pré-compile
-			Iterator<String> entries = resolve.groups.keySet().iterator();
+			if (metadataWad.getShowtoroles() != null) {
+				for (String nodeRole : metadataWad.getShowtoroles().split(" ")) {
+					role.getGroup(nodeRole).rd = 0;
 
-			// Crée les groupes, ils n'existent pas
+					resolve.groups.put(nodeRole, 0L);
+				}
+			}
 
-			while (entries.hasNext()) {
+			if (metadataWad.getDelnoderoles() != null) {
+				for (String nodeRole : metadataWad.getDelnoderoles().split(" ")) {
+					role.getGroup(nodeRole).dl = 1;
+
+					resolve.groups.put(nodeRole, 0L);
+				}
+			}
+
+			if (metadataWad.getEditnoderoles() != null) {
+				for (String nodeRole : metadataWad.getEditnoderoles().split(" ")) {
+					role.getGroup(nodeRole).wr = 1;
+
+					resolve.groups.put(nodeRole, 0L);
+				}
+			}
+
+			if (metadataWad.getEditresroles() != null) {
+				for (String nodeRole : metadataWad.getEditresroles().split(" ")) {
+					role.getGroup(nodeRole).wr = 1;
+
+					resolve.groups.put(nodeRole, 0L);
+				}
+			}
+
+			if (metadataWad.getSubmitroles() != null) {
+				for (String nodeRole : metadataWad.getSubmitroles().split(" ")) {
+					role.getGroup(nodeRole).sb = 1;
+
+					resolve.groups.put(nodeRole, 0L);
+				}
+			}
+
+
+			if (metadataWad.getMenuroles() != null) {
+				for (String line : metadataWad.getMenuroles().split(";")) {
+					/// Format pour l'instant:
+					/// code_portfolio,tag_semantique,label@en/libelle@fr,reles[;autre menu]
+					String[] tokens = line.split(",");
+					String menurolename = tokens[3];
+
+					if (menurolename != null) {
+						// Break down list of roles
+						for (String s : menurolename.split(" "))
+							resolve.groups.put(s.trim(), 0L);
+					}
+				}
+			}
+
+			if (metadataWad.getNotifyroles() != null) {
+				role.setNotify(metadataWad.getNotifyroles().replace(" ", ","));
+			}
+
+			if (portfolioRepository.isPublic(portfolioId))
+				setPublic = true;
+
+			MetadataDocument metadata = mapper
+											.readerFor(MetadataDocument.class)
+											.readValue("<metadata>" + current.getMetadata() + "</metadata>");
+
+
+			if (metadata.getPublic())
+				setPublic = true;
+
+			for (String s : resolve.groups.keySet()) {
 				GroupRightInfo gri = new GroupRightInfo();
-				String label = entries.next();
 				gri.setOwner(1L);
-				gri.setLabel(label);
+				gri.setLabel(s);
 				gri.setChangeRights(false);
 				gri.setPortfolio(new Portfolio(portfolioId));
 
 				groupRightInfoRepository.save(gri);
 				Long grid = gri.getId();
-				resolve.groups.put(label, grid);
+				resolve.groups.put(s, grid);
 
-				groupInfoRepository.save(new GroupInfo(grid, 1L, label));
+				groupInfoRepository.save(new GroupInfo(grid, 1L, s));
 			}
 
 			/// Ajout des droits des noeuds
 			GroupRights groupRights = null;
 
-			Iterator<Entry<String, groupright>> rights = resolve.resolve.entrySet().iterator();
-			while (rights.hasNext()) {
-				Entry<String, groupright> entry = rights.next();
-				String uuid = entry.getKey();
+			for (Entry<String, groupright> entry : resolve.resolve.entrySet()) {
 				groupright gr = entry.getValue();
 
-				Iterator<Entry<String, right>> rightiter = gr.rights.entrySet().iterator();
-				while (rightiter.hasNext()) {
-					Entry<String, right> rightelem = rightiter.next();
+				for (Entry<String, right> rightelem : gr.rights.entrySet()) {
 					String group = rightelem.getKey();
 					long grid = resolve.groups.get(group);
 					right rightval = rightelem.getValue();
 					groupRights = new GroupRights();
 					groupRights.setId(new GroupRightsId());
 					groupRights.setGroupRightInfo(new GroupRightInfo(grid));
-					groupRights.setGroupRightsId(UUID.fromString(uuid));
+					groupRights.setGroupRightsId(UUID.fromString(entry.getKey()));
 					groupRights.setRead(BooleanUtils.toBoolean(rightval.rd));
 					groupRights.setWrite(BooleanUtils.toBoolean(rightval.wr));
 					groupRights.setDelete(BooleanUtils.toBoolean(rightval.dl));
@@ -1130,71 +806,72 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 
 			// Rendre le portfolio public si nécessaire
 			if (setPublic)
-				groupManager.setPublicState(userId, portfolioId, setPublic);
-		} catch (Exception e) {
-			logger.error("MESSAGE: " + e.getMessage() + " " + e.getLocalizedMessage());
+				groupManager.setPublicState(userId, portfolioId, true);
 		}
 
 		return portfolioId;
 	}
 
 	@Override
-	public String addPortfolio(String xmlPortfolio, long userId, long groupId, UUID portfolioModelId,
+	public PortfolioList addPortfolio(PortfolioDocument portfolioDocument, long userId, long groupId, UUID portfolioModelId,
 							   long substid, boolean parseRights, String projectName)
-			throws BusinessException, Exception {
+			throws BusinessException, JsonProcessingException {
 		if (!credentialRepository.isAdmin(userId) && !credentialRepository.isCreator(userId))
 			throw new GenericBusinessException("FORBIDDEN : No admin right");
-
-		StringBuffer outTrace = new StringBuffer();
 
 		// Si le modèle est renseigné, on ignore le XML poste et on récupère le contenu
 		// du modèle a la place
 		// FIXME Inutilisé, nous instancions / copions un portfolio
 		if (portfolioModelId != null)
-			xmlPortfolio = getPortfolio(portfolioModelId, userId, groupId, null, null, null, substid, null);
+			portfolioDocument = getPortfolio(portfolioModelId, userId, groupId, null, false, false, substid, null);
 
-		Portfolio portfolio = null;
-		if (xmlPortfolio.length() > 0) {
-			Document doc = DomUtils.xmlString2Document(xmlPortfolio, outTrace);
+		Optional<NodeDocument> nodeDocument = portfolioDocument.getNodes()
+					.stream()
+					.filter(n -> n.getType().equals("asmRoot")
+									&& n.getResources() != null
+									&& !n.getResources().isEmpty())
+					.findFirst();
 
-			// Vérifier si le code est déjà utilisé par un portfolio.
-			XPath xPath = XPathFactory.newInstance().newXPath();
-			String filterRes = "//*[local-name()='asmRoot']/*[local-name()='asmResource']/*[local-name()='code']";
-			NodeList nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
-
-			if (nodelist.getLength() > 0) {
-				String code = nodelist.item(0).getTextContent();
-				if (projectName != null) {
-					// Find if it contains a project name
-					int dot = code.indexOf(".");
-					if (dot < 0) // Doesn't exist, add it
-						code = projectName + "." + code;
-					else // Replace
-						code = projectName + code.substring(dot);
-				}
-
-				// Simple query
-				if (nodeRepository.isCodeExist(code)) {
-					throw new GenericBusinessException("CONFLICT : Existing code.");
-				}
-				nodelist.item(0).setTextContent(code);
-			}
-
-			org.w3c.dom.Node rootNode = (doc.getElementsByTagName("portfolio")).item(0);
-			if (rootNode == null) {
-				throw new Exception("Root Node (portfolio) not found !");
-			} else {
-				rootNode = (doc.getElementsByTagName("asmRoot")).item(0);
-
-				UUID uuid = UUID.randomUUID();
-
-				portfolio = add(uuid, null, userId, new Portfolio());
-				nodeManager.writeNode(rootNode, portfolio.getId(), portfolioModelId, userId, 0, uuid, null,
-						false, false, false, null, parseRights);
-				// On récupère le noeud root généré précédemment et on l'affecte au portfolio.
-				portfolio.setRootNode(nodeRepository.getRootNodeByPortfolio(portfolio.getId()));
-			}
+		if (!nodeDocument.isPresent()) {
+			throw new GenericBusinessException("Exception handling node");
 		}
+
+		NodeDocument rootNode = nodeDocument.get();
+
+		Optional<ResourceDocument> resourceDocument = rootNode
+				.getResources()
+				.stream()
+				.filter(r -> r.getCode() != null)
+				.findFirst();
+
+		if (resourceDocument.isPresent()) {
+			String code = resourceDocument.get().getCode();
+
+			if (projectName != null) {
+				int dot = code.indexOf(".");
+
+				if (dot < 0) // Doesn't exist, add it
+					code = projectName + "." + code;
+				else // Replace
+					code = projectName + code.substring(dot);
+			}
+
+			if (nodeRepository.isCodeExist(code)) {
+				throw new GenericBusinessException("CONFLICT : Existing code.");
+			}
+
+			resourceDocument.get().setCode(code);
+		}
+
+		UUID uuid = UUID.randomUUID();
+
+		Portfolio portfolio = add(uuid, null, userId, new Portfolio());
+
+		nodeManager.writeNode(rootNode, portfolio.getId(), portfolioModelId, userId, 0, uuid, null,
+				false, false, false, null, parseRights);
+
+		// On récupère le noeud root généré précédemment et on l'affecte au portfolio.
+		portfolio.setRootNode(nodeRepository.getRootNodeByPortfolio(portfolio.getId()));
 
 		portfolio.setActive(1);
 		portfolio.setModelId(portfolioModelId);
@@ -1211,215 +888,196 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		/// Ajoute la personne dans ce groupe
 		groupUserRepository.save(new GroupUser(roleId, userId));
 
-		String result = "<portfolios>";
-		result += "<portfolio ";
-		result += DomUtils.getXmlAttributeOutput("id", portfolio.getId().toString()) + " ";
-		result += "/>";
-		result += "</portfolios>";
-		return result;
+		return new PortfolioList(
+				Collections.singletonList(new PortfolioDocument(portfolio.getId())));
 	}
 
+	@Override
 	public String importZippedPortfolio(String path, String userName, InputStream inputStream, Long userId, Long groupId,
 										String modelId, Long credentialSubstitutionId,
-										boolean parseRights, String projectName) throws BusinessException, FileNotFoundException, Exception {
-		if (!credentialRepository.isAdmin(userId) && !credentialRepository.isCreator(userId))
-			throw new GenericBusinessException("403 FORBIDDEN : No admin right");
+										boolean parseRights, String projectName) throws BusinessException, IOException {
+        if (!credentialRepository.isAdmin(userId) && !credentialRepository.isCreator(userId))
+            throw new GenericBusinessException("403 FORBIDDEN : No admin right");
 
-		if (projectName == null)
-			projectName = "";
-		else
-			projectName = projectName.trim();
+        if (projectName == null)
+            projectName = "";
+        else
+            projectName = projectName.trim();
 
-		DataInputStream inZip = new DataInputStream(inputStream);
-		// Parse the request
-		System.out.println(inputStream);
+        DataInputStream inZip = new DataInputStream(inputStream);
 
-		String filename;
-		String[] xmlFiles;
-		String[] allFiles;
-		byte[] buff = new byte[0x100000]; // 1MB buffer
+        String filename;
+        String[] xmlFiles;
+        String[] allFiles;
+        byte[] buff = new byte[0x100000]; // 1MB buffer
 
-		String outsideDir = path.substring(0, path.lastIndexOf(File.separator)) + "_files" + File.separator;
-		File outsideDirectoryFile = new File(outsideDir);
-		System.out.println(outsideDir);
-		// if the directory does not exist, create it
-		if (!outsideDirectoryFile.exists()) {
-			outsideDirectoryFile.mkdir();
-		}
+        String outsideDir = path.substring(0, path.lastIndexOf(File.separator)) + "_files" + File.separator;
+        File outsideDirectoryFile = new File(outsideDir);
 
-		// Création de l'archive au format zip.
-		String portfolioUuidPreliminaire = UUID.randomUUID().toString();
-		filename = outsideDir + "xml_" + portfolioUuidPreliminaire + ".zip";
-		FileOutputStream outZip = new FileOutputStream(filename);
+        // if the directory does not exist, create it
+        if (!outsideDirectoryFile.exists()) {
+            outsideDirectoryFile.mkdir();
+        }
 
-		int len;
+        // Création de l'archive au format zip.
+        String portfolioUuidPreliminaire = UUID.randomUUID().toString();
+        filename = outsideDir + "xml_" + portfolioUuidPreliminaire + ".zip";
+        FileOutputStream outZip = new FileOutputStream(filename);
 
-		while ((len = inZip.read(buff)) != -1) {
-			outZip.write(buff, 0, len);
-		}
+        int len;
 
-		inZip.close();
-		outZip.close();
+        while ((len = inZip.read(buff)) != -1) {
+            outZip.write(buff, 0, len);
+        }
 
-		// -- unzip --
-		fileManager.unzip(filename, outsideDir + portfolioUuidPreliminaire + File.separator);
+        inZip.close();
+        outZip.close();
 
-		// Unzip just the next zip level. I hope there will be no zipped documents...
-		String[] zipFiles = fileManager.findFiles(outsideDir + portfolioUuidPreliminaire + File.separator, "zip");
-		for (int i = 0; i < zipFiles.length; ++i) {
-			fileManager.unzip(zipFiles[i], outsideDir + portfolioUuidPreliminaire + File.separator);
-		}
+        final String destination = outsideDir + portfolioUuidPreliminaire + File.separator;
 
-		xmlFiles = fileManager.findFiles(outsideDir + portfolioUuidPreliminaire + File.separator, "xml");
-		allFiles = fileManager.findFiles(outsideDir + portfolioUuidPreliminaire + File.separator, null);
+        // -- unzip --
+        fileManager.unzip(filename, destination);
 
-		////// Lecture du fichier de portfolio
-		StringBuffer outTrace = new StringBuffer();
-		//// Importation du portfolio
-		// --- Lecture fichier XML ----
-		///// Pour associer l'ancien uuid -> nouveau, pour les fichiers
-		Map<UUID, UUID> resolve = new HashMap<>();
-		Portfolio portfolio = null;
-		boolean hasLoaded = false;
+        // Unzip just the next zip level. I hope there will be no zipped documents...
+        String[] zipFiles = fileManager.findFiles(destination, "zip");
 
-		try {
-			for (int i = 0; i < xmlFiles.length; i++) {
-				String xmlFilepath = xmlFiles[i];
-				String xmlFilename = xmlFilepath.substring(xmlFilepath.lastIndexOf(File.separator));
-				if (xmlFilename.contains("_"))
-					continue; // Case when we add an XML in the portfolio
+        for (String zipFile : zipFiles) {
+            fileManager.unzip(zipFile, destination);
+        }
 
-				BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(xmlFilepath), "UTF8"));
-				String line;
-				StringBuilder sb = new StringBuilder();
+        xmlFiles = fileManager.findFiles(destination, "xml");
+        allFiles = fileManager.findFiles(destination, null);
 
-				while ((line = br.readLine()) != null) {
-					sb.append(line.trim());
-				}
-				br.close();
-				String xml = "?";
-				xml = sb.toString();
+        ////// Lecture du fichier de portfolio
+        //// Importation du portfolio
+        // --- Lecture fichier XML ----
+        ///// Pour associer l'ancien uuid -> nouveau, pour les fichiers
+        Map<UUID, UUID> resolve = new HashMap<>();
+        Portfolio portfolio = null;
+        boolean hasLoaded = false;
 
-				portfolio = new Portfolio();
+        for (String xmlFilepath : xmlFiles) {
+            String xmlFilename = xmlFilepath.substring(xmlFilepath.lastIndexOf(File.separator));
+            if (xmlFilename.contains("_"))
+                continue; // Case when we add an XML in the portfolio
 
-				if (xml.contains("<portfolio")) // Le porfolio (peux mieux faire)
-				{
-					Document doc = DomUtils.xmlString2Document(xml, outTrace);
+            BufferedReader br = new BufferedReader(
+                    new InputStreamReader(new FileInputStream(xmlFilepath), StandardCharsets.UTF_8));
 
-					// Find code
-					/// Cherche si on a deje envoye quelque chose
-					XPath xPath = XPathFactory.newInstance().newXPath();
-					String filterRes = "//*[local-name()='asmRoot']/*[local-name()='asmResource']/*[local-name()='code']";
-					NodeList nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
+            String line;
+            StringBuilder sb = new StringBuilder();
 
-					if (nodelist.getLength() > 0) {
-						String code = nodelist.item(0).getTextContent();
+            while ((line = br.readLine()) != null) {
+                sb.append(line.trim());
+            }
 
-						if (!"".equals(projectName)) // If a new name has been specified
-						{
-							// Find if it contains a project name
-							int dot = code.indexOf(".");
-							if (dot > 0)
-								code = projectName + code.substring(dot);
-							else // If no dot, it's a project, skip it
-								continue;
+            br.close();
+            String xml = sb.toString();
 
-							// Check if new code exists
-							if (nodeRepository.isCodeExist(code))
-								throw new GenericBusinessException("409 Conflict : Existing code.");
+            portfolio = new Portfolio();
 
-							// Replace content
-							nodelist.item(0).setTextContent(code);
-						} else // Otherwise, check if it exists
-						{
-							// Simple query
-							if (nodeRepository.isCodeExist(code))
-								throw new GenericBusinessException("409 Conflict : Existing code.");
-						}
-					}
+            PortfolioDocument document = new XmlMapper()
+                    .readerFor(PortfolioDocument.class)
+                    .readValue(xml);
 
-					// Check if it needs replacing
-					org.w3c.dom.Node rootNode = (doc.getElementsByTagName("portfolio")).item(0);
-					if (rootNode == null)
-						throw new Exception("Root Node (portfolio) not found !");
-					else {
-						rootNode = (doc.getElementsByTagName("asmRoot")).item(0);
+            Optional<NodeDocument> asmRoot = document.getNodes().stream()
+                    .filter(n -> n.getType().equals("asmRoot"))
+                    .findFirst();
 
-						UUID uuid = UUID.randomUUID();
+            if (!asmRoot.isPresent())
+                continue;
 
-						add(uuid, null, userId, portfolio);
-						nodeManager.writeNode(rootNode, portfolio.getId(), null, userId, 0, uuid,
-								null, false, false, false, resolve, parseRights);
-						// On récupère le noeud root généré précédemment et on l'affecte au portfolio.
-						portfolio.setRootNode(nodeRepository.getRootNodeByPortfolio(portfolio.getId()));
-					}
+            Optional<ResourceDocument> resource = asmRoot.get()
+                    .getResources()
+                    .stream()
+                    .findFirst();
 
-					portfolio.setActive(1);
-					portfolioRepository.save(portfolio);
+            if (resource.isPresent()) {
+                String code = resource.get().getCode();
 
-					/// Create base group
-					securityManager.addRole(portfolio.getId(), "all", userId);
+                if (!"".equals(projectName)) { // If a new name has been specified
+                    // Find if it contains a project name
+                    int dot = code.indexOf(".");
 
-					/// Finalement on crée un rôle de designer
-					Long groupid = securityManager.addRole(portfolio.getId(), "designer", userId);
+                    if (dot > 0)
+                        code = projectName + code.substring(dot);
+                    else // If no dot, it's a project, skip it
+                        continue;
+                }
 
-					/// Ajoute la personne dans ce groupe
-					groupUserRepository.save(new GroupUser(groupid, userId));
+                if (nodeRepository.isCodeExist(code))
+                    throw new GenericBusinessException("409 Conflict : Existing code.");
+            }
 
-					hasLoaded = true;
-				}
-			}
-		} catch (Exception e) {
-			throw e;
-		}
+            UUID uuid = UUID.randomUUID();
 
-		if (hasLoaded)
-			for (int i = 0; i < allFiles.length; i++) {
-				String fullPath = allFiles[i];
-				String tmpFileName = fullPath.substring(fullPath.lastIndexOf(File.separator) + 1);
+            add(uuid, null, userId, portfolio);
 
-				if (!tmpFileName.contains("_"))
-					continue; // We want ressources now, they have '_' in their name
-				int index = tmpFileName.indexOf("_");
-				if (index == -1)
-					index = tmpFileName.indexOf(".");
-				int last = tmpFileName.lastIndexOf(File.separator);
-				if (last == -1)
-					last = 0;
-				String uuid = tmpFileName.substring(last, index);
+            nodeManager.writeNode(asmRoot.get(), portfolio.getId(), null, userId, 0, uuid,
+                    null, false, false, false, resolve, parseRights);
 
-				String lang;
-				try {
-					lang = tmpFileName.substring(index + 1, index + 3);
+            // On récupère le noeud root généré précédemment et on l'affecte au portfolio.
+            portfolio.setRootNode(nodeRepository.getRootNodeByPortfolio(portfolio.getId()));
+            portfolio.setActive(1);
 
-					if ("un".equals(lang)) // Hack sort of fixing previous implementation
-						lang = "en";
-				} catch (Exception ex) {
-					lang = "";
-				}
+            portfolioRepository.save(portfolio);
 
-				// Attention on initialise la ligne file
-				// avec l'UUID d'origine de l'asmContext parent
-				// Il sera mis e jour avec l'UUID asmContext final dans writeNode
-				try {
-					UUID resolved = resolve.get(uuid); /// New uuid
-					String sessionval = passwdGen(24);
-					// session.getId()
-					// FIX ... there is no session id in RESTFUL webServices so generate a mocked
-					// one in place
-					File file = new File(fullPath);
-					String backend = configurationManager.get("backendserver");
+            /// Create base group
+            securityManager.addRole(portfolio.getId(), "all", userId);
 
-					if (resolved != null) {
-						/// Have to send it in FORM, compatibility with regular file posting
-						fileManager.rewriteFile(sessionval, backend, userName, resolved, lang, file);
-					}
-				} catch (Exception ex) {
-					// Le nom du fichier ne commence pas par un UUID,
-					// ce n'est donc pas une ressource
-					ex.printStackTrace();
-				}
-			}
+            /// Finalement on crée un rôle de designer
+            Long groupid = securityManager.addRole(portfolio.getId(), "designer", userId);
+
+            /// Ajoute la personne dans ce groupe
+            groupUserRepository.save(new GroupUser(groupid, userId));
+
+            hasLoaded = true;
+        }
+
+        if (hasLoaded) {
+            for (String fullPath : allFiles) {
+                String tmpFileName = fullPath.substring(fullPath.lastIndexOf(File.separator) + 1);
+
+                if (!tmpFileName.contains("_"))
+                    continue; // We want ressources now, they have '_' in their name
+                int index = tmpFileName.indexOf("_");
+                if (index == -1)
+                    index = tmpFileName.indexOf(".");
+                int last = tmpFileName.lastIndexOf(File.separator);
+                if (last == -1)
+                    last = 0;
+                String uuid = tmpFileName.substring(last, index);
+
+                String lang;
+
+                lang = tmpFileName.substring(index + 1, index + 3);
+
+                if ("un".equals(lang)) // Hack sort of fixing previous implementation
+                    lang = "en";
+
+                // Attention on initialise la ligne file
+                // avec l'UUID d'origine de l'asmContext parent
+                // Il sera mis e jour avec l'UUID asmContext final dans writeNode
+                try {
+                    UUID resolved = resolve.get(UUID.fromString(uuid)); /// New uuid
+                    String sessionval = passwdGen(24);
+                    // session.getId()
+                    // FIX ... there is no session id in RESTFUL webServices so generate a mocked
+                    // one in place
+                    File file = new File(fullPath);
+                    String backend = configurationManager.get("backendserver");
+
+                    if (resolved != null) {
+                        /// Have to send it in FORM, compatibility with regular file posting
+                        fileManager.rewriteFile(sessionval, backend, userName, resolved, lang, file);
+                    }
+                } catch (Exception ex) {
+                    // Le nom du fichier ne commence pas par un UUID,
+                    // ce n'est donc pas une ressource
+                    ex.printStackTrace();
+                }
+            }
+        }
 
 		File zipfile = new File(filename);
 		zipfile.delete();
@@ -1429,6 +1087,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		return portfolio.getId().toString();
 	}
 
+	@Override
 	public String instanciatePortfolio(String portfolioId, String srccode, String tgtcode, Long id,
 			int groupId, boolean copyshared, String groupname, boolean setOwner) {
 		// TODO Auto-generated method stub
@@ -1463,6 +1122,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		return 0;
 	}
 
+	@Override
 	public Long getPortfolioGroupIdFromLabel(String groupLabel, Long userId) {
 		Optional<PortfolioGroup> portfolioGroup = portfolioGroupRepository.findByLabel(groupLabel);
 
@@ -1473,6 +1133,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		}
 	}
 
+	@Override
 	public String getPortfolioGroupList() {
 		class TreeNode {
 			String nodeContent;
@@ -1546,26 +1207,13 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 	}
 
 	@Override
-	public String getPortfolioGroupListFromPortfolio(UUID portfolioId) {
-		List<PortfolioGroupMembers> pgmList = portfolioGroupMembersRepository.getByPortfolioID(portfolioId);
+	public PortfolioGroupList getPortfolioGroupListFromPortfolio(UUID portfolioId) {
+		List<PortfolioGroupMembers> groupMembers = portfolioGroupMembersRepository.getByPortfolioID(portfolioId);
 
-		final StringBuilder result = new StringBuilder();
-		result.append("<portfolio>");
-
-		for (PortfolioGroupMembers pgm : pgmList) {
-			Long portfolioGid = pgm.getPortfolioGroup().getId();
-
-			if (pgm.getPortfolioGroup() != null && !(portfolioGid == null || portfolioGid == 0L)) {
-				result.append("<group");
-				result.append(" id=\"");
-				result.append(pgm.getPortfolioGroup().getId());
-				result.append("\">");
-				result.append(pgm.getPortfolioGroup().getLabel());
-				result.append("</group>");
-			}
-		}
-		result.append("</portfolio>");
-		return result.toString();
+		return new PortfolioGroupList(groupMembers.stream()
+				.map(PortfolioGroupMembers::getPortfolioGroup)
+				.map(PortfolioGroupDocument::new)
+				.collect(Collectors.toList()));
 	}
 
 	public Long addPortfolioGroup(String groupname, String type, Long parentId, Long userId) {
@@ -1609,112 +1257,28 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 	}
 
 	@Override
-	public String getRolesByPortfolio(UUID portfolioId, Long userId) {
+	public GroupInfoList getRolesByPortfolio(UUID portfolioId, Long userId) {
 		GroupRights rights = getRightsOnPortfolio(userId, 0L, portfolioId);
 		if (!rights.isRead())
 			return null;
 
-		List<GroupInfo> giList = groupInfoRepository.getByPortfolio(portfolioId);
+		List<GroupInfo> groupInfos = groupInfoRepository.getByPortfolio(portfolioId);
 
-		String result = "<groups>";
-		for (GroupInfo gi : giList) {
-			result += "<group ";
-			result += DomUtils.getXmlAttributeOutput("id", gi.getId().toString()) + " ";
-			result += DomUtils.getXmlAttributeOutput("templateId", gi.getGroupRightInfo().getId().toString()) + " ";
-			result += ">";
-			result += DomUtils.getXmlElementOutput("groupid", gi.getId().toString()) + " ";
-			result += DomUtils.getXmlElementOutput("groupname", gi.getLabel());
-			result += DomUtils.getXmlElementOutput("roleid", gi.getGroupRightInfo().getId().toString()) + " ";
-			result += DomUtils.getXmlElementOutput("rolename", gi.getGroupRightInfo().getLabel()) + " ";
-			result += "</group>";
-		}
-		result += "</groups>";
-
-		return result;
+		return new GroupInfoList(groupInfos.stream()
+				.map(GroupInfoDocument::new)
+				.collect(Collectors.toList()));
 	}
 
 	@Override
-	public String getGroupRightsInfos(Long userId, UUID portfolioId) throws BusinessException {
+	public GroupRightInfoList getGroupRightsInfos(Long userId, UUID portfolioId) throws BusinessException {
 		if (!credentialRepository.isAdmin(userId))
 			throw new GenericBusinessException("403 FORBIDDEN : no admin right");
 
-		List<GroupRightInfo> resList = groupRightInfoRepository.getByPortfolioAndUser(portfolioId, userId);
-		String result = "<groupRightsInfos>";
-		for (GroupRightInfo res : resList) {
-			result += "<groupRightInfo ";
-			result += DomUtils.getXmlAttributeOutput("grid", res.getId().toString()) + " ";
-			result += ">";
-			result += "<label>" + res.getLabel() + "</label>";
-			result += "<owner>" + String.valueOf(res.getOwner()) + "</owner>";
-			result += "</groupRightInfo>";
-		}
+		List<GroupRightInfo> groups = groupRightInfoRepository.getByPortfolioAndUser(portfolioId, userId);
 
-		result += "</groupRightsInfos>";
-		return result;
-	}
-
-	@Override
-	public String addRoleInPortfolio(Long userId, UUID portfolioId, String data) throws BusinessException {
-		if (!credentialRepository.isAdmin(userId) && !portfolioRepository.isOwner(portfolioId, userId))
-			throw new GenericBusinessException("FORBIDDEN 403 : No admin right");
-
-		String value = "erreur";
-		/// Parse data
-		DocumentBuilder documentBuilder;
-		Document document = null;
-		try {
-			DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
-			documentBuilder = documentBuilderFactory.newDocumentBuilder();
-			InputSource is = new InputSource(new StringReader(data));
-			document = documentBuilder.parse(is);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
-		/// Problème de parsage
-		if (document == null)
-			return value;
-
-		try {
-			Element labelNode = document.getDocumentElement();
-			String label = null;
-
-			if (labelNode != null) {
-				org.w3c.dom.Node labelText = labelNode.getFirstChild();
-				if (labelText != null)
-					label = labelText.getNodeValue();
-			}
-
-			if (label == null)
-				return value;
-			/// Création du groupe de droit
-
-			Long grid = 0L;
-			final GroupRightInfo gri = new GroupRightInfo();
-			gri.setOwner(userId);
-			gri.setLabel(label);
-			gri.setPortfolio(new Portfolio(portfolioId));
-
-			try {
-				groupRightInfoRepository.save(gri);
-				grid = gri.getId();
-			} catch (Exception e) {
-			}
-
-			labelNode.setAttribute("id", Long.toString(grid));
-
-			/// Récupère les données avec identifiant mis à jour
-			StringWriter stw = new StringWriter();
-			Transformer serializer = TransformerFactory.newInstance().newTransformer();
-			DOMSource source = new DOMSource(document);
-			StreamResult stream = new StreamResult(stw);
-			serializer.transform(source, stream);
-			value = stw.toString();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
-		return value;
+		return new GroupRightInfoList(groups.stream()
+				.map(GroupRightInfoDocument::new)
+				.collect(Collectors.toList()));
 	}
 
 	@Override

@@ -17,10 +17,12 @@ package eportfolium.com.karuta.webapp.rest.controller;
 
 import eportfolium.com.karuta.business.contract.GroupManager;
 import eportfolium.com.karuta.business.contract.PortfolioManager;
+import eportfolium.com.karuta.document.GroupInfoList;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import eportfolium.com.karuta.webapp.util.UserInfo;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
@@ -48,10 +50,10 @@ public class GroupsController extends AbstractController {
      *         LABEL</group> ... </groups>
      */
     @GetMapping(produces = "application/xml")
-    public String getGroups(HttpServletRequest request) throws Exception {
+    public HttpEntity<GroupInfoList> getGroups(HttpServletRequest request) {
         UserInfo ui = checkCredential(request);
 
-        return groupManager.getUserGroups(ui.userId);
+        return new HttpEntity<>(groupManager.getUserGroups(ui.userId));
     }
 
     /**
@@ -63,11 +65,11 @@ public class GroupsController extends AbstractController {
      * @return
      */
     @GetMapping(value = "/{portfolio-id}", produces = "application/xml")
-    public String getGroupsPortfolio(@PathVariable("portfolio-id") UUID portfolioId,
-                                     HttpServletRequest request) {
+    public HttpEntity<GroupInfoList> getGroupsPortfolio(@PathVariable("portfolio-id") UUID portfolioId,
+                                                        HttpServletRequest request) {
 
         UserInfo ui = checkCredential(request);
 
-        return portfolioManager.getRolesByPortfolio(portfolioId, ui.userId);
+        return new HttpEntity<>(portfolioManager.getRolesByPortfolio(portfolioId, ui.userId));
     }
 }

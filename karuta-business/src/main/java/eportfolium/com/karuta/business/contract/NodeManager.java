@@ -19,51 +19,33 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import javax.xml.parsers.ParserConfigurationException;
-
+import com.fasterxml.jackson.core.JsonProcessingException;
+import eportfolium.com.karuta.document.*;
 import eportfolium.com.karuta.model.bean.GroupRights;
 import eportfolium.com.karuta.model.bean.Node;
 import eportfolium.com.karuta.model.exception.BusinessException;
 
 public interface NodeManager {
 
-	String getNode(UUID nodeId, boolean withChildren, Long userId, Long groupId, String label,
-			Integer cutoff) throws BusinessException, ParserConfigurationException;
-
-	String getChildNodes(String parentNodeCode, String parentSemtag, String semtag) throws Exception;
+	NodeDocument getNode(UUID nodeId, boolean withChildren, Long userId, Long groupId, String label,
+			Integer cutoff) throws BusinessException;
 
 	GroupRights getRights(Long userId, Long groupId, UUID nodeId);
 
-	void resetRights(List<Node> children) throws ParserConfigurationException;
+	void resetRights(List<Node> children) throws JsonProcessingException;
 
-	/**
-	 * <node uuid=""> <role name=""> <right RD="" WR="" DL="" />
-	 * <action>reset</action> </role> </node> ====== <portfolio uuid="">
-	 * <xpath>XPATH</xpath> <role name=""> <right RD="" WR="" DL="" />
-	 * <action>reset</action> </role> </portfolio> ====== <portfoliogroup name="">
-	 * <xpath>XPATH</xpath> <role name=""> <right RD="" WR="" DL="" />
-	 * <action>reset</action> </role> </portfoliogroup>
-	 * 
-	 * @param xmlNode
-	 * @param label
-	 * @throws BusinessException
-	 * @throws Exception
-	 */
-	void changeRights(String xmlNode, Long id, Long credentialSubstitutionId, String label)
-			throws BusinessException, Exception;
-
-	String changeRights(Long userId, UUID nodeId, String role, GroupRights rights) throws BusinessException;
+	String changeRights(Long userId, UUID nodeId, String label, GroupRights rights);
 
 	UUID getPortfolioIdFromNode(Long userId, UUID nodeId) throws BusinessException;
 
-	String getNodeXmlOutput(UUID nodeId, boolean withChildren, String withChildrenOfXsiType, Long userId,
+	NodeDocument getNode(UUID nodeId, boolean withChildren, String withChildrenOfXsiType, Long userId,
 			Long groupId, String label, boolean checkSecurity);
 
-	String getNodeBySemanticTag(UUID portfolioId, String semantictag, Long userId, Long groupId)
+	NodeDocument getNodeBySemanticTag(UUID portfolioId, String semantictag, Long userId, Long groupId)
 			throws BusinessException;
 
-	String getNodesBySemanticTag(Long userId, Long groupId, UUID portfolioId,
-			String semanticTag) throws BusinessException;
+	NodeList getNodesBySemanticTag(Long userId, Long groupId, UUID portfolioId,
+								   String semanticTag) throws BusinessException;
 
 	/**
 	 * forcedParentUuid permet de forcer l'uuid parent, independamment de l'attribut
@@ -84,63 +66,66 @@ public interface NodeManager {
 	 * @return
 	 * @throws BusinessException
 	 */
-	UUID writeNode(org.w3c.dom.Node node, UUID portfolioId, UUID portfolioModelId, Long userId, int ordrer,
-					 UUID forcedId, UUID forcedParentId, boolean sharedResParent, boolean sharedNodeResParent,
-					 boolean rewriteId, Map<UUID, UUID> resolve, boolean parseRights) throws BusinessException;
+	UUID writeNode(NodeDocument node, UUID portfolioId, UUID portfolioModelId, Long userId, int ordrer,
+				   UUID forcedId, UUID forcedParentId, boolean sharedResParent, boolean sharedNodeResParent,
+				   boolean rewriteId, Map<UUID, UUID> resolve, boolean parseRights)
+			throws BusinessException, JsonProcessingException;
 
 	boolean isCodeExist(String code, UUID uuid);
 
 	boolean isCodeExist(String code);
 
-	String executeMacroOnNode(long userId, UUID nodeId, String macroName);
+	String executeMacroOnNode(long userId, UUID nodeId, String macroName)
+			throws JsonProcessingException, BusinessException;
 
-	String getNodeMetadataWad(UUID nodeId, Long userId, Long groupId)
+	MetadataWadDocument getNodeMetadataWad(UUID nodeId, Long userId, Long groupId)
 			throws BusinessException;
 
-	Integer changeNode(UUID nodeId, String xmlNode, Long userId, Long groupId)
+	Integer changeNode(UUID nodeId, NodeDocument node, Long userId, Long groupId)
 			throws Exception;
 
 	void removeNode(UUID nodeId, Long userId, long groupId) throws BusinessException;
 
 	long getRoleByNode(Long userId, UUID nodeUuid, String role) throws BusinessException;
 
-	String changeNodeMetadataWad(UUID nodeId, String xmlMetawad, Long userId, Long groupId)
-			throws Exception;
+	String changeNodeMetadataWad(UUID nodeId, MetadataWadDocument metadata, Long userId, Long groupId)
+			throws BusinessException, JsonProcessingException;
 
 	boolean changeParentNode(Long userid, UUID id, UUID parentId) throws BusinessException;
 
 	Long moveNodeUp(UUID nodeId);
 
-	String addNodeFromModelBySemanticTag(UUID nodeId, String semanticTag, Long userId,
-			Long groupId) throws Exception;
+	NodeList addNodeFromModelBySemanticTag(UUID nodeId, String semanticTag, Long userId,
+			Long groupId) throws BusinessException, JsonProcessingException;
 
-	String changeNodeMetadataEpm(UUID nodeId, String xmlMetadataEpm, Long id, long groupId)
-			throws Exception;
+	String changeNodeMetadataEpm(UUID nodeId, MetadataEpmDocument metadata, Long id, long groupId)
+			throws BusinessException, JsonProcessingException;
 
-	String changeNodeMetadata(UUID nodeId, String xmlNode, Long id, long groupId)
-			throws Exception;
+	String changeNodeMetadata(UUID nodeId, MetadataDocument metadata, Long id, long groupId)
+			throws BusinessException, JsonProcessingException;
 
-	String changeNodeContext(UUID nodeId, String xmlNode, Long userId, Long groupId)
-			throws BusinessException, Exception;
+	String changeNodeContext(UUID nodeId, ResourceDocument resource, Long userId, Long groupId)
+			throws BusinessException;
 
-	String changeNodeResource(UUID nodeId, String xmlNode, Long id, Long groupId)
-			throws BusinessException, Exception;
+	String changeNodeResource(UUID nodeId, ResourceDocument resource, Long id, Long groupId)
+			throws BusinessException;
 
-	String addNode(UUID parentNodeId, String xmlNode, Long userId, Long groupId,
-			boolean forcedUuid) throws Exception;
+	NodeList addNode(UUID parentNodeId, NodeDocument node, Long userId, Long groupId,
+			boolean forcedUuid) throws JsonProcessingException, BusinessException;
 
-	String getNodeWithXSL(UUID nodeId, String xslFile, String parameters, Long id, Long groupId)
-			throws Exception;
+	NodeDocument getNodeWithXSL(UUID nodeId, String xslFile, String parameters, Long id, Long groupId)
+			throws BusinessException;
 
-	String getNodes(String rootNodeCode, String childSemtag, Long userId, Long groupId,
+	NodeList getNodes(String rootNodeCode, String childSemtag, Long userId, Long groupId,
 			String parentSemtag, String parentNodeCode, Integer cutoff) throws BusinessException;
 
 	String executeAction(Long userId, UUID nodeId, String action, String role);
 
-	String copyNode(UUID destId, String tag, String code, UUID sourceId, Long userId,
-			Long groupId);
+	UUID copyNode(UUID destId, String tag, String code, UUID sourceId, Long userId,
+			Long groupId) throws BusinessException, JsonProcessingException;
 
-	UUID importNode(UUID parentId, String semtag, String code, UUID sourceId, Long id, long groupId);
+	UUID importNode(UUID parentId, String semtag, String code, UUID sourceId, Long id, long groupId)
+			throws BusinessException, JsonProcessingException;
 
 	int updateNodeCode(UUID nodeId, String code);
 

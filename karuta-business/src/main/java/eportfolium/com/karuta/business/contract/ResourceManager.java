@@ -17,25 +17,27 @@ package eportfolium.com.karuta.business.contract;
 
 import java.util.UUID;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import eportfolium.com.karuta.document.ResourceDocument;
+import eportfolium.com.karuta.document.ResourceList;
 import eportfolium.com.karuta.model.exception.BusinessException;
 
 public interface ResourceManager {
 
-	String getResource(UUID parentNodeId, Long userId, Long groupId) throws BusinessException;
+	ResourceDocument getResource(UUID parentNodeId, Long userId, Long groupId) throws BusinessException;
 
-	String getResource(UUID nodeId);
+	ResourceList getResources(UUID portfolioId, Long userId, Long groupId);
 
-	String getResources(UUID portfolioId, Long userId, Long groupId) throws Exception;
+	Integer changeResource(UUID parentNodeId, ResourceDocument resource, Long userId, Long groupId)
+			throws BusinessException, JsonProcessingException;
 
-	Integer changeResource(UUID parentNodeId, String in, Long userId, Long groupId)
-			throws BusinessException, Exception;
-
-	String addResource(UUID parentNodeId, String in, Long userId, Long groupId)
-			throws BusinessException, Exception;
+	String addResource(UUID parentNodeId, ResourceDocument resource, Long userId, Long groupId)
+			throws BusinessException;
 
 	void removeResource(UUID resourceId, Long userId, Long groupId) throws BusinessException;
 
-	void changeResourceByXsiType(UUID nodeId, String xsiType, String content, Long userId) throws Exception;
+	void changeResourceByXsiType(UUID nodeId, String xsiType, ResourceDocument resource, Long userId)
+			throws BusinessException;
 
 	int addResource(UUID id, UUID parentId, String xsiType, String content, UUID portfolioModelId,
 						   boolean sharedNodeRes, boolean sharedRes, Long userId);

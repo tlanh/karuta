@@ -15,16 +15,16 @@
 
 package eportfolium.com.karuta.business.contract;
 
-import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.UUID;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import eportfolium.com.karuta.document.*;
 import eportfolium.com.karuta.model.bean.GroupRights;
 import eportfolium.com.karuta.model.bean.Portfolio;
 import eportfolium.com.karuta.model.exception.BusinessException;
-
-import javax.xml.parsers.ParserConfigurationException;
 
 /**
  * @author mlengagne
@@ -42,31 +42,40 @@ public interface PortfolioManager {
 
 	boolean removePortfolioGroups(Long portfolioGroupId);
 
-	String getPortfolio(UUID portfolioId, Long userId, Long groupId, String label,
-			String resource, String files, long substid, Integer cutoff)
-			throws BusinessException, ParserConfigurationException;
+	PortfolioDocument getPortfolio(UUID portfolioId,
+								   Long userId,
+								   Long groupId,
+								   String label,
+								   boolean resource,
+								   boolean files,
+								   long substid,
+								   Integer cutoff) throws BusinessException;
 
-	String getPortfolioByCode(String portfolioCode, Long userId, Long groupId, String resources,
-			long substid) throws BusinessException, ParserConfigurationException;
+	String getZippedPortfolio(PortfolioDocument portfolio) throws IOException;
 
-	String getPortfoliosByPortfolioGroup(Long portfolioGroupId);
+	PortfolioDocument getPortfolioByCode(String portfolioCode,
+										 Long userId,
+										 Long groupId,
+										 boolean resources,
+										 long substid) throws BusinessException;
+
+	PortfolioGroupDocument getPortfoliosByPortfolioGroup(Long portfolioGroupId);
 
 	Long getPortfolioGroupIdFromLabel(String groupLabel, Long userId);
 
 	String getPortfolioGroupList();
 
-	String getPortfolioGroupListFromPortfolio(UUID portfolioId);
+	PortfolioGroupList getPortfolioGroupListFromPortfolio(UUID portfolioId);
 
-	String getPortfolios(long userId, long groupId, Boolean portfolioActive,
-			long substid, Boolean portfolioProject, String projectId, Boolean countOnly, String search);
+	PortfolioList getPortfolios(long userId, Boolean active, long substid, Boolean project);
 
-	String getPortfolioShared(Long userId);
+	PortfolioList getPortfolioShared(Long userId);
 
 	GroupRights getRightsOnPortfolio(Long userId, Long groupId, UUID portfolioId);
 
 	int changePortfolioActive(UUID portfolioId, Boolean active);
 
-	UUID postPortfolioParserights(UUID portfolioId, Long userId);
+	UUID postPortfolioParserights(UUID portfolioId, Long userId) throws JsonProcessingException, BusinessException;
 
 	boolean changePortfolioDate(final UUID nodeId, final UUID portfolioId);
 
@@ -86,27 +95,25 @@ public interface PortfolioManager {
 	Portfolio changePortfolioConfiguration(UUID portfolioId, Boolean portfolioActive, Long userId)
 			throws BusinessException;
 
-	boolean rewritePortfolioContent(String xmlPortfolio, UUID portfolioId, Long userId, Boolean portfolioActive)
-			throws BusinessException, Exception;
+	boolean rewritePortfolioContent(PortfolioDocument portfolio, UUID portfolioId, Long userId, Boolean portfolioActive)
+			throws BusinessException, JsonProcessingException;
 
 	String instanciatePortfolio(String portfolioId, String srccode, String tgtcode, Long id,
 			int groupId, boolean copyshared, String groupname, boolean setOwner);
 
 	String importZippedPortfolio(String path, String userName, InputStream fileInputStream, Long id, Long groupId,
 								 String modelId, Long credentialSubstitutionId, boolean instantiate, String projectName)
-			throws BusinessException, FileNotFoundException, Exception;
+			throws BusinessException, IOException;
 
-	String addPortfolio(String xmlPortfolio, long userId, long groupId,
+	PortfolioList addPortfolio(PortfolioDocument portfolio, long userId, long groupId,
 			UUID portfolioModelId, long substid, boolean parseRights, String projectName)
-			throws BusinessException, Exception;
+			throws BusinessException, JsonProcessingException;
 
-	String getGroupRightsInfos(Long id, UUID portfolioId) throws BusinessException;
-
-	String addRoleInPortfolio(Long userId, UUID portfolioUuid, String data) throws BusinessException;
+	GroupRightInfoList getGroupRightsInfos(Long id, UUID portfolioId) throws BusinessException;
 
 	String getRoleByPortfolio(String role, UUID portfolioId, Long userId);
 
-	String getRolesByPortfolio(UUID portfolioId, Long userId);
+	GroupInfoList getRolesByPortfolio(UUID portfolioId, Long userId);
 
 	UUID copyPortfolio(UUID portfolioId, String srccode, String tgtcode, Long userId, boolean setOwner)
 			throws Exception;

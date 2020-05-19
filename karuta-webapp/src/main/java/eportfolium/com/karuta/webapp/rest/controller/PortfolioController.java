@@ -15,71 +15,38 @@
 
 package eportfolium.com.karuta.webapp.rest.controller;
 
-
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
-import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import javax.servlet.ServletConfig;
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.Result;
-import javax.xml.transform.Source;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.stream.StreamResult;
-import javax.xml.transform.stream.StreamSource;
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathExpressionException;
-import javax.xml.xpath.XPathFactory;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import eportfolium.com.karuta.business.contract.*;
+import eportfolium.com.karuta.business.contract.SecurityManager;
+import eportfolium.com.karuta.document.NodeDocument;
+import eportfolium.com.karuta.document.PortfolioDocument;
+import eportfolium.com.karuta.document.PortfolioList;
+import eportfolium.com.karuta.document.ResourceDocument;
 import eportfolium.com.karuta.model.exception.GenericBusinessException;
 import eportfolium.com.karuta.webapp.util.UserInfo;
-import org.apache.commons.io.IOUtils;
-import org.apache.http.Header;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.StatusLine;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.message.BasicHeader;
-import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.util.MimeTypeUtils;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
-import eportfolium.com.karuta.business.contract.ConfigurationManager;
-import eportfolium.com.karuta.business.contract.NodeManager;
-import eportfolium.com.karuta.business.contract.PortfolioManager;
-import eportfolium.com.karuta.business.contract.SecurityManager;
-import eportfolium.com.karuta.business.contract.UserManager;
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
-import eportfolium.com.karuta.webapp.util.DomUtils;
 
 @RestController
 @RequestMapping("/portfolios")
@@ -102,6 +69,9 @@ public class PortfolioController extends AbstractController {
     @Autowired
     private NodeManager nodeManager;
 
+    @Autowired
+    private ResourceManager resourceManager;
+
     @InjectLogger
     static private Logger logger;
 
@@ -110,7 +80,7 @@ public class PortfolioController extends AbstractController {
      * GET /rest/api/portfolios/portfolio/{portfolio-id}
      *
      * @param portfolioId
-     * @param resource
+     * @param resources
      * @param files              if set with resource, return a zip file
      * @param export             if set, return XML as a file download
      * @param lang
@@ -126,43 +96,35 @@ public class PortfolioController extends AbstractController {
      *         </portfolio>
      */
     @GetMapping(value = "/portfolio/{portfolio-id}", produces = {"application/xml", "application/json",
-        "application/zip", "application/octet-stream"})
-    public Object getPortfolio(@PathVariable("portfolio-id") UUID portfolioId,
-                               @RequestParam("resources") String resource,
-                               @RequestParam("files") String files,
-                               @RequestParam("export") String export,
-                               @RequestParam("lang") String lang,
-                               @RequestParam("level") Integer cutoff,
-                               HttpServletRequest request) throws Exception {
+            "application/zip", "application/octet-stream"})
+    public HttpEntity<Object> getPortfolio(@PathVariable("portfolio-id") UUID portfolioId,
+                                           @RequestParam("resources") boolean resources,
+                                           @RequestParam("files") boolean files,
+                                           @RequestParam("export") String export,
+                                           @RequestParam("lang") String lang,
+                                           @RequestParam("level") Integer cutoff,
+                                           HttpServletRequest request) throws BusinessException, IOException {
 
         UserInfo ui = checkCredential(request);
 
-        String portfolio = portfolioManager.getPortfolio(portfolioId, ui.userId, 0L,
-                this.label, resource, "", ui.subId, cutoff);
+        PortfolioDocument portfolio = portfolioManager.getPortfolio(portfolioId, ui.userId, 0L,
+                this.label, resources, false, ui.subId, cutoff);
 
-        /// Finding back code. Not really pretty
-        Date time = new Date();
         SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
-        String timeFormat = dt.format(time);
-        Document doc = DomUtils.xmlString2Document(portfolio, new StringBuffer());
-        NodeList codes = doc.getDocumentElement().getElementsByTagName("code");
-        // Le premier c'est celui du root
-        Node codenode = codes.item(0);
-        String code = "";
-        if (codenode != null)
-            code = codenode.getTextContent();
-        // Sanitize code
-        code = code.replace("_", "");
+        String timeFormat = dt.format(new Date());
+
+        String code = portfolio.getCode().replace("_", "");
 
         if (export != null) {
             return ResponseEntity
                     .ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename = \"" + code + "-" + timeFormat + ".xml\"")
                     .body(portfolio);
-        } else if (resource != null && files != null) {
+        } else if (resources && files) {
+            // TODO: Rely on PortfolioManager#getZippedPortfolio
+
             //// Cas du renvoi d'un ZIP
-            HttpSession session = request.getSession(true);
-            File tempZip = getZipFile(portfolioId, portfolio, lang, doc, session);
+            File tempZip = getZipFile(portfolio, lang, ui.userId);
 
             /// Return zip file
             RandomAccessFile f = new RandomAccessFile(tempZip.getAbsoluteFile(), "r");
@@ -176,112 +138,82 @@ public class PortfolioController extends AbstractController {
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE)
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename = \"" + code + "-" + timeFormat + ".zip")
-                    .build();
+                    .body(b);
         } else {
-            return ResponseEntity.ok()
-                        .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_XML_VALUE)
-                        .body(portfolio);
+            return new HttpEntity<>(portfolio);
         }
 
     }
 
-    private File getZipFile(UUID portfolioId, String portfolioContent, String lang, Document doc,
-                            HttpSession session) throws IOException, XPathExpressionException {
+    private File getZipFile(PortfolioDocument portfolio, final String lang, Long userId)
+            throws IOException {
 
-        /// Temp file in temp directory
-        File tempDir = new File(System.getProperty("java.io.tmpdir", null));
-        File tempZip = File.createTempFile(portfolioId.toString(), ".zip", tempDir);
+        File tempZip = File.createTempFile(portfolio.getId().toString(), ".zip");
 
         FileOutputStream fos = new FileOutputStream(tempZip);
         ZipOutputStream zos = new ZipOutputStream(fos);
 
         /// Write XML file to zip
-        ZipEntry ze = new ZipEntry(portfolioId.toString() + ".xml");
+        ZipEntry ze = new ZipEntry(portfolio.getId().toString() + ".xml");
         zos.putNextEntry(ze);
 
-        byte[] bytes = portfolioContent.getBytes("UTF-8");
+        byte[] bytes = new XmlMapper()
+                                .writeValueAsString(portfolio)
+                                .getBytes(StandardCharsets.UTF_8);
         zos.write(bytes);
-
         zos.closeEntry();
 
-        /// Find all fileid/filename
-        XPath xPath = XPathFactory.newInstance().newXPath();
-        String filterRes = "//*[local-name()='asmResource']/*[local-name()='fileid' and text()]";
-        NodeList nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
+        List<NodeDocument> nodesWithFiles = portfolio
+                .getNodes()
+                .stream()
+                .filter(n -> n.getResources()
+                        .stream()
+                        .anyMatch(r -> r.getLang() == lang && r.getFileid() != null))
+                .collect(Collectors.toList());
 
-        /// Fetch all files
-        for (int i = 0; i < nodelist.getLength(); ++i) {
-            Node res = nodelist.item(i);
-            /// Check if fileid has a lang
-            Node langAtt = res.getAttributes().getNamedItem("lang");
-            String filterName = "";
-            if (langAtt != null) {
-                lang = langAtt.getNodeValue();
-                filterName = ".//*[local-name()='filename' and @lang='" + lang + "' and text()]";
-            } else {
-                filterName = ".//*[local-name()='filename' and @lang and text()]";
-            }
+        // Loop through the different nodes that have file to
+        // fetch them.
+        nodesWithFiles.forEach(node -> {
+            ResourceDocument resource = node.getResources()
+                                                .stream()
+                                                .filter(r -> r.getFileid() != null)
+                                                .findFirst()
+                                                .get();
 
-            Node p = res.getParentNode(); // fileid -> resource
-            Node gp = p.getParentNode(); // resource -> context
-            Node uuidNode = gp.getAttributes().getNamedItem("id");
-            String uuid = uuidNode.getTextContent();
+            String filename = resource.getFilename();
+            String resourceLang = resource.getLang() != null ? resource.getLang() : "fr";
 
-            NodeList textList = (NodeList) xPath.compile(filterName).evaluate(p, XPathConstants.NODESET);
-            String filename = "";
-            if (textList.getLength() != 0) {
-                Element fileNode = (Element) textList.item(0);
-                filename = fileNode.getTextContent();
-                lang = fileNode.getAttribute("lang"); // In case it's a general fileid, fetch first filename (which can
-                // break things if nodes are not clean)
-                if ("".equals(lang))
-                    lang = "fr";
-            }
+            if (filename.equals(""))
+                return;
 
-            String backend = configurationManager.get("backendserver");
-            String url = backend + "/resources/resource/file/" + uuid + "?lang=" + lang;
-            HttpGet get = new HttpGet(url);
+            String fullname = String.format("%s_%s.%s",
+                    node.getId().toString(),
+                    resourceLang,
+                    filename.substring(filename.lastIndexOf(".") + 1));
 
-            // Transfer sessionid so that local request still get security checked
-            get.addHeader("Cookie", "JSESSIONID=" + session.getId());
-
-            // Send request
-            CloseableHttpClient client = HttpClients.createDefault();
-            CloseableHttpResponse ret = client.execute(get);
-            HttpEntity entity = ret.getEntity();
-
-            // Put specific name for later recovery
-            if ("".equals(filename))
-                continue;
-            int lastDot = filename.lastIndexOf(".");
-            if (lastDot < 0)
-                lastDot = 0;
-            String filenameext = filename.substring(0); /// find extension
-            int extindex = filenameext.lastIndexOf(".") + 1;
-            filenameext = uuid + "_" + lang + "." + filenameext.substring(extindex);
-
-            // Save it to zip file
-            InputStream content = entity.getContent();
-            ze = new ZipEntry(filenameext);
+            // Save entry to zip file
             try {
-                int totalread = 0;
-                zos.putNextEntry(ze);
+                // TODO: Properly fetch the resource ; looks like it hasn't
+                //  been imported from original code
+                // String resourceDocument = resourceManager.getResource(node.getId(), userId, 0L);
+
+                InputStream content = null;
+                ZipEntry entry = new ZipEntry(fullname);
+
+                zos.putNextEntry(entry);
                 int inByte;
                 byte[] buf = new byte[4096];
+
                 while ((inByte = content.read(buf)) != -1) {
-                    totalread += inByte;
                     zos.write(buf, 0, inByte);
                 }
-                System.out.println("FILE: " + filenameext + " -> " + totalread);
+
                 content.close();
                 zos.closeEntry();
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            EntityUtils.consume(entity);
-            ret.close();
-            client.close();
-        }
+        });
 
         zos.close();
         fos.close();
@@ -293,7 +225,7 @@ public class PortfolioController extends AbstractController {
      * Return the portfolio from its code. <br>
      * GET /rest/api/portfolios/code/{code}
      *
-     * @see #putPortfolio(String, UUID, String, HttpServletRequest)
+     * @see #putPortfolio(PortfolioDocument, UUID, boolean, HttpServletRequest)
      *
      * @param groupId
      * @param code
@@ -302,27 +234,18 @@ public class PortfolioController extends AbstractController {
      * @return
      */
     @GetMapping(value = "/portfolio/code/{code}", produces = {"application/json", "application/xml"})
-    public Object getPortfolioByCode(@RequestParam("group") long groupId,
-                                     @PathVariable("code") String code,
-                                     @RequestParam("resources") String resources,
-                                     HttpServletRequest request) throws Exception {
+    public HttpEntity<PortfolioDocument> getPortfolioByCode(@RequestParam("group") long groupId,
+                                                            @PathVariable("code") String code,
+                                                            @RequestParam("resources") boolean resources,
+                                                            HttpServletRequest request) throws BusinessException {
         UserInfo ui = checkCredential(request);
 
         if (ui.userId == 0) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
-        if (resources == null)
-            resources = "false";
-
-        String returnValue = portfolioManager
-                .getPortfolioByCode(code, ui.userId, groupId, resources, ui.subId);
-
-        if ("".equals(returnValue)) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("");
-        }
-
-        return returnValue;
+        return new HttpEntity<>(portfolioManager
+                .getPortfolioByCode(code, ui.userId, groupId, resources, ui.subId));
     }
 
     /**
@@ -338,8 +261,6 @@ public class PortfolioController extends AbstractController {
      * @param cutoff
      * @param public_var
      * @param project
-     * @param count
-     * @param search
      * @param request
      * @return <?xml version=\"1.0\" encoding=\"UTF-8\"?> <portfolios>
      *         <portfolio id="uuid" root_node_id="uuid" owner="Y/N" ownerid="uid"
@@ -350,73 +271,39 @@ public class PortfolioController extends AbstractController {
      *         </portfolios>
      */
     @GetMapping(consumes = "application/xml", produces = {"application/json", "application/xml"})
-    public String getPortfolios(@RequestParam("group") long groupId,
-                                @RequestParam("active") String active,
-                                @RequestParam("userid") Integer userId,
-                                @RequestParam("code") String code,
-                                @RequestParam("portfolio") UUID portfolioId,
-                                @RequestParam("level") Integer cutoff,
-                                @RequestParam("public") String public_var,
-                                @RequestParam("project") String project,
-                                @RequestParam("count") String count,
-                                @RequestParam("search") String search,
-                                HttpServletRequest request) throws ParserConfigurationException, BusinessException {
+    public HttpEntity<Object> getPortfolios(@RequestParam("group") long groupId,
+                                            @RequestParam("active") boolean active,
+                                            @RequestParam("userid") Integer userId,
+                                            @RequestParam("code") String code,
+                                            @RequestParam("portfolio") UUID portfolioId,
+                                            @RequestParam("level") Integer cutoff,
+                                            @RequestParam("public") String public_var,
+                                            @RequestParam("project") boolean project,
+                                            HttpServletRequest request) throws BusinessException {
 
         UserInfo ui = checkCredential(request);
 
         if (portfolioId != null) {
-            return portfolioManager.getPortfolio(portfolioId, ui.userId,
-                    groupId, this.label, null, null, ui.subId, cutoff);
+            return new HttpEntity<>(portfolioManager.getPortfolio(portfolioId, ui.userId,
+                    groupId, this.label, false, false, ui.subId, cutoff));
+
+        } else if (code != null) {
+            return new HttpEntity<>(portfolioManager.getPortfolioByCode(code, ui.userId,
+                        groupId, false, ui.subId));
+
+        } else if (public_var != null) {
+            long publicid = userManager.getUserId("public");
+
+            return new HttpEntity<>(portfolioManager.getPortfolios(publicid,
+                        active, 0, project));
+
+        } else if (userId != null && securityManager.isAdmin(ui.userId)) {
+            return new HttpEntity<>(portfolioManager.getPortfolios(userId,
+                        active, ui.subId, project));
+
         } else {
-            String portfolioCode = null;
-            Boolean countOnly = false;
-            Boolean portfolioActive;
-            Boolean portfolioProject = null;
-            String portfolioProjectId = null;
-
-
-            if (active != null && (active.equals("false") || active.equals("0")))
-                portfolioActive = false;
-            else
-                portfolioActive = true;
-
-            if (project != null && (project.equals("false") || project.equals("0")))
-                portfolioProject = false;
-            else if (project != null && (project.equals("true") || project.equals("1")))
-                portfolioProject = true;
-            else if (project != null && project.length() > 0)
-                portfolioProjectId = project;
-            else
-                portfolioProject = null;
-
-
-            if (count != null && (count.equals("true") || count.equals("1")))
-                countOnly = true;
-            else
-                countOnly = false;
-
-
-            portfolioCode = code;
-
-            if (portfolioCode != null) {
-                return portfolioManager.getPortfolioByCode(portfolioCode, ui.userId,
-                        groupId, null, ui.subId).toString();
-            } else {
-                if (public_var != null) {
-                    long publicid = userManager.getUserId("public");
-
-                    return portfolioManager.getPortfolios(publicid, groupId,
-                            portfolioActive, 0, portfolioProject, portfolioProjectId, countOnly, search);
-
-                } else if (userId != null && securityManager.isAdmin(ui.userId)) {
-                    return portfolioManager.getPortfolios(userId, groupId,
-                            portfolioActive, ui.subId, portfolioProject, portfolioProjectId, countOnly, search);
-
-                } else { /// For user logged in
-                    return portfolioManager.getPortfolios(ui.userId, groupId,
-                            portfolioActive, ui.subId, portfolioProject, portfolioProjectId, countOnly, search);
-                }
-            }
+            return new HttpEntity<>(portfolioManager.getPortfolios(ui.userId,
+                        active, ui.subId, project));
         }
     }
 
@@ -424,7 +311,7 @@ public class PortfolioController extends AbstractController {
      * Rewrite portfolio content. <br>
      * PUT /rest/api/portfolios/portfolios/{portfolio-id}
      *
-     * @param xmlPortfolio       GET /rest/api/portfolios/portfolio/{portfolio-id}
+     * @param portfolio       GET /rest/api/portfolios/portfolio/{portfolio-id}
      *                           and/or the asm format
      * @param portfolioId
      * @param active
@@ -432,22 +319,14 @@ public class PortfolioController extends AbstractController {
      * @return
      */
     @PutMapping(value = "/portfolio/{portfolio-id}", consumes = "application/xml", produces = "application/xml")
-    public String putPortfolio(@RequestBody String xmlPortfolio,
+    public String putPortfolio(@RequestBody PortfolioDocument portfolio,
                                @PathVariable("portfolio-id") UUID portfolioId,
-                               @RequestParam("active") String active,
-                               HttpServletRequest request) throws Exception {
+                               @RequestParam("active") boolean active,
+                               HttpServletRequest request) throws BusinessException, JsonProcessingException {
 
         UserInfo ui = checkCredential(request);
 
-        Boolean portfolioActive;
-
-        if ("false".equals(active) || "0".equals(active))
-            portfolioActive = false;
-        else
-            portfolioActive = true;
-
-
-        portfolioManager.rewritePortfolioContent(xmlPortfolio, portfolioId, ui.userId, portfolioActive);
+        portfolioManager.rewritePortfolioContent(portfolio, portfolioId, ui.userId, active);
 
         return "";
     }
@@ -462,7 +341,8 @@ public class PortfolioController extends AbstractController {
      */
     @PostMapping("/portfolio/{portfolio-id}/parserights")
     public ResponseEntity<String> postPortfolio(@PathVariable("portfolio-id") UUID portfolioId,
-                                                HttpServletRequest request) {
+                                                HttpServletRequest request)
+            throws BusinessException, JsonProcessingException {
 
         UserInfo ui = checkCredential(request);
 
@@ -484,10 +364,10 @@ public class PortfolioController extends AbstractController {
      * @return
      */
     @PutMapping(value = "/portfolio/{portfolio-id}/setOwner/{newOwnerId}", consumes = "application/xml",
-        produces = "application/xml")
+            produces = "application/xml")
     public Boolean putPortfolioOwner(@PathVariable("portfolio-id") UUID portfolioId,
-                                    @PathVariable("newOwnerId") long newOwner, 
-                                    HttpServletRequest request) {
+                                     @PathVariable("newOwnerId") long newOwner,
+                                     HttpServletRequest request) {
 
         UserInfo ui = checkCredential(request);
 
@@ -533,10 +413,10 @@ public class PortfolioController extends AbstractController {
      *                           uuid, search for the portfolio by code
      * @param tgtcode            code we want the portfolio to have. If code already
      *                           exists, adds a number after
-     * @param copy               y/null Make a copy of shared nodes, rather than
+     * @param copyshared         y/null Make a copy of shared nodes, rather than
      *                           keeping the link to the original data
      * @param groupname
-     * @param setowner           true/null Set the current user instanciating the
+     * @param setOwner           true/null Set the current user instanciating the
      *                           portfolio as owner. Otherwise keep the one that
      *                           created it.
      * @param request
@@ -547,9 +427,9 @@ public class PortfolioController extends AbstractController {
                                                            @PathVariable("portfolio-id") String portfolioId,
                                                            @RequestParam("sourcecode") String srccode,
                                                            @RequestParam("targetcode") String tgtcode,
-                                                           @RequestParam("copyshared") String copy,
+                                                           @RequestParam("copyshared") boolean copyshared,
                                                            @RequestParam("groupname") String groupname,
-                                                           @RequestParam("owner") String setowner,
+                                                           @RequestParam("owner") boolean setOwner,
                                                            HttpServletRequest request) throws BusinessException {
 
         UserInfo ui = checkCredential(request);
@@ -558,13 +438,6 @@ public class PortfolioController extends AbstractController {
         if (!securityManager.isAdmin(ui.userId) && !securityManager.isCreator(ui.userId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("403");
         }
-
-        boolean setOwner = false;
-        if ("true".equals(setowner))
-            setOwner = true;
-        boolean copyshared = false;
-        if ("y".equalsIgnoreCase(copy))
-            copyshared = true;
 
         /// Vérifiez si le code existe, trouvez-en un qui convient, sinon. Eh.
         String newcode = tgtcode;
@@ -585,7 +458,7 @@ public class PortfolioController extends AbstractController {
         }
 
         return ResponseEntity.ok()
-                    .body(returnValue);
+                .body(returnValue);
     }
 
     /**
@@ -593,7 +466,7 @@ public class PortfolioController extends AbstractController {
      * POST /rest/api/portfolios/copy/{portfolio-id}
      *
      * @see #postInstanciatePortfolio(int, String,
-     *      String, String, String, String, String, HttpServletRequest)
+     *      String, String, boolean, String, boolean, HttpServletRequest)
      *
      * @param portfolioId
      * @param srccode
@@ -604,10 +477,10 @@ public class PortfolioController extends AbstractController {
      */
     @PostMapping("/copy/{portfolio-id}")
     public ResponseEntity<String> postCopyPortfolio(@PathVariable("portfolio-id") UUID portfolioId,
-                                      @RequestParam("sourcecode") String srccode,
-                                      @RequestParam("targetcode") String tgtcode,
-                                      @RequestParam("owner") String setowner,
-                                      HttpServletRequest request) throws Exception {
+                                                    @RequestParam("sourcecode") String srccode,
+                                                    @RequestParam("targetcode") String tgtcode,
+                                                    @RequestParam("owner") boolean setowner,
+                                                    HttpServletRequest request) throws Exception {
 
         UserInfo ui = checkCredential(request);
 
@@ -623,46 +496,11 @@ public class PortfolioController extends AbstractController {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("code exist");
         }
 
-        boolean setOwner = false;
-
-        if ("true".equals(setowner))
-            setOwner = true;
-
         String returnValue = portfolioManager
-                .copyPortfolio(portfolioId, srccode, tgtcode, ui.userId, setOwner)
+                .copyPortfolio(portfolioId, srccode, tgtcode, ui.userId, setowner)
                 .toString();
 
         return ResponseEntity.ok().body(returnValue);
-    }
-
-    /**
-     * As a form, import xml into the database. <br>
-     * POST /rest/api/portfolios
-     *
-     * @param xmlPortfolio
-     * @param groupId
-     * @param modelId
-     * @param srceType
-     * @param srceUrl
-     * @param xsl
-     * @param instance
-     * @param projectName
-     * @param request
-     * @return
-     */
-    @PostMapping(consumes = "multipart/form-data", produces = "application/xml")
-    public String postFormPortfolio(@RequestParam("uploadfile") String xmlPortfolio,
-                                    @RequestParam("group") int groupId,
-                                    @RequestParam("model") UUID modelId,
-                                    @RequestParam("srce") String srceType,
-                                    @RequestParam("srceurl") String srceUrl,
-                                    @RequestParam("xsl") String xsl,
-                                    @RequestParam("instance") String instance,
-                                    @RequestParam("project") String projectName,
-                                    ServletConfig sc,
-                                    HttpServletRequest request) throws Exception {
-        return postPortfolio(xmlPortfolio, groupId, modelId, srceType,
-                srceUrl, xsl, instance, projectName, sc, request);
     }
 
     /**
@@ -674,13 +512,12 @@ public class PortfolioController extends AbstractController {
      * @return
      */
     @PostMapping(value = "/shared/{userid}", produces = "application/xml")
-    public ResponseEntity<String> getPortfolioShared(@PathVariable("userid") long userid,
-                                                     HttpServletRequest request) {
+    public HttpEntity<PortfolioList> getPortfolioShared(@PathVariable("userid") long userid,
+                                                        HttpServletRequest request) {
         UserInfo ui = checkCredential(request);
 
         if (securityManager.isAdmin(ui.userId)) {
-            return ResponseEntity.ok()
-                    .body(portfolioManager.getPortfolioShared(userid));
+            return new HttpEntity<>(portfolioManager.getPortfolioShared(userid));
         } else {
             return ResponseEntity.status(403).build();
         }
@@ -702,12 +539,10 @@ public class PortfolioController extends AbstractController {
                                   HttpServletRequest request) throws Exception {
         UserInfo ui = checkCredential(request);
 
-        HttpSession session = request.getSession(false);
-
         List<UUID> uuids = Arrays.asList(portfolioList.split(","))
-                            .stream()
-                            .map(UUID::fromString)
-                            .collect(Collectors.toList());
+                .stream()
+                .map(UUID::fromString)
+                .collect(Collectors.toList());
 
         List<File> files = new ArrayList<>();
 
@@ -716,24 +551,26 @@ public class PortfolioController extends AbstractController {
 
         /// Create all the zip files
         for (UUID portfolioId : uuids) {
-            String portfolio = portfolioManager.getPortfolio(portfolioId, ui.userId, 0L,
-                    this.label, "true", "", ui.subId, null);
+            PortfolioDocument portfolio = portfolioManager.getPortfolio(portfolioId, ui.userId, 0L,
+                    this.label, true, false, ui.subId, null);
 
             // No name yet
             if ("".equals(name)) {
-                StringBuffer outTrace = new StringBuffer();
-                Document doc = DomUtils.xmlString2Document(portfolio, outTrace);
-                XPath xPath = XPathFactory.newInstance().newXPath();
-                String filterRes = "//*[local-name()='asmRoot']/*[local-name()='asmResource']/*[local-name()='code']";
-                NodeList nodelist = (NodeList) xPath.compile(filterRes).evaluate(doc, XPathConstants.NODESET);
+                Optional<NodeDocument> nodeDocument = portfolio
+                        .getNodes()
+                        .stream()
+                        .filter(n -> n.getType().equals("asmRoot"))
+                        .findFirst();
 
-                if (nodelist.getLength() > 0)
-                    name = nodelist.item(0).getTextContent();
+                if (nodeDocument.isPresent()) {
+                    List<ResourceDocument> resources = nodeDocument.get().getResources();
+
+                    if (!resources.isEmpty())
+                        name = resources.get(0).getCode();
+                }
             }
 
-            Document doc = DomUtils.xmlString2Document(portfolio, new StringBuffer());
-
-            files.add(getZipFile(portfolioId, portfolio, lang, doc, session));
+            files.add(getZipFile(portfolio, lang, ui.userId));
         }
 
         // Make a big zip of it
@@ -806,7 +643,8 @@ public class PortfolioController extends AbstractController {
                                    @RequestParam("model") String modelId,
                                    @RequestParam("instance") String instance,
                                    @RequestParam("project") String projectName,
-                                   HttpServletRequest request) throws Exception {
+                                   HttpServletRequest request)
+            throws BusinessException, IOException {
 
         UserInfo ui = checkCredential(request);
         javax.servlet.ServletContext servletContext = request.getSession().getServletContext();
@@ -848,93 +686,27 @@ public class PortfolioController extends AbstractController {
      * As a form, import xml into the database. <br>
      * POST /rest/api/portfolios
      *
-     * @param xmlPortfolio
+     * @param portfolio
      * @param groupId
      * @param modelId            another uuid, not sure why it's here
-     * @param srceType           sakai/null Need to be logged in on sakai first
-     * @param srceUrl            url part of the sakai system to fetch
-     * @param xsl                filename when using with sakai source, convert data
-     *                           before importing it
      * @param instance           true/null if as an instance, parse rights.
      *                           Otherwise just write nodes xml: ASM format
      * @param projectName
-     * @param sc
      * @param request
      * @return <portfolios> <portfolio id="uuid"/> </portfolios>
      */
-    @PostMapping(consumes = "application/xml", produces = "application/xml")
-    public String postPortfolio(@RequestBody String xmlPortfolio,
-                                @RequestParam("group") int groupId,
-                                @RequestParam("model") UUID modelId,
-                                @RequestParam("srce") String srceType,
-                                @RequestParam("srceurl") String srceUrl,
-                                @RequestParam("xsl") String xsl,
-                                @RequestParam("instance") String instance,
-                                @RequestParam("project") String projectName,
-                                ServletConfig sc,
-                                HttpServletRequest request) throws Exception {
+    @PostMapping(consumes = {"multipart/form-data", "application/xml"}, produces = "application/xml")
+    public HttpEntity<PortfolioList> postPortfolio(@RequestBody PortfolioDocument portfolio,
+                                                   @RequestParam("group") int groupId,
+                                                   @RequestParam("model") UUID modelId,
+                                                   @RequestParam("instance") boolean instance,
+                                                   @RequestParam("project") String projectName,
+                                                   HttpServletRequest request) throws BusinessException, JsonProcessingException {
 
         UserInfo ui = checkCredential(request);
 
-        if ("sakai".equals(srceType)) {
-            /// Session Sakai
-            HttpSession session = request.getSession(false);
-            if (session != null) {
-                String sakai_session = (String) session.getAttribute("sakai_session");
-                String sakai_server = (String) session.getAttribute("sakai_server");
-                // Base server - http://localhost:9090
-                HttpClient client = HttpClients.createDefault();
-
-                /// Fetch page
-                HttpGet get = new HttpGet(sakai_server + "/" + srceUrl);
-                Header header = new BasicHeader("JSESSIONID", sakai_session);
-                get.addHeader(header);
-
-
-                HttpResponse response = client.execute(get);
-                StatusLine status = response.getStatusLine();
-                if (status.getStatusCode() != 200) {
-                    System.err.println("Method failed: " + status.getStatusCode());
-                }
-
-                // Retrieve data
-                InputStream retrieve = response.getEntity().getContent();
-                String sakaiData = IOUtils.toString(retrieve, "UTF-8");
-
-                //// Convert it via XSL
-                /// Path to XSL
-                String servletDir = sc.getServletContext().getRealPath("/");
-                int last = servletDir.lastIndexOf(File.separator);
-                last = servletDir.lastIndexOf(File.separator, last - 1);
-                String baseDir = servletDir.substring(0, last);
-
-                String basepath = xsl.substring(0, xsl.indexOf(File.separator));
-                String firstStage = baseDir + File.separator + basepath + File.separator + "karuta" + File.separator
-                        + "xsl" + File.separator + "html2xml.xsl";
-                System.out.println("FIRST: " + firstStage);
-
-                /// Storing transformed data
-                StringWriter dataTransformed = new StringWriter();
-
-                /// Apply change
-                Source xsltSrc1 = new StreamSource(new File(firstStage));
-                TransformerFactory transFactory = TransformerFactory.newInstance();
-                Transformer transformer1 = transFactory.newTransformer(xsltSrc1);
-                StreamSource stageSource = new StreamSource(new ByteArrayInputStream(sakaiData.getBytes()));
-                Result stageRes = new StreamResult(dataTransformed);
-                transformer1.transform(stageSource, stageRes);
-
-                /// Result as portfolio data to be imported
-                xmlPortfolio = dataTransformed.toString();
-            }
-        }
-
-        boolean instantiate = false;
-        if ("true".equals(instance))
-            instantiate = true;
-
-        return portfolioManager.addPortfolio(xmlPortfolio, ui.userId, groupId, modelId,
-                ui.subId, instantiate, projectName);
+        return new HttpEntity<>(portfolioManager.addPortfolio(portfolio, ui.userId, groupId, modelId,
+                ui.subId, instance, projectName));
     }
 
     /**
@@ -970,7 +742,7 @@ public class PortfolioController extends AbstractController {
         final String userName = ui.User;
 
         return portfolioManager
-                    .importZippedPortfolio(path, userName, uploadedInputStream, credentialId, groupId, modelId,
-                            ui.subId, instantiate, projectName);
+                .importZippedPortfolio(path, userName, uploadedInputStream, credentialId, groupId, modelId,
+                        ui.subId, instantiate, projectName);
     }
 }

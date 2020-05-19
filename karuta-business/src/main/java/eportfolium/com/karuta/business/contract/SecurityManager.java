@@ -18,6 +18,10 @@ package eportfolium.com.karuta.business.contract;
 import java.util.List;
 import java.util.UUID;
 
+import eportfolium.com.karuta.document.CredentialDocument;
+import eportfolium.com.karuta.document.CredentialList;
+import eportfolium.com.karuta.document.LoginDocument;
+import eportfolium.com.karuta.document.RoleDocument;
 import eportfolium.com.karuta.model.bean.Credential;
 import eportfolium.com.karuta.model.exception.AuthenticationException;
 import eportfolium.com.karuta.model.exception.BusinessException;
@@ -60,32 +64,26 @@ public interface SecurityManager {
 	 * 
 	 * @param byUserId
 	 * @param forUserId
-	 * @param xmlUser
+	 * @param user
 	 * @return
 	 * @throws BusinessException
 	 */
-	String changeUser(Long byUserId, Long forUserId, String xmlUser) throws BusinessException;
+	Long changeUser(Long byUserId, Long forUserId, CredentialDocument user) throws BusinessException;
 
 	/**
 	 * This method provides a way for users to change their personal info.
 	 * 
 	 * @param byUserId
 	 * @param forUserId
-	 * @param xmlUser
+	 * @param user
 	 * @return
 	 * @throws BusinessException
 	 */
-	String changeUserInfo(Long byUserId, Long forUserId, String xmlUser) throws BusinessException;
+	Long changeUserInfo(Long byUserId, Long forUserId, CredentialDocument user) throws BusinessException;
 
-	boolean registerUser(String username, String password);
-
-	Long addUser(String username, String email) throws BusinessException;
-
-	boolean addUser(String username, String email, boolean isDesigner, long userId) throws Exception;
+	boolean addUser(String username, String email);
 
 	String generatePassword();
-
-	void removeUser(Long byUser, Long forUser) throws BusinessException;
 
 	void removeUsers(Long byUser, Long forUser) throws BusinessException;
 
@@ -101,11 +99,11 @@ public interface SecurityManager {
 	 */
 	boolean checkPassword(Long userID, String passwd);
 
-	String[] postCredentialFromXml(String login, String password, String substit);
+	CredentialDocument login(LoginDocument credentials);
 
 	boolean userHasRole(long userId, long roleId);
 
-	String addUsers(String xmlUsers, Long userId) throws Exception;
+	CredentialList addUsers(CredentialList users, Long userId) throws BusinessException;
 
 	Long addRole(UUID portfolioId, String role, Long userId) throws BusinessException;
 
@@ -126,9 +124,9 @@ public interface SecurityManager {
 
 	void removeRole(Long userId, Long groupRightInfoId) throws Exception;
 
-	Long changeRole(Long userId, Long rrgId, String xmlRole) throws Exception;
+	Long changeRole(Long userId, Long rrgId, RoleDocument role) throws BusinessException;
 
-	String addUsersToRole(Long id, Long rrgId, String xmlUser) throws BusinessException;
+	String addUsersToRole(Long id, Long rrgId, CredentialList users) throws BusinessException;
 
 	void addUserToGroup(Long byUser, Long forUser, Long groupId) throws BusinessException;
 

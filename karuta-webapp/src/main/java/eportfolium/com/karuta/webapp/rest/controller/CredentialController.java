@@ -16,14 +16,14 @@
 package eportfolium.com.karuta.webapp.rest.controller;
 
 import java.io.IOException;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import javax.xml.parsers.ParserConfigurationException;
 
+import eportfolium.com.karuta.document.CredentialDocument;
+import eportfolium.com.karuta.document.LoginDocument;
 import eportfolium.com.karuta.webapp.util.UserInfo;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
@@ -32,14 +32,8 @@ import org.apache.commons.logging.LogFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.NodeList;
 
 import edu.yale.its.tp.cas.client.ServiceTicketValidator;
 import eportfolium.com.karuta.business.contract.ConfigurationManager;
@@ -47,9 +41,7 @@ import eportfolium.com.karuta.business.contract.EmailManager;
 import eportfolium.com.karuta.business.contract.SecurityManager;
 import eportfolium.com.karuta.business.contract.UserManager;
 import eportfolium.com.karuta.config.Consts;
-import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
-import eportfolium.com.karuta.webapp.util.DomUtils;
 import org.xml.sax.SAXException;
 
 @RestController
@@ -75,272 +67,161 @@ public class CredentialController extends AbstractController {
      * Fetch current user info. <br>
      * GET /rest/api/credential
      *
-     * @param groupId
      * @param request
      * @return <user id="uid"> <username></username> <firstname></firstname>
      *         <lastname></lastname> <email></email> <admin>1/0</admin>
      *         <designer>1/0</designer> <active>1/0</active>
      *         <substitute>1/0</substitute> </user>
      */
-
     @GetMapping(produces = "application/xml")
-    public ResponseEntity<String> getCredential(@RequestParam("group") int groupId,
-                                                HttpServletRequest request) throws BusinessException {
+    public HttpEntity<CredentialDocument> getCredential(HttpServletRequest request) {
         UserInfo ui = checkCredential(request);
 
-        if (ui.userId == 0) // userid not valid -- id de l'utilisateur non valide.
-        {
+        if (ui.userId == 0) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        String xmluser = userManager.getUserInfos(ui.userId);
-
-        /// Add shibboleth info if needed
-        HttpSession session = request.getSession(false);
-        Integer fromshibe = (Integer) session.getAttribute("fromshibe");
-        Integer updatefromshibe = (Integer) session.getAttribute("updatefromshibe");
-        String alist = configurationManager.get("shib_attrib");
-        HashMap<String, String> updatevals = new HashMap<>();
-
-        if (fromshibe != null && fromshibe == 1 && alist != null) {
-            /// Fetch and construct needed data
-            String[] attriblist = alist.split(",");
-            int lastst = xmluser.lastIndexOf("<");
-            StringBuilder shibuilder = new StringBuilder(xmluser.substring(0, lastst));
-
-            for (String attrib : attriblist) {
-                String value = (String) request.getAttribute(attrib);
-                shibuilder.append("<").append(attrib).append(">").append(value).append("</").append(attrib)
-                        .append(">");
-                /// Pre-process values
-                if (1 == updatefromshibe) {
-                    String colname = configurationManager.get(attrib);
-                    updatevals.put(colname, value);
-                }
-            }
-            /// Update values
-            if (1 == updatefromshibe) {
-                String xmlInfUser = String.format(
-                        "<user id=\"%s\">" + "<firstname>%s</firstname>" + "<lastname>%s</lastname>"
-                                + "<email>%s</email>" + "</user>",
-                        ui.userId, updatevals.get("display_firstname"), updatevals.get("display_lastname"),
-                        updatevals.get("email"));
-                /// User update its own info automatically
-                securityManager.changeUser(ui.userId, ui.userId, xmlInfUser);
-                /// Consider it done
-                session.removeAttribute("updatefromshibe");
-            }
-            /// Add it as last tag after "moving" the closing tag
-            shibuilder.append(xmluser.substring(lastst));
-            xmluser = shibuilder.toString();
-        }
-
-        return ResponseEntity.ok(xmluser);
-    }
-
-    /**
-     * Send login information. <br>
-     * PUT /rest/api/credential/login
-     *
-     * @param xmlCredential
-     * @param request
-     * @return
-     */
-    @PutMapping(value = "/login", consumes = "application/xml", produces = "application/xml")
-    public ResponseEntity<String> putCredentialFromXml(@RequestBody String xmlCredential,
-                                         HttpServletRequest request) throws Exception {
-        return postCredentialFromXml(xmlCredential, request);
+        return new HttpEntity<>(userManager.getUserInfos(ui.userId));
     }
 
     /**
      * Send login information. <br>
      * POST /rest/api/credential/login
      *
-     * @param xmlCredential
+     * @param credentials
      * @param request
      * @return
      */
-    @PostMapping(value = "/login", consumes = "application/xml", produces = "application/xml")
-    public ResponseEntity<String> postCredentialFromXml(@RequestBody String xmlCredential,
-                                                        HttpServletRequest request) throws Exception {
+    @RequestMapping(value = "/login", consumes = "application/xml", produces = "application/xml",
+        method = { RequestMethod.POST, RequestMethod.PUT })
+    public HttpEntity<Object> postCredentialFromXml(@RequestBody LoginDocument credentials,
+                                                    HttpServletRequest request) {
         HttpSession session = request.getSession(true);
-
-        String retVal = "";
-        int status = 0;
 
         String authlog = configurationManager.get("auth_log");
         Log authLog = null;
 
-        try {
-            if (!"".equals(authlog) && authlog != null)
+        if (StringUtils.isNotEmpty(authlog)) {
+            try {
                 authLog = LogFactory.getLog(authlog);
-        } catch (LogConfigurationException e1) {
-            logger.error("Could not create authentification log file");
+            } catch (LogConfigurationException e1) {
+                logger.error("Could not create authentification log file");
+            }
         }
 
+        String login = credentials.getLogin();
 
-        Document doc = DomUtils.xmlString2Document(xmlCredential, new StringBuffer());
-        Element credentialElement = doc.getDocumentElement();
-        String login = "";
-        String password = "";
-        String substit = null;
-        if (credentialElement.getNodeName().equals("credential")) {
-            String[] templogin = DomUtils.getInnerXml(doc.getElementsByTagName("login").item(0)).split("#");
-            password = DomUtils.getInnerXml(doc.getElementsByTagName("password").item(0));
+        CredentialDocument credential = securityManager.login(credentials);
 
-            if (templogin.length > 1)
-                substit = templogin[1];
-            login = templogin[0];
-        }
-
-        String[] resultCredential = securityManager.postCredentialFromXml(login, password, substit);
-        // 0 : XML de retour
-        // 1,2 : username, uid
-        // 3,4 : substitute name, substitute id
-        if (resultCredential == null) {
-            status = 403;
-            retVal = "invalid credential";
-
-            if (authLog != null)
+        if (credential == null) {
+            if (authLog != null) {
                 authLog.info(String.format("Authentication error for user '%s' date '%s'\n", login,
                         new Date()));
-        } else if (!"0".equals(resultCredential[2])) {
-            // String tokenID = resultCredential[2];
-
-            if (substit != null && !"0".equals(resultCredential[4])) {
-                long uid = Long.parseLong(resultCredential[2]);
-                long subid = Long.parseLong(resultCredential[4]);
-
-                session.setAttribute("user", resultCredential[3]);
-                session.setAttribute("uid", subid);
-                session.setAttribute("subuser", resultCredential[1]);
-                session.setAttribute("subuid", uid);
-                if (authLog != null)
-                    authLog.info(String.format("Authentication success for user '%s' date '%s' (Substitution)\n",
-                            login, new Date()));
-            } else {
-                String login1 = resultCredential[1];
-                long userId = Long.parseLong(resultCredential[2]);
-                long subuid = 0;
-
-                session.setAttribute("user", login1);
-                session.setAttribute("uid", userId);
-                session.setAttribute("subuser", "");
-                session.setAttribute("subuid", subuid);
-                if (authLog != null)
-                    authLog.info(String.format("Authentication success for user '%s' date '%s'\n", login,
-                            new Date()));
             }
 
-            status = 200;
-            retVal = resultCredential[0];
+            return ResponseEntity
+                        .status(403)
+                        .body("Invalid credential");
+
+        } else {
+            boolean substitute = credential.getSubstitute() == 1;
+
+            session.setAttribute("user", credential.getUsername());
+            session.setAttribute("uid", credential.getId());
+            session.setAttribute("subuser", substitute ? login : "");
+            session.setAttribute("subuid", substitute ? credential.getSubstituteId() : 0);
+
+            if (authLog != null) {
+
+                if (substitute) {
+                    authLog.info(String.format("Authentication success for user '%s' date '%s' (Substitution)\n",
+                            login, new Date()));
+                } else {
+                    authLog.info(String.format("Authentication success for user '%s' date '%s'\n", login,
+                            new Date()));
+                }
+            }
         }
 
-        return ResponseEntity
-                    .status(status)
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_XML_VALUE)
-                    .body(retVal);
+        return new HttpEntity<>(credential);
     }
 
     /**
      * Tell system to forgot your password. <br>
      * POST /rest/api/credential/forgot
      *
-     * @param xml
+     * @param document
      * @param request
      * @return
      */
     @PostMapping(value = "/forgot", consumes = "application/xml")
-    public ResponseEntity<String> postForgotCredential(@RequestBody String xml,
+    public ResponseEntity<String> postForgotCredential(@RequestBody LoginDocument document,
                                                        HttpServletRequest request) throws Exception {
-        int retVal = 404;
-        String retText = "";
+
+        String resetEnable = configurationManager.get("enable_password_reset");
+
+        if (!Arrays.asList("y", "true").contains(resetEnable)) {
+            return ResponseEntity
+                        .notFound()
+                        .build();
+        }
+
+        String username = document.getLogin();
+        String email = userManager.getEmailByLogin(username);
+
+        if (!StringUtils.isNotEmpty(email)) {
+            return ResponseEntity
+                        .notFound()
+                        .build();
+        }
+
         Logger securityLog = null;
         String securitylog = configurationManager.get("security_log");
 
-        if (StringUtils.isNotEmpty(securitylog))
+        if (StringUtils.isNotEmpty(securitylog)) {
             securityLog = LoggerFactory.getLogger(securitylog);
-
-        String resetEnable = configurationManager.get("enable_password_reset");
-        if (resetEnable != null
-                && ("y".equals(resetEnable.toLowerCase()) || "true".equals(resetEnable.toLowerCase()))) {
-
-            Document doc = DomUtils.xmlString2Document(xml, new StringBuffer());
-            Element userInfos = doc.getDocumentElement();
-
-            String username = "";
-            if (userInfos.getNodeName().equals("credential")) {
-                NodeList children2 = userInfos.getChildNodes();
-                for (int y = 0; y < children2.getLength(); y++) {
-                    if (children2.item(y).getNodeName().equals("login")) {
-                        username = DomUtils.getInnerXml(children2.item(y));
-                        break;
-                    }
-                }
-            }
-
-            // Vérifier si nous avons cet email enregistré en base
-            String email = userManager.getEmailByLogin(username);
-            if (email != null && !"".equals(email)) {
-
-                // écrire les changements en base
-                String password = securityManager.generatePassword();
-                boolean result = securityManager.changePassword(username, password);
-
-                if (result) {
-                    if (securityLog != null) {
-                        String ip = request.getRemoteAddr();
-                        securityLog.info(String.format(
-                                "[%s] [%s] a demandé la réinitialisation de son mot de passe\n", ip, username));
-                    }
-
-                    final Map<String, String> template_vars = new HashMap<String, String>();
-                    template_vars.put("firstname", username);
-                    template_vars.put("lastname", "");
-                    template_vars.put("email", email);
-                    template_vars.put("passwd", password);
-
-                    String cc_email = configurationManager.get("sys_email");
-                    // Envoie d'un email
-                    final Integer langId = Integer.valueOf(configurationManager.get("PS_LANG_DEFAULT"));
-                    emailManager.send(langId, "employee_password",
-                            emailManager.getTranslation("Your new password!"), template_vars, email, username, null,
-                            null, null, null, Consts._PS_MAIL_DIR_, false, cc_email, null);
-
-                    retVal = 200;
-                    retText = "sent";
-                }
-            }
         }
 
-        return ResponseEntity
-                    .status(retVal)
-                    .body(retText);
+        // Try to write changes to database
+        String password = securityManager.generatePassword();
+        boolean result = securityManager.changePassword(username, password);
+
+        if (result) {
+            if (securityLog != null) {
+                String ip = request.getRemoteAddr();
+                securityLog.info(String.format(
+                        "[%s] [%s] a demandé la réinitialisation de son mot de passe\n", ip, username));
+            }
+
+            final Map<String, String> template_vars = new HashMap<String, String>();
+            template_vars.put("firstname", username);
+            template_vars.put("lastname", "");
+            template_vars.put("email", email);
+            template_vars.put("passwd", password);
+
+            String cc_email = configurationManager.get("sys_email");
+            // Envoie d'un email
+            final Integer langId = Integer.valueOf(configurationManager.get("PS_LANG_DEFAULT"));
+            emailManager.send(langId, "employee_password",
+                    emailManager.getTranslation("Your new password!"), template_vars, email, username, null,
+                    null, null, null, Consts._PS_MAIL_DIR_, false, cc_email, null);
+
+            return ResponseEntity
+                        .ok()
+                        .body("sent");
+        } else {
+            return ResponseEntity
+                        .badRequest()
+                        .build();
+        }
     }
 
-    /**
-     * Fetch current user information (CAS). <br>
-     * GET /rest/api/credential/login/cas
-     *
-     * @param ticket
-     * @param redir
-     * @param request
-     * @return
-     */
-    @PostMapping("/login/cas")
-    public ResponseEntity<String> postCredentialFromCas(@RequestParam("ticket") String ticket,
-                                                        @RequestParam("redir") String redir,
-                                                        HttpServletRequest request) throws ParserConfigurationException, SAXException, IOException {
-        return getCredentialFromCas(ticket, redir, request);
-    }
-
-    @GetMapping("/login/cas")
+    @RequestMapping(value = "/login/cas", method = {RequestMethod.GET, RequestMethod.POST})
     public ResponseEntity<String> getCredentialFromCas(@RequestParam("ticket") String ticket,
                                          @RequestParam("redir") String redir,
                                          HttpServletRequest httpServletRequest) throws ParserConfigurationException, SAXException, IOException {
 
         HttpSession session = httpServletRequest.getSession(true); // FIXME
-        String xmlResponse = null;
         String userId = null;
         String completeURL;
         StringBuffer requestURL;
@@ -389,7 +270,8 @@ public class CredentialController extends AbstractController {
         // sv.setProxyCallbackUrl(urlOfProxyCallbackServlet);
         sv.validate();
 
-        xmlResponse = sv.getResponse();
+        String xmlResponse = sv.getResponse();
+
         if (xmlResponse.contains("cas:authenticationFailure")) {
             System.out.println(String.format("CAS response: %s\n", xmlResponse));
             return ResponseEntity
@@ -428,8 +310,10 @@ public class CredentialController extends AbstractController {
     @PostMapping("/logout")
     public ResponseEntity<String> logout(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
+
         if (session != null)
             session.invalidate();
+
         return ResponseEntity.ok("logout");
     }
 

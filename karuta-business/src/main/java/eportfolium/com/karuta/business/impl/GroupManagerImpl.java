@@ -15,12 +15,12 @@
 
 package eportfolium.com.karuta.business.impl;
 
-import java.util.Iterator;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import eportfolium.com.karuta.consumer.repositories.*;
+import eportfolium.com.karuta.document.*;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -29,7 +29,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import eportfolium.com.karuta.business.contract.GroupManager;
-import eportfolium.com.karuta.consumer.util.DomUtils;
 import eportfolium.com.karuta.model.bean.Credential;
 import eportfolium.com.karuta.model.bean.CredentialGroup;
 import eportfolium.com.karuta.model.bean.CredentialGroupMembers;
@@ -75,39 +74,17 @@ public class GroupManagerImpl implements GroupManager {
 	@Autowired
 	private CredentialGroupRepository credentialGroupRepository;
 
-	public String addGroup(String name) {
-		Long retval = 0L;
-		try {
-			GroupRightInfo gri = new GroupRightInfo();
-			gri.setOwner(1);
-			gri.setLabel(name);
-			groupRightInfoRepository.save(gri);
-
-			retval = gri.getId();
-
-			groupInfoRepository.save(new GroupInfo(gri, 1L, name));
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
-
-		return String.valueOf(retval);
-	}
-
-	public String getCredentialGroupByUser(Long userId) {
+	@Override
+	public CredentialGroupList getCredentialGroupByUser(Long userId) {
 		List<CredentialGroupMembers> cgmList = credentialGroupMembersRepository.findByUser(userId);
-		String result = "<groups>";
 
-		for (CredentialGroupMembers cgm : cgmList) {
-			result += "<group ";
-			result += DomUtils.getXmlAttributeOutput("id", "" + cgm.getCredentialGroup().getId()) + " ";
-			result += ">";
-			result += "<label>" + cgm.getCredentialGroup().getLabel() + "</label>";
-			result += "</group>";
-		}
-		result += "</groups>";
-		return result;
+		return new CredentialGroupList(cgmList.stream()
+				.map(CredentialGroupMembers::getCredentialGroup)
+				.map(CredentialGroupDocument::new)
+				.collect(Collectors.toList()));
 	}
 
+	@Override
 	public boolean changeNotifyRoles(Long userId, UUID portfolioId, UUID nodeId, String notify)
 			throws GenericBusinessException {
 
@@ -122,6 +99,7 @@ public class GroupManagerImpl implements GroupManager {
 		return true;
 	}
 
+	@Override
 	public boolean setPublicState(Long userId, UUID portfolioId, boolean isPublic) throws BusinessException {
 		boolean ret = false;
 		if (!credentialRepository.isAdmin(userId)
@@ -188,43 +166,26 @@ public class GroupManagerImpl implements GroupManager {
 
 	}
 
-	public String getGroupsByRole(UUID portfolioId, String role) {
+	@Override
+	public RoleGroupList getGroupsByRole(UUID portfolioId, String role) {
 		List<GroupInfo> giList = groupInfoRepository.getGroupsByRole(portfolioId, role);
 
-		String result = "<groups>";
-
-		for (GroupInfo gi : giList) {
-			result += DomUtils.getXmlElementOutput("group", String.valueOf(gi.getId()));
-		}
-
-		result += "</groups>";
-
-		return result;
+		return new RoleGroupList(giList.stream()
+				.map(GroupInfo::getId)
+				.collect(Collectors.toList()));
 	}
 
-	public String getUserGroups(Long userId) throws Exception {
-		List<GroupUser> res = groupUserRepository.getByUser(userId);
-		GroupUser current = null;
+	@Override
+	public GroupInfoList getUserGroups(Long userId) {
+		List<GroupUser> groups = groupUserRepository.getByUser(userId);
 
-		Iterator<GroupUser> it = res.iterator();
-		String result = "<groups>";
-		while (it.hasNext()) {
-			current = it.next();
-			result += "<group ";
-			result += DomUtils.getXmlAttributeOutput("id", String.valueOf(current.getGroupInfo().getId())) + " ";
-			result += DomUtils.getXmlAttributeOutput("owner", String.valueOf(current.getGroupInfo().getOwner())) + " ";
-			result += DomUtils.getXmlAttributeOutput("templateId",
-					String.valueOf(current.getGroupInfo().getGroupRightInfo().getId())) + " ";
-			result += ">";
-			result += DomUtils.getXmlElementOutput("label", current.getGroupInfo().getLabel());
-			result += "</group>";
-		}
-
-		result += "</groups>";
-
-		return result;
+		return new GroupInfoList(groups.stream()
+				.map(GroupUser::getGroupInfo)
+				.map(GroupInfoDocument::new)
+				.collect(Collectors.toList()));
 	}
 
+	@Override
 	public void changeUserGroup(Long grid, Long groupId, Long userId) throws BusinessException {
 		if (!credentialRepository.isAdmin(userId))
 			throw new GenericBusinessException("403 FORBIDDEN : No admin right");
@@ -351,60 +312,16 @@ public class GroupManagerImpl implements GroupManager {
 		return reponse;
 	}
 
-	public String getGroupRights(Long userId, Long groupId) throws Exception {
+	@Override
+	public GroupRightsList getGroupRights(Long userId, Long groupId) throws BusinessException {
 		if (!credentialRepository.isAdmin(userId))
 			throw new GenericBusinessException("403 FORBIDDEN : No admin right");
 
-		List<GroupRights> resList = groupRightsRepository.getRightsByGroupId(groupId);
-		boolean AD, SB, WR, DL, RD;
-		AD = SB = WR = DL = RD = true;
+		List<GroupRights> groupRightsList = groupRightsRepository.getRightsByGroupId(groupId);
 
-		String result = "<groupRights>";
-		for (GroupRights res : resList) {
-			result += "<groupRight ";
-			result += DomUtils.getXmlAttributeOutput("gid", res.getGroupRightInfo().getGroupInfo().getId().toString())
-					+ " ";
-			result += DomUtils.getXmlAttributeOutput("templateId", res.getGroupRightInfo().getId().toString()) + " ";
-			result += ">";
-
-			result += "<item ";
-			if (AD == res.isAdd()) {
-				result += DomUtils.getXmlAttributeOutput("add", "True") + " ";
-			} else {
-				result += DomUtils.getXmlAttributeOutput("add", "False") + " ";
-			}
-			result += DomUtils.getXmlAttributeOutput("creator",
-					String.valueOf(res.getGroupRightInfo().getGroupInfo().getOwner())) + " ";
-			result += DomUtils.getXmlAttributeOutput("date", String.valueOf(res.isDelete())) + " ";
-			if (DL == res.isDelete()) {
-				result += DomUtils.getXmlAttributeOutput("del", "True") + " ";
-			} else {
-				result += DomUtils.getXmlAttributeOutput("del", "False") + " ";
-			}
-			result += DomUtils.getXmlAttributeOutput("id", res.getGroupRightsId().toString()) + " ";
-			result += DomUtils.getXmlAttributeOutput("owner", String.valueOf(res.getGroupRightInfo().getOwner())) + " ";
-			if (RD == res.isRead()) {
-				result += DomUtils.getXmlAttributeOutput("read", "True") + " ";
-			} else {
-				result += DomUtils.getXmlAttributeOutput("read", "False") + " ";
-			}
-			if (SB == res.isSubmit()) {
-				result += DomUtils.getXmlAttributeOutput("submit", "True") + " ";
-			} else {
-				result += DomUtils.getXmlAttributeOutput("submit", "False") + " ";
-			}
-			result += DomUtils.getXmlAttributeOutput("typeId", res.getTypesId()) + " ";
-			if (WR == res.isWrite()) {
-				result += DomUtils.getXmlAttributeOutput("write", "True") + " ";
-			} else {
-				result += DomUtils.getXmlAttributeOutput("write", "False") + " ";
-			}
-			result += "/>";
-
-			result += "</groupRight>";
-		}
-		result += "</groupRights>";
-		return result;
+		return new GroupRightsList(groupRightsList.stream()
+				.map(GroupRightsDocument::new)
+				.collect(Collectors.toList()));
 	}
 
 	public void removeRights(long groupId, Long userId) throws BusinessException {
@@ -414,23 +331,13 @@ public class GroupManagerImpl implements GroupManager {
 		groupInfoRepository.deleteById(groupId);
 	}
 
-	/*******************************************************
-	 * Fcts. pour groupes utilisateurs
-	 *******************************************************/
-	public String getCredentialGroupList() {
-		String result = "<groups>";
-		Iterable<CredentialGroup> res = credentialGroupRepository.findAll();
+	@Override
+	public CredentialGroupList getCredentialGroupList() {
+		Iterable<CredentialGroup> groups = credentialGroupRepository.findAll();
 
-		for (CredentialGroup currentCredential : res) {
-			result += "<group ";
-			result += DomUtils.getXmlAttributeOutput("id", String.valueOf(currentCredential.getId()) + " ");
-			result += ">";
-			result += DomUtils.getXmlElementOutput("label", currentCredential.getLabel());
-			result += "</group>";
-		}
-		result += "</groups>";
-
-		return result;
+		return new CredentialGroupList(StreamSupport.stream(groups.spliterator(), false)
+				.map(CredentialGroupDocument::new)
+				.collect(Collectors.toList()));
 	}
 
 	public Long addCredentialGroup(String credentialGroupName) {
@@ -461,6 +368,7 @@ public class GroupManagerImpl implements GroupManager {
 		return credentialGroupRepository.findByLabel(name);
 	}
 
+	@Override
 	public Boolean removeCredentialGroup(Long credentialGroupId) {
 		try {
 			credentialGroupMembersRepository.deleteAll(credentialGroupMembersRepository.findByGroup(credentialGroupId));
@@ -472,5 +380,10 @@ public class GroupManagerImpl implements GroupManager {
 
 			return false;
 		}
+	}
+
+	@Override
+	public GroupRightInfo getByPortfolioAndLabel(UUID portfolioId, String label) {
+		return groupRightInfoRepository.getByPortfolioAndLabel(portfolioId, label);
 	}
 }

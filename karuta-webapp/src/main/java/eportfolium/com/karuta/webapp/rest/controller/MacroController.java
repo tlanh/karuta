@@ -15,6 +15,7 @@
 
 package eportfolium.com.karuta.webapp.rest.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import eportfolium.com.karuta.business.contract.NodeManager;
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
@@ -52,7 +53,8 @@ public class MacroController extends AbstractController {
     @PostMapping(value = "/action/{uuid}/{macro-name}", produces = "text/plain")
     public String postMacro(@PathVariable("uuid") UUID uuid,
                             @PathVariable("macro-name") String macroName,
-                            HttpServletRequest httpServletRequest) throws BusinessException {
+                            HttpServletRequest httpServletRequest)
+            throws BusinessException, JsonProcessingException {
 
         UserInfo ui = checkCredential(httpServletRequest);
 

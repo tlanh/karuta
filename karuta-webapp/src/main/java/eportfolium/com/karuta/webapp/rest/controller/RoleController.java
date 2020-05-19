@@ -17,6 +17,7 @@ package eportfolium.com.karuta.webapp.rest.controller;
 
 import javax.servlet.http.HttpServletRequest;
 
+import eportfolium.com.karuta.document.RoleDocument;
 import eportfolium.com.karuta.webapp.util.UserInfo;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +26,7 @@ import eportfolium.com.karuta.business.contract.PortfolioManager;
 import eportfolium.com.karuta.business.contract.SecurityManager;
 import eportfolium.com.karuta.business.contract.UserManager;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
+import org.springframework.http.HttpEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -53,8 +55,8 @@ public class RoleController extends AbstractController {
      * @return
      */
     @GetMapping(value = "/role/{role-id}", produces = {"application/xml"})
-    public String getRole(@PathVariable("role-id") Long roleId) {
-        return userManager.getRole(roleId);
+    public HttpEntity<RoleDocument> getRole(@PathVariable("role-id") Long roleId) {
+        return new HttpEntity<>(userManager.getRole(roleId));
     }
 
     /**
@@ -80,18 +82,18 @@ public class RoleController extends AbstractController {
      * Modify a role. <br>
      * PUT /rest/api/roles/role/{role-id}
      *
-     * @param xmlRole
+     * @param role
      * @param roleId
      * @param request
      * @return
      */
     @PutMapping(value = "/role/{role-id}", produces = "application/xml")
-    public String putRole(@RequestBody String xmlRole,
+    public String putRole(@RequestBody RoleDocument role,
                           @PathVariable("role-id") long roleId,
                           HttpServletRequest request) throws Exception {
 
         UserInfo ui = checkCredential(request);
 
-        return securityManager.changeRole(ui.userId, roleId, xmlRole).toString();
+        return securityManager.changeRole(ui.userId, roleId, role).toString();
     }
 }

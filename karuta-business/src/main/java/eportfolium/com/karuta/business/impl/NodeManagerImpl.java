@@ -15,53 +15,28 @@
 
 package eportfolium.com.karuta.business.impl;
 
-import java.io.ByteArrayInputStream;
-import java.io.StringReader;
-import java.io.StringWriter;
-import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathExpression;
-import javax.xml.xpath.XPathFactory;
-
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import eportfolium.com.karuta.consumer.repositories.*;
+import eportfolium.com.karuta.document.*;
 import eportfolium.com.karuta.model.bean.*;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.util.EntityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.NamedNodeMap;
-import org.w3c.dom.NodeList;
-import org.w3c.dom.ls.DOMImplementationLS;
-import org.w3c.dom.ls.LSSerializer;
-import org.xml.sax.InputSource;
 
 import eportfolium.com.karuta.business.contract.ConfigurationManager;
 import eportfolium.com.karuta.business.contract.GroupManager;
@@ -69,7 +44,6 @@ import eportfolium.com.karuta.business.contract.NodeManager;
 import eportfolium.com.karuta.business.contract.PortfolioManager;
 import eportfolium.com.karuta.business.contract.ResourceManager;
 import eportfolium.com.karuta.business.contract.SecurityManager;
-import eportfolium.com.karuta.consumer.util.DomUtils;
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.model.exception.GenericBusinessException;
 import eportfolium.com.karuta.util.InMemoryCache;
@@ -122,8 +96,8 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 	private InMemoryCache<UUID, List<Node>> cachedNodes = new InMemoryCache<>(600, 1500, 6);
 
 	@Override
-	public String getNode(UUID nodeId, boolean withChildren, Long userId, Long groupId,
-			String label, Integer cutoff) throws BusinessException, ParserConfigurationException {
+	public NodeDocument getNode(UUID nodeId, boolean withChildren, Long userId, Long groupId,
+			String label, Integer cutoff) throws BusinessException {
 		final GroupRights rights = getRights(userId, groupId, nodeId);
 
 		if (!rights.isRead()) {
@@ -137,676 +111,245 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		List<Pair<Node, GroupRights>> nodes = getNodePerLevel(nodeId, userId, rights.getGroupRightInfo().getId(),
 				cutoff);
 
-		/// Préparation du XML que l'on va renvoyer
-		DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
-		DocumentBuilder documentBuilder = null;
-		Document document = null;
-		documentBuilder = documentBuilderFactory.newDocumentBuilder();
-		document = documentBuilder.newDocument();
-		document.setXmlStandalone(true);
-
-		Map<String, Object[]> resolve = new HashMap<>();
 		/// Node -> parent
-		Map<String, t_tree> entries = new HashMap<>();
-		processQuery(nodes, resolve, entries, document, documentBuilder, rights.getGroupRightInfo().getLabel());
+		Map<UUID, Tree> entries = new HashMap<>();
+		processQuery(nodes, entries, rights.getGroupRightInfo().getLabel());
 
 		/// Reconstruct functional tree
-		t_tree root = entries.get(nodeId);
-		StringBuilder out = new StringBuilder(256);
-		reconstructTree(out, root, entries);
+		Tree root = entries.get(nodeId);
+		reconstructTree(root, entries);
 
-		String nodexml = out.toString();
-
-		return nodexml;
+		// TODO: Check result ; not sure the output is expected
+		return entries.get(nodeId).node;
 	}
 
 	@Override
-	public String getChildNodes(String parentNodeCode, String parentSemtag, String childSemtag) throws Exception {
-		String result = "";
-		try {
-			Portfolio portfolio = portfolioRepository.getPortfolioFromNodeCode(parentNodeCode);
-			Node parentNode = nodeRepository.getNodeBySemtagAndCode(portfolio.getId(), parentSemtag,
-					parentNodeCode);
-			if (parentNode != null) {
-				final List<Node> children = nodeRepository.getFirstLevelChildren(parentNode.getId());
-				if (CollectionUtils.isNotEmpty(children)) {
-					result += "<nodes>";
-					for (Node child : children) {
-						Node tmp = nodeRepository.findByIdAndSemantictag(child.getId(), childSemtag);
-						if (tmp != null) {
-							result += "<node ";
-							result += DomUtils.getXmlAttributeOutput("id", tmp.getId().toString());
-							result += ">";
-							result += "</node>";
-						}
-					}
-					result += "</nodes>";
-				}
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return result;
-	}
+	public UUID writeNode(NodeDocument node, UUID portfolioId, UUID portfolioModelId, Long userId,
+						  int ordrer, UUID forcedId, UUID forcedParentId, boolean sharedResParent,
+						  boolean sharedNodeResParent, boolean rewriteId, Map<UUID, UUID> resolve, boolean parseRights)
+			throws BusinessException, JsonProcessingException {
 
-	@Override
-	public UUID writeNode(org.w3c.dom.Node node, UUID portfolioId, UUID portfolioModelId, Long userId,
-			int ordrer, UUID forcedId, UUID forcedParentId, boolean sharedResParent,
-			boolean sharedNodeResParent, boolean rewriteId, Map<UUID, UUID> resolve, boolean parseRights)
-			throws BusinessException {
-
-		UUID nodeId;
-		UUID originUuid = null;
-		UUID parentUuid = null;
+		if (node == null)
+			return null;
 
 		boolean sharedRes = false;
 		boolean sharedNode = false;
 		boolean sharedNodeRes = false;
 
-		UUID sharedResUuid = null;
-		UUID sharedNodeUuid = null;
-		UUID sharedNodeResUuid = null;
+		final String asmType = node.getType();
+		final String xsiType = node.getXsiType();
+		final String semtag = node.getSemtag();
+		final String format = node.getFormat();
+		final String label = node.getLabel();
+		final String descr = node.getDescription();
 
-		String metadata = "";
-		String metadataWad = "";
-		String metadataEpm = "";
-		String asmType = null;
-		String xsiType = null;
-		String semtag = null;
-		String format = null;
-		String label = null;
-		String code = null;
-		String descr = null;
+		String metadataStr = "";
+		String metadataWadStr = "";
+		String metadataEpmStr = "";
+
+		String code = node.getCode();
 		String semanticTag = null;
 
-		String nodeRole = null;
-
-		if (node == null)
-			return null;
-
-		if (node.getNodeName().equals("portfolio")) {
-			// On n'attribue pas d'uuid sur la balise portfolio
-			// TODO : Check original Karuta code
-		} else {
-		}
-
-		UUID currentNodeid = null;
-
-		org.w3c.dom.Node idAtt = node.getAttributes().getNamedItem("id");
-		if (idAtt != null) {
-			String tempId = idAtt.getNodeValue();
-			if (tempId.length() > 0)
-				currentNodeid = UUID.fromString(tempId);
-		}
-
-		// Si uuid force, alors on ne tient pas compte de l'uuid indique dans le XML.
-		if (rewriteId) // On garde les uuid par défaut
-		{
-			nodeId = currentNodeid;
-		} else if (forcedId != null) {
-			nodeId = forcedId;
-		} else {
-			nodeId = UUID.randomUUID();
-		}
+		final UUID nodeId = rewriteId ? node.getId() : (forcedId != null ? forcedId : UUID.randomUUID());
 
 		if (resolve != null) // Mapping old id -> new id
-			resolve.put(currentNodeid, nodeId);
+			resolve.put(node.getId(), nodeId);
 
-		if (forcedParentId != null) {
-			// Dans le cas d'un uuid parent force => POST => on génère un UUID
-			parentUuid = forcedParentId;
-		}
+		// If we are dealing with the root of the tree, we need to ensure
+		// that the node's type is "asmRoot".
+		if (nodeId != null && node.getParent() != null) {
+			if (!asmType.equals("asmRoot") && portfolioId == null)
+				throw new GenericBusinessException("Missing node with 'asmRoot' type");
 
-		/// Récupération d'autres informations
-		try {
-			if (node.getNodeName() != null)
-				asmType = node.getNodeName();
-		} catch (Exception ex) {
-		}
-		try {
-			if (node.getAttributes().getNamedItem("xsi_type") != null)
-				xsiType = node.getAttributes().getNamedItem("xsi_type").getNodeValue().trim();
-		} catch (Exception ex) {
-		}
-		try {
-			if (node.getAttributes().getNamedItem("semtag") != null)
-				semtag = node.getAttributes().getNamedItem("semtag").getNodeValue().trim();
-		} catch (Exception ex) {
+			List<ResourceDocument> resourceDocuments = node.getResources();
 
-		}
-		try {
-			if (node.getAttributes().getNamedItem("format") != null)
-				format = node.getAttributes().getNamedItem("format").getNodeValue().trim();
-		} catch (Exception ex) {
-		}
-
-		// Si id défini, alors on écrit en base
-		// TODO Transactionnel noeud+enfant
-		NodeList children = null;
-		try {
-			children = node.getChildNodes();
-			// On parcourt une premiere fois les enfants pour récupérer la liste à écrire en
-			// base.
-			for (int i = 0; i < children.getLength(); i++) {
-				org.w3c.dom.Node child = children.item(i);
-
-				if ("#text".equals(child.getNodeName()))
-					continue;
-
-				if (children.item(i).getNodeName().equals("metadata-wad")) {
-					metadataWad = DomUtils.getNodeAttributesString(children.item(i));
-
-					if (parseRights) {
-						// Gestion de la sécurité intégrée
-						//
-						org.w3c.dom.Node metadataWadNode = children.item(i);
-
-						try {
-							if (metadataWadNode.getAttributes().getNamedItem("seenoderoles") != null) {
-								StringTokenizer tokens = new StringTokenizer(
-										metadataWadNode.getAttributes().getNamedItem("seenoderoles").getNodeValue(),
-										" ");
-								while (tokens.hasMoreElements()) {
-
-									nodeRole = tokens.nextElement().toString();
-									groupManager.addGroupRights(nodeRole, nodeId, GroupRights.READ, portfolioId,
-											userId);
-								}
-							}
-						} catch (Exception ex) {
-						}
-						try {
-							if (metadataWadNode.getAttributes().getNamedItem("delnoderoles") != null) {
-								StringTokenizer tokens = new StringTokenizer(
-										metadataWadNode.getAttributes().getNamedItem("delnoderoles").getNodeValue(),
-										" ");
-								while (tokens.hasMoreElements()) {
-
-									nodeRole = tokens.nextElement().toString();
-									groupManager.addGroupRights(nodeRole, nodeId, GroupRights.DELETE, portfolioId,
-											userId);
-								}
-							}
-						} catch (Exception ex) {
-						}
-						try {
-							if (metadataWadNode.getAttributes().getNamedItem("editnoderoles") != null) {
-								StringTokenizer tokens = new StringTokenizer(
-										metadataWadNode.getAttributes().getNamedItem("editnoderoles").getNodeValue(),
-										" ");
-								while (tokens.hasMoreElements()) {
-
-									nodeRole = tokens.nextElement().toString();
-									groupManager.addGroupRights(nodeRole, nodeId, GroupRights.WRITE, portfolioId,
-											userId);
-								}
-							}
-						} catch (Exception ex) {
-						}
-						try {
-							if (metadataWadNode.getAttributes().getNamedItem("submitnoderoles") != null) // TODO
-																											// submitnoderoles
-																											// deprecated
-																											// fro
-																											// submitroles
-							{
-								StringTokenizer tokens = new StringTokenizer(
-										metadataWadNode.getAttributes().getNamedItem("submitnoderoles").getNodeValue(),
-										" ");
-								while (tokens.hasMoreElements()) {
-									nodeRole = tokens.nextElement().toString();
-									groupManager.addGroupRights(nodeRole, nodeId, GroupRights.SUBMIT, portfolioId,
-											userId);
-								}
-							}
-						} catch (Exception ex) {
-						}
-						//
-						try {
-							if (metadataWadNode.getAttributes().getNamedItem("seeresroles") != null) {
-								StringTokenizer tokens = new StringTokenizer(
-										metadataWadNode.getAttributes().getNamedItem("seeresroles").getNodeValue(),
-										" ");
-								while (tokens.hasMoreElements()) {
-									nodeRole = tokens.nextElement().toString();
-									groupManager.addGroupRights(nodeRole, nodeId, GroupRights.READ, portfolioId,
-											userId);
-								}
-							}
-						} catch (Exception ex) {
-						}
-
-						try {
-							if (metadataWadNode.getAttributes().getNamedItem("delresroles") != null) {
-								StringTokenizer tokens = new StringTokenizer(
-										metadataWadNode.getAttributes().getNamedItem("delresroles").getNodeValue(),
-										" ");
-								while (tokens.hasMoreElements()) {
-									nodeRole = tokens.nextElement().toString();
-									groupManager.addGroupRights(nodeRole, nodeId, GroupRights.DELETE, portfolioId,
-											userId);
-								}
-							}
-						} catch (Exception ex) {
-						}
-
-						try {
-							if (metadataWadNode.getAttributes().getNamedItem("editresroles") != null) {
-								StringTokenizer tokens = new StringTokenizer(
-										metadataWadNode.getAttributes().getNamedItem("editresroles").getNodeValue(),
-										" ");
-								while (tokens.hasMoreElements()) {
-									nodeRole = tokens.nextElement().toString();
-									groupManager.addGroupRights(nodeRole, nodeId, GroupRights.WRITE, portfolioId,
-											userId);
-								}
-							}
-						} catch (Exception ex) {
-						}
-
-						try {
-							if (metadataWadNode.getAttributes().getNamedItem("submitresroles") != null)
-							// TODO submitresroles deprecated fro submitroles
-							{
-								StringTokenizer tokens = new StringTokenizer(
-										metadataWadNode.getAttributes().getNamedItem("submitresroles").getNodeValue(),
-										" ");
-								while (tokens.hasMoreElements()) {
-									nodeRole = tokens.nextElement().toString();
-									groupManager.addGroupRights(nodeRole, nodeId, GroupRights.SUBMIT, portfolioId,
-											userId);
-								}
-							}
-						} catch (Exception ex) {
-						}
-
-						try {
-							if (metadataWadNode.getAttributes().getNamedItem("submitroles") != null) {
-								StringTokenizer tokens = new StringTokenizer(
-										metadataWadNode.getAttributes().getNamedItem("submitroles").getNodeValue(),
-										" ");
-								while (tokens.hasMoreElements()) {
-									nodeRole = tokens.nextElement().toString();
-									groupManager.addGroupRights(nodeRole, nodeId, GroupRights.SUBMIT, portfolioId,
-											userId);
-								}
-							}
-						} catch (Exception ex) {
-						}
-
-						try {
-							if (metadataWadNode.getAttributes().getNamedItem("showtoroles") != null) {
-								StringTokenizer tokens = new StringTokenizer(
-										metadataWadNode.getAttributes().getNamedItem("showtoroles").getNodeValue(),
-										" ");
-								while (tokens.hasMoreElements()) {
-									nodeRole = tokens.nextElement().toString();
-									groupManager.addGroupRights(nodeRole, nodeId, GroupRights.NONE, portfolioId,
-											userId);
-								}
-							}
-						} catch (Exception ex) {
-						}
-
-						try {
-							org.w3c.dom.Node actionroles = metadataWadNode.getAttributes().getNamedItem("actionroles");
-							if (actionroles != null) {
-								/// Format pour l'instant: actionroles="sender:1,2;responsable:4"
-								StringTokenizer tokens = new StringTokenizer(actionroles.getNodeValue(), ";");
-								while (tokens.hasMoreElements()) {
-									nodeRole = tokens.nextElement().toString();
-									StringTokenizer data = new StringTokenizer(nodeRole, ":");
-									String role = data.nextElement().toString();
-									String actions = data.nextElement().toString();
-									groupManager.addGroupRights(role, nodeId, actions, portfolioId, userId);
-								}
-							}
-						} catch (Exception ex) {
-						}
-
-						try /// TODO: e l'integration avec sakai/LTI
-						{
-							org.w3c.dom.Node notifyroles = metadataWadNode.getAttributes().getNamedItem("notifyroles");
-							if (notifyroles != null) {
-								/// Format pour l'instant: actionroles="sender:1,2;responsable:4"
-								StringTokenizer tokens = new StringTokenizer(notifyroles.getNodeValue(), " ");
-								String notifyRoles = "";
-								if (tokens.hasMoreElements())
-									notifyRoles = tokens.nextElement().toString();
-								while (tokens.hasMoreElements())
-									notifyRoles += "," + tokens.nextElement().toString();
-
-								groupManager.changeNotifyRoles(userId, portfolioId, nodeId, notifyRoles);
-							}
-						} catch (Exception ex) {
-						}
-
-					}
-
-				} else if (children.item(i).getNodeName().equals("metadata-epm")) {
-					metadataEpm = DomUtils.getNodeAttributesString(children.item(i));
-				} else if (children.item(i).getNodeName().equals("metadata")) {
-//					/*
-					try {
-						String publicatt = children.item(i).getAttributes().getNamedItem("public").getNodeValue();
-						if ("Y".equals(publicatt))
-							groupManager.setPublicState(userId, portfolioId, true);
-						else if ("N".equals(publicatt))
-							groupManager.setPublicState(userId, portfolioId, false);
-					} catch (Exception ex) {
-					}
-					// */
-
-					String tmpSharedRes = "";
-					try {
-						tmpSharedRes = children.item(i).getAttributes().getNamedItem("sharedResource").getNodeValue();
-					} catch (Exception ex) {
-					}
-
-					String tmpSharedNode = "";
-					try {
-						tmpSharedNode = children.item(i).getAttributes().getNamedItem("sharedNode").getNodeValue();
-					} catch (Exception ex) {
-					}
-
-					String tmpSharedNodeRes = "";
-					try {
-						tmpSharedNodeRes = children.item(i).getAttributes().getNamedItem("sharedNodeResource")
-								.getNodeValue();
-					} catch (Exception ex) {
-					}
-
-					try {
-						semanticTag = children.item(i).getAttributes().getNamedItem("semantictag").getNodeValue();
-					} catch (Exception ex) {
-					}
-
-					if (tmpSharedRes.equalsIgnoreCase("y"))
-						sharedRes = true;
-					if (tmpSharedNode.equalsIgnoreCase("y"))
-						sharedNode = true;
-					if (tmpSharedNodeRes.equalsIgnoreCase("y"))
-						sharedNodeRes = true;
-
-					metadata = DomUtils.getNodeAttributesString(children.item(i));
-				}
-				// On vérifie si l'enfant n'est pas un element de type code, label ou descr
-				else if (children.item(i).getNodeName().equals("label")) {
-					label = DomUtils.getInnerXml(children.item(i));
-				} else if (children.item(i).getNodeName().equals("code")) {
-					code = DomUtils.getInnerXml(children.item(i));
-				} else if (children.item(i).getNodeName().equals("description")) {
-					descr = DomUtils.getInnerXml(children.item(i));
-				} else if (children.item(i).getAttributes() != null) {
-				}
-			}
-		} catch (Exception ex) {
-			// Pas d'enfants
-			ex.printStackTrace();
-		}
-
-		// Si on est au début de l'arbre, on stocke la definition du portfolio
-		// dans la table portfolio
-		if (nodeId != null && node.getParentNode() != null) {
-			// On retrouve le code caché dans les ressources.
-			NodeList childs = node.getChildNodes();
-			for (int k = 0; k < childs.getLength(); ++k) {
-				org.w3c.dom.Node child = childs.item(k);
-				if ("asmResource".equals(child.getNodeName())) {
-					NodeList grandchilds = child.getChildNodes();
-					for (int l = 0; l < grandchilds.getLength(); ++l) {
-						org.w3c.dom.Node gc = grandchilds.item(l);
-						if ("code".equals(gc.getNodeName())) {
-							code = DomUtils.getInnerXml(gc);
-							break;
-						}
-					}
-				}
-				if (code != null)
-					break;
-			}
-
-			if (node.getNodeName().equals("asmRoot")) {
-				// TODO: Check original Karuta code
-			} else if (portfolioId == null)
-				throw new GenericBusinessException("Il manque la balise asmRoot !!");
-		}
-
-		// Si on instancie un portfolio à partir d'un modèle
-		// Alors on gère les share*
-		if (portfolioModelId != null) {
-			if (sharedNode) {
-				sharedNodeUuid = originUuid;
+			if (!resourceDocuments.isEmpty()) {
+				code = resourceDocuments.get(0).getCode();
 			}
 		}
 
-		if (nodeId != null && !node.getNodeName().equals("portfolio") && !node.getNodeName().equals("asmResource"))
-			nodeId = add(nodeId, "", asmType, xsiType, sharedRes, sharedNode, sharedNodeRes,
-					sharedResUuid, sharedNodeUuid, sharedNodeResUuid, metadata, metadataWad, metadataEpm, semtag,
+		for (MetadataDocument metadata : node.getMetadata()) {
+
+			if (parseRights && metadata instanceof MetadataWadDocument) {
+				MetadataWadDocument metadataWad = (MetadataWadDocument)metadata;
+				metadataWadStr = xmlAttributes(metadataWad);
+
+				if (metadataWad.getSeenoderoles() != null) {
+					for (String role : metadataWad.getSeenoderoles().split(" ")) {
+						groupManager.addGroupRights(role, nodeId, GroupRights.READ, portfolioId,
+								userId);
+					}
+				}
+
+				if (metadataWad.getDelnoderoles() != null) {
+					for (String role : metadataWad.getDelnoderoles().split(" ")) {
+						groupManager.addGroupRights(role, nodeId, GroupRights.DELETE, portfolioId,
+								userId);
+					}
+				}
+
+				if (metadataWad.getEditnoderoles() != null) {
+					for (String role : metadataWad.getEditnoderoles().split("")) {
+						groupManager.addGroupRights(role, nodeId, GroupRights.WRITE, portfolioId,
+								userId);
+					}
+				}
+
+				if (metadataWad.getEditresroles() != null) {
+					for (String role : metadataWad.getEditresroles().split(" ")) {
+						groupManager.addGroupRights(role, nodeId, GroupRights.WRITE, portfolioId,
+								userId);
+					}
+				}
+
+				if (metadataWad.getSubmitroles() != null) {
+					for (String role : metadataWad.getSubmitroles().split(" ")) {
+						groupManager.addGroupRights(role, nodeId, GroupRights.SUBMIT, portfolioId,
+								userId);
+					}
+				}
+
+				if (metadataWad.getShowtoroles() != null) {
+					for (String role : metadataWad.getShowtoroles().split(" ")) {
+						groupManager.addGroupRights(role, nodeId, GroupRights.NONE, portfolioId,
+								userId);
+					}
+				}
+
+				if (metadataWad.getNotifyroles() != null) {
+					groupManager.changeNotifyRoles(userId, portfolioId, nodeId,
+							metadataWad.getNotifyroles().replace(" ", ","));
+				}
+
+			} else if (metadata instanceof MetadataEpmDocument) {
+				metadataEpmStr = xmlAttributes(metadata);
+			} else {
+
+				groupManager.setPublicState(userId, portfolioId, metadata.getPublic());
+
+				if (metadata.getSharedResource())
+					sharedRes = true;
+				if (metadata.getSharedNode())
+					sharedNode = true;
+				if (metadata.getSharedNodeResource())
+					sharedNodeRes = true;
+
+				semanticTag = metadata.getSemantictag();
+
+				metadataStr = xmlAttributes(metadata);
+			}
+		}
+
+		UUID newNodeId = add(nodeId, "", asmType, xsiType, sharedRes, sharedNode, sharedNodeRes,
+					metadataStr, metadataWadStr, metadataEpmStr, semtag,
 					semanticTag, label, code, descr, format, ordrer, userId, portfolioId);
 
-		// Si le parent a été force, cela veut dire qu'il faut mettre e jour les enfants
-		// du parent TODO
-		// MODIF : On le met à jour tout le temps car dans le cas d'un POST les uuid ne
-		// sont pas connus à l'avance
-		// if(forcedUuidParent!=null)
-		// Si le noeud est de type asmResource, on stocke le innerXML du noeud
-		if (node.getNodeName().equals("asmResource")) {
-			if (portfolioModelId != null) {
-				if (xsiType.equals("nodeRes") && sharedNodeResParent) {
-					sharedNodeResUuid = originUuid;
-					resourceManager.addResource(sharedNodeResUuid, parentUuid, xsiType, DomUtils.getInnerXml(node),
-							portfolioModelId, sharedNodeResParent, sharedResParent, userId);
-				} else if (!xsiType.equals("context") && !xsiType.equals("nodeRes") && sharedResParent) {
-					sharedResUuid = originUuid;
-					resourceManager.addResource(sharedResUuid, parentUuid, xsiType, DomUtils.getInnerXml(node),
-							portfolioModelId, sharedNodeResParent, sharedResParent, userId);
-				} else {
-					resourceManager.addResource(nodeId, parentUuid, xsiType, DomUtils.getInnerXml(node),
-							portfolioModelId, sharedNodeResParent, sharedResParent, userId);
-				}
-			} else
-				resourceManager.addResource(nodeId, parentUuid, xsiType, DomUtils.getInnerXml(node), null,
-						sharedNodeResParent, sharedResParent, userId);
-		}
-
-		// Ensuite, on parcourt à nouveau les enfants pour continuer la récursivité.
-		if (children != null) {
+		// Loop through children to go down in the tree.
+		if (!node.getChildren().isEmpty()) {
 			int k = 0;
-			for (int i = 0; i < children.getLength(); i++) {
-				org.w3c.dom.Node child = children.item(i);
+
+			for (NodeDocument child : node.getChildren()) {
 				UUID childId = null;
 
 				if (!rewriteId)
 					childId = UUID.randomUUID();
 
-				if (child.getAttributes() != null) {
-					String nodeName = child.getNodeName();
-					if ("asmRoot".equals(nodeName) || "asmStructure".equals(nodeName) || "asmUnit".equals(nodeName)
-							|| "asmUnitStructure".equals(nodeName) || "asmUnitContent".equals(nodeName)
-							|| "asmContext".equals(nodeName)) {
-						writeNode(child, portfolioId, portfolioModelId, userId, k, childId, nodeId, sharedRes,
-								sharedNodeRes, rewriteId, resolve, parseRights);
-						k++;
-					} else if ("asmResource".equals(nodeName)) // Les asmResource pose problème dans l'ordre des noeuds
-					{
-						writeNode(child, portfolioId, portfolioModelId, userId, k, childId, nodeId, sharedRes,
-								sharedNodeRes, rewriteId, resolve, parseRights);
-					}
-				}
+				writeNode(child, portfolioId, portfolioModelId, userId, k, childId, newNodeId, sharedRes,
+							sharedNodeRes, rewriteId, resolve, parseRights);
+				k++;
 			}
 		}
 
 		updateNode(forcedParentId);
 
-		return nodeId;
+		return newNodeId;
 	}
 
 	@Override
-	public String getNodeXmlOutput(UUID nodeId, boolean withChildren, String withChildrenOfXsiType, Long userId,
+	public NodeDocument getNode(UUID nodeId, boolean withChildren, String withChildrenOfXsiType, Long userId,
 			Long groupId, String label, boolean checkSecurity) {
-		StringBuffer result = new StringBuffer();
-
-		// Vérification de sécurité
 		if (checkSecurity) {
 			GroupRights rights = getRights(userId, groupId, nodeId);
 
+			// If the user doesn't have the right to see this node, we
+			// check whether the public account has such right.
 			if (!rights.isRead()) {
-				userId = credentialRepository.getPublicId();
+				Long publicId = credentialRepository.getPublicId();
 
-				/// Vérifie les droits avec le compte publique (dernière chance)
-				rights = groupRightsRepository.getPublicRightsByUserId(nodeId, userId);
+				rights = groupRightsRepository.getPublicRightsByUserId(nodeId, publicId);
 				if (!rights.isRead())
-					return result.toString();
+					return null;
 			}
 		}
 
-		ResourceTable resResource = null;
+		Optional<Node> nodeOptional = nodeRepository.findById(nodeId);
 
-		String indentation = " ";
+		if (nodeOptional.isPresent())
+			return null;
 
-		Node resNode = nodeRepository.findById(nodeId).get();
-		if (resNode.getSharedNodeUuid() != null) {
-			result.append(getNodeXmlOutput(resNode.getSharedNodeUuid(), true, null, userId, groupId,
-					null, true));
+		Node node = nodeOptional.get();
+		NodeDocument nodeDocument;
+
+		if (node.getSharedNodeUuid() != null) {
+			nodeDocument = getNode(node.getSharedNodeUuid(), true, null, userId, groupId,
+					null, true);
 		} else {
-			result.append(indentation + "<" + resNode.getAsmType() + " "
-					+ DomUtils.getXmlAttributeOutput("id", resNode.getId().toString()) + " ");
-			result.append(">");
+			nodeDocument = new NodeDocument(node);
 
-			if (!resNode.getAsmType().equals("asmResource")) {
-				DocumentBuilderFactory newInstance = DocumentBuilderFactory.newInstance();
-				DocumentBuilder builder;
-				Document document = null;
-				try {
-					builder = newInstance.newDocumentBuilder();
-					document = builder.newDocument();
-				} catch (ParserConfigurationException e) {
-					e.printStackTrace();
-				}
+			MetadataWadDocument metadataWad = new MetadataWadDocument(node.getMetadataWad());
+			MetadataEpmDocument metadataEpm = new MetadataEpmDocument(node.getMetadataEpm());
+			MetadataDocument metadataNode = new MetadataDocument(node.getMetadata());
 
-				if (resNode.getMetadataWad() != null && !resNode.getMetadataWad().equals("")) {
-					Element meta = document.createElement("metadata-wad");
-					convertAttr(meta, resNode.getMetadataWad());
+			nodeDocument.setCode(node.getCode());
+			nodeDocument.setLabel(node.getLabel());
+			nodeDocument.setDescription(node.getDescr());
+			nodeDocument.setSemtag(node.getSemtag());
 
-					TransformerFactory transFactory = TransformerFactory.newInstance();
-					Transformer transformer;
-					try {
-						transformer = transFactory.newTransformer();
-						StringWriter buffer = new StringWriter();
-						transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
-						transformer.transform(new DOMSource(meta), new StreamResult(buffer));
-						result.append(buffer.toString());
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
-				} else
-					result.append("<metadata-wad/>");
+			List<MetadataDocument> metadata = Arrays.asList(metadataWad, metadataEpm, metadataNode);
+			List<ResourceDocument> resources = new ArrayList<>();
 
-				if (resNode.getMetadataEpm() != null && !resNode.getMetadataEpm().equals(""))
-					result.append("<metadata-epm " + resNode.getMetadataEpm() + "/>");
-				else
-					result.append("<metadata-epm/>");
-
-				if (resNode.getMetadata() != null && !resNode.getMetadata().equals(""))
-					result.append("<metadata " + resNode.getMetadata() + "/>");
-				else
-					result.append("<metadata/>");
-
-				//
-				result.append(DomUtils.getXmlElementOutput("code", resNode.getCode()));
-				result.append(DomUtils.getXmlElementOutput("label", resNode.getLabel()));
-				result.append(DomUtils.getXmlElementOutput("description", resNode.getDescr()));
-				try {
-					result.append(DomUtils.getXmlElementOutput("semanticTag", resNode.getSemantictag()));
-				} catch (Exception ex) {
-					result.append(DomUtils.getXmlElementOutput("semanticTag", ""));
-				}
-			} else {
+			if (node.getResResource() != null) {
+				resources.add(new ResourceDocument(node.getResResource(), node));
 			}
 
-			if (resNode.getResResource() != null) {
-				resResource = resNode.getResResource();
-				if (resResource.getId().toString().length() > 0) {
-					result.append("<asmResource id='" + resResource.getId().toString() + "'  contextid='" + nodeId
-							+ "' xsi_type='nodeRes'>");
-					result.append(resResource.getContent());
-					result.append("</asmResource>");
-				}
+			if (node.getContextResource() != null) {
+				resources.add(new ResourceDocument(node.getContextResource(), node));
 			}
-			if (resNode.getContextResource() != null) {
-				resResource = resNode.getContextResource();
-				if (resResource.getId().toString().length() > 0) {
-					result.append("<asmResource id='" + resResource.getId().toString() + "' contextid='" + nodeId
-							+ "' xsi_type='context'>");
-					result.append(resResource.getContent());
-					result.append("</asmResource>");
-				}
-			}
-			if (resNode.getResource() != null) {
-				resResource = resNode.getResource();
-				if (resNode.getId().toString().length() > 0) {
-					result.append("<asmResource id='" + resNode.getId().toString() + "' contextid='" + nodeId
-							+ "' xsi_type='" + resResource.getXsiType() + "'>");
 
-					result.append(resResource.getContent());
-					result.append("</asmResource>");
-				}
+			if (node.getResource() != null) {
+				resources.add(new ResourceDocument(node.getResource(), node));
 			}
+
+			nodeDocument.setMetadata(metadata);
+			nodeDocument.setResources(resources);
 		}
 
 		if (withChildren || withChildrenOfXsiType != null) {
-			if (StringUtils.isNotEmpty(resNode.getChildrenStr())) {
-				List<UUID> uuids = Arrays.asList(resNode.getChildrenStr().split(","))
-									.stream()
+			if (StringUtils.isNotEmpty(node.getChildrenStr())) {
+				List<UUID> uuids = Arrays.stream(node.getChildrenStr().split(","))
 									.map(UUID::fromString)
 									.collect(Collectors.toList());
 
+				List<NodeDocument> children = new ArrayList<>();
+
 				for (UUID uuid : uuids) {
-					Node resChildNode = nodeRepository.findById(uuid).get();
-					String tmpXsiType = resChildNode.getXsiType();
+					Node child = nodeRepository.findById(uuid).get();
 
-					if (withChildrenOfXsiType == null || withChildrenOfXsiType.equals(tmpXsiType))
-						result.append(getNodeXmlOutput(uuid, true, null, userId, groupId, null, true));
+					if (withChildrenOfXsiType == null
+							|| withChildrenOfXsiType.equals(child.getXsiType())) {
+						children.add(getNode(uuid, true, null, userId, groupId, null, true));
+					}
 				}
+
+				nodeDocument.setChildren(children);
 			}
 		}
 
-		result.append("</" + resNode.getAsmType() + ">");
-
-		return result.toString();
-	}
-
-	//// Pourquoi on a converti les "en' en premier lieu?
-	//// Avec de l'espoir on en aura plus besoin (meilleur performance)
-	private void convertAttr(Element attributes, String att) {
-		String nodeString = "<?xml version='1.0' encoding='UTF-8' standalone='no'?><transfer " + att + "/>";
-
-		try {
-			/// Ensure we can parse it correctly
-			DocumentBuilder documentBuilder;
-			DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
-			documentBuilder = documentBuilderFactory.newDocumentBuilder();
-			InputSource is = new InputSource(new StringReader(nodeString));
-			Document doc = documentBuilder.parse(is);
-
-			/// Transfer attributes
-			Element attribNode = doc.getDocumentElement();
-			NamedNodeMap attribMap = attribNode.getAttributes();
-
-			for (int i = 0; i < attribMap.getLength(); ++i) {
-				org.w3c.dom.Node singleatt = attribMap.item(i);
-				String name = singleatt.getNodeName();
-				String value = singleatt.getNodeValue();
-				attributes.setAttribute(name, value);
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		return nodeDocument;
 	}
 
 	@Override
-	public String getNodeBySemanticTag(UUID portfolioId, String semantictag, Long userId,
+	public NodeDocument getNodeBySemanticTag(UUID portfolioId, String semantictag, Long userId,
 			Long groupId) throws BusinessException {
 
 		final List<Node> nodes = nodeRepository.getNodesBySemanticTag(portfolioId, semantictag);
@@ -823,40 +366,35 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 			throw new GenericBusinessException("Vous n'avez pas les droits nécessaires.");
 		}
 
-		return getNodeXmlOutput(nodeId, true, null, userId, groupId, null, true).toString();
+		return getNode(nodeId, true, null, userId, groupId, null, true);
 	}
 
 	@Override
-	public String getNodesBySemanticTag(Long userId, Long groupId, UUID portfolioId,
-			String semanticTag) throws BusinessException {
+	public NodeList getNodesBySemanticTag(Long userId, Long groupId, UUID portfolioId,
+																		  String semanticTag) throws BusinessException {
 		List<Node> nodes = nodeRepository.getNodesBySemanticTag(portfolioId, semanticTag);
 
-		String result = "<nodes>";
-
-		for (Node node : nodes) {
-			UUID nodeUuid = node.getId();
-			if (!hasRight(userId, groupId, nodeUuid, GroupRights.READ)) {
-				throw new GenericBusinessException("403 FORBIDDEN : No READ credential");
-			}
-
-			result += "<node ";
-			result += DomUtils.getXmlAttributeOutput("id", nodeUuid.toString()) + " ";
-			result += ">";
-			result += "</node>";
+		if (nodes.stream()
+				.anyMatch(n -> !hasRight(userId, groupId, n.getId(), GroupRights.READ))) {
+			throw new GenericBusinessException("403 FORBIDDEN : No READ credential");
 		}
-		result += "</nodes>";
 
-		return result;
+		return new NodeList(nodes.stream()
+				.map(n -> new NodeDocument(n.getId()))
+				.collect(Collectors.toList()));
 	}
 
+	@Override
 	public boolean isCodeExist(String code, UUID uuid) {
 		return nodeRepository.isCodeExist(code, uuid);
 	}
 
+	@Override
 	public boolean isCodeExist(String code) {
 		return nodeRepository.isCodeExist(code);
 	}
 
+	@Override
 	public UUID getPortfolioIdFromNode(Long userId, UUID nodeId) throws BusinessException {
 		// Admin, or if user has a right to read can fetch this information
 		if (!credentialRepository.isAdmin(userId) && !hasRight(userId, 0L, nodeId, GroupRights.READ)) {
@@ -867,537 +405,262 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		return n.getPortfolio().getId();
 	}
 
-	public String executeMacroOnNode(long userId, UUID nodeId, String macroName) {
-		String val = "erreur";
+	@Override
+	public String executeMacroOnNode(long userId, UUID nodeId, String macroName)
+            throws BusinessException, JsonProcessingException {
 
-		try {
-			/// Selection du grid de l'utilisateur
-			GroupRights gr = groupRightsRepository.getPublicRightsByUserId(nodeId, userId);
-			Long grid = null;
-			String label = null;
-			if (gr != null) {
-				grid = gr.getGroupRightInfo().getId();
-			}
+        /// Selection du grid de l'utilisateur
+        GroupRights gr = groupRightsRepository.getPublicRightsByUserId(nodeId, userId);
+        Long grid = null;
+        String label = "";
 
-			String meta = "";
-			String tmp = nodeRepository.getMetadataWad(nodeId);
-			if (tmp != null)
-				meta = tmp;
+        if (gr != null) {
+            grid = gr.getGroupRightInfo().getId();
+            label = gr.getGroupRightInfo().getLabel();
+        }
 
-			/// FIXME: Check if user has indeed the right to
+        String meta;
+        String tmp = nodeRepository.getMetadataWad(nodeId);
 
-			// Parse it, for the amount of manipulation we do, it will be simpler than
-			// find/replace
-			DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
-			DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
-			meta = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><metadata-wad " + meta + "></metadata-wad>";
-			System.out.println("ACTION OUT: " + meta);
-			InputSource is = new InputSource(new StringReader(meta));
-			Document doc = documentBuilder.parse(is);
-			Element rootMeta = doc.getDocumentElement();
-			boolean doUpdate = true;
+        if (tmp != null)
+            meta = "<metadata-wad " + tmp + "></metadata-wad>";
+        else
+            meta = "<metadata-wad></metadata-wad>";
 
-			NamedNodeMap metaAttr = rootMeta.getAttributes();
-			long resetgroup = getRoleByNode(1L, nodeId, "resetter"); // Check for the possibility of resetter group
-			if ("reset".equals(macroName)
-					&& (credentialRepository.isAdmin(userId) || securityManager.userHasRole(userId, resetgroup))) // Admin,
-																												// or
-																												// part
-																												// of
-			// resetter group
-			{
-				/// if reset and admin
-				// Call specific function to process current temporary table
-				List<Node> children = getChildren(nodeId);
-				resetRights(children);
-			} else if ("show".equals(macroName) || "hide".equals(macroName)) {
-				// Check if current group can show stuff
-				org.w3c.dom.Node roleitem = metaAttr.getNamedItem("showroles");
-				String roles = roleitem.getNodeValue();
-				if (roles.contains(label)) // Can activate it
-				{
-					String showto = metaAttr.getNamedItem("showtoroles").getNodeValue();
-					String vallist = "?";
-					String[] valarray = showto.split(" ");
-					for (int i = 0; i < valarray.length - 1; ++i) {
-						vallist += ",?";
-					}
+        // FIXME: Check if user has indeed the right to
 
-					//// Il faut qu'il y a un showtorole
-					if (!"".equals(showto)) {
+        XmlMapper mapper = new XmlMapper();
+        MetadataWadDocument document = mapper.readerFor(MetadataWadDocument.class)
+                                        .readValue(meta);
 
-						updateNodeRights(nodeId, Arrays.asList(valarray), macroName);
+        long resetgroup = getRoleByNode(1L, nodeId, "resetter");
 
-						org.w3c.dom.Node isPriv = metaAttr.getNamedItem("private");
-						if (isPriv == null) {
-							isPriv = doc.createAttribute("private");
-							metaAttr.setNamedItem(isPriv);
-						}
-						// Update local string
-						if ("hide".equals(macroName))
-							isPriv.setNodeValue("Y");
-						else if ("show".equals(macroName))
-							isPriv.setNodeValue("N");
-					}
-				}
+        // Admin or part of "resetter" group
+        if ("reset".equals(macroName)
+                && (credentialRepository.isAdmin(userId)
+                    || securityManager.userHasRole(userId, resetgroup))) {
 
-				// Update DB
-				if (doUpdate) {
-					meta = DomUtils.getNodeAttributesString(rootMeta);
-					System.out.println("META: " + meta);
-					Node n = nodeRepository.findById(nodeId).get();
-					n.setMetadataWad(meta);
-					nodeRepository.save(n);
-				}
+            resetRights(getChildren(nodeId));
 
-			} else if ("submit".equals(macroName)) {
-				List<Node> children = getChildren(nodeId);
+        } else if ("show".equals(macroName) || "hide".equals(macroName)) {
 
-				boolean updated = updateNodesRights(children, grid);
-				/// Apply changes
-				System.out.println("ACTION: " + macroName + " grid: " + grid + " -> uuid: " + nodeId);
+            String roles = document.getShowroles();
 
-				if (!updated)
-					return "unchanged";
+            if (roles.contains(label)) {
+                String showto = document.getShowtoroles();
 
-				/// FIXME: This part might be deprecated in the near future
-				/// Vérifie le showtoroles
-				org.w3c.dom.Node showtonode = metaAttr.getNamedItem("showtoroles");
-				String showto = "";
-				if (showtonode != null)
-					showto = showtonode.getNodeValue();
-				showto = showto.replace(" ", "','");
-//				showto = "('" + showto +"')";
+                if (!"".equals(showto)) {
+                    updateNodeRights(nodeId, Arrays.asList(showto.split(" ")), macroName);
 
-				//// Il faut qu'il y a un showtorole
-				log.info("SHOWTO: " + showto);
-				if (!"".equals(showto)) {
-					log.info("SHOWING TO: " + showto);
+                    if ("hide".equals(macroName))
+                        document.setPrivate(true);
+                    else
+                        document.setPrivate(false);
+                }
+            }
 
-					// Update rights
-					updateNodeRights(nodeId, Arrays.asList(showto), "show");
-					metaAttr.removeNamedItem("private");
-				}
+            Node n = nodeRepository.findById(nodeId).get();
+            n.setMetadataWad(xmlAttributes(document));
+            nodeRepository.save(n);
 
-				/// We then update the metadata notifying it was submitted
-				rootMeta.setAttribute("submitted", "Y");
-				/// Submitted date
-				Date time = new Date();
-				SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-				String timeFormat = dt.format(time);
-				rootMeta.setAttribute("submitteddate", timeFormat);
-				String updatedMeta = DomUtils.getNodeAttributesString(rootMeta);
-				Node n = nodeRepository.findById(nodeId).get();
-				n.setMetadataWad(updatedMeta);
-				nodeRepository.save(n);
+        } else if ("submit".equals(macroName)) {
+            List<Node> children = getChildren(nodeId);
 
-			} else if ("submitall".equals(macroName)) {
-				// Fill temp table 't_struc_nodeid' with node ids
-				List<Node> children = getChildren(nodeId);
+            boolean updated = updateNodesRights(children, grid);
 
-				/// Apply changes
-				log.info("ACTION: " + macroName + " grid: " + grid + " -> uuid: " + nodeId);
-				/// Insert/replace existing editing related rights
-				/// Same as submit, except we don't limit to user's own group right
-				boolean hasChanges = updateAllNodesRights(children, grid);
+            if (!updated)
+                return "unchanged";
 
-				if (!hasChanges)
-					return "unchanged";
+            /// FIXME: This part might be deprecated in the near future
+            String showto = "";
 
-				/// We then update the metadata notifying it was submitted
-				rootMeta.setAttribute("submitted", "Y");
-				/// Submitted date
-				Date time = new Date();
-				SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-				String timeFormat = dt.format(time);
-				rootMeta.setAttribute("submitteddate", timeFormat);
-				String updatedMeta = DomUtils.getNodeAttributesString(rootMeta);
+            if (document.getShowtoroles() != null)
+                showto = document.getShowtoroles().replace(" ", "','");
 
-				Node n = nodeRepository.findById(nodeId).get();
-				n.setMetadataWad(meta);
+            if (!"".equals(showto)) {
+                updateNodeRights(nodeId, Collections.singletonList(showto), "show");
+                document.setPrivate(false);
+            }
 
-				nodeRepository.save(n);
-			} else if ("submitQuizz".equals(macroName)) {
+            document.setSubmitted(true);
+            document.setSubmitteddate(new Date());
 
-				// Comparaison entre les réponses
-				// node 1
-				Node n1 = nodeRepository.getParentNode(nodeId, "quizz");
-				UUID uuidREP = n1.getId();
+            Node n = nodeRepository.findById(nodeId).get();
+            n.setMetadataWad(xmlAttributes(document));
+            nodeRepository.save(n);
 
-				// node 2
-				Node n2 = nodeRepository.getParentNode(nodeId, "proxy-quizz");
-				ResourceTable rt = resourceTableRepository.getResourceByXsiType(n2.getId(), "Proxy");
-				String ContentUuid2 = rt.getContent();
-				String uuidSOL = ContentUuid2.substring(6, 42);
+        } else if ("submitall".equals(macroName)) {
+            List<Node> children = getChildren(nodeId);
 
-				// TODO: What the ?
-				String uuids = uuidREP + uuidSOL + nodeId.toString();
+            log.info("ACTION: " + macroName + " grid: " + grid + " -> uuid: " + nodeId);
 
-				CloseableHttpClient client = HttpClientBuilder.create().build();
-				String backend = configurationManager.get("backendserver");
-				HttpGet method = new HttpGet(backend + "/compare/" + uuids);
-				CloseableHttpResponse response = client.execute(method);
-				String bodyAsString = EntityUtils.toString(response.getEntity());
-				int prctElv = Integer.parseInt(bodyAsString);
+            /// Insert/replace existing editing related rights
+            /// Same as submit, except we don't limit to user's own group right
+            boolean hasChanges = updateAllNodesRights(children, grid);
 
-				// Recherche noeud pourcentage mini
-				UUID childNodeId = getChildUuidBySemtag(nodeId, "level"); // Récupération noeud avec semantictag
+            if (!hasChanges)
+                return "unchanged";
 
-				String lbl = null;
-				String ndSol = getNode(childNodeId, true, 1L, 0L, lbl, null);
-				if (ndSol == null)
-					return null;
+            document.setSubmitted(true);
+            document.setSubmitteddate(new Date());
 
-				DocumentBuilderFactory documentBuilderFactory2 = DocumentBuilderFactory.newInstance();
-				DocumentBuilder documentBuilder2 = documentBuilderFactory2.newDocumentBuilder();
-				ByteArrayInputStream is2 = new ByteArrayInputStream(ndSol.getBytes("UTF-8"));
-				Document doc2 = documentBuilder2.parse(is2);
+            Node n = nodeRepository.findById(nodeId).get();
+            n.setMetadataWad(xmlAttributes(document));
+            nodeRepository.save(n);
+        }
 
-				DOMImplementationLS impl = (DOMImplementationLS) doc2.getImplementation().getFeature("LS", "3.0");
-				LSSerializer serial = impl.createLSSerializer();
-				serial.getDomConfig().setParameter("xml-declaration", true);
-
-				// Récupération valeur seuil
-				Element root = doc2.getDocumentElement();
-
-				// root.getElementsByTagName("semantictag");
-				org.w3c.dom.Node ndValeur = root.getFirstChild().getNextSibling().getNextSibling().getNextSibling()
-						.getNextSibling().getNextSibling();
-				org.w3c.dom.Node essai = ndValeur.getFirstChild().getNextSibling().getNextSibling();
-				String seuil = ndValeur.getFirstChild().getNextSibling().getNextSibling().getTextContent().trim();
-				int prctMini = Integer.parseInt(seuil);
-
-				// Récupération asmContext contenant l'action
-				final Node n3 = nodeRepository.getParentNode(nodeId, "action");
-				final String[] children = StringUtils.split(n3.getChildrenStr(), ",");
-				final Set<UUID> childrenSet = new LinkedHashSet<>(children.length);
-				for (String child : children) {
-					childrenSet.add(UUID.fromString(child));
-				}
-
-				final List<Node> contextActionNode = nodeRepository.getNodes(new ArrayList<>(childrenSet));
-				UUID contextActionNodeUuid = contextActionNode.isEmpty() ? null
-						: contextActionNode.get(0).getId();
-
-				// Récupération uuidNoeud sur lequel effectuer l'action, role et action
-				String lbl2 = null;
-				String nd = getNode(contextActionNodeUuid, true, 1L, 0L, lbl2, null);
-				if (nd == null)
-					return null;
-
-				DocumentBuilderFactory documentBuilderFactory3 = DocumentBuilderFactory.newInstance();
-				DocumentBuilder documentBuilder3 = documentBuilderFactory3.newDocumentBuilder();
-				ByteArrayInputStream is3 = new ByteArrayInputStream(nd.getBytes("UTF-8"));
-				Document doc3 = documentBuilder3.parse(is3);
-
-				DOMImplementationLS imple = (DOMImplementationLS) doc3.getImplementation().getFeature("LS", "3.0");
-				LSSerializer seriale = imple.createLSSerializer();
-				seriale.getDomConfig().setParameter("xml-declaration", true);
-
-				Element racine = doc3.getDocumentElement();
-
-				String action = null;
-				UUID nodeAction = null;
-				String role = null;
-
-				NodeList valueList = racine.getElementsByTagName("value");
-				nodeAction = UUID.fromString(valueList.item(0).getFirstChild().getNodeValue());
-
-				NodeList actionList = racine.getElementsByTagName("action");
-				action = actionList.item(0).getFirstChild().getNodeValue();
-
-				NodeList roleList = racine.getElementsByTagName("role");
-				role = roleList.item(0).getFirstChild().getNodeValue();
-
-				userId = groupRightsRepository.getUserIdFromNode(nodeAction);
-
-				// comparaison
-				if (prctElv >= prctMini) {
-					executeAction(1L, nodeAction, action, role);
-
-					Node n = nodeRepository.findById(nodeAction).get();
-					String metaA = "";
-					if (n != null)
-						metaA = n.getMetadataWad();
-
-					// Parsage meta
-					DocumentBuilderFactory documentBuilderFactorys = DocumentBuilderFactory.newInstance();
-					DocumentBuilder documentBuilders = documentBuilderFactorys.newDocumentBuilder();
-					metaA = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><metadata-wad " + metaA + "></metadata-wad>";
-					System.out.println("ACTION OUT: " + metaA);
-					InputSource iss = new InputSource(new StringReader(metaA));
-					Document docs = documentBuilders.parse(iss);
-					Element rootMetaA = docs.getDocumentElement();
-					boolean doUpdatee = true;
-
-					NamedNodeMap metaAttrs = rootMetaA.getAttributes();
-					org.w3c.dom.Node isPriv = metaAttrs.removeNamedItem("private");
-
-					String updatedMeta = DomUtils.getNodeAttributesString(rootMetaA);
-					n.setMetadataWad(updatedMeta);
-
-					nodeRepository.save(n);
-
-					executeMacroOnNode(userId, nodeId, "submit");
-				} else {
-					executeMacroOnNode(userId, uuidREP, "submit");
-				}
-			}
-			val = "OK";
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return val;
+		return "OK";
 	}
 
-	public void resetRights(List<Node> children) throws ParserConfigurationException {
+	@Override
+	public void resetRights(List<Node> children) throws JsonProcessingException {
 		Map<UUID, Map<String, GroupRights>> resolve = new HashMap<>();
 
-		DocumentBuilder documentBuilder;
-		DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
-		documentBuilder = documentBuilderFactory.newDocumentBuilder();
 		for (Node child : children) {
 			UUID uuid = child.getId();
 			String meta = child.getMetadataWad();
-			String nodeString = "<?xml version='1.0' encoding='UTF-8' standalone='no'?><transfer " + meta + "/>";
 
-			Map<String, GroupRights> rolesMap = resolve.get(uuid);
+			final Map<String, GroupRights> existing = resolve.get(uuid);
+			final Map<String, GroupRights> rolesMap = existing != null ? existing : new HashMap<>();
 
 			if (rolesMap == null) {
-				rolesMap = new HashMap<>();
 				resolve.put(uuid, rolesMap);
 			}
 
-			try {
-				/// parse meta
-				InputSource is = new InputSource(new StringReader(nodeString));
-				Document doc = documentBuilder.parse(is);
+			// FIXME MARCHE PAS !
+			MetadataWadDocument metadata = new MetadataWadDocument(meta);
 
-				/// Process attributes
-				Element attribNode = doc.getDocumentElement();
-				NamedNodeMap attribMap = attribNode.getAttributes();
-
-				String nodeRole;
-				org.w3c.dom.Node att = attribMap.getNamedItem("access");
-				if (att != null) {
-					// if(access.equalsIgnoreCase("public") || access.contains("public"))
-					// credential.postGroupRight("all",uuid,Credential.READ,portfolioUuid,userId);
-				}
-				att = attribMap.getNamedItem("seenoderoles");
-				if (att != null) {
-					StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-					while (tokens.hasMoreElements()) {
-						nodeRole = tokens.nextElement().toString();
-						if (!rolesMap.containsKey(nodeRole)) {
-							GroupRights gr = new GroupRights();
-							gr.setRead(true);
-							rolesMap.put(nodeRole, gr);
-						}
+			if (metadata.getSeenoderoles() != null) {
+				for (String role : metadata.getSeenoderoles().split(" ")) {
+					if (!rolesMap.containsKey(role)) {
+						GroupRights gr = new GroupRights();
+						gr.setRead(true);
+						rolesMap.put(role, gr);
 					}
 				}
-				att = attribMap.getNamedItem("showtoroles");
-				if (att != null) {
-					StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-					while (tokens.hasMoreElements()) {
-						nodeRole = tokens.nextElement().toString();
-						if (!rolesMap.containsKey(nodeRole)) {
-							GroupRights gr = new GroupRights();
-							gr.setRead(false);
-							rolesMap.put(nodeRole, gr);
-						}
+			}
+
+			if (metadata.getShowtoroles() != null) {
+				for (String role : metadata.getShowtoroles().split(" ")) {
+					if (!rolesMap.containsKey(role)) {
+						GroupRights gr = new GroupRights();
+						gr.setRead(false);
+						rolesMap.put(role, gr);
 					}
 				}
-				att = attribMap.getNamedItem("delnoderoles");
-				if (att != null) {
-					StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-					while (tokens.hasMoreElements()) {
+			}
 
-						nodeRole = tokens.nextElement().toString();
-						if (!rolesMap.containsKey(nodeRole)) {
-							GroupRights gr = new GroupRights();
-							gr.setDelete(true);
-							rolesMap.put(nodeRole, gr);
-						}
+			if (metadata.getDelnoderoles() != null) {
+				for (String role : metadata.getDelnoderoles().split(" ")) {
+					if (!rolesMap.containsKey(role)) {
+						GroupRights gr = new GroupRights();
+						gr.setDelete(true);
+						rolesMap.put(role, gr);
 					}
 				}
-				att = attribMap.getNamedItem("editnoderoles");
-				if (att != null) {
-					StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-					while (tokens.hasMoreElements()) {
-						nodeRole = tokens.nextElement().toString();
-						if (!rolesMap.containsKey(nodeRole)) {
-							GroupRights gr = new GroupRights();
-							gr.setWrite(true);
-							rolesMap.put(nodeRole, gr);
-						}
+			}
+
+			if (metadata.getEditnoderoles() != null) {
+				for (String role : metadata.getEditnoderoles().split(" ")) {
+					if (!rolesMap.containsKey(role)) {
+						GroupRights gr = new GroupRights();
+						gr.setWrite(true);
+						rolesMap.put(role, gr);
 					}
 				}
-				att = attribMap.getNamedItem("submitroles");
-				if (att != null) {
-					StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-					while (tokens.hasMoreElements()) {
-						nodeRole = tokens.nextElement().toString();
-						if (!rolesMap.containsKey(nodeRole)) {
-							GroupRights gr = new GroupRights();
-							gr.setSubmit(true);
-							rolesMap.put(nodeRole, gr);
-						}
+			}
+
+			if (metadata.getSubmitroles() != null) {
+				for (String role : metadata.getSubmitroles().split(" ")) {
+					if (!rolesMap.containsKey(role)) {
+						GroupRights gr = new GroupRights();
+						gr.setSubmit(true);
+						rolesMap.put(role, gr);
 					}
 				}
-				att = attribMap.getNamedItem("seeresroles");
-				if (att != null) {
-					StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-					while (tokens.hasMoreElements()) {
-						nodeRole = tokens.nextElement().toString();
-						if (!rolesMap.containsKey(nodeRole)) {
-							GroupRights gr = new GroupRights();
-							gr.setRead(true);
-							rolesMap.put(nodeRole, gr);
-						}
+			}
+
+			if (metadata.getEditresroles() != null) {
+				for (String role : metadata.getEditresroles().split(" ")) {
+					if (!rolesMap.containsKey(role)) {
+						GroupRights gr = new GroupRights();
+						gr.setWrite(true);
+						rolesMap.put(role, gr);
 					}
 				}
-				att = attribMap.getNamedItem("delresroles");
-				if (att != null) {
-					StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-					while (tokens.hasMoreElements()) {
-						nodeRole = tokens.nextElement().toString();
-						if (!rolesMap.containsKey(nodeRole)) {
-							GroupRights gr = new GroupRights();
-							gr.setDelete(true);
-							rolesMap.put(nodeRole, gr);
-						}
+			}
+
+			if (metadata.getMenuroles() != null) {
+				for (String role : metadata.getMenuroles().split(";")) {
+					/// Given format:
+					/// code_portfolio,tag_semantique,label@en/libelle@fr,reles[;autre menu]
+					String[] tokens = role.split(",");
+					String menurolename = tokens[3];
+
+					if (menurolename != null) {
+						for (String s : menurolename.split(" "))
+							rolesMap.put(s.trim(), new GroupRights());
 					}
 				}
-				att = attribMap.getNamedItem("editresroles");
-				if (att != null) {
-					StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-					while (tokens.hasMoreElements()) {
-						nodeRole = tokens.nextElement().toString();
-						if (!rolesMap.containsKey(nodeRole)) {
-							GroupRights gr = new GroupRights();
-							gr.setWrite(true);
-							rolesMap.put(nodeRole, gr);
-						}
-					}
+			}
+
+			if (metadata.getNotifyroles() != null) {
+				/// Format pour l'instant: notifyroles="sender responsable"
+				String merge = Arrays.stream(metadata.getNotifyroles().split(" "))
+									.collect(Collectors.joining(","));
+
+				for (GroupRights value : rolesMap.values()) {
+					value.setNotifyRoles(merge);
 				}
-				att = attribMap.getNamedItem("submitresroles");
-				if (att != null) {
-					StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-					while (tokens.hasMoreElements()) {
-						nodeRole = tokens.nextElement().toString();
-						if (!rolesMap.containsKey(nodeRole)) {
-							GroupRights gr = new GroupRights();
-							gr.setSubmit(true);
-							rolesMap.put(nodeRole, gr);
-						}
-					}
+			}
+
+			/// Now remove mention to being submitted
+			Node n = nodeRepository.findById(uuid).get();
+			n.setMetadataWad(xmlAttributes(metadata));
+
+			nodeRepository.save(n);
+
+			/// Ajout des droits des noeuds FIXME
+			GroupRightsId grId = new GroupRightsId();
+			GroupRightInfo gri = null;
+
+			Iterator<Entry<UUID, Map<String, GroupRights>>> rights = resolve.entrySet().iterator();
+
+			while (rights.hasNext()) {
+				Entry<UUID, Map<String, GroupRights>> entry = rights.next();
+				uuid = entry.getKey();
+				Map<String, GroupRights> gr = entry.getValue();
+
+				Iterator<Entry<String, GroupRights>> rightiter = gr.entrySet().iterator();
+				while (rightiter.hasNext()) {
+					Entry<String, GroupRights> rightElem = rightiter.next();
+					String group = rightElem.getKey();
+
+					GroupRights gr2 = groupRightsRepository.getRightsByIdAndLabel(uuid, group);
+					if (gr2 != null)
+						gri = gr2.getGroupRightInfo();
+
+					GroupRights rightValue = rightElem.getValue();
+					grId.setGroupRightInfo(gri);
+					grId.setId(uuid);
+					GroupRights toUpdate = groupRightsRepository.findById(grId).get();
+
+					toUpdate.setRead(rightValue.isRead());
+					toUpdate.setWrite(rightValue.isWrite());
+					toUpdate.setDelete(rightValue.isDelete());
+					toUpdate.setSubmit(rightValue.isSubmit());
+					toUpdate.setAdd(rightValue.isAdd());
+					toUpdate.setTypesId(rightValue.getTypesId());
+					toUpdate.setRulesId(rightValue.getRulesId());
+					toUpdate.setNotifyRoles(rightValue.getNotifyRoles());
+
+					groupRightsRepository.save(toUpdate);
 				}
-				org.w3c.dom.Node actionroles = attribMap.getNamedItem("actionroles");
-				if (actionroles != null) {
-					/// Format pour l'instant: actionroles="sender:1,2;responsable:4"
-					StringTokenizer tokens = new StringTokenizer(actionroles.getNodeValue(), ";");
-					while (tokens.hasMoreElements()) {
-						nodeRole = tokens.nextElement().toString();
-						StringTokenizer data = new StringTokenizer(nodeRole, ":");
-						String nrole = data.nextElement().toString();
-						String actions = data.nextElement().toString().trim();
-						if (!rolesMap.containsKey(nrole)) {
-							GroupRights gr = new GroupRights();
-							gr.setDelete(true);
-							gr.setRulesId(actions);
-							rolesMap.put(nrole, gr);
-						}
-					}
-				}
-				org.w3c.dom.Node menuroles = attribMap.getNamedItem("menuroles");
-				if (menuroles != null) {
-					/// Pour les differents items du menu
-					StringTokenizer menuline = new StringTokenizer(menuroles.getNodeValue(), ";");
-
-					while (menuline.hasMoreTokens()) {
-						String line = menuline.nextToken();
-						/// Format pour l'instant:
-						/// code_portfolio,tag_semantique,label@en/libelle@fr,reles[;autre menu]
-						String[] tokens = line.split(",");
-						String menurolename = null;
-						for (int t = 0; t < 4; ++t)
-							menurolename = tokens[3];
-
-						if (menurolename != null) {
-							// Break down list of roles
-							String[] roles = menurolename.split(" ");
-							for (int i = 0; i < roles.length; ++i)
-								rolesMap.put(roles[i].trim(), new GroupRights());
-						}
-					}
-				}
-				org.w3c.dom.Node notifyroles = attribMap.getNamedItem("notifyroles");
-				if (notifyroles != null) {
-					/// Format pour l'instant: notifyroles="sender responsable"
-					StringTokenizer tokens = new StringTokenizer(notifyroles.getNodeValue(), " ");
-					String merge = "";
-					if (tokens.hasMoreElements())
-						merge = tokens.nextElement().toString().trim();
-					while (tokens.hasMoreElements())
-						merge += "," + tokens.nextElement().toString().trim();
-
-					for (GroupRights value : rolesMap.values()) {
-						value.setNotifyRoles(merge);
-					}
-
-				}
-
-				/// Now remove mention to being submitted
-				attribNode.removeAttribute("submitted");
-				attribNode.removeAttribute("submitteddate");
-				String resetMeta = DomUtils.getNodeAttributesString(attribNode);
-				Node n = nodeRepository.findById(uuid).get();
-				n.setMetadataWad(resetMeta);
-
-				nodeRepository.save(n);
-
-				/// Ajout des droits des noeuds FIXME
-				GroupRightsId grId = new GroupRightsId();
-				GroupRightInfo gri = null;
-
-				Iterator<Entry<UUID, Map<String, GroupRights>>> rights = resolve.entrySet().iterator();
-
-				while (rights.hasNext()) {
-					Entry<UUID, Map<String, GroupRights>> entry = rights.next();
-					uuid = entry.getKey();
-					Map<String, GroupRights> gr = entry.getValue();
-
-					Iterator<Entry<String, GroupRights>> rightiter = gr.entrySet().iterator();
-					while (rightiter.hasNext()) {
-						Entry<String, GroupRights> rightElem = rightiter.next();
-						String group = rightElem.getKey();
-
-						GroupRights gr2 = groupRightsRepository.getRightsByIdAndLabel(uuid, group);
-						if (gr2 != null)
-							gri = gr2.getGroupRightInfo();
-
-						GroupRights rightValue = rightElem.getValue();
-						grId.setGroupRightInfo(gri);
-						grId.setId(uuid);
-						GroupRights toUpdate = groupRightsRepository.findById(grId).get();
-
-						toUpdate.setRead(rightValue.isRead());
-						toUpdate.setWrite(rightValue.isWrite());
-						toUpdate.setDelete(rightValue.isDelete());
-						toUpdate.setSubmit(rightValue.isSubmit());
-						toUpdate.setAdd(rightValue.isAdd());
-						toUpdate.setTypesId(rightValue.getTypesId());
-						toUpdate.setRulesId(rightValue.getRulesId());
-						toUpdate.setNotifyRoles(rightValue.getNotifyRoles());
-
-						groupRightsRepository.save(toUpdate);
-					}
-				}
-			} catch (Exception e) {
 			}
 		}
 	}
 
+	@Override
 	public long getRoleByNode(Long userId, UUID nodeId, String role) throws BusinessException {
 		if (!credentialRepository.isAdmin(userId))
 			throw new GenericBusinessException("FORBIDDEN : No admin right");
@@ -1426,190 +689,101 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 	}
 
 	@Override
-	public String getNodeMetadataWad(UUID nodeId, Long userId, Long groupId) throws BusinessException {
-		StringBuffer result = new StringBuffer();
+	public MetadataWadDocument getNodeMetadataWad(UUID nodeId, Long userId, Long groupId)
+			throws BusinessException {
 
-		// Vérification de sécurité
 		GroupRights rightsOnNode = getRights(userId, groupId, nodeId);
+
 		if (!rightsOnNode.isRead()) {
 			throw new GenericBusinessException("Vous n'avez pas les droits nécessaires.");
 		}
 
-		Node node = nodeRepository.findById(nodeId).get();
+		Optional<Node> node = nodeRepository.findById(nodeId);
 
-		if (!StringUtils.equals(node.getAsmType(), "asmResource")) {
-			if (StringUtils.isNotEmpty(node.getMetadataWad()))
-				result.append("<metadata-wad " + node.getMetadataWad() + "/>");
-			else
-				result.append("<metadata-wad/>");
+		if (!node.isPresent() || !node.get().getAsmType().equals("asmResource"))
+			return null;
 
-		}
-
-		return result.toString();
+		return new MetadataWadDocument(node.get().getMetadataWad());
 	}
 
 	@Override
-	public Integer changeNode(UUID nodeId, String xmlNode, Long userId, Long groupId) throws Exception {
-		String asmType = null;
-		String xsiType = null;
-		String semtag = null;
-		String format = null;
-		String label = null;
-		String code = null;
-		String descr = null;
-		String metadata = "";
-		String metadataWad = "";
-		String metadataEpm = "";
-		String nodeChildrenUuid = null;
+	public Integer changeNode(UUID nodeId, NodeDocument node, Long userId, Long groupId) throws Exception {
+		if (!hasRight(userId, groupId, nodeId, GroupRights.WRITE))
+			throw new GenericBusinessException("403 Forbidden : no write credential ");
+
+		if (node == null)
+			return null;
+
+		String asmType = node.getType();
+		String xsiType = node.getXsiType();
+		String semtag = node.getSemtag();
+		String format = node.getFormat();
+		String label = node.getLabel();
+		String code = node.getCode();
+		String descr = node.getDescription();
+
+		String metadataStr = "";
+		String metadataWadStr = "";
+		String metadataEpmStr = "";
 
 		boolean sharedRes = false;
 		boolean sharedNode = false;
 		boolean sharedNodeRes = false;
 
-		if (!hasRight(userId, groupId, nodeId, GroupRights.WRITE))
-			throw new GenericBusinessException("403 Forbidden : no write credential ");
-
-		String inPars = DomUtils.cleanXMLData(xmlNode);
-		Document doc = DomUtils.xmlString2Document(inPars, new StringBuffer());
-		// Puis on le recrée
-		org.w3c.dom.Node node = doc.getDocumentElement();
-
-		if (node == null)
-			return null;
-
-		try {
-			if (node.getNodeName() != null)
-				asmType = node.getNodeName();
-		} catch (Exception ex) {
-		}
-		try {
-			if (node.getAttributes().getNamedItem("xsi_type") != null)
-				xsiType = node.getAttributes().getNamedItem("xsi_type").getNodeValue();
-		} catch (Exception ex) {
-		}
-		try {
-			if (node.getAttributes().getNamedItem("semtag") != null)
-				semtag = node.getAttributes().getNamedItem("semtag").getNodeValue();
-		} catch (Exception ex) {
-
-		}
-		try {
-			if (node.getAttributes().getNamedItem("format") != null)
-				format = node.getAttributes().getNamedItem("format").getNodeValue();
-		} catch (Exception ex) {
+		for (ResourceDocument resourceDocument : node.getResources()) {
+			resourceManager.updateResource(nodeId, resourceDocument.getXsiType(),
+					resourceDocument.getContent(), userId);
 		}
 
-		// Si id défini, alors on écrit en base
-		NodeList children = node.getChildNodes();
-		// On parcourt une premiere fois les enfants pour récupérer la liste à écrire en
-		// base
-		int j = 0;
-		for (int i = 0; i < children.getLength(); i++) {
-			if (!children.item(i).getNodeName().equals("#text")) {
-				// On vérifie si l'enfant n'est pas un element de type code, label ou descr.
-				if (children.item(i).getNodeName().equals("label")) {
-					label = DomUtils.getInnerXml(children.item(i));
-				} else if (children.item(i).getNodeName().equals("code")) {
-					code = DomUtils.getInnerXml(children.item(i));
-				} else if (children.item(i).getNodeName().equals("description")) {
-					descr = DomUtils.getInnerXml(children.item(i));
-				} else if (children.item(i).getNodeName().equals("semanticTag")) {
-					semtag = DomUtils.getInnerXml(children.item(i));
-				} else if (children.item(i).getNodeName().equals("asmResource")) {
-					// Si le noeud est de type asmResource, on stocke le innerXML du noeud
-					resourceManager.updateResource(nodeId,
-							children.item(i).getAttributes().getNamedItem("xsi_type").getNodeValue(),
-							DomUtils.getInnerXml(children.item(i)), userId);
-				} else if (children.item(i).getNodeName().equals("metadata-wad")) {
-					metadataWad = DomUtils.getNodeAttributesString(children.item(i));// " attr1=\"wad1\" attr2=\"wad2\"
-																						// ";
-				} else if (children.item(i).getNodeName().equals("metadata-epm")) {
-					metadataEpm = DomUtils.getNodeAttributesString(children.item(i));
-				} else if (children.item(i).getNodeName().equals("metadata")) {
-					String tmpSharedRes = "";
-					try {
-						tmpSharedRes = children.item(i).getAttributes().getNamedItem("sharedRes").getNodeValue();
-					} catch (Exception ex) {
-					}
+		for (MetadataDocument metadataDocument : node.getMetadata()) {
+			if (metadataDocument instanceof MetadataWadDocument) {
+				metadataWadStr = xmlAttributes(metadataDocument);
 
-					String tmpSharedNode = "";
-					try {
-						tmpSharedNode = children.item(i).getAttributes().getNamedItem("sharedNode").getNodeValue();
-					} catch (Exception ex) {
-					}
-					String tmpSharedNodeResource = "";
-					try {
-						tmpSharedNodeResource = children.item(i).getAttributes().getNamedItem("sharedNodeResource")
-								.getNodeValue();
-					} catch (Exception ex) {
-					}
+			} else if (metadataDocument instanceof MetadataEpmDocument) {
+				metadataEpmStr = xmlAttributes(metadataDocument);
 
-					if (tmpSharedRes.equalsIgnoreCase("y"))
-						sharedRes = true;
-					if (tmpSharedNode.equalsIgnoreCase("y"))
-						sharedNode = true;
-					if (tmpSharedNodeResource.equalsIgnoreCase("y"))
-						sharedNodeRes = true;
+			} else {
+				if (metadataDocument.getSharedResource())
+					sharedRes = true;
+				if (metadataDocument.getSharedNode())
+					sharedNode = true;
+				if (metadataDocument.getSharedNodeResource())
+					sharedNodeRes = true;
 
-					metadata = DomUtils.getNodeAttributesString(children.item(i));
-				} else if (children.item(i).getAttributes() != null) {
-					if (children.item(i).getAttributes().getNamedItem("id") != null) {
-						if (nodeChildrenUuid == null)
-							nodeChildrenUuid = "";
-						if (j > 0)
-							nodeChildrenUuid += ",";
-						nodeChildrenUuid += children.item(i).getAttributes().getNamedItem("id").getNodeValue();
-						updateNodeOrder(
-								children.item(i).getAttributes().getNamedItem("id").getNodeValue(), j);
-						System.out.println("UPDATE NODE ORDER");
-						j++;
-					}
-				}
+				metadataStr = xmlAttributes(metadataDocument);
 			}
 		}
 
-		// Si le noeud est de type asmResource, on stocke le innerXML du noeud
-		if (node.getNodeName().equals("asmResource")) {
-			resourceManager.changeResourceByXsiType(nodeId, xsiType, DomUtils.getInnerXml(node), userId);
+		int order = 0;
+
+		for (NodeDocument child : node.getChildren()) {
+			updateNodeOrder(child.getId(), order);
+			order++;
 		}
 
 		// TODO UpdateNode different selon creation de modèle ou instantiation copie
-		if (nodeChildrenUuid != null)
+		if (!node.getChildren().isEmpty())
 			updateNode(nodeId);
 
 		portfolioManager.updateTimeByNode(nodeId);
 
-		int retval = update(nodeId, asmType, xsiType, semtag, label, code, descr, format, metadata,
-				metadataWad, metadataEpm, sharedRes, sharedNode, sharedNodeRes, userId);
-
-		return retval;
+		return update(nodeId, asmType, xsiType, semtag, label, code, descr, format, metadataStr,
+				metadataWadStr, metadataEpmStr, sharedRes, sharedNode, sharedNodeRes, userId);
 	}
 
 	@Override
-	public String changeNodeMetadataWad(UUID nodeId, String xmlMetawad, Long userId,
-										Long groupId) throws Exception {
-		String metadatawad = "";
-		String result = null;
+	public String changeNodeMetadataWad(UUID nodeId, MetadataWadDocument metadata, Long userId,
+										Long groupId) throws BusinessException, JsonProcessingException {
 
 		if (!hasRight(userId, groupId, nodeId, GroupRights.WRITE))
 			throw new GenericBusinessException("403 FORBIDDEN : No WRITE credential");
 
-		// D'abord, on supprime les noeuds existants
-		xmlMetawad = DomUtils.cleanXMLData(xmlMetawad);
-		Document doc = DomUtils.xmlString2Document(xmlMetawad, new StringBuffer());
-		// Puis on le recrée
-		org.w3c.dom.Node node = doc.getDocumentElement();
-
-		if (node.getNodeName().equals("metadata-wad")) {
-			metadatawad = DomUtils.getNodeAttributesString(node);// " attr1=\"wad1\" attr2=\"wad2\" ";
-		}
-
-		Node n = nodeRepository.findById(nodeId).get();
-		n.setMetadataWad(metadatawad);
-		nodeRepository.save(n);
+		Node node = nodeRepository.findById(nodeId).get();
+		node.setMetadataWad(xmlAttributes(metadata));
+		nodeRepository.save(node);
 		portfolioManager.updateTimeByNode(nodeId);
-		result = "editer";
-		return result;
+
+		return "editer";
 	}
 
 	@Override
@@ -1649,8 +823,8 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		int level = 0;
 		boolean added = true;
 		while (added) {
-			t_set_parentid = new LinkedHashSet<String>();
-			t_set_parent = new LinkedHashSet<Node>();
+			t_set_parentid = new LinkedHashSet<>();
+			t_set_parent = new LinkedHashSet<>();
 
 			for (Node t_node : t_nodes) {
 				for (String t_parent_id : t_map_parentid.get(level)) {
@@ -1779,22 +953,14 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 	}
 
 	@Override
-	public String changeNodeMetadataEpm(UUID nodeId, String xmlMetadataEpm, Long userId, long groupId) throws Exception {
+	public String changeNodeMetadataEpm(UUID nodeId, MetadataEpmDocument metadata, Long userId, long groupId)
+			throws BusinessException, JsonProcessingException {
 		if (!hasRight(userId, groupId, nodeId, GroupRights.WRITE))
 			throw new GenericBusinessException("FORBIDDEN 403 : No WRITE credential ");
 
-		xmlMetadataEpm = DomUtils.cleanXMLData(xmlMetadataEpm);
-		Document doc = DomUtils.xmlString2Document(xmlMetadataEpm, new StringBuffer());
-		org.w3c.dom.Node node = doc.getDocumentElement();
-
-		String metadataepm = "";
-		if (node.getNodeName().equals("metadata-epm")) {
-			metadataepm = DomUtils.getNodeAttributesString(node);
-		}
-
-		Node n = nodeRepository.findById(nodeId).get();
-		n.setMetadataEpm(metadataepm);
-		nodeRepository.save(n);
+		Node node = nodeRepository.findById(nodeId).get();
+		node.setMetadataEpm(xmlAttributes(metadata));
+		nodeRepository.save(node);
 
 		portfolioManager.updateTimeByNode(nodeId);
 
@@ -1802,124 +968,56 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 	}
 
 	@Override
-	public String changeNodeMetadata(UUID nodeId, String xmlNode, Long userId, long groupId)
-			throws Exception {
-		String metadata = "";
-
-		boolean sharedRes = false;
-		boolean sharedNode = false;
-		boolean sharedNodeRes = false;
+	public String changeNodeMetadata(UUID nodeId, MetadataDocument metadata, Long userId, long groupId)
+			throws BusinessException, JsonProcessingException {
 
 		if (!hasRight(userId, groupId, nodeId, GroupRights.WRITE))
 			throw new GenericBusinessException("403 FORBIDDEN, no WRITE credential");
 
-		String status = "erreur";
-
 		UUID portfolioUuid = portfolioRepository.getPortfolioUuidFromNode(nodeId);
 
-		// D'abord, on supprime les noeuds existants.
-		xmlNode = DomUtils.cleanXMLData(xmlNode);
-		Document doc = DomUtils.xmlString2Document(xmlNode, new StringBuffer());
+		// Public has to be managed via the group/user function
+		groupManager.setPublicState(userId, portfolioUuid, metadata.getPublic());
 
-		// Puis on le recrée
-		org.w3c.dom.Node node = doc.getDocumentElement();
+		Node n = nodeRepository.findById(nodeId).get();
 
-		if (node.getNodeName().equals("metadata")) {
+		n.setMetadata(xmlAttributes(metadata));
+		n.setSemantictag(metadata.getSemantictag());
+		n.setSharedRes(metadata.getSharedResource());
+		n.setSharedNode(metadata.getSharedNode());
+		n.setSharedNodeRes(metadata.getSharedNodeResource());
 
-			String tag = "";
-			NamedNodeMap attr = node.getAttributes();
+		nodeRepository.save(n);
+		portfolioManager.updateTime(portfolioUuid);
 
-			/// Public has to be managed via the group/user function
-
-			String publicatt = attr.getNamedItem("public").getNodeValue();
-			groupManager.setPublicState(userId, portfolioUuid, "Y".equals(publicatt));
-
-			try {
-				tag = attr.getNamedItem("semantictag").getNodeValue();
-			} catch (Exception ex) {
-			}
-
-			String tmpSharedRes = "";
-			try {
-				tmpSharedRes = attr.getNamedItem("sharedResource").getNodeValue();
-				if (tmpSharedRes.equalsIgnoreCase("y"))
-					sharedRes = true;
-			} catch (Exception ex) {
-			}
-
-			String tmpSharedNode = "";
-			try {
-				tmpSharedNode = attr.getNamedItem("sharedNode").getNodeValue();
-				if (tmpSharedNode.equalsIgnoreCase("y"))
-					sharedNode = true;
-			} catch (Exception ex) {
-			}
-
-			String tmpSharedNodeResource = "";
-			try {
-				tmpSharedNodeResource = attr.getNamedItem("sharedNodeResource").getNodeValue();
-				if (tmpSharedNodeResource.equalsIgnoreCase("y"))
-					sharedNodeRes = true;
-			} catch (Exception ex) {
-			}
-			metadata = DomUtils.getNodeAttributesString(node);
-			/// Mettre à jour les flags et données du champ
-			Node n = nodeRepository.findById(nodeId).get();
-
-			n.setMetadata(metadata);
-			n.setSemantictag(tag);
-			n.setSharedRes(sharedRes);
-			n.setSharedNode(sharedNode);
-			n.setSharedNodeRes(sharedNodeRes);
-			nodeRepository.save(n);
-			status = "editer";
-			portfolioManager.updateTime(portfolioUuid);
-		}
-		return status;
+		return "editer";
 	}
 
 	@Override
-	public String changeNodeContext(UUID nodeId, String xmlNode, Long userId, Long groupId)
-			throws BusinessException, Exception {
+	public String changeNodeContext(UUID nodeId, ResourceDocument resource, Long userId, Long groupId)
+			throws BusinessException {
 		if (!hasRight(userId, groupId, nodeId, GroupRights.WRITE))
 			throw new GenericBusinessException("403 FORBIDDEN : No WRITE credential");
 
-		xmlNode = DomUtils.cleanXMLData(xmlNode);
-		Document doc = DomUtils.xmlString2Document(xmlNode, new StringBuffer());
-		// Puis on le recrée
-		org.w3c.dom.Node node = doc.getDocumentElement();
+		resourceManager.changeResourceByXsiType(nodeId, "context", resource, userId);
 
-		if (node.getNodeName().equals("asmResource")) {
-			// Si le noeud est de type asmResource, on stocke le innerXML du noeud
-			resourceManager.changeResourceByXsiType(nodeId, "context", DomUtils.getInnerXml(node), userId);
-			return "editer";
-		}
-		return "erreur";
+		return "editer";
 	}
 
 	@Override
-	public String changeNodeResource(UUID nodeId, String xmlNode, Long userId, Long groupId)
-			throws BusinessException, Exception {
+	public String changeNodeResource(UUID nodeId, ResourceDocument resource, Long userId, Long groupId)
+			throws BusinessException {
 		if (!hasRight(userId, groupId, nodeId, GroupRights.WRITE))
 			throw new GenericBusinessException("403 FORBIDDEN : No WRITE credential");
 
-		xmlNode = DomUtils.cleanXMLData(xmlNode);
-		Document doc = DomUtils.xmlString2Document(xmlNode, new StringBuffer());
-		// Puis on le recrée
-		org.w3c.dom.Node node;
-		node = doc.getDocumentElement();
+		resourceManager.changeResourceByXsiType(nodeId, "nodeRes", resource, userId);
 
-		if (node.getNodeName().equals("asmResource")) {
-			// Si le noeud est de type asmResource, on stocke le innerXML du noeud
-			resourceManager.changeResourceByXsiType(nodeId, "nodeRes", DomUtils.getInnerXml(node), userId);
-
-			return "editer";
-		}
-		return "erreur";
+		return "editer";
 	}
 
-	public String addNode(UUID parentNodeId, String xmlNode, Long userId, Long groupId,
-			boolean forcedUuid) throws Exception {
+	@Override
+	public NodeList addNode(UUID parentNodeId, NodeDocument node, Long userId, Long groupId,
+			boolean forcedUuid) throws JsonProcessingException, BusinessException {
 
 		Integer nodeOrder = nodeRepository.getNodeNextOrderChildren(parentNodeId);
 		Portfolio portfolio = portfolioRepository.getPortfolioFromNode(parentNodeId);
@@ -1932,36 +1030,25 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		}
 
 		// TODO getNodeRight postNode
-		String inPars = DomUtils.cleanXMLData(xmlNode);
-		Document doc = DomUtils.xmlString2Document(inPars, new StringBuffer());
-		// Puis on le recrée
-		org.w3c.dom.Node rootNode = doc.getDocumentElement();
-		String nodeType = rootNode.getNodeName();
 
-		UUID nodeId = writeNode(rootNode, portfolioId, portfolioModelId, userId, nodeOrder, null, parentNodeId,
+		UUID nodeId = writeNode(node, portfolioId, portfolioModelId, userId, nodeOrder, null, parentNodeId,
 				false, false, forcedUuid, null, true);
-
-		String result = "<nodes>";
-		result += "<" + nodeType + " ";
-		result += DomUtils.getXmlAttributeOutput("id", nodeId.toString()) + " ";
-		result += "/>";
-		result += "</nodes>";
 
 		portfolioManager.updateTimeByNode(portfolioId);
 
-		return result;
+		return new NodeList(Collections.singletonList(new NodeDocument(nodeId)));
 	}
 
 	@Override
-	public String getNodeWithXSL(UUID nodeId, String xslFile, String parameters, Long userId,
-			Long groupId) throws Exception {
+	public NodeDocument getNodeWithXSL(UUID nodeId, String xslFile, String parameters, Long userId,
+			Long groupId) throws BusinessException {
 		String result = null;
 		/// Préparation des paramètres pour les besoins futurs, format:
 		/// "par1:par1val;par2:par2val;..."
 		String[] table = parameters.split(";");
 		int parSize = table.length;
-		String param[] = new String[parSize];
-		String paramVal[] = new String[parSize];
+		String[] param = new String[parSize];
+		String[] paramVal = new String[parSize];
 		for (int i = 0; i < parSize; ++i) {
 			String line = table[i];
 			int var = line.indexOf(":");
@@ -1969,19 +1056,12 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 			paramVal[i] = line.substring(var + 1);
 		}
 
-		String nodeInXml = getNode(nodeId, true, userId, groupId, null, null);
-
-		if (nodeInXml != null) {
-			result = DomUtils.processXSLTfile2String(DomUtils.xmlString2Document(nodeInXml, new StringBuffer()),
-					xslFile, param, paramVal, new StringBuffer());
-		}
-
-		return result;
+		return getNode(nodeId, true, userId, groupId, null, null);
 	}
 
 	@Override
-	public String addNodeFromModelBySemanticTag(UUID nodeId, String semanticTag, Long userId,
-			Long groupId) throws Exception {
+	public NodeList addNodeFromModelBySemanticTag(UUID nodeId, String semanticTag, Long userId,
+			Long groupId) throws BusinessException, JsonProcessingException {
 		Portfolio portfolio = portfolioRepository.getPortfolioFromNode(nodeId);
 
 		UUID portfolioModelId = null;
@@ -1990,144 +1070,17 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 			portfolioModelId = portfolio.getModelId();
 		}
 
-		String xml = getNodeBySemanticTag(portfolioModelId, semanticTag, userId, groupId);
+		NodeDocument node = getNodeBySemanticTag(portfolioModelId, semanticTag, userId, groupId);
 
 		// C'est le noeud obtenu dans le modèle indiqué par la table de correspondance.
 		UUID otherParentNodeUuid = nodeRepository.getNodeUuidByPortfolioModelAndSemanticTag(portfolioModelId, semanticTag);
 
-		return addNode(otherParentNodeUuid, xml, userId, groupId, true);
+		return addNode(otherParentNodeUuid, node, userId, groupId, true);
 	}
 
-	public void changeRights(String xmlNode, Long userId, Long subId, String label)
-			throws BusinessException, Exception {
-
-		DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
-		DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
-		Document doc = documentBuilder.parse(new ByteArrayInputStream(xmlNode.getBytes("UTF-8")));
-
-		XPath xPath = XPathFactory.newInstance().newXPath();
-		List<UUID> portfolio = new ArrayList<>();
-
-		String xpathRole = "//*[local-name()='role']";
-		XPathExpression findRole = xPath.compile(xpathRole);
-		String xpathNodeFilter = "//*[local-name()='xpath']";
-		XPathExpression findXpath = xPath.compile(xpathNodeFilter);
-		String nodefilter = "";
-		NodeList roles = null;
-
-		/// Chercher le(s) portfolio(s)
-		String portfolioNode = "//*[local-name()='portfoliogroup']";
-		XPathExpression xpathFilter = null;
-		org.w3c.dom.Node portgroupnode = (org.w3c.dom.Node) xPath.compile(portfolioNode).evaluate(doc,
-				XPathConstants.NODE);
-		if (portgroupnode != null) {
-			org.w3c.dom.Node xpathNode = (org.w3c.dom.Node) findXpath.evaluate(portgroupnode, XPathConstants.NODE);
-			nodefilter = xpathNode.getNodeValue();
-			xpathFilter = xPath.compile(nodefilter);
-			roles = (NodeList) findRole.evaluate(portgroupnode, XPathConstants.NODESET);
-		} else {
-			// Ou ajoutez l'unique portfolio.
-			portfolioNode = "//*[local-name()='portfolio' and @*[local-name()='uuid']]";
-			org.w3c.dom.Node portnode = (org.w3c.dom.Node) xPath.compile(portfolioNode).evaluate(doc,
-					XPathConstants.NODE);
-			if (portnode != null) {
-				portfolio.add(UUID.fromString(portnode.getNodeValue()));
-
-				org.w3c.dom.Node xpathNode = (org.w3c.dom.Node) findXpath.evaluate(portnode, XPathConstants.NODE);
-				nodefilter = xpathNode.getNodeValue();
-				xpathFilter = xPath.compile(nodefilter);
-				roles = (NodeList) findRole.evaluate(portnode, XPathConstants.NODESET);
-			}
-		}
-
-		List<UUID> nodesIds = new ArrayList<>();
-
-		for (int i = 0; i < portfolio.size(); ++i) // pour tous les portfolios.
-		{
-			UUID portfolioUuid = portfolio.get(i);
-			String portfolioStr = portfolioManager
-					.getPortfolio(portfolioUuid, userId, 0L, label, null, null, subId, null);
-
-			Document docPort = documentBuilder.parse(new ByteArrayInputStream(portfolioStr.getBytes("UTF-8")));
-
-			// Récupérer des noeuds à l'intérieur de ces portfolios.
-			NodeList portNodes = (NodeList) xpathFilter.evaluate(docPort, XPathConstants.NODESET);
-			for (int j = 0; j < portNodes.getLength(); ++j) {
-				org.w3c.dom.Node node = portNodes.item(j);
-				String nodeuuid = node.getAttributes().getNamedItem("id").getNodeValue();
-
-				nodesIds.add(UUID.fromString(nodeuuid)); // Gardons ceux que nous devons changer de droits
-			}
-		}
-
-		// Récupération d'un seul noeud
-		if (nodesIds.isEmpty()) {
-//				String singleNode = "//node";
-			String singleNode = "//*[local-name()='node']";
-			org.w3c.dom.Node sNode = (org.w3c.dom.Node) xPath.compile(singleNode).evaluate(doc, XPathConstants.NODE);
-			String uuid = sNode.getAttributes().getNamedItem("uuid").getNodeValue();
-			nodesIds.add(UUID.fromString(uuid));
-			roles = (NodeList) findRole.evaluate(sNode, XPathConstants.NODESET);
-		}
-
-		/// Pour tous les rôles, nous devons changer
-		for (int i = 0; i < roles.getLength(); ++i) {
-			org.w3c.dom.Node rolenode = roles.item(i);
-			String roleName = rolenode.getAttributes().getNamedItem("name").getNodeValue();
-			org.w3c.dom.Node right = rolenode.getFirstChild();
-
-			//
-			if ("user".equals(roleName)) {
-				/// username as role
-			}
-
-			if ("#text".equals(right.getNodeName()))
-				right = right.getNextSibling();
-
-			if ("right".equals(right.getNodeName())) // Modification des droits de noeud
-			{
-				NamedNodeMap rights = right.getAttributes();
-				GroupRights rightsOnNode = new GroupRights();
-
-				String val = rights.getNamedItem("RD").getNodeValue();
-				if (val != null)
-					rightsOnNode.setRead(Boolean.parseBoolean(val));
-				val = rights.getNamedItem("WR").getNodeValue();
-				if (val != null)
-					rightsOnNode.setWrite(Boolean.parseBoolean(val));
-				val = rights.getNamedItem("DL").getNodeValue();
-				if (val != null)
-					rightsOnNode.setDelete(Boolean.parseBoolean(val));
-				val = rights.getNamedItem("SB").getNodeValue();
-				if (val != null)
-					rightsOnNode.setSubmit(Boolean.parseBoolean(val));
-
-				/// Appliquer la modification pour tous les noeuds.
-				for (int j = 0; j < nodesIds.size(); ++j) {
-					changeRights(userId, nodesIds.get(j), roleName, rightsOnNode);
-				}
-			} else if ("action".equals(right.getNodeName())) // Using an action on node
-			{
-				/// Appliquer la modification pour tous les noeuds.
-				for (int j = 0; j < nodesIds.size(); ++j) {
-
-					// TODO: check for reset keyword
-
-					// réinitialiser les droits.
-					executeMacroOnNode(userId, nodesIds.get(j), "reset");
-				}
-			}
-		}
-	}
-
-	/**
-	 * change rights
-	 */
-	public String changeRights(Long userId, UUID nodeId, String role, GroupRights rights) throws BusinessException {
-		if (!credentialRepository.isAdmin(userId))
-			throw new GenericBusinessException("403 FORBIDDEN : No admin right");
-
-		GroupRights gr = groupRightsRepository.getRightsByIdAndLabel(nodeId, role);
+	@Override
+	public String changeRights(Long userId, UUID nodeId, String label, GroupRights rights) {
+		GroupRights gr = groupRightsRepository.getRightsByIdAndLabel(nodeId, label);
 
 		if (gr != null) {
 			gr.setRead(rights.isRead());
@@ -2137,126 +1090,106 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 
 			groupRightsRepository.save(gr);
 		}
+
 		return "ok";
 	}
 
-	public String getNodes(String rootNodeCode, String childSemtag, Long userId, Long groupId,
+	@Override
+	public NodeList getNodes(String rootNodeCode, String childSemtag, Long userId, Long groupId,
 			String parentSemtag, String parentNodeCode, Integer cutoff) throws BusinessException {
 
 		UUID pid = portfolioRepository.getPortfolioUuidFromNodeCode(rootNodeCode);
+		final NodeList emptyList = new NodeList(Collections.emptyList());
 
 		if (pid == null)
-			return "";
+			return emptyList;
 
 		GroupRights rights = portfolioManager.getRightsOnPortfolio(userId, groupId, pid);
+
 		if (!rights.isRead()
 				&& !credentialRepository.isAdmin(userId)
 				&& !portfolioRepository.isPublic(pid)
 				&& !portfolioManager.isOwner(userId, pid))
 			throw new GenericBusinessException("403 FORBIDDEN : no admin right");
 
-		String result = "";
+		// Not null, not empty
+		// When we have a set, subset, and code of selected item
+		/// Searching nodes subset where semtag is under semtag_parent. First filtering
+		// is with parentNodeCode
+		if (StringUtils.isNotEmpty(parentSemtag) && StringUtils.isNotEmpty(parentNodeCode)) {
+			List<Node> nodes = nodeRepository.getNodes(pid);
 
-		try {
-			// Not null, not empty
-			// When we have a set, subset, and code of selected item
-			/// Searching nodes subset where semtag is under semtag_parent. First filtering
-			// is with parentNodeCode
-			if (StringUtils.isNotEmpty(parentSemtag) && StringUtils.isNotEmpty(parentNodeCode)) {
-				List<Node> nodes = nodeRepository.getNodes(pid);
+			/// Init temp set and hashmap
+			final Optional<Node> parentTagNode = nodes.stream()
+				.filter(n -> StringUtils.equals(n.getCode(), parentNodeCode)
+							&& StringUtils.indexOf(n.getSemantictag(), parentSemtag) != -1)
+				.findFirst();
 
-				/// Init temp set and hashmap
-				final Map<Integer, Set<Node>> t_nodesByLevel = new HashMap<Integer, Set<Node>>();
-				Set<Node> t_nodes = new LinkedHashSet<Node>();
+			final Map<Integer, Set<Node>> nodesByLevel = new HashMap<>();
 
-				int found;
-				/// Find parent tag
+			if (parentTagNode.isPresent()) {
+				nodesByLevel.put(0, Collections.singleton(parentTagNode.get()));
+			} else {
+				nodesByLevel.put(0, new LinkedHashSet<>());
+			}
+
+			int level = 0;
+			boolean added = true;
+
+			while (added && (cutoff == null || level < cutoff)) {
+				Set<Node> found = new HashSet<>();
+
 				for (Node node : nodes) {
-					if (StringUtils.equals(node.getCode(), parentNodeCode)
-							&& (found = StringUtils.indexOf(node.getSemantictag(), parentSemtag)) != -1) {
-						t_nodes.add(node);
-						break;
+					for (Node t_node : nodesByLevel.get(level)) {
+						if (node.getParentNode() != null
+								&& t_node.getId().equals(node.getParentNode().getId())) {
+							found.add(node);
+							break;
+						}
 					}
 				}
-				t_nodesByLevel.put(0, t_nodes);
 
-				try {
-					int level = 0;
-					boolean added = true;
+				nodesByLevel.put(level + 1, found);
+				level = level + 1;
 
-					while (added && (cutoff == null ? true : level < cutoff)) {
-						t_nodes = new HashSet<Node>();
-						for (Node node : nodes) {
-							for (Node t_node : t_nodesByLevel.get(level)) {
-								if (node.getParentNode() != null
-										&& t_node.getId().equals(node.getParentNode().getId())) {
-									t_nodes.add(node);
-									break;
-								}
-							}
-						}
-						t_nodesByLevel.put(level + 1, t_nodes);
-						added = CollectionUtils.isNotEmpty(t_nodes); // On s'arrete quand rien n'a été ajouté.
-						level = level + 1; // Prochaine étape
+				// We stop once nothing is added anymore
+				added = CollectionUtils.isNotEmpty(found);
+			}
+
+			Set<Node> semtagSet = new HashSet<>();
+
+			for (Set<Node> nodeSet : nodesByLevel.values()) {
+				for (Node t_node : nodeSet) {
+					if (StringUtils.indexOf(t_node.getSemantictag(), childSemtag) != -1) {
+						semtagSet.add(t_node);
 					}
+				}
+			}
 
-					Set<Node> semtagSet = new HashSet<Node>();
-					for (Set<Node> nodeSet : t_nodesByLevel.values()) {
-						for (Node t_node : nodeSet) {
-							if ((found = StringUtils.indexOf(t_node.getSemantictag(), childSemtag)) != -1) {
-								semtagSet.add(t_node);
-							}
-						}
-					}
+			Stream<Node> nodeStream = semtagSet.stream().sorted((o1, o2) -> {
+				int result = StringUtils.compare(o1.getCode(), o2.getCode());
 
-					List<Node> nodeListBySemtag = new ArrayList<Node>(semtagSet);
-					Collections.sort(nodeListBySemtag, new Comparator<Node>() {
-						public int compare(Node o1, Node o2) {
-							int result = StringUtils.compare(o1.getCode(), o2.getCode());
-							if (result == 0) {
-								result = NumberUtils.compare(o1.getNodeOrder(), o2.getNodeOrder());
-							}
-							return result;
-						}
-					});
-
-					result += "<nodes>";
-					for (Node nodeBySemtag : nodeListBySemtag) /// FIXME Could be done in a better way
-					{
-						result += "<node ";
-						result += DomUtils.getXmlAttributeOutput("id", nodeBySemtag.getId().toString());
-						result += ">";
-						result += resourceManager.getResource(nodeBySemtag.getId());
-						result += "</node>";
-					}
-					result += "</nodes>";
-				} catch (Exception ex) {
-					ex.printStackTrace();
-					return null;
+				if (result == 0) {
+					return NumberUtils.compare(o1.getNodeOrder(), o2.getNodeOrder());
 				}
 
 				return result;
-			} else {
-				Portfolio portfolio = portfolioRepository.findById(pid).get();
-				if (portfolio != null) {
-					List<Node> nodes = null;
-					nodes = nodeRepository.getNodesBySemanticTag(pid, childSemtag);
-					result += "<nodes>";
-					for (Node node : nodes) {
-						result += "<node ";
-						result += DomUtils.getXmlAttributeOutput("id", node.getId().toString());
-						result += ">";
-						result += resourceManager.getResource(node.getId());
-						result += "</node>";
-					}
-					result += "</nodes>";
-				}
-			}
-		} catch (Exception e) {
+			});
 
+			return new NodeList(nodeStream
+					.map(this::getNodeDocument)
+					.collect(Collectors.toList()));
+		} else {
+			if (portfolioRepository.existsById(pid)) {
+				List<Node> nodes = nodeRepository.getNodesBySemanticTag(pid, childSemtag);
+
+				return new NodeList(nodes.stream()
+						.map(this::getNodeDocument)
+						.collect(Collectors.toList()));
+			}
 		}
 
-		return result;
+		return emptyList;
 	}
 
 	@Override
@@ -2392,8 +1325,8 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 
 		// Sélectionne les données selon la filtration
 		for (Node node : nodes) {
-			if (t_rights_22.containsKey(node.getId().toString())) { // Verification des droits
-				GroupRights rights = t_rights_22.get(node.getId().toString());
+			if (t_rights_22.containsKey(node.getId())) { // Verification des droits
+				GroupRights rights = t_rights_22.get(node.getId());
 				if (rights.isRead()) { // On doit au moins avoir le droit de lecture
 					finalResults.add(Pair.of(node, rights));
 				}
@@ -2404,290 +1337,24 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 
 	}
 
-	/**
-	 * Même chose que postImportNode, mais on ne prend pas en compte le parsage des
-	 * droits
-	 *
-	 * @param destId
-	 * @param tag
-	 * @param code
-	 * @param sourceId
-	 * @param userId
-	 * @param groupId
-	 * @return
-	 */
-	public String copyNode(UUID destId, String tag, String code, UUID sourceId, Long userId, Long groupId) {
-		if (StringUtils.isEmpty(tag) || StringUtils.isEmpty(code)) {
-			if (sourceId == null) {
-				throw new IllegalArgumentException(
-						"copyNode() a reçu des paramètres non valides (complétez le paramètre 'srcuuid' ou les paramètres 'tag' et 'code').");
-			}
-		}
+    /**
+     * Même chose que postImportNode, mais on ne prend pas en compte le parsage des
+     * droits
+     *
+     * @param destId
+     * @param tag
+     * @param code
+     * @param sourceId
+     * @param userId
+     * @param groupId
+     * @return
+     */
+    public UUID copyNode(UUID destId, String tag, String code, UUID sourceId, Long userId, Long groupId)
+            throws BusinessException, JsonProcessingException {
+        return importNode(destId, tag, code, sourceId, userId, groupId, false);
+    }
 
-		String createdUuid = "erreur";
-
-		try {
-			UUID portfolioUUID = null;
-
-			if (sourceId != null) {
-				// Vérifier si l'utilisateur a le droit en lecture
-				if (!hasRight(userId, groupId, sourceId, GroupRights.READ)) {
-					throw new GenericBusinessException("403 FORBIDDEN : no READ credential");
-				}
-			} else {
-				/// Check/update cache
-				portfolioUUID = checkCache(code);
-
-				if (portfolioUUID == null) {
-					throw new GenericBusinessException("Aucun noeud trouvé pour le code : " + code);
-				}
-			}
-
-			// Pour la copie de la structure
-			UUID baseUuid = null;
-
-			List<Node> t_nodes = null;
-
-			// On évite la recherche de balises puisque nous connaissons l'uuid du noeud à
-			// copier.
-			if (sourceId != null) {
-				// Puisque nous ne savons pas si ces noeuds doivent être mis en cache, on
-				// recherche les informations dans la base.
-				UUID portfolioUuid = nodeRepository.getPortfolioIdFromNode(sourceId);
-
-				// Récupération des noeuds du portfolio à copier depuis la base.
-				t_nodes = nodeRepository.getNodes(portfolioUuid);
-
-				baseUuid = sourceId;
-			} else {
-				/// // Récupération des noeuds du portfolio à copier depuis le cache.
-				t_nodes = cachedNodes.get(portfolioUUID);
-
-				/// Vérifier si on peut trouver un noeud avec le tag envoyé
-				Node nodeByTag = null;
-				Node nodeBySemanticTag = null;
-				for (Node t_node : t_nodes) {
-					if (StringUtils.equalsIgnoreCase(t_node.getCode(), tag)) {
-						nodeByTag = t_node;
-						break; // on arrête lorsqu'on a trouvé le premier
-					}
-					// Si rien, continuer avec semantictag
-					if (StringUtils.equalsIgnoreCase(t_node.getSemantictag(), tag) && nodeBySemanticTag == null) {
-						nodeBySemanticTag = t_node; // Prendre le premier trouvé
-					}
-				}
-
-				if (nodeByTag != null) {
-					baseUuid = nodeByTag.getId();
-				} else {
-					if (nodeBySemanticTag != null) {
-						baseUuid = nodeBySemanticTag.getId();
-					} else {
-						throw new GenericBusinessException(
-								"Aucun noeud trouvé pour le code : " + code + " et le tag : " + tag);
-					}
-				}
-			}
-
-			final Node destNode = nodeRepository.findById(destId).get();
-
-			/// Contient les noeuds à copier.
-			final Set<Node> nodesToCopy = new LinkedHashSet<Node>();
-			/// Contient les uuid des noeuds à copier.
-			final Set<String> nodesUuidToCopy = new LinkedHashSet<String>();
-
-			final Map<Integer, Set<String>> t_map_parentid = new HashMap<Integer, Set<String>>();
-
-			Set<String> t_set_parentid_2 = new LinkedHashSet<String>();
-			Set<Node> t_set_parent_2 = null;
-
-			for (Node t_node : t_nodes) {
-				if (t_node.getId().toString().equals(baseUuid)) {
-					t_node.setParentNode(destNode);
-					nodesUuidToCopy.add(t_node.getId().toString());
-					nodesToCopy.add(t_node);
-					break;
-				}
-			}
-
-			/// Initialisation du dictionnaire.
-			t_map_parentid.put(0, nodesUuidToCopy);
-
-			int level = 0;
-			boolean added = true;
-
-			/// les tours de boucle sont toujours <= au nombre de noeud du portfolio.
-			while (added) {
-				t_set_parentid_2 = new LinkedHashSet<String>();
-				t_set_parent_2 = new LinkedHashSet<Node>();
-
-				for (Node t_node : t_nodes) {
-					for (String t_parent_id : t_map_parentid.get(level)) {
-						if (t_node.getParentNode() != null
-								&& t_node.getParentNode().getId().toString().equals(t_parent_id)) {
-							t_set_parentid_2.add(t_node.getId().toString());
-							t_set_parent_2.add(t_node);
-							break;
-						}
-					}
-				}
-				t_map_parentid.put(level + 1, t_set_parentid_2);
-				nodesUuidToCopy.addAll(t_set_parentid_2);
-				nodesToCopy.addAll(t_set_parent_2);
-				added = CollectionUtils.isNotEmpty(t_set_parentid_2); // On s'arrete quand rien n'a été ajouté
-				level = level + 1; // Prochaine étape
-			}
-
-			//////////////////////////////////////////
-			/// Copie des noeuds et des ressources ///
-			/////////////////////////////////////////
-
-			// Contient les noeuds d'origine et les copies.
-			final Map<Node, Node> nodes = new HashMap<Node, Node>();
-			// Contient les ressources d'origine et les copies.
-			final Map<ResourceTable, ResourceTable> resources = new HashMap<ResourceTable, ResourceTable>();
-
-			Node nodeCopy = null;
-			ResourceTable resourceCopy = null;
-			for (Node t_node : nodesToCopy) {
-				/// Copie du noeud.
-				nodeCopy = new Node(t_node);
-				nodeCopy.setModifUserId(userId);
-
-				//////////////////////////////
-				/// Copie des ressources/////
-				/////////////////////////////
-				if (t_node.getResource() != null) {
-					resourceCopy = nodeCopy.getResource();
-					resourceCopy.setModifUserId(userId);
-					if (!t_node.isSharedRes() || !t_node.getSharedNode() || !t_node.isSharedNodeRes()) {
-						resourceTableRepository.save(resourceCopy);
-						resources.put(t_node.getResource(), resourceCopy);
-					}
-				}
-
-				if (t_node.getResResource() != null) {
-					resourceCopy = nodeCopy.getResResource();
-					resourceCopy.setModifUserId(userId);
-					if (!t_node.isSharedRes() || !t_node.getSharedNode() || !t_node.isSharedNodeRes()) {
-						resourceTableRepository.save(resourceCopy);
-						resources.put(t_node.getResource(), resourceCopy);
-					}
-				}
-				if (t_node.getContextResource() != null) {
-					resourceCopy = nodeCopy.getContextResource();
-					resourceCopy.setModifUserId(userId);
-					if (!t_node.isSharedRes() || !t_node.getSharedNode() || !t_node.isSharedNodeRes()) {
-						resourceTableRepository.save(resourceCopy);
-						resources.put(t_node.getResource(), resourceCopy);
-					}
-				}
-
-				nodeRepository.save(nodeCopy);
-				nodes.put(t_node, nodeCopy);
-			}
-
-			final Node searchedNode = new Node();
-			// Récupère les groupes de destination via le noeud de destination
-			final List<GroupRightInfo> destGroups = groupRightInfoRepository.getByNode(destId);
-			final Portfolio destPortfolio = new Portfolio(destNode.getPortfolio().getId());
-
-			Entry<Node, Node> tmp_entry = null;
-			Node tmp_original_node = null;
-			Node tmp_copied_node = null;
-			GroupRights tmp_groupRights = null;
-
-			// Contient la liste de droits des noeuds d'origine
-			List<GroupRights> tmp_rights_list = null;
-
-			for (Iterator<Entry<Node, Node>> it = nodes.entrySet().iterator(); it.hasNext();) {
-				tmp_entry = it.next();
-				tmp_original_node = tmp_entry.getKey();
-				tmp_copied_node = tmp_entry.getValue();
-				// Assigner le nouveau parent
-				if (tmp_original_node.getParentNode() != null) {
-					tmp_copied_node.setParentNode(nodes.get(tmp_original_node.getParentNode()));
-				}
-				if (tmp_original_node.getChildrenStr() != null) {
-					// Mise à jour de la liste des enfants
-					// L'ordre détermine le rendu visuel final du XML
-					String[] children = StringUtils.split(tmp_original_node.getChildrenStr(), ",");
-					String[] childrenCopies = new String[children.length];
-					for (int i = 0; i < children.length; i++) {
-						searchedNode.setId(UUID.fromString(children[i]));
-						nodeCopy = nodes.get(searchedNode);
-						childrenCopies[i] = nodeCopy.getId().toString();
-					}
-					tmp_copied_node.setChildrenStr(StringUtils.join(childrenCopies, ","));
-				}
-				/// Lier le noeud copié au portfolio de destination
-				tmp_copied_node.setPortfolio(destPortfolio);
-				nodeRepository.save(tmp_copied_node);
-
-				//////////////////////////////////
-				/// Copie des droits du noeud ///
-				/////////////////////////////////
-
-				// Récupère la liste des droits du noeud d'origine pour l'appliquer à la copie
-				// sur les groupes de destination.
-				tmp_rights_list = groupRightsRepository.getRightsById(tmp_original_node.getId());
-				for (GroupRights rights : tmp_rights_list) {
-					for (GroupRightInfo destGroup : destGroups) {
-						if (destGroup.getLabel().equals(rights.getGroupRightInfo().getLabel())) {
-							tmp_groupRights = new GroupRights(rights);
-							tmp_groupRights.setGroupRightInfo(destGroup);
-							tmp_groupRights.setGroupRightsId(tmp_copied_node.getId());
-							groupRightsRepository.save(tmp_groupRights);
-							break;
-						}
-					}
-				}
-			}
-
-			// Mise à jour de l'ordre et du noeud parent de la copie
-			searchedNode.setId(baseUuid);
-			nodeCopy = nodes.get(searchedNode);
-			nodeCopy.setParentNode(destNode);
-			int nodeOrder = nodeRepository.getFirstLevelChildren(destId).size();
-			nodeCopy.setNodeOrder(nodeOrder);
-			nodeRepository.save(nodeCopy);
-
-			/// Ajout de l'enfant dans le noeud de destination
-			destNode.setChildrenStr((destNode.getChildrenStr() != null ? destNode.getChildrenStr() + "," : "")
-					+ nodeCopy.getId().toString());
-			nodeRepository.save(destNode);
-
-			Entry<ResourceTable, ResourceTable> tmp_res_entry = null;
-			ResourceTable tmp_original_resource = null;
-			ResourceTable tmp_copied_resource = null;
-			/// Ajout des droits des resources
-			// Apparemment inutile si l'on s'en occupe qu'au niveau du contexte...
-			for (Iterator<Entry<ResourceTable, ResourceTable>> it = resources.entrySet().iterator(); it.hasNext();) {
-				tmp_res_entry = it.next();
-				tmp_original_resource = tmp_res_entry.getKey();
-				tmp_copied_resource = tmp_res_entry.getValue();
-				tmp_rights_list = groupRightsRepository.getRightsByIdAndGroup(tmp_original_resource.getId(),
-						groupId);
-				for (GroupRights tmp_rights : tmp_rights_list) {
-					tmp_groupRights = new GroupRights(tmp_rights);
-					tmp_groupRights.setGroupRightInfo(tmp_rights.getGroupRightInfo());
-					tmp_groupRights.setGroupRightsId(tmp_copied_resource.getId());
-
-					groupRightsRepository.save(tmp_groupRights);
-				}
-			}
-
-			// On récupère le uuid crée
-			searchedNode.setId(baseUuid);
-			createdUuid = nodes.get(searchedNode).getId().toString();
-		} catch (Exception e) {
-			createdUuid = "erreur: " + e.getMessage();
-		}
-
-		return createdUuid;
-	}
-
-	private UUID checkCache(String code) throws Exception {
+	private UUID checkCache(String code) {
 
 		UUID portfolioId = null;
 		boolean setCache = false;
@@ -2733,573 +1400,509 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 	}
 
 	@Override
-	public UUID importNode(UUID destId, String tag, String code, UUID sourceId, Long userId, long groupId) {
+	public UUID importNode(UUID destId, String tag, String code, UUID sourceId, Long userId, long groupId)
+            throws BusinessException, JsonProcessingException {
+	    return importNode(destId, tag, code, sourceId, userId, groupId, true);
+    }
 
-		if (StringUtils.isEmpty(tag) || StringUtils.isEmpty(code)) {
-			if (sourceId == null) {
-				throw new IllegalArgumentException(
-						"importNode() a reçu des paramètres non valides (complétez le paramètre 'srcuuid' ou les paramètres 'tag' et 'code').");
-			}
+    private UUID importNode(UUID destId, String tag, String code, UUID sourceId, Long userId, Long groupId, boolean parseRights)
+            throws BusinessException, JsonProcessingException {
+		if ((StringUtils.isEmpty(tag) || StringUtils.isEmpty(code)) && sourceId == null) {
+            throw new IllegalArgumentException(
+                    "importNode() a reçu des paramètres non valides (complétez le paramètre 'srcuuid' ou les paramètres 'tag' et 'code').");
 		}
 
-		UUID createdUuid = null;
-		UUID portfolioId = null;
+        if (sourceId != null && !hasRight(userId, groupId, sourceId, GroupRights.READ)) {
+            throw new GenericBusinessException("403 FORBIDDEN : No READ credential");
+        } else if (checkCache(code) == null) {
+            throw new GenericBusinessException("Aucun noeud trouvé pour le code : " + code);
+        }
 
-		try {
-			if (sourceId != null) {
-				// Vérifie si l'utilisateur a le droit d'y accéder.
-				if (!hasRight(userId, groupId, sourceId, GroupRights.READ)) {
-					throw new GenericBusinessException("403 FORBIDDEN : No READ credential");
-				}
-			} else {
-				/// Vérification / mise à jour du cache
-				portfolioId = checkCache(code);
+        UUID portfolioId = null;
 
-				if (portfolioId == null) {
-					throw new GenericBusinessException("Aucun noeud trouvé pour le code : " + code);
-				}
-			}
+        // Pour la copie de la structure
+        UUID baseUuid = null;
 
-			// Pour la copie de la structure
-			UUID baseUuid = null;
+        List<Node> nodes = null;
 
-			List<Node> t_nodes = null;
+        // On évite la recherche de balises puisque nous connaissons l'uuid du noeud à
+        // copier.
+        if (sourceId != null) {
+            // Puisque nous ne savons pas si ces noeuds doivent être mis en cache, on
+            // recherche les informations dans la base.
+            UUID portfolioUuid = nodeRepository.getPortfolioIdFromNode(sourceId);
 
-			// On évite la recherche de balises puisque nous connaissons l'uuid du noeud à
-			// copier.
-			if (sourceId != null) {
-				// Puisque nous ne savons pas si ces noeuds doivent être mis en cache, on
-				// recherche les informations dans la base.
-				UUID portfolioUuid = nodeRepository.getPortfolioIdFromNode(sourceId);
+            // Récupération des noeuds du portfolio à copier depuis la base.
+            nodes = nodeRepository.getNodes(portfolioUuid);
 
-				// Récupération des noeuds du portfolio à copier depuis la base.
-				t_nodes = nodeRepository.getNodes(portfolioUuid);
+            baseUuid = sourceId;
+        } else {
+            // Get nodes from portfolio we need to copy from cache
+            nodes = cachedNodes.get(portfolioId);
 
-				baseUuid = sourceId;
-			} else {
-				/// Récupération des noeuds du portfolio à copier depuis le cache.
-				t_nodes = cachedNodes.get(portfolioId);
+            // Check whether we can find a node with the given tag
+            Node nodeByTag = null;
+            Node nodeBySemanticTag = null;
 
-				/// Vérifier si on peut trouver un noeud avec le tag envoyé
-				Node nodeByTag = null;
-				Node nodeBySemanticTag = null;
-				for (Node t_node : t_nodes) {
-					if (StringUtils.equalsIgnoreCase(t_node.getCode(), tag)) {
-						nodeByTag = t_node;
-						break; // on arrête lorsqu'on a trouvé le premier
-					}
-					// Si rien, continuer avec semantictag
-					if (StringUtils.equalsIgnoreCase(t_node.getSemantictag(), tag) && nodeBySemanticTag == null) {
-						nodeBySemanticTag = t_node; // Prendre le premier trouvé
-					}
-				}
+            for (Node node : nodes) {
+                if (StringUtils.equalsIgnoreCase(node.getCode(), tag)) {
+                    nodeByTag = node;
+                    break;
+                }
 
-				if (nodeByTag != null) {
-					baseUuid = nodeByTag.getId();
-				} else {
-					if (nodeBySemanticTag != null) {
-						baseUuid = nodeBySemanticTag.getId();
-					} else {
-						throw new GenericBusinessException(
-								"Aucun noeud trouvé pour le code : " + code + " et le tag : " + tag);
-					}
-				}
-			}
+                if (StringUtils.equalsIgnoreCase(node.getSemantictag(), tag) && nodeBySemanticTag == null) {
+                    nodeBySemanticTag = node;
+                }
+            }
 
-			final Node destNode = nodeRepository.findById(destId).get();
+            if (nodeByTag != null) {
+                baseUuid = nodeByTag.getId();
 
-			/// Contient les noeuds à copier.
-			final Set<Node> nodesToCopy = new LinkedHashSet<Node>();
-			/// Contient les uuid des noeuds à copier.
-			final Set<String> nodesUuidToCopy = new LinkedHashSet<String>();
+            } else if (nodeBySemanticTag != null) {
+                baseUuid = nodeBySemanticTag.getId();
 
-			final Map<Integer, Set<String>> t_map_parentid = new HashMap<Integer, Set<String>>();
+            } else {
+                throw new GenericBusinessException(
+                        "Aucun noeud trouvé pour le code : " + code + " et le tag : " + tag);
+            }
+        }
 
-			Set<String> t_set_parentid_2 = new LinkedHashSet<String>();
-			Set<Node> t_set_parent_2 = null;
+        final Node destNode = nodeRepository.findById(destId).get();
 
-			for (Node t_node : t_nodes) {
-				if (t_node.getId().toString().equals(baseUuid)) {
-					t_node.setParentNode(destNode);
-					nodesUuidToCopy.add(t_node.getId().toString());
-					nodesToCopy.add(t_node);
-					break;
-				}
-			}
+        /// Contient les noeuds à copier.
+        final Set<Node> nodesToCopy = new LinkedHashSet<>();
+        /// Contient les uuid des noeuds à copier.
+        final Set<UUID> nodesUuidToCopy = new LinkedHashSet<>();
 
-			/// Initialisation du dictionnaire.
-			t_map_parentid.put(0, nodesUuidToCopy);
+        final Map<Integer, Set<UUID>> parentIdMap = new HashMap<>();
 
-			int level = 0;
-			boolean added = true;
+        for (Node node : nodes) {
+            if (node.getId().equals(baseUuid)) {
+                node.setParentNode(destNode);
+                nodesUuidToCopy.add(node.getId());
+                nodesToCopy.add(node);
+                break;
+            }
+        }
 
-			/// les tours de boucle sont toujours <= au nombre de noeud du portfolio.
-			while (added) {
-				t_set_parentid_2 = new LinkedHashSet<String>();
-				t_set_parent_2 = new LinkedHashSet<Node>();
+        parentIdMap.put(0, nodesUuidToCopy);
 
-				for (Node t_node : t_nodes) {
-					for (String t_parent_id : t_map_parentid.get(level)) {
-						if (t_node.getParentNode() != null
-								&& t_node.getParentNode().getId().toString().equals(t_parent_id)) {
-							t_set_parentid_2.add(t_node.getId().toString());
-							t_set_parent_2.add(t_node);
-							break;
-						}
-					}
-				}
-				t_map_parentid.put(level + 1, t_set_parentid_2);
-				nodesUuidToCopy.addAll(t_set_parentid_2);
-				nodesToCopy.addAll(t_set_parent_2);
-				added = CollectionUtils.isNotEmpty(t_set_parentid_2); // On s'arrete quand rien n'a été ajouté
-				level = level + 1; // Prochaine étape
-			}
+        int level = 0;
+        boolean added = true;
 
-			//////////////////////////////////////////
-			/// Copie des noeuds et des ressources ///
-			/////////////////////////////////////////
-			// Contient les noeuds d'origine et les copies.
-			final Map<Node, Node> nodes = new HashMap<Node, Node>();
-			// Contient les ressources d'origine et les copies.
-			final Map<ResourceTable, ResourceTable> resources = new HashMap<ResourceTable, ResourceTable>();
+        while (added) {
+            Set<UUID> parentIds = new LinkedHashSet<>();
+            Set<Node> parentNodes = new LinkedHashSet<>();
 
-			Node nodeCopy = null;
-			ResourceTable resourceCopy = null;
-			for (Node t_node : nodesToCopy) {
-				/// Copie du noeud.
-				nodeCopy = new Node(t_node);
-				nodeCopy.setModifUserId(userId);
+            for (Node node : nodes) {
+                for (UUID t_parent_id : parentIdMap.get(level)) {
+                    if (node.getParentNode() != null
+                            && node.getParentNode().getId().equals(t_parent_id)) {
+                        parentIds.add(node.getId());
+                        parentNodes.add(node);
+                        break;
+                    }
+                }
+            }
 
-				//////////////////////////////
-				/// Copie des ressources/////
-				/////////////////////////////
-				if (t_node.getResource() != null) {
-					resourceCopy = nodeCopy.getResource();
-					resourceCopy.setModifUserId(userId);
-					if (!t_node.isSharedRes() || !t_node.getSharedNode() || !t_node.isSharedNodeRes()) {
-						resourceTableRepository.save(resourceCopy);
-						resources.put(t_node.getResource(), resourceCopy);
-					}
-				}
+            parentIdMap.put(level + 1, parentIds);
+            nodesUuidToCopy.addAll(parentIds);
+            nodesToCopy.addAll(parentNodes);
+            added = CollectionUtils.isNotEmpty(parentIds);
+            level = level + 1;
+        }
 
-				if (t_node.getResResource() != null) {
-					resourceCopy = nodeCopy.getResResource();
-					resourceCopy.setModifUserId(userId);
-					if (!t_node.isSharedRes() || !t_node.getSharedNode() || !t_node.isSharedNodeRes()) {
-						resourceTableRepository.save(resourceCopy);
-						resources.put(t_node.getResource(), resourceCopy);
-					}
-				}
-				if (t_node.getContextResource() != null) {
-					resourceCopy = nodeCopy.getContextResource();
-					resourceCopy.setModifUserId(userId);
-					if (!t_node.isSharedRes() || !t_node.getSharedNode() || !t_node.isSharedNodeRes()) {
-						resourceTableRepository.save(resourceCopy);
-						resources.put(t_node.getResource(), resourceCopy);
-					}
-				}
+        //////////////////////////////////////////
+        /// Copie des noeuds et des ressources ///
+        /////////////////////////////////////////
 
-				nodeRepository.save(nodeCopy);
-				nodes.put(t_node, nodeCopy);
-			}
+        // Contain a mapping between original elements and their copy.
+        final Map<Node, Node> allNodes = new HashMap<>();
+        final Map<ResourceTable, ResourceTable> resources = new HashMap<>();
 
-			final Node searchedNode = new Node();
-			final Portfolio destPortfolio = new Portfolio(destNode.getPortfolio().getId());
+        for (Node node : nodesToCopy) {
+            Node nodeCopy = new Node(node);
+            nodeCopy.setModifUserId(userId);
 
-			Entry<Node, Node> tmp_entry = null;
-			Node tmp_original_node = null;
-			Node tmp_copied_node = null;
+            if (node.getResource() != null) {
+                ResourceTable resourceCopy = nodeCopy.getResource();
+                resourceCopy.setModifUserId(userId);
 
-			for (Iterator<Entry<Node, Node>> it = nodes.entrySet().iterator(); it.hasNext();) {
-				tmp_entry = it.next();
-				tmp_original_node = tmp_entry.getKey();
-				tmp_copied_node = tmp_entry.getValue();
-				/// Assigner le nouveau parent
-				if (tmp_original_node.getParentNode() != null) {
-					tmp_copied_node.setParentNode(nodes.get(tmp_original_node.getParentNode()));
-				}
-				// Mise à jour de la liste des enfants
-				// L'ordre détermine le rendu visuel final du XML
-				if (tmp_original_node.getChildrenStr() != null) {
-					String[] children = StringUtils.split(tmp_original_node.getChildrenStr(), ",");
-					String[] childrenCopies = new String[children.length];
-					for (int i = 0; i < children.length; i++) {
-						searchedNode.setId(UUID.fromString(children[i]));
-						nodeCopy = nodes.get(searchedNode);
-						childrenCopies[i] = nodeCopy.getId().toString();
-					}
-					tmp_copied_node.setChildrenStr(StringUtils.join(childrenCopies, ","));
-				}
-				// Lier le noeud copié au portfolio de destination
-				tmp_copied_node.setPortfolio(destPortfolio);
-				nodeRepository.save(tmp_copied_node);
+                if (!node.isSharedRes() || !node.getSharedNode() || !node.isSharedNodeRes()) {
+                    resourceTableRepository.save(resourceCopy);
+                    resources.put(node.getResource(), resourceCopy);
+                }
+            }
 
-			}
+            if (node.getResResource() != null) {
+                ResourceTable resourceCopy = nodeCopy.getResResource();
+                resourceCopy.setModifUserId(userId);
 
-			// Mise à jour de l'ordre et du noeud parent de la copie
-			searchedNode.setId(baseUuid);
-			nodeCopy = nodes.get(searchedNode);
-			nodeCopy.setParentNode(destNode);
-			int nodeOrder = nodeRepository.getFirstLevelChildren(destId).size();
-			nodeCopy.setNodeOrder(nodeOrder);
-			nodeRepository.save(nodeCopy);
+                if (!node.isSharedRes() || !node.getSharedNode() || !node.isSharedNodeRes()) {
+                    resourceTableRepository.save(resourceCopy);
+                    resources.put(node.getResource(), resourceCopy);
+                }
+            }
 
-			/// Ajout de l'enfant dans le noeud de destination
-			destNode.setChildrenStr((destNode.getChildrenStr() != null ? destNode.getChildrenStr() + "," : "")
-					+ nodeCopy.getId().toString());
-			nodeRepository.save(destNode);
+            if (node.getContextResource() != null) {
+                ResourceTable resourceCopy = nodeCopy.getContextResource();
+                resourceCopy.setModifUserId(userId);
 
-			//////////////////////////////////
-			/// Copie des droits des noeuds ///
-			/////////////////////////////////
-			// Login
-			final String login = credentialRepository.getLoginById(userId);
+                if (!node.isSharedRes() || !node.getSharedNode() || !node.isSharedNodeRes()) {
+                    resourceTableRepository.save(resourceCopy);
+                    resources.put(node.getResource(), resourceCopy);
+                }
+            }
 
-			/// Copier les rôles actuel @Override pour faciliter le référencement.
-			final UUID tmpPortfolioUuid = nodeRepository.getPortfolioIdFromNode(destId);
+            nodeRepository.save(nodeCopy);
+            allNodes.put(node, nodeCopy);
+        }
 
-			// Récupération des rôles dans la BDD.
-			final List<GroupRightInfo> griList = groupRightInfoRepository.getByPortfolioID(tmpPortfolioUuid);
+        final Node searchedNode = new Node();
+        final Portfolio destPortfolio = new Portfolio(destNode.getPortfolio().getId());
 
-			//// Set temporaire roles
-			final Set<GroupRightInfo> t_set_groupRightInfo = new HashSet<GroupRightInfo>(griList);
-			final Map<GroupRightsId, GroupRights> t_group_rights = new HashMap<GroupRightsId, GroupRights>();
+        for (Entry<Node, Node> entry : allNodes.entrySet()) {
+            Node originalNode = entry.getKey();
+            Node copiedNode = entry.getValue();
 
-			GroupRights t_gr = null;
-			GroupRightsId t_grId = null;
-			Entry<Node, Node> entry = null;
-			Node original = null, copy = null;
-			GroupRightInfo t_groupRightInfo = null;
-			boolean found = false;
-			final boolean hasGroup = !griList.isEmpty();
+            if (originalNode.getParentNode() != null) {
+                originalNode.setParentNode(allNodes.get(originalNode.getParentNode()));
+            }
 
-			/// Gestion des droits
-			if (hasGroup) {
-				String onlyuser = "(?<![-=+])(user)(?![-=+])";
-				Pattern pattern = Pattern.compile(onlyuser);
+            // Update children list ; the order will define the XML output
+            if (originalNode.getChildrenStr() != null) {
+                String[] children = StringUtils.split(originalNode.getChildrenStr(), ",");
+                List<String> childrenCopies = new ArrayList<>();
 
-				for (Iterator<Entry<Node, Node>> it = nodes.entrySet().iterator(); it.hasNext();) {
-					found = false;
-					t_grId = new GroupRightsId();
+                for (String child : children) {
+                    searchedNode.setId(UUID.fromString(child));
+                    Node nodeCopy = allNodes.get(searchedNode);
+                    childrenCopies.add(nodeCopy.getId().toString());
+                }
 
-					entry = it.next();
-					original = entry.getKey();
-					copy = entry.getValue();
+                copiedNode.setChildrenStr(StringUtils.join(childrenCopies, ","));
+            }
 
-					UUID uuid = copy.getId();
-					UUID portfolioUuid = copy.getPortfolio().getId();
-					// Process et remplacement de 'user' par la personne en cours
-					String meta = original.getMetadataWad();
+            copiedNode.setPortfolio(destPortfolio);
+            nodeRepository.save(copiedNode);
+        }
 
-					Matcher matcher = pattern.matcher(meta);
-					if (matcher.find()) {
-						meta = meta.replaceAll(onlyuser, login);
+        // Mise à jour de l'ordre et du noeud parent de la copie
+        searchedNode.setId(baseUuid);
 
-						// Remplacer les métadonnées par le nom d'utilisateur actuel
-						copy.setMetadataWad(meta);
-						nodeRepository.save(copy);
+        Node nodeCopy = allNodes.get(searchedNode);
+        int nodeOrder = nodeRepository.getFirstLevelChildren(destId).size();
 
-						// S'assurer qu'un groupe d'utilisateurs spécifique existe en base et y ajouter
-						// l'utilisateur.
-						long ngid = getRoleByNode(1L, destId, login);
-						securityManager.addUserToGroup(1L, userId, ngid);
+        nodeCopy.setParentNode(destNode);
+        nodeCopy.setNodeOrder(nodeOrder);
+        nodeRepository.save(nodeCopy);
 
-						/// Ensure entry is there in temp table, just need a skeleton info
-						t_groupRightInfo = new GroupRightInfo();
-						t_groupRightInfo.setId(ngid);
-						t_groupRightInfo.setLabel(login);
-						t_groupRightInfo.setOwner(1L);
-						t_set_groupRightInfo.add(t_groupRightInfo);
-					}
+        /// Ajout de l'enfant dans le noeud de destination
+        destNode.setChildrenStr((destNode.getChildrenStr() != null ? destNode.getChildrenStr() + "," : "")
+                + nodeCopy.getId().toString());
+        nodeRepository.save(destNode);
 
-					String nodeString = "<?xml version='1.0' encoding='UTF-8' standalone='no'?><transfer " + meta
-							+ "></transfer>";
-					try {
-						// S'assurer que nous pouvons le parser correctement
-						DocumentBuilder documentBuilder;
-						DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
-						documentBuilder = documentBuilderFactory.newDocumentBuilder();
-						InputSource is = new InputSource(new StringReader(nodeString));
-						Document doc = documentBuilder.parse(is); // Transformer en un autre fichier.
+        //////////////////////////////////
+        /// Copie des droits des noeuds ///
+        /////////////////////////////////
+        // Login
+        final String login = credentialRepository.getLoginById(userId);
 
-						// Process attributes
-						Element attribNode = doc.getDocumentElement();
-						NamedNodeMap attribMap = attribNode.getAttributes();
+        /// Copier les rôles actuel @Override pour faciliter le référencement.
+        final UUID tmpPortfolioUuid = nodeRepository.getPortfolioIdFromNode(destId);
 
-						// FIXME: à améliorer pour faciliter le changement des droits
-						String nodeRole;
-						org.w3c.dom.Node att = attribMap.getNamedItem("access");
-						att = attribMap.getNamedItem("seenoderoles");
-						if (att != null) {
-							StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-							while (tokens.hasMoreElements()) {
-								nodeRole = tokens.nextElement().toString();
-								for (GroupRightInfo tmp_gri : t_set_groupRightInfo) {
-									if (StringUtils.equalsIgnoreCase(tmp_gri.getLabel(), nodeRole)) {
-										t_grId.setGroupRightInfo(tmp_gri);
-										t_grId.setId(uuid);
-										if (t_group_rights.containsKey(t_grId)) {
-											t_gr = t_group_rights.get(t_grId);
-											t_gr.setRead(true);
-										} else {
-											t_gr = new GroupRights();
-											t_gr.setId(t_grId);
-											t_gr.setRead(true);
-											t_group_rights.put(t_grId, t_gr);
-										}
-										found = true;
-										break;
-									}
-								}
-								if (!found) {
-									log.error("Role '" + nodeRole
-											+ "' might not exist in destination portfolio. (seenoderoles)");
-								}
-							}
-						}
-						att = attribMap.getNamedItem("showtoroles");
-						if (att != null) {
-							StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-							while (tokens.hasMoreElements()) {
-								nodeRole = tokens.nextElement().toString();
-								for (GroupRightInfo tmp_gri : t_set_groupRightInfo) {
-									if (StringUtils.equalsIgnoreCase(tmp_gri.getLabel(), nodeRole)) {
-										t_grId.setGroupRightInfo(tmp_gri);
-										t_grId.setId(uuid);
-										if (t_group_rights.containsKey(t_grId)) {
-											t_gr = t_group_rights.get(t_grId);
-											t_gr.setRead(false);
-										} else {
-											t_gr = new GroupRights();
-											t_gr.setId(t_grId);
-											t_gr.setRead(false);
-											t_group_rights.put(t_grId, t_gr);
-										}
-										found = true;
-										break;
-									}
-								}
-								if (!found) {
-									log.error("Role '" + nodeRole
-											+ "' might not exist in destination portfolio. (showtoroles)");
-								}
-							}
-						}
-						att = attribMap.getNamedItem("delnoderoles");
-						if (att != null) {
-							StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-							while (tokens.hasMoreElements()) {
-								nodeRole = tokens.nextElement().toString();
-								for (GroupRightInfo t_gri : t_set_groupRightInfo) {
-									if (StringUtils.equalsIgnoreCase(t_gri.getLabel(), nodeRole)) {
-										t_grId.setGroupRightInfo(t_gri);
-										t_grId.setId(uuid);
-										if (t_group_rights.containsKey(t_grId)) {
-											t_gr = t_group_rights.get(t_grId);
-											t_gr.setDelete(true);
-										} else {
-											t_gr = new GroupRights();
-											t_gr.setId(t_grId);
-											t_gr.setDelete(true);
-											t_gr.setRead(false);
-											t_group_rights.put(t_grId, t_gr);
-										}
-										found = true;
-										break;
-									}
-								}
-								if (!found) {
-									log.error("Role '" + nodeRole
-											+ "' might not exist in destination portfolio. (delroles)");
-								}
-							}
-						}
-						att = attribMap.getNamedItem("editnoderoles");
-						if (att != null) {
-							StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-							while (tokens.hasMoreElements()) {
-								nodeRole = tokens.nextElement().toString();
-								for (GroupRightInfo tmp_gri : t_set_groupRightInfo) {
-									if (StringUtils.equalsIgnoreCase(tmp_gri.getLabel(), nodeRole)) {
-										t_grId.setGroupRightInfo(tmp_gri);
-										t_grId.setId(uuid);
-										if (t_group_rights.containsKey(t_grId)) {
-											t_gr = t_group_rights.get(t_grId);
-											t_gr.setWrite(true);
-										} else {
-											t_gr = new GroupRights();
-											t_gr.setId(t_grId);
-											t_gr.setWrite(true);
-											t_gr.setRead(false);
-											t_group_rights.put(t_grId, t_gr);
-										}
-										found = true;
-										break;
-									}
-								}
-								if (!found) {
-									log.error("Role '" + nodeRole
-											+ "' might not exist in destination portfolio. (editnoderoles)");
-								}
-							}
-						}
-						att = attribMap.getNamedItem("submitroles");
-						if (att != null) {
-							StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-							while (tokens.hasMoreElements()) {
-								nodeRole = tokens.nextElement().toString();
-								for (GroupRightInfo tmp_gri : t_set_groupRightInfo) {
-									if (StringUtils.equalsIgnoreCase(tmp_gri.getLabel(), nodeRole)) {
-										t_grId.setGroupRightInfo(tmp_gri);
-										t_grId.setId(uuid);
-										if (t_group_rights.containsKey(t_grId)) {
-											t_gr = t_group_rights.get(t_grId);
-											t_gr.setSubmit(true);
-										} else {
-											t_gr = new GroupRights();
-											t_gr.setId(t_grId);
-											t_gr.setSubmit(true);
-											t_gr.setRead(false);
-											t_group_rights.put(t_grId, t_gr);
-										}
-										found = true;
-										break;
-									}
-								}
-								if (!found) {
-									log.error("Role '" + nodeRole
-											+ "' might not exist in destination portfolio. (submitroles)");
-								}
-							}
-						}
+        // Récupération des rôles dans la BDD.
+        final List<GroupRightInfo> griList = groupRightInfoRepository.getByPortfolioID(tmpPortfolioUuid);
 
-						att = attribMap.getNamedItem("seeresroles");
-						if (att != null) {
-							StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-							while (tokens.hasMoreElements()) {
-								nodeRole = tokens.nextElement().toString();
-								groupManager.addGroupRights(nodeRole, uuid, GroupRights.READ, portfolioUuid,
-										userId);
-							}
-						}
-						att = attribMap.getNamedItem("delresroles");
-						if (att != null) {
-							StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-							while (tokens.hasMoreElements()) {
-								nodeRole = tokens.nextElement().toString();
-								groupManager.addGroupRights(nodeRole, uuid, GroupRights.DELETE,
-										portfolioUuid, userId);
-							}
-						}
-						att = attribMap.getNamedItem("editresroles");
-						if (att != null) {
-							StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-							while (tokens.hasMoreElements()) {
-								nodeRole = tokens.nextElement().toString();
-								for (GroupRightInfo tmp_gri : t_set_groupRightInfo) {
-									if (StringUtils.equalsIgnoreCase(tmp_gri.getLabel(), nodeRole)) {
-										t_grId.setGroupRightInfo(tmp_gri);
-										t_grId.setId(uuid);
-										if (t_group_rights.containsKey(t_grId)) {
-											t_gr = t_group_rights.get(t_grId);
-											t_gr.setWrite(true);
-										} else {
-											t_gr = new GroupRights();
-											t_gr.setId(t_grId);
-											t_gr.setWrite(true);
-											t_gr.setRead(false);
-											t_group_rights.put(t_grId, t_gr);
-										}
-										found = true;
-										break;
-									}
-								}
-								if (!found) {
-									log.error("Role '" + nodeRole
-											+ "' might not exist in destination portfolio. (editresroles)");
-								}
-							}
-						}
-						att = attribMap.getNamedItem("submitresroles");
-						if (att != null) {
-							StringTokenizer tokens = new StringTokenizer(att.getNodeValue(), " ");
-							while (tokens.hasMoreElements()) {
-								nodeRole = tokens.nextElement().toString();
-								groupManager.addGroupRights(nodeRole, uuid, GroupRights.SUBMIT,
-										portfolioUuid, userId);
-							}
-						}
-						// */
-						/// FIXME: Incomplete
-						/// FIXME: Incomplete
-						org.w3c.dom.Node menuroles = attribMap.getNamedItem("menuroles");
-						if (menuroles != null) {
-							/// Pour les différents items du menu
-							StringTokenizer menuline = new StringTokenizer(menuroles.getNodeValue(), ";");
+        //// Set temporaire roles
+        final Set<GroupRightInfo> t_set_groupRightInfo = new HashSet<>(griList);
+        final Map<GroupRightsId, GroupRights> t_group_rights = new HashMap<>();
 
-							while (menuline.hasMoreTokens()) {
-								String line = menuline.nextToken();
-								/// Format pour l'instant:
-								/// code_portfolio,tag_semantique,label@en/libelle@fr,reles[;autre menu]
-								String[] tokens = line.split(",");
-								String menurolename = null;
-								for (int t = 0; t < 4; ++t)
-									menurolename = tokens[3];
+        GroupRights t_gr = null;
+        final boolean hasGroup = !griList.isEmpty();
 
-								if (menurolename != null) {
-									// Break down list of roles
-									String[] roles = menurolename.split(" ");
-									for (int i = 0; i < roles.length; ++i) {
-										// Ensure roles exists
-										securityManager.addRole(portfolioId, roles[i], 1L);
-									}
-								}
-							}
-						}
-						org.w3c.dom.Node actionroles = attribMap.getNamedItem("actionroles");
-						if (actionroles != null) {
-							/// Format pour l'instant: actionroles="sender:1,2;responsable:4"
-							StringTokenizer tokens = new StringTokenizer(actionroles.getNodeValue(), ";");
-							while (tokens.hasMoreElements()) {
-								nodeRole = tokens.nextElement().toString();
-								StringTokenizer data = new StringTokenizer(nodeRole, ":");
-								String role = data.nextElement().toString();
-								String actions = data.nextElement().toString();
-								groupManager.addGroupRights(role, uuid, actions, portfolioUuid, userId);
-							}
-						}
+        /// Gestion des droits
+        if (parseRights && hasGroup) {
+            String onlyuser = "(?<![-=+])(user)(?![-=+])";
+            Pattern pattern = Pattern.compile(onlyuser);
 
-						org.w3c.dom.Node notifyroles = attribMap.getNamedItem("notifyroles");
-						if (notifyroles != null) {
-							/// Format pour l'instant: actionroles="sender:1,2;responsable:4"
-							StringTokenizer tokens = new StringTokenizer(notifyroles.getNodeValue(), " ");
-							String notifyRoles = "";
-							if (tokens.hasMoreElements())
-								notifyRoles = tokens.nextElement().toString();
-							while (tokens.hasMoreElements())
-								notifyRoles += "," + tokens.nextElement().toString();
-							groupManager.changeNotifyRoles(userId, portfolioUuid, uuid, notifyRoles);
-						}
+            for (Entry<Node, Node> entry : allNodes.entrySet()) {
+                boolean found = false;
+                GroupRightsId grId = new GroupRightsId();
 
-					} catch (Exception e) {
-						log.error("Erreur lors du traitement sur les droits : " + e.getMessage());
-						e.printStackTrace();
-					}
-				}
-				/// Ajout des droits des noeuds
-				for (GroupRights gr : t_group_rights.values()) {
-					groupRightsRepository.save(gr);
-				}
-			} /// Fin de la gestion des droits
+                Node original = entry.getKey();
+                Node copy = entry.getValue();
 
-			// On récupère le UUID crée
-			searchedNode.setId(baseUuid);
-			createdUuid = nodes.get(searchedNode).getId();
-		} catch (Exception e) {
-			createdUuid = null;
-		}
+                UUID uuid = copy.getId();
+                UUID portfolioUuid = copy.getPortfolio().getId();
 
-		return createdUuid;
+                // Process et remplacement de 'user' par la personne en cours
+                String meta = original.getMetadataWad();
+
+                Matcher matcher = pattern.matcher(meta);
+
+                if (matcher.find()) {
+                    meta = meta.replaceAll(onlyuser, login);
+
+                    // Remplacer les métadonnées par le nom d'utilisateur actuel
+                    copy.setMetadataWad(meta);
+                    nodeRepository.save(copy);
+
+                    // S'assurer qu'un groupe d'utilisateurs spécifique existe en base et y ajouter
+                    // l'utilisateur.
+                    long ngid = getRoleByNode(1L, destId, login);
+                    securityManager.addUserToGroup(1L, userId, ngid);
+
+                    /// Ensure entry is there in temp table, just need a skeleton info
+                    GroupRightInfo groupRightInfo = new GroupRightInfo();
+
+                    groupRightInfo.setId(ngid);
+                    groupRightInfo.setLabel(login);
+                    groupRightInfo.setOwner(1L);
+                    t_set_groupRightInfo.add(groupRightInfo);
+                }
+
+                MetadataWadDocument metadata = new XmlMapper()
+                                                    .readerFor(MetadataWadDocument.class)
+                                                    .readValue("<metadata-wad " + meta + "></metadata-wad>");
+
+                // FIXME: à améliorer pour faciliter le changement des droits
+                String nodeRole;
+
+                if (metadata.getSeenoderoles() != null) {
+                    StringTokenizer tokens = new StringTokenizer(metadata.getSeenoderoles(), " ");
+
+                    while (tokens.hasMoreElements()) {
+                        nodeRole = tokens.nextElement().toString();
+                        for (GroupRightInfo tmp_gri : t_set_groupRightInfo) {
+                            if (StringUtils.equalsIgnoreCase(tmp_gri.getLabel(), nodeRole)) {
+                                grId.setGroupRightInfo(tmp_gri);
+                                grId.setId(uuid);
+
+                                if (t_group_rights.containsKey(grId)) {
+                                    t_gr = t_group_rights.get(grId);
+                                    t_gr.setRead(true);
+                                } else {
+                                    GroupRights gr = new GroupRights();
+                                    gr.setId(grId);
+                                    gr.setRead(true);
+                                    t_group_rights.put(grId, t_gr);
+                                }
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found) {
+                            log.error("Role '" + nodeRole
+                                    + "' might not exist in destination portfolio. (seenoderoles)");
+                        }
+                    }
+                }
+
+                if (metadata.getShowtoroles() != null) {
+                    StringTokenizer tokens = new StringTokenizer(metadata.getShowtoroles(), " ");
+
+                    while (tokens.hasMoreElements()) {
+                        nodeRole = tokens.nextElement().toString();
+                        for (GroupRightInfo tmp_gri : t_set_groupRightInfo) {
+                            if (StringUtils.equalsIgnoreCase(tmp_gri.getLabel(), nodeRole)) {
+                                grId.setGroupRightInfo(tmp_gri);
+                                grId.setId(uuid);
+                                if (t_group_rights.containsKey(grId)) {
+                                    t_gr = t_group_rights.get(grId);
+                                    t_gr.setRead(false);
+                                } else {
+                                    t_gr = new GroupRights();
+                                    t_gr.setId(grId);
+                                    t_gr.setRead(false);
+                                    t_group_rights.put(grId, t_gr);
+                                }
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found) {
+                            log.error("Role '" + nodeRole
+                                    + "' might not exist in destination portfolio. (showtoroles)");
+                        }
+                    }
+                }
+
+                if (metadata.getDelnoderoles() != null) {
+                    StringTokenizer tokens = new StringTokenizer(metadata.getDelnoderoles(), " ");
+
+                    while (tokens.hasMoreElements()) {
+                        nodeRole = tokens.nextElement().toString();
+                        for (GroupRightInfo t_gri : t_set_groupRightInfo) {
+                            if (StringUtils.equalsIgnoreCase(t_gri.getLabel(), nodeRole)) {
+                                grId.setGroupRightInfo(t_gri);
+                                grId.setId(uuid);
+
+                                if (t_group_rights.containsKey(grId)) {
+                                    t_gr = t_group_rights.get(grId);
+                                    t_gr.setDelete(true);
+                                } else {
+                                    t_gr = new GroupRights();
+                                    t_gr.setId(grId);
+                                    t_gr.setDelete(true);
+                                    t_gr.setRead(false);
+                                    t_group_rights.put(grId, t_gr);
+                                }
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found) {
+                            log.error("Role '" + nodeRole
+                                    + "' might not exist in destination portfolio. (delroles)");
+                        }
+                    }
+                }
+
+                if (metadata.getEditnoderoles() != null) {
+                    StringTokenizer tokens = new StringTokenizer(metadata.getEditnoderoles(), " ");
+
+                    while (tokens.hasMoreElements()) {
+                        nodeRole = tokens.nextElement().toString();
+                        for (GroupRightInfo tmp_gri : t_set_groupRightInfo) {
+                            if (StringUtils.equalsIgnoreCase(tmp_gri.getLabel(), nodeRole)) {
+                                grId.setGroupRightInfo(tmp_gri);
+                                grId.setId(uuid);
+
+                                if (t_group_rights.containsKey(grId)) {
+                                    t_gr = t_group_rights.get(grId);
+                                    t_gr.setWrite(true);
+                                } else {
+                                    t_gr = new GroupRights();
+                                    t_gr.setId(grId);
+                                    t_gr.setWrite(true);
+                                    t_gr.setRead(false);
+                                    t_group_rights.put(grId, t_gr);
+                                }
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found) {
+                            log.error("Role '" + nodeRole
+                                    + "' might not exist in destination portfolio. (editnoderoles)");
+                        }
+                    }
+                }
+
+                if (metadata.getSubmitroles() != null) {
+                    StringTokenizer tokens = new StringTokenizer(metadata.getSubmitroles(), " ");
+
+                    while (tokens.hasMoreElements()) {
+                        nodeRole = tokens.nextElement().toString();
+                        for (GroupRightInfo tmp_gri : t_set_groupRightInfo) {
+                            if (StringUtils.equalsIgnoreCase(tmp_gri.getLabel(), nodeRole)) {
+                                grId.setGroupRightInfo(tmp_gri);
+                                grId.setId(uuid);
+
+                                if (t_group_rights.containsKey(grId)) {
+                                    t_gr = t_group_rights.get(grId);
+                                    t_gr.setSubmit(true);
+                                } else {
+                                    t_gr = new GroupRights();
+                                    t_gr.setId(grId);
+                                    t_gr.setSubmit(true);
+                                    t_gr.setRead(false);
+                                    t_group_rights.put(grId, t_gr);
+                                }
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found) {
+                            log.error("Role '" + nodeRole
+                                    + "' might not exist in destination portfolio. (submitroles)");
+                        }
+                    }
+                }
+
+                if (metadata.getEditresroles() != null) {
+                    StringTokenizer tokens = new StringTokenizer(metadata.getEditresroles(), " ");
+
+                    while (tokens.hasMoreElements()) {
+                        nodeRole = tokens.nextElement().toString();
+                        for (GroupRightInfo tmp_gri : t_set_groupRightInfo) {
+                            if (StringUtils.equalsIgnoreCase(tmp_gri.getLabel(), nodeRole)) {
+                                grId.setGroupRightInfo(tmp_gri);
+                                grId.setId(uuid);
+
+                                if (t_group_rights.containsKey(grId)) {
+                                    t_gr = t_group_rights.get(grId);
+                                    t_gr.setWrite(true);
+                                } else {
+                                    t_gr = new GroupRights();
+                                    t_gr.setId(grId);
+                                    t_gr.setWrite(true);
+                                    t_gr.setRead(false);
+                                    t_group_rights.put(grId, t_gr);
+                                }
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found) {
+                            log.error("Role '" + nodeRole
+                                    + "' might not exist in destination portfolio. (editresroles)");
+                        }
+                    }
+                }
+
+
+                /// FIXME: Incomplete
+
+                if (metadata.getMenuroles() != null) {
+                    /// Pour les différents items du menu
+                    StringTokenizer menuline = new StringTokenizer(metadata.getMenuroles(), ";");
+
+                    while (menuline.hasMoreTokens()) {
+                        String line = menuline.nextToken();
+                        /// Format pour l'instant:
+                        /// code_portfolio,tag_semantique,label@en/libelle@fr,reles[;autre menu]
+                        String[] tokens = line.split(",");
+                        String menurolename = null;
+                        for (int t = 0; t < 4; ++t)
+                            menurolename = tokens[3];
+
+                        if (menurolename != null) {
+                            // Break down list of roles
+                            String[] roles = menurolename.split(" ");
+                            for (String role : roles) {
+                                // Ensure roles exists
+                                securityManager.addRole(portfolioId, role, 1L);
+                            }
+                        }
+                    }
+                }
+
+                if (metadata.getNotifyroles() != null) {
+                    /// Format pour l'instant: actionroles="sender:1,2;responsable:4"
+                    StringTokenizer tokens = new StringTokenizer(metadata.getNotifyroles(), " ");
+                    String notifyRoles = "";
+
+                    if (tokens.hasMoreElements())
+                        notifyRoles = tokens.nextElement().toString();
+                    while (tokens.hasMoreElements())
+                        notifyRoles += "," + tokens.nextElement().toString();
+
+                    groupManager.changeNotifyRoles(userId, portfolioUuid, uuid, notifyRoles);
+                }
+            }
+
+            /// Ajout des droits des noeuds
+            for (GroupRights gr : t_group_rights.values()) {
+                groupRightsRepository.save(gr);
+            }
+        }
+
+        // On récupère le UUID crée
+        searchedNode.setId(baseUuid);
+
+		return allNodes.get(searchedNode).getId();
 
 	}
 
@@ -3471,8 +2074,8 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		nodeRepository.save(n);
 	}
 
-	private void updateNodeOrder(String nodeUuid, int order) {
-		Node n = nodeRepository.findById(UUID.fromString(nodeUuid)).get();
+	private void updateNodeOrder(UUID nodeUuid, int order) {
+		Node n = nodeRepository.findById(nodeUuid).get();
 
 		n.setNodeOrder(order);
 
@@ -3480,8 +2083,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 	}
 
 	private UUID add(UUID nodeId, String nodeChildrenUuid, String asmType, String xsiType,
-					 boolean sharedRes, boolean sharedNode, boolean sharedNodeRes, UUID sharedResUuid, UUID sharedNodeUuid,
-					 UUID sharedNodeResUuid, String metadata, String metadataWad, String metadataEpm, String semtag,
+					 boolean sharedRes, boolean sharedNode, boolean sharedNodeRes, String metadata, String metadataWad, String metadataEpm, String semtag,
 					 String semanticTag, String label, String code, String descr, String format, int order, Long modifUserId,
 					 UUID portfolioId) {
 		Optional<Node> nodeOptional = nodeRepository.findById(nodeId);
@@ -3500,13 +2102,6 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		node.setSharedRes(sharedRes);
 		node.setSharedNode(sharedNode);
 		node.setSharedNodeRes(sharedNodeRes);
-
-		if (sharedResUuid != null)
-			node.setSharedResUuid(sharedResUuid);
-		if (sharedNodeUuid != null)
-			node.setSharedNodeUuid(sharedNodeUuid);
-		if (sharedNodeResUuid != null)
-			node.setSharedNodeResUuid(sharedNodeResUuid);
 
 		node.setMetadata(metadata);
 		node.setMetadataWad(metadataWad);
@@ -3557,4 +2152,31 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		return 0;
 	}
 
+	private NodeDocument getNodeDocument(Node node) {
+		NodeDocument nodeDocument = new NodeDocument(node);
+
+		List<ResourceDocument> resources = new ArrayList<>();
+
+		nodeDocument.setMetadata(Arrays.asList(
+				new MetadataDocument(node.getMetadata()),
+				new MetadataEpmDocument(node.getMetadataEpm()),
+				new MetadataWadDocument(node.getMetadataWad())
+		));
+
+		if (node.getResource() != null) {
+			resources.add(new ResourceDocument(node.getResource(), node));
+		}
+
+		if (node.getResResource() != null) {
+			resources.add(new ResourceDocument(node.getResResource(), node));
+		}
+
+		if (node.getContextResource() != null) {
+			resources.add(new ResourceDocument(node.getContextResource(), node));
+		}
+
+		nodeDocument.setResources(resources);
+
+		return nodeDocument;
+	}
 }

@@ -16,28 +16,23 @@
 package eportfolium.com.karuta.business.impl;
 
 import java.time.LocalDateTime;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import eportfolium.com.karuta.business.contract.PortfolioManager;
+import eportfolium.com.karuta.consumer.repositories.PortfolioRepository;
 import eportfolium.com.karuta.consumer.repositories.ResourceTableRepository;
-import eportfolium.com.karuta.model.bean.Credential;
+import eportfolium.com.karuta.document.*;
+import eportfolium.com.karuta.model.bean.*;
 import eportfolium.com.karuta.util.JavaTimeUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.w3c.dom.Document;
-import org.w3c.dom.NodeList;
 
 import eportfolium.com.karuta.business.contract.NodeManager;
 import eportfolium.com.karuta.business.contract.ResourceManager;
-import eportfolium.com.karuta.consumer.util.DomUtils;
-import eportfolium.com.karuta.model.bean.GroupRights;
-import eportfolium.com.karuta.model.bean.Node;
-import eportfolium.com.karuta.model.bean.ResourceTable;
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.model.exception.GenericBusinessException;
 
@@ -54,119 +49,76 @@ public class ResourceManagerImpl extends BaseManager implements ResourceManager 
 	@Autowired
 	private ResourceTableRepository resourceTableRepository;
 
+	@Autowired
+	private PortfolioRepository portfolioRepository;
+
 	@Override
-	public String getResource(UUID parentNodeId, Long userId, Long groupId)
+	public ResourceDocument getResource(UUID parentNodeId, Long userId, Long groupId)
 			throws BusinessException {
 
 		if (!hasRight(userId, groupId, parentNodeId, GroupRights.READ)) {
 			throw new GenericBusinessException("403 FORBIDDEN : No READ credential");
 		}
 
-		ResourceTable rt = resourceTableRepository.getResourceByParentNodeUuid(parentNodeId);
+		ResourceTable resource = resourceTableRepository.getResourceByParentNodeUuid(parentNodeId);
 
-		return "<asmResource id=\"" + rt.getId().toString() + "\" contextid=\"" + parentNodeId.toString() + "\">"
-				+ rt.getXsiType() + "</asmResource>";
-	}
+		ResourceDocument document = new ResourceDocument(resource.getId());
 
-	/** Récupère le noeud, et assemble les ressources, s'il y en a */
-	@Override
-	public String getResource(UUID nodeId) {
-		String result = "";
+		document.setNodeId(parentNodeId);
+		document.setContent(resource.getXsiType());
 
-		Node resNode = nodeRepository.findById(nodeId).get();
-		String m_epm = resNode.getMetadataEpm();
-		if (m_epm == null)
-			m_epm = "";
-		result += "<" + resNode.getAsmType() + " id='" + resNode.getId().toString() + "'>";
-		result += "<metadata " + resNode.getMetadata() + "/>";
-		result += "<metadata-epm " + m_epm + "/>";
-		result += "<metadata-wad " + resNode.getMetadataWad() + "/>";
-
-		ResourceTable resResource = resNode.getResource();
-		if (resResource != null && resResource.getId() != null) {
-			result += "<asmResource id='" + resResource.getId().toString() + "' contextid='"
-					+ resNode.getId().toString() + "' xsi_type='" + resResource.getXsiType() + "'>";
-			result += resResource.getContent();
-			result += "</asmResource>";
-		}
-
-		resResource = resNode.getResResource();
-		if (resResource != null && resResource.getId() != null) {
-			result += "<asmResource id='" + resResource.getId().toString() + "' contextid='"
-					+ resNode.getId().toString() + "' xsi_type='" + resResource.getXsiType() + "'>";
-			result += resResource.getContent();
-			result += "</asmResource>";
-
-		}
-
-		resResource = resNode.getContextResource();
-		if (resResource != null && resResource.getId() != null) {
-			result += "<asmResource id='" + resResource.getId().toString() + "' contextid='"
-					+ resNode.getId().toString() + "' xsi_type='" + resResource.getXsiType() + "'>";
-			result += resResource.getContent();
-			result += "</asmResource>";
-
-		}
-		result += "</" + resNode.getAsmType() + ">";
-
-		return result;
+		return document;
 	}
 
 	@Override
-	public String getResources(UUID portfolioId, Long userId, Long groupId) throws Exception {
-		List<ResourceTable> res = resourceTableRepository.getResourcesByPortfolioUUID(portfolioId);
+	public ResourceList getResources(UUID portfolioId, Long userId, Long groupId) {
+		List<ResourceTable> resources = resourceTableRepository
+											.getResourcesByPortfolioUUID(portfolioId);
 
-		String returnValue = "<resources>";
-
-		for (ResourceTable rt : res) {
-			returnValue += "<resource " + DomUtils.getXmlAttributeOutput("id", rt.getNode().getId().toString())
-					+ " />";
-		}
-		returnValue += "</resources>";
-
-		return returnValue;
+		return new ResourceList(resources.stream()
+				.map(r -> new ResourceDocument(r.getNode().getId()))
+				.collect(Collectors.toList()));
 	}
 
 	@Override
-	public Integer changeResource(UUID parentNodeId, String xmlResource, Long userId,
-			Long groupId) throws BusinessException, Exception {
-
-		int retVal = -1;
-
-		xmlResource = DomUtils.filterXmlResource(xmlResource);
-
-		ResourceTable rt = resourceTableRepository.getResourceByParentNodeUuid(parentNodeId);
-
-		Document doc = DomUtils.xmlString2Document(xmlResource, new StringBuffer());
-		// Puis on le recrée
-		org.w3c.dom.Node node = (doc.getElementsByTagName("asmResource")).item(0);
+	public Integer changeResource(UUID parentNodeId, ResourceDocument resource, Long userId,
+			Long groupId) throws BusinessException, JsonProcessingException {
 
 		if (!hasRight(userId, groupId, parentNodeId, GroupRights.WRITE))
 			throw new GenericBusinessException("403 FORBIDDEN : No WRITE credential");
 
+		ResourceTable rt = resourceTableRepository.getResourceByParentNodeUuid(parentNodeId);
+
 		portfolioManager.updateTimeByNode(parentNodeId);
 
-		retVal = updateResource(rt.getId(), null, DomUtils.getInnerXml(node), userId);
-
-		return retVal;
-
+		return updateResource(rt.getId(), null, xmlAttributes(resource), userId);
 	}
 
-	public String addResource(UUID parentNodeId, String in, Long userId, Long groupId)
-			throws BusinessException, Exception {
+	@Override
+	public String addResource(UUID parentNodeId, ResourceDocument resource, Long userId, Long groupId)
+			throws BusinessException {
 		if (!credentialRepository.isAdmin(userId))
 			throw new GenericBusinessException("403 FORBIDDEN : No ADMIN right");
 
-		in = DomUtils.filterXmlResource(in);
 
 		if (!hasRight(userId, groupId, parentNodeId, GroupRights.WRITE)) {
 			throw new GenericBusinessException("403 FORBIDDEN : No WRITE credential");
-		} else
-			nodeManager.addNode(parentNodeId, in, userId, groupId, true);
+		}
+
+		Portfolio portfolio = portfolioRepository.getPortfolioFromNode(parentNodeId);
+
+		String xsiType = resource.getXsiType();
+
+		UUID portfolioId = portfolio != null ? portfolio.getId()  : null;
+		UUID modelId = portfolio != null ? portfolio.getModelId() : null;
+
+		addResource(resource.getId(), portfolioId, xsiType, resource.getContent(),
+				modelId, false, false, userId);
 
 		return "";
 	}
 
+	@Override
 	public void removeResource(UUID resourceId, Long userId, Long groupId) throws BusinessException {
 		if (!credentialRepository.isAdmin(userId))
 			throw new GenericBusinessException("403 FORBIDDEN : No admin right");
@@ -176,98 +128,85 @@ public class ResourceManagerImpl extends BaseManager implements ResourceManager 
 		}
 	}
 
-	public void changeResourceByXsiType(UUID nodeId, String xsiType, String content, Long userId) throws Exception {
+	@Override
+	public void changeResourceByXsiType(UUID nodeId,
+										String xsiType,
+										ResourceDocument resource,
+										Long userId) throws BusinessException {
 
 		if (StringUtils.equals(xsiType, "nodeRes")) {
-			updateResResource(nodeId, content, userId);
-			/// Interprétation du code XML.
-			Document doc = DomUtils.xmlString2Document(
-					"<?xml version='1.0' encoding='UTF-8' standalone='no'?><res>" + content + "</res>",
-					new StringBuffer());
-			NodeList nodes = doc.getElementsByTagName("code");
-			org.w3c.dom.Node code = nodes.item(0);
-			if (code != null) {
-				org.w3c.dom.Node codeContent = code.getFirstChild();
+			updateResResource(nodeId, resource.getContent(), userId);
+			String code = resource.getCode();
 
-				String codeVal;
-				if (codeContent != null) {
-					codeVal = codeContent.getNodeValue();
-					// Vérifier si le code existe déjà.
-					if (nodeRepository.isCodeExist(codeVal, nodeId)) {
-						throw new GenericBusinessException("CONFLICT : code already exists.");
-					} else {
-						if (nodeManager.updateNodeCode(nodeId, codeVal) > 0) {
-							throw new GenericBusinessException("Cannot update node code");
-						}
-					}
-				}
+			if (nodeRepository.isCodeExist(code, nodeId)) {
+				throw new GenericBusinessException("CONFLICT : code already exists.");
+			} else if (nodeManager.updateNodeCode(nodeId, code) > 0) {
+				throw new GenericBusinessException("Cannot update node code");
 			}
 		} else if (StringUtils.equals(xsiType, "context")) {
-			updateContextResource(nodeId, content, userId);
+			updateContextResource(nodeId, resource.getContent(), userId);
 		} else {
-			updateResource(nodeId, content, userId);
+			updateResource(nodeId, resource.getContent(), userId);
 		}
-
 	}
 
 	@Override
 	public int addResource(UUID id, UUID parentId, String xsiType, String content, UUID portfolioModelId,
 						   boolean sharedNodeRes, boolean sharedRes, Long userId) {
 
-		int status = 0;
-
-		ResourceTable rt = null;
 		if (((xsiType.equals("nodeRes") && sharedNodeRes)
 				|| (!xsiType.equals("context") && !xsiType.equals("nodeRes") && sharedRes))
 				&& portfolioModelId != null) {
-			// On ne fait rien
+			return 0;
+		}
+
+		Optional<ResourceTable> resourceTableOptional = resourceTableRepository.findById(id);
+
+		ResourceTable rt;
+
+		if (resourceTableOptional.isPresent()) {
+			rt = resourceTableOptional.get();
 		} else {
-			Optional<ResourceTable> resourceTableOptional = resourceTableRepository.findById(id);
-
-			if (resourceTableOptional.isPresent()) {
-				rt = resourceTableOptional.get();
-			} else {
-				rt = new ResourceTable();
-				rt.setId(id);
-			}
-
-			rt.setXsiType(xsiType);
-			rt.setContent(content);
-			rt.setCredential(new Credential(userId));
-			rt.setModifUserId(userId);
-
-			resourceTableRepository.save(rt);
+			rt = new ResourceTable();
+			rt.setId(id);
 		}
 
+		rt.setXsiType(xsiType);
+		rt.setContent(content);
+		rt.setCredential(new Credential(userId));
+		rt.setModifUserId(userId);
 
-		try {
-			final Node n = nodeRepository.findById(parentId).get();
+		resourceTableRepository.save(rt);
 
-			// Ensuite on met à jour les id ressource au niveau du noeud parent
-			if (xsiType.equals("nodeRes")) {
-				n.setResResource(rt);
-				if (sharedNodeRes && portfolioModelId != null) {
-					n.setSharedNodeResUuid(id);
-				} else {
-					n.setSharedNodeResUuid(null);
-				}
-			} else if (xsiType.equals("context")) {
-				n.setContextResource(rt);
+		Optional<Node> node = nodeRepository.findById(parentId);
+
+		if (!node.isPresent())
+			return 1;
+
+		Node n = node.get();
+
+		// Ensuite on met à jour les id ressource au niveau du noeud parent
+		if (xsiType.equals("nodeRes")) {
+			n.setResResource(rt);
+			if (sharedNodeRes) {
+				n.setSharedNodeResUuid(id);
 			} else {
-				n.setResource(rt);
-				if (sharedRes && portfolioModelId != null) {
-					n.setSharedResUuid(id);
-				} else {
-					n.setSharedResUuid(null);
-				}
+				n.setSharedNodeResUuid(null);
 			}
-
-			nodeRepository.save(n);
-		} catch (Exception ex) {
-			ex.printStackTrace();
-			status = 1;
+		} else if (xsiType.equals("context")) {
+			n.setContextResource(rt);
+		} else {
+			n.setResource(rt);
+			if (sharedRes) {
+				n.setSharedResUuid(id);
+			} else {
+				n.setSharedResUuid(null);
+			}
 		}
-		return status;
+
+		nodeRepository.save(n);
+
+		return 0;
 	}
 
 	@Override
@@ -333,7 +272,7 @@ public class ResourceManagerImpl extends BaseManager implements ResourceManager 
 		return 0;
 	}
 
-	private int updateResResource(UUID nodeUuid, String content, Long userId) {
+	private void updateResResource(UUID nodeUuid, String content, Long userId) {
 		ResourceTable rt = resourceTableRepository.getResourceOfResourceByNodeUuid(nodeUuid);
 
 		rt.setContent(content);
@@ -341,7 +280,5 @@ public class ResourceManagerImpl extends BaseManager implements ResourceManager 
 		rt.setModifUserId(userId);
 
 		resourceTableRepository.save(rt);
-
-		return 0;
 	}
 }

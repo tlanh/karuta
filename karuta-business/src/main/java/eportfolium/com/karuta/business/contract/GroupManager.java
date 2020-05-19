@@ -15,17 +15,21 @@
 
 package eportfolium.com.karuta.business.contract;
 
+import eportfolium.com.karuta.document.CredentialGroupList;
+import eportfolium.com.karuta.document.GroupInfoList;
+import eportfolium.com.karuta.document.GroupRightsList;
+import eportfolium.com.karuta.document.RoleGroupList;
 import eportfolium.com.karuta.model.bean.CredentialGroup;
+import eportfolium.com.karuta.model.bean.GroupRightInfo;
 import eportfolium.com.karuta.model.exception.BusinessException;
 
 import java.util.UUID;
 
 public interface GroupManager {
 
+	CredentialGroupList getCredentialGroupByUser(Long userId);
 
-	String getCredentialGroupByUser(Long userId);
-
-	String getGroupsByRole(UUID portfolioId, String role);
+	RoleGroupList getGroupsByRole(UUID portfolioId, String role);
 
 	boolean changeNotifyRoles(Long userId, UUID portfolioId, UUID nodeId, String notify)
 			throws BusinessException;
@@ -38,25 +42,20 @@ public interface GroupManager {
 
 	CredentialGroup getCredentialGroupByName(String name);
 
-	String getCredentialGroupList();
+	CredentialGroupList getCredentialGroupList();
 
-	/**
-	 * Get groups from a user
-	 * 
-	 * @param userId
-	 * @return
-	 * @throws Exception
-	 */
-	String getUserGroups(Long userId) throws Exception;
+	GroupInfoList getUserGroups(Long userId);
 
 	Boolean removeCredentialGroup(Long credentialGroupId);
 
 	void changeUserGroup(Long grid, Long groupId, Long userId) throws BusinessException;
 
-	String getGroupRights(Long userId, Long groupId) throws Exception;
+	GroupRightsList getGroupRights(Long userId, Long groupId) throws BusinessException;
 
 	boolean addGroupRights(String label, UUID nodeUuid, String right, UUID portfolioId, Long userId);
 
 	void removeRights(long groupId, Long userId) throws BusinessException;
+
+	GroupRightInfo getByPortfolioAndLabel(UUID portfolioId, String role);
 
 }

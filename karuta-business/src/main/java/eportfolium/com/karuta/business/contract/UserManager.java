@@ -15,43 +15,28 @@
 
 package eportfolium.com.karuta.business.contract;
 
-import java.util.Set;
 import java.util.UUID;
 
+import eportfolium.com.karuta.document.*;
 import eportfolium.com.karuta.model.bean.Credential;
-import eportfolium.com.karuta.model.exception.BusinessException;
 
 public interface UserManager {
 
-	/**
-	 * @deprecated
-	 * 
-	 *             Apparently unused, keep getListUsers
-	 * 
-	 * @param userId
-	 * @param username
-	 * @param firstname
-	 * @param lastname
-	 * @return
-	 * @throws Exception
-	 */
-	String getUsers(Long userId, String username, String firstname, String lastname);
+	CredentialList getUserList(String username, String firstname, String lastname);
 
-	String getUserList(Long userId, String username, String firstname, String lastname);
+	CredentialGroupDocument getUsersByCredentialGroup(Long userGroupId);
 
-	String getUsersByCredentialGroup(Long userGroupId);
+	GroupInfoList getUserGroupByPortfolio(UUID portfolioId, Long userId);
 
-	String getUserGroupByPortfolio(UUID portfolioId, Long userId);
+	CredentialList getUsersByRole(Long userId, UUID portfolioId, String role);
 
-	String getUsersByRole(Long userId, UUID portfolioId, String role);
+	RoleDocument getRole(Long groupRightInfoId);
 
-	String getRole(Long groupRightInfoId);
-
-	String getUserInfos(Long userId);
+	CredentialDocument getUserInfos(Long userId);
 
 	Long getUserId(String userLogin);
 
-	String getUserRolesByUserId(Long userId);
+	ProfileList getUserRolesByUserId(Long userId);
 
 	Long getPublicUserId();
 
@@ -59,8 +44,7 @@ public interface UserManager {
 
 	Long getUserId(String userLogin, String email);
 
-
-	String getRoleList(UUID portfolioId, Long userId, String role) throws BusinessException;
+	RoleRightsGroupList getRoleList(UUID portfolioId, Long userId);
 
 	/**
 	 * Liste des RRG utilisateurs d'un portfolio donné
@@ -70,11 +54,9 @@ public interface UserManager {
 	 * @return
 	 * @throws Exception
 	 */
-	String getUserRolesByPortfolio(UUID portfolioId, Long id) throws Exception;
+	GroupUserList getUserRolesByPortfolio(UUID portfolioId, Long id);
 
-	String getUserRole(Long rrgid);
-
-	Set<String[]> getNotificationUserList(Long userId, Long groupId, UUID groupRightId);
+	RoleRightsGroupDocument getUserRole(Long rrgid);
 
 	Credential getUser(Long userId);
 

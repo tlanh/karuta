@@ -15,7 +15,6 @@
 
 package eportfolium.com.karuta.business.impl;
 
-import java.io.StringReader;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
@@ -26,30 +25,25 @@ import java.util.regex.Pattern;
 
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 
 import eportfolium.com.karuta.business.contract.ConfigurationManager;
 import eportfolium.com.karuta.consumer.repositories.*;
-import org.apache.commons.lang3.BooleanUtils;
+import eportfolium.com.karuta.document.CredentialDocument;
+import eportfolium.com.karuta.document.CredentialList;
+import eportfolium.com.karuta.document.LoginDocument;
+import eportfolium.com.karuta.document.RoleDocument;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.validator.routines.EmailValidator;
 import org.passay.CharacterRule;
 import org.passay.EnglishCharacterData;
 import org.passay.PasswordGenerator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.NodeList;
-import org.xml.sax.InputSource;
 
 import eportfolium.com.karuta.business.contract.EmailManager;
 import eportfolium.com.karuta.business.contract.SecurityManager;
-import eportfolium.com.karuta.consumer.util.DomUtils;
 import eportfolium.com.karuta.model.bean.Credential;
 import eportfolium.com.karuta.model.bean.CredentialGroup;
 import eportfolium.com.karuta.model.bean.CredentialGroupMembers;
@@ -192,54 +186,6 @@ public class SecurityManagerImpl implements SecurityManager {
 		credentialRepository.save(user);
 	}
 
-	public boolean registerUser(String username, String password) {
-		if (!credentialRepository.existsByLogin(username)) {
-			Credential newUser = new Credential();
-			newUser.setLogin(username);
-
-			try {
-				setPassword(password, newUser);
-
-				newUser.setDisplayFirstname("");
-				newUser.setDisplayLastname("");
-				newUser.setOther("");
-				newUser.setIsDesigner(Integer.valueOf(1));
-
-				credentialRepository.save(newUser);
-
-				return true;
-			} catch (BusinessException e) {
-				e.printStackTrace();
-
-				return false;
-			}
-		}
-
-		return false;
-	}
-
-	public Long addUser(String username, String email) throws BusinessException {
-
-		if (!EmailValidator.getInstance().isValid(email)) {
-			throw new IllegalArgumentException();
-		}
-
-		final Credential cr = new Credential();
-
-		cr.setLogin(username);
-		cr.setDisplayFirstname("");
-		cr.setDisplayLastname("");
-		cr.setEmail(email);
-		cr.setOther("");
-		cr.setActive(1);
-
-		setPassword(generatePassword(), cr);
-
-		credentialRepository.save(cr);
-
-		return cr.getId();
-	}
-
 	public String generatePassword() {
 		List<CharacterRule> rules = Arrays.asList(
 				// at least one upper-case character
@@ -332,14 +278,6 @@ public class SecurityManagerImpl implements SecurityManager {
 		}
 	}
 
-	@Override
-	public void removeUser(Long byUser, Long forUser) throws BusinessException {
-		if (!credentialRepository.isAdmin(byUser))
-			throw new GenericBusinessException("FORBIDDEN : No admin right");
-
-		credentialRepository.deleteById(forUser);
-	}
-
 	public void removeUsers(Long byUser, Long forUser) throws BusinessException {
 		if (!credentialRepository.isAdmin(byUser) && byUser != forUser)
 			throw new GenericBusinessException("FORBIDDEN : No admin right");
@@ -348,127 +286,59 @@ public class SecurityManagerImpl implements SecurityManager {
 		credentialRepository.deleteById(forUser);
 	}
 
-	public String addUsers(String xmlUsers, Long userId) throws Exception {
+	@Override
+	public CredentialList addUsers(CredentialList users, Long userId) throws BusinessException {
 		if (!credentialRepository.isAdmin(userId) && !credentialRepository.isCreator(userId))
 			throw new GenericBusinessException("403 FORBIDDEN : No admin right");
 
-		String result = null;
-		Credential cr = null;
+		List<CredentialDocument> processed = new ArrayList<>();
 
-		Long id = 0L;
-		NodeList children2 = null;
-		org.w3c.dom.Node currentItem = null;
-		String nodeName = null;
-
-		// On récupère le body
-		Document doc = DomUtils.xmlString2Document(xmlUsers, new StringBuffer());
-		Element users = doc.getDocumentElement();
-
-		NodeList children = users.getChildNodes();
-		// On parcourt une première fois les enfants pour récupérer la liste et écrire
-		// en base
-
-		// On vérifie le bon format
-		StringBuilder userdone = new StringBuilder();
-		userdone.append("<users>");
-		String value = null;
-		try {
-			if (users.getNodeName().equals("users")) {
-				for (int i = 0; i < children.getLength(); i++) {
-					if (children.item(i).getNodeName().equals("user")) {
-						cr = new Credential();
-						cr.setActive(1);
-						cr.setOther("");
-						cr.setEmail("");
-
-						children2 = children.item(i).getChildNodes();
-
-						for (int j = 0; j < children2.getLength(); j++) {
-							currentItem = children2.item(j);
-							nodeName = currentItem.getNodeName();
-							value = DomUtils.getInnerXml(currentItem);
-
-							if (nodeName.equals("username")) {
-								cr.setLogin(value);
-							} else if (nodeName.equals("password")) {
-								setPassword(value, cr);
-							} else if (nodeName.equals("firstname")) {
-								cr.setDisplayFirstname(StringUtils.defaultString(value));
-							} else if (nodeName.equals("lastname")) {
-								cr.setDisplayLastname(StringUtils.defaultString(value));
-							} else if (nodeName.equals("email")) {
-								cr.setEmail(StringUtils.defaultString(value));
-							} else if (nodeName.equals("active")) {
-								if ("1".equals(value))
-									cr.setActive(1);
-								else
-									cr.setActive(0);
-							} else if (nodeName.equals("designer")) {
-								if ("1".equals(value))
-									cr.setIsDesigner(1);
-								else
-									cr.setIsDesigner(0);
-							} else if (nodeName.equals("substitute")) {
-								if ("1".equals(value))
-									cr.setCanSubstitute(1);
-								else
-									cr.setCanSubstitute(0);
-							} else if (nodeName.equals("other")) {
-								cr.setOther(value);
-							}
-						}
-
-						// On ajoute l'utilisateur dans la base de données
-						credentialRepository.save(cr);
-						id = cr.getId();
-
-						CredentialSubstitution subst = new CredentialSubstitution();
-						/// FIXME: More complete rule to use
-						CredentialSubstitutionId csId = new CredentialSubstitutionId();
-						// id = 0, ne pas vérifier qui cette personne peut remplacer (sauf root)
-						csId.setId(0L);
-						csId.setCredential(cr);
-						csId.setType("USER");
-
-						if (cr.getCanSubstitute() == 1) {
-							subst.setId(csId);
-							credentialSubstitutionRepository.save(subst);
-							cr.setCredentialSubstitution(subst);
-						} else {
-							credentialSubstitutionRepository.deleteById(csId);
-						}
-
-						userdone.append("<user ").append("id=\"").append(id).append("\">");
-						userdone.append("<username>").append(cr.getLogin()).append("</username>");
-						userdone.append("<firstname>").append(cr.getDisplayFirstname()).append("</firstname>");
-						userdone.append("<lastname>").append(cr.getDisplayLastname()).append("</lastname>");
-						userdone.append("<email>").append(cr.getEmail()).append("</email>");
-						userdone.append("<active>").append(cr.getActive()).append("</active>");
-						userdone.append("<designer>").append(cr.getIsDesigner()).append("</designer>");
-						userdone.append("<substitute>").append(cr.getSubUser()).append("</substitute>");
-						userdone.append("<other>").append(cr.getOther()).append("</other>");
-						userdone.append("</user>");
-					}
-				}
-			} else {
-				result = "Missing 'users' tag";
+		for (CredentialDocument document : users.getUsers()) {
+			// Password is required
+			if (StringUtils.isEmpty(document.getPassword())) {
+				continue;
 			}
-		} catch (Exception e) {
-			log.error(e.getMessage());
-			result = "Error when processing user : " + cr != null ? cr.getLogin() : "undefined";
+
+			Credential credential = new Credential();
+
+			credential.setActive(document.getActive());
+			credential.setIsDesigner(document.getDesigner());
+			credential.setCanSubstitute(document.getSubstitute());
+			credential.setPassword(hash(credential.getPassword().toCharArray()));
+
+			credential.setLogin(document.getUsername());
+			credential.setOther(document.getOther());
+			credential.setEmail(document.getEmail());
+			credential.setDisplayFirstname(document.getFirstname());
+			credential.setDisplayLastname(document.getLastname());
+
+			credentialRepository.save(credential);
+
+			/// FIXME: More complete rule to use
+			CredentialSubstitutionId csId = new CredentialSubstitutionId();
+			// id = 0, ne pas vérifier qui cette personne peut remplacer (sauf root)
+			csId.setId(0L);
+			csId.setCredential(credential);
+			csId.setType("USER");
+
+			if (credential.getCanSubstitute() == 1) {
+				CredentialSubstitution subst = new CredentialSubstitution();
+				subst.setId(csId);
+
+				credentialSubstitutionRepository.save(subst);
+				credential.setCredentialSubstitution(subst);
+			} else {
+				credentialSubstitutionRepository.deleteById(csId);
+			}
+
+			processed.add(document);
 		}
-		userdone.append("</users>");
 
-		if (result == null)
-			result = userdone.toString();
-
-		return result;
+		return new CredentialList(processed);
 	}
 
-	public boolean addUser(String username, String email, boolean isDesigner, long userId) throws Exception {
-		if (!credentialRepository.isAdmin(userId) && !credentialRepository.isCreator(userId))
-			throw new GenericBusinessException("Status.FORBIDDEN : No admin right");
-
+	@Override
+	public boolean addUser(String username, String email) {
 		if (!credentialRepository.existsByLogin(username)) {
 
 			try {
@@ -482,10 +352,9 @@ public class SecurityManagerImpl implements SecurityManager {
 				newUser.setDisplayFirstname("");
 				newUser.setOther("");
 				newUser.setDisplayLastname("");
-				newUser.setIsDesigner(BooleanUtils.toInteger(isDesigner));
+				newUser.setIsDesigner(1);
 
 				credentialRepository.save(newUser);
-
 
 				final Map<String, String> template_vars = new HashMap<String, String>();
 				template_vars.put("firstname", username);
@@ -513,157 +382,75 @@ public class SecurityManagerImpl implements SecurityManager {
 		return false;
 	}
 
-	public String changeUser(Long byUserId, Long forUserId, String xmlUser) throws BusinessException {
+	@Override
+	public Long changeUser(Long byUserId, Long forUserId, CredentialDocument user) throws BusinessException {
 		if (credentialRepository.existsById(forUserId)) {
 			throw new GenericBusinessException("Unknown user id");
 		}
 
-		String result1 = null;
-		String currentPassword = null;
-		String newPassword = null;
-		String email = null;
-		String userlogin = null;
-		String firstname = null;
-		String lastname = null;
-		String active = null;
-		String is_admin = null;
-		String is_designer = null;
-		String hasSubstitute = null;
-		String other = "";
-
-		// On récupère le body
-		Document doc;
-		Element infUser = null;
-		try {
-			doc = DomUtils.xmlString2Document(xmlUser, new StringBuffer());
-			infUser = doc.getDocumentElement();
-		} catch (Exception e) {
-			e.printStackTrace();
+		if (!checkPassword(byUserId, user.getPrevpass()) && !credentialRepository.isAdmin(byUserId)) {
+			throw new GenericBusinessException("Not authorized");
 		}
 
-		if (infUser.getNodeName().equals("user")) {
-			// On récupère les attributs
-			NodeList children = infUser.getChildNodes();
-			/// Fetch parameters
-			/// TODO Make some function out of this I think
-			for (int y = 0; y < children.getLength(); y++) {
-				if (children.item(y).getNodeName().equals("username")) {
-					userlogin = DomUtils.getInnerXml(children.item(y));
-				}
-				if (children.item(y).getNodeName().equals("prevpass")) {
-					currentPassword = DomUtils.getInnerXml(children.item(y));
-				}
-				if (children.item(y).getNodeName().equals("password")) {
-					newPassword = DomUtils.getInnerXml(children.item(y));
-				}
-				if (children.item(y).getNodeName().equals("firstname")) {
-					firstname = DomUtils.getInnerXml(children.item(y));
-				}
-				if (children.item(y).getNodeName().equals("lastname")) {
-					lastname = DomUtils.getInnerXml(children.item(y));
-				}
-				if (children.item(y).getNodeName().equals("email")) {
-					email = DomUtils.getInnerXml(children.item(y));
-				}
-				if (children.item(y).getNodeName().equals("admin")) {
-					is_admin = DomUtils.getInnerXml(children.item(y));
-				}
-				if (children.item(y).getNodeName().equals("designer")) {
-					is_designer = DomUtils.getInnerXml(children.item(y));
-				}
-				if (children.item(y).getNodeName().equals("active")) {
-					active = DomUtils.getInnerXml(children.item(y));
-				}
-				if (children.item(y).getNodeName().equals("substitute")) {
-					hasSubstitute = DomUtils.getInnerXml(children.item(y));
-				}
-				if (children.item(y).getNodeName().equals("other")) {
-					other = DomUtils.getInnerXml(children.item(y));
-				}
-			}
+		Credential credential = credentialRepository.findById(forUserId)
+									.orElseThrow(() -> new GenericBusinessException("Unexisting user"));
 
-			/// Vérifier si l'utilisateur a le bon mot de passe afin d'exécuter les
-			/// modifications
-			boolean isOK = checkPassword(byUserId, currentPassword);
+		if (user.getUsername() != null)
+			credential.setLogin(user.getUsername());
 
-			/// Vérifier si l'utilisateur qui demande les modifications est bien
-			/// administrateur
-			if (isOK || credentialRepository.isAdmin(byUserId)) {
-				// Récupération de l'utilisateur en base de données.
-				Credential user = credentialRepository.findById(forUserId).get();
+		if (user.getPassword() != null)
+			setPassword(user.getPassword(), credential);
 
-				if (userlogin != null) {
-					user.setLogin(userlogin);
-				}
-				if (newPassword != null) {
-					setPassword(newPassword, user);
-				}
-				if (firstname != null) {
-					user.setDisplayFirstname(firstname);
-				}
-				if (lastname != null) {
-					user.setDisplayLastname(lastname);
-				}
-				if (email != null) {
-					user.setEmail(email);
-				}
-				if (is_admin != null) {
-					int is_adminInt = 0;
-					if ("1".equals(is_admin))
-						is_adminInt = 1;
+		if (user.getFirstname() != null)
+			credential.setDisplayFirstname(user.getFirstname());
 
-					user.setIsAdmin(is_adminInt);
-				}
-				if (is_designer != null) {
-					int is_designerInt = 0;
-					if ("1".equals(is_designer))
-						is_designerInt = 1;
+		if (user.getLastname() != null)
+			credential.setDisplayLastname(user.getLastname());
 
-					user.setIsDesigner(is_designerInt);
-				}
-				if (active != null) {
-					int activeInt = 0;
-					if ("1".equals(active))
-						activeInt = 1;
+		if (user.getEmail() != null)
+			credential.setEmail(user.getEmail());
 
-					user.setActive(activeInt);
-				}
-				if (other != null) {
-					user.setOther(other);
-				}
+		if (user.getAdmin() != null)
+			credential.setIsAdmin(user.getAdmin());
 
-				credentialRepository.save(user);
+		if (user.getDesigner() != null)
+			credential.setIsDesigner(user.getDesigner());
 
-				if (hasSubstitute != null) {
-					CredentialSubstitution subst = new CredentialSubstitution();
-					/// FIXME: More complete rule to use
-					CredentialSubstitutionId csId = new CredentialSubstitutionId();
-					// id=0, don't check who this person can substitute (except root)
-					csId.setId(0L);
-					csId.setCredential(user);
-					csId.setType("USER");
+		if (user.getActive() != null)
+			credential.setActive(user.getActive());
 
-					if ("1".equals(hasSubstitute)) {
-						subst.setId(csId);
-						credentialSubstitutionRepository.save(subst);
-					} else if ("0".equals(hasSubstitute)) {
-						credentialSubstitutionRepository.deleteById(csId);
-					}
-				}
+		if (user.getOther() != null)
+			credential.setOther(user.getOther());
+
+		credentialRepository.save(credential);
+
+		if (user.getSubstitute() != null) {
+			/// FIXME: More complete rule to use
+			CredentialSubstitutionId csId = new CredentialSubstitutionId();
+			// id=0, don't check who this person can substitute (except root)
+			csId.setId(0L);
+			csId.setCredential(credential);
+			csId.setType("USER");
+
+			if (user.getSubstitute() == 1) {
+				CredentialSubstitution subst = new CredentialSubstitution();
+				subst.setId(csId);
+
+				credentialSubstitutionRepository.save(subst);
 			} else {
-				throw new GenericBusinessException("Not authorized");
+				credentialSubstitutionRepository.deleteById(csId);
 			}
 		}
 
-		result1 = "" + forUserId;
-
-		return result1;
+		return forUserId;
 	}
 
+	@Override
 	public boolean isAdmin(Long userId) {
 		return credentialRepository.isAdmin(userId);
 	}
 
+	@Override
 	public boolean isCreator(Long userId) {
 		return credentialRepository.isCreator(userId);
 	}
@@ -683,78 +470,34 @@ public class SecurityManagerImpl implements SecurityManager {
 		return cr != null ? authenticate(passwd.toCharArray(), cr.getPassword()) : false;
 	}
 
-	public String changeUserInfo(Long byUserId, Long forUserId, String xmlUser) throws BusinessException {
+	@Override
+	public Long changeUserInfo(Long byUserId, Long forUserId, CredentialDocument user) throws BusinessException {
 		if (byUserId != forUserId)
 			throw new GenericBusinessException("Not authorized");
 
-		if (credentialRepository.existsById(forUserId))
-			throw new GenericBusinessException("Unknown user id");
+		Credential credential = credentialRepository.findById(forUserId)
+				.orElseThrow(() -> new GenericBusinessException("Unknown user id"));
 
-		String result1 = null;
-		String currentPassword = null;
-		String newPassword = null;
-		String email = null;
-		String firstname = null;
-		String lastname = null;
-
-		// Parse input
-		Document doc;
-		Element userInfos = null;
 		try {
-			doc = DomUtils.xmlString2Document(xmlUser, new StringBuffer());
-			userInfos = doc.getDocumentElement();
-		} catch (Exception e) {
-			e.printStackTrace();
+			changeUserPassword(forUserId, user.getPrevpass(), user.getPassword());
+			log.info(String.format("User with id  [%s] has changed his password\n", forUserId));
+		} catch (BusinessException e) {
+			// L'utilisation du même mot de passe dans cette méthode n'est pas interdite
+			// donc on continue.
 		}
 
-		NodeList children = userInfos.getChildNodes();
+		if (user.getEmail() != null)
+			credential.setEmail(user.getEmail());
 
-		if (userInfos.getNodeName().equals("user")) {
+		if (user.getFirstname() != null)
+			credential.setDisplayFirstname(user.getFirstname());
 
-			/// Get parameters
-			for (int y = 0; y < children.getLength(); y++) {
-				if (children.item(y).getNodeName().equals("prevpass")) {
-					currentPassword = DomUtils.getInnerXml(children.item(y));
-				} else if (children.item(y).getNodeName().equals("password")) {
-					newPassword = DomUtils.getInnerXml(children.item(y));
-				} else if (children.item(y).getNodeName().equals("email")) {
-					email = DomUtils.getInnerXml(children.item(y));
-				} else if (children.item(y).getNodeName().equals("firstname")) {
-					firstname = DomUtils.getInnerXml(children.item(y));
-				} else if (children.item(y).getNodeName().equals("lastname")) {
-					lastname = DomUtils.getInnerXml(children.item(y));
-				}
-			}
+		if (user.getLastname() != null)
+			credential.setDisplayLastname(user.getLastname());
 
-			try {
-				changeUserPassword(forUserId, currentPassword, newPassword);
-				log.info(String.format("User with id  [%s] has changed his password\n", forUserId));
-			} catch (AuthenticationException e) {
-				throw e;
-			} catch (BusinessException e) {
-				// L'utilisation du même mot de passe dans cette méthode n'est pas interdite
-				// donc on continue.
-			}
+		credentialRepository.save(credential);
 
-			try {
-				Credential cr = credentialRepository.findById(forUserId).get();
-
-				if (email != null) {
-					cr.setEmail(email);
-				}
-				if (firstname != null) {
-					cr.setDisplayFirstname(firstname);
-				}
-				if (lastname != null) {
-					cr.setDisplayLastname(lastname);
-				}
-				credentialRepository.save(cr);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
-		result1 = "" + forUserId;
-		return result1;
+		return forUserId;
 	}
 
 	/**
@@ -843,69 +586,28 @@ public class SecurityManagerImpl implements SecurityManager {
 				+ rrgid;
 	}
 
-	public String[] postCredentialFromXml(String login, String password, String substitute) {
-		String[] returnValue = null;
-		Long uid = 0L;
-		Long subuid = 0L;
-		try {
-			Credential c = credentialRepository.findByLogin(login);
+	@Override
+	public CredentialDocument login(LoginDocument credentials) {
+		Credential user = credentialRepository.findByLogin(credentials.getLogin());
 
-			if (c != null) {
-				if (!authenticate(password.toCharArray(), c.getPassword()))
-					return returnValue;
-				else
-					uid = c.getId();
-			} else {
-				return returnValue;
-			}
+		if (user == null)
+			return null;
+		else if (!authenticate(credentials.getPassword().toCharArray(), user.getPassword()))
+			return null;
 
-			if (substitute != null) {
-				/// Specific lenient substitution rule
-				CredentialSubstitution cs = credentialSubstitutionRepository.getSubstitutionRule(uid, 0L, "USER");
+		Credential credential = user;
+		String substitute = credentials.getSubstitute();
 
-				if (cs != null) {
-					// User can get "any" account, except admin one
-					Credential cr = credentialRepository.findByLoginAndAdmin(substitute, 0);
-					if (cr != null)
-						subuid = cr.getId();
-				} else {
-					/// General rule, when something specific is written in 'id', with USER or GROUP
-					subuid = credentialSubstitutionRepository.getSubuidFromUserType(substitute, uid);
-					if (subuid == null)
-						subuid = credentialSubstitutionRepository.getSubuidFromGroupType(substitute, uid);
-				}
-			}
-
-			returnValue = new String[5];
-			returnValue[1] = login; // login
-			returnValue[2] = Long.toString(uid); // User id
-			returnValue[4] = Long.toString(subuid); // Substitute
-			Credential cr = null;
-
-			if (!(subuid == null || subuid == 0L)) {
-				returnValue[3] = substitute;
-				cr = credentialRepository.findByLogin(substitute);
-			} else {
-				returnValue[3] = "";
-				cr = credentialRepository.findByLogin(login);
-			}
-
-			returnValue[0] = "<credential>";
-			returnValue[0] += DomUtils.getXmlElementOutput("useridentifier", cr.getLogin());
-			returnValue[0] += DomUtils.getXmlElementOutput("token", cr.getToken());
-			returnValue[0] += DomUtils.getXmlElementOutput("firstname", cr.getDisplayFirstname());
-			returnValue[0] += DomUtils.getXmlElementOutput("lastname", cr.getDisplayLastname());
-			returnValue[0] += DomUtils.getXmlElementOutput("admin", String.valueOf(cr.getIsAdmin()));
-			returnValue[0] += DomUtils.getXmlElementOutput("designer", String.valueOf(cr.getIsDesigner()));
-			returnValue[0] += DomUtils.getXmlElementOutput("email", cr.getEmail());
-			returnValue[0] += DomUtils.getXmlElementOutput("other", cr.getOther());
-			returnValue[0] += "</credential>";
-		} catch (Exception e) {
-			e.printStackTrace();
+		if (substitute != null &&
+				credentialSubstitutionRepository.getFor(user.getId(), "USER") != null) {
+			// User can get "any" account, except admin one
+			credential = credentialRepository.findByLoginAndAdmin(substitute, 0);
 		}
-		return returnValue;
+
+		return new CredentialDocument(credential, true);
 	}
 
+	@Override
 	public boolean userHasRole(long userId, long roleId) {
 		return groupUserRepository.hasRole(userId, roleId);
 	}
@@ -941,35 +643,19 @@ public class SecurityManagerImpl implements SecurityManager {
 		groupInfoRepository.deleteById(groupId);
 	}
 
-	public Long changeRole(Long userId, Long rrgId, String xmlRole)
-			throws Exception {
+	@Override
+	public Long changeRole(Long userId, Long rrgId, RoleDocument role) throws BusinessException {
 		if (!credentialRepository.isAdmin(userId) && !groupRightInfoRepository.isOwner(userId, rrgId))
 			throw new GenericBusinessException("403 FORBIDDEN, no admin rights");
 
-		/// Parse data
-		DocumentBuilder documentBuilder;
-		Document document = null;
-		DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
-		documentBuilder = documentBuilderFactory.newDocumentBuilder();
-		InputSource is = new InputSource(new StringReader(xmlRole));
-		document = documentBuilder.parse(is);
-
-		NodeList labelNodes = document.getElementsByTagName("label");
-		org.w3c.dom.Node labelNode = labelNodes.item(0);
-
 		GroupRightInfo gri = groupRightInfoRepository.findById(rrgId).get();
 
-		if (labelNode != null) {
-			org.w3c.dom.Node labelText = labelNode.getFirstChild();
-			if (labelText != null) {
-				gri.setLabel(labelText.getNodeValue());
-			}
+		if (role.getLabel() != null) {
+			gri.setLabel(role.getLabel());
 		}
 
-		NodeList portfolioNodes = document.getElementsByTagName("portfolio");
-		Element portfolioNode = (Element) portfolioNodes.item(0);
-		if (portfolioNode != null) {
-			gri.setPortfolio(new Portfolio(UUID.fromString(portfolioNode.getAttribute("id"))));
+		if (role.getPortfolioId() != null) {
+			gri.setPortfolio(new Portfolio(role.getPortfolioId()));
 		}
 
 		groupRightInfoRepository.save(gri);
@@ -977,45 +663,16 @@ public class SecurityManagerImpl implements SecurityManager {
 		return gri.getId();
 	}
 
-	public String addUsersToRole(Long userId, Long rrgid, String xmlUser) throws BusinessException {
+	@Override
+	public String addUsersToRole(Long userId, Long rrgid, CredentialList users) throws BusinessException {
 		if (!credentialRepository.isAdmin(userId) && !groupRightInfoRepository.isOwner(userId, rrgid))
 			throw new GenericBusinessException("403 FORBIDDEN : no admin right");
 
-		String value = "";
-		/// Parse data
-		DocumentBuilder documentBuilder;
-		Document document = null;
-		try {
-			DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
-			documentBuilder = documentBuilderFactory.newDocumentBuilder();
-			InputSource is = new InputSource(new StringReader(xmlUser));
-			document = documentBuilder.parse(is);
-		} catch (Exception e) {
-			e.printStackTrace();
+		for (CredentialDocument user : users.getUsers()) {
+			addUserRole(userId, rrgid, user.getId());
 		}
 
-		/// Problème de parsage
-		if (document == null)
-			return value;
-
-		try {
-			Element root = document.getDocumentElement();
-
-			/// ajout des utilisateurs
-			NodeList users = root.getElementsByTagName("user");
-			Long uid = null;
-			String uidl = null;
-			Element user = null;
-			for (int j = 0; j < users.getLength(); ++j) {
-				user = (Element) users.item(j);
-				uidl = user.getAttribute("id");
-				uid = Long.valueOf(uidl);
-				addUserRole(userId, rrgid, uid);
-			}
-		} catch (Exception e) {
-		}
-
-		return value;
+		return "";
 	}
 
 	@Override
