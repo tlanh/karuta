@@ -55,8 +55,8 @@ public class GenericBusinessException extends BusinessException {
 		// more likely to be in the user's
 		// locale.
 
-		String msg = MessageUtil.toText(messageId, messageArgs);
-		return msg;
+		//String msg = MessageUtil.toText(messageId, messageArgs);
+		return messageId;
 	}
 
 	public Object[] getMessageArgs() {
