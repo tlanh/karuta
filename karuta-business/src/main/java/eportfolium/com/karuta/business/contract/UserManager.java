@@ -26,8 +26,6 @@ public interface UserManager {
 
 	CredentialGroupDocument getUsersByCredentialGroup(Long userGroupId);
 
-	GroupInfoList getUserGroupByPortfolio(UUID portfolioId, Long userId);
-
 	CredentialList getUsersByRole(Long userId, UUID portfolioId, String role);
 
 	RoleDocument getRole(Long groupRightInfoId);
@@ -37,8 +35,6 @@ public interface UserManager {
 	Long getUserId(String userLogin);
 
 	ProfileList getUserRolesByUserId(Long userId);
-
-	Long getPublicUserId();
 
 	String getEmailByLogin(String userLogin);
 

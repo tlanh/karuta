@@ -73,11 +73,7 @@ public interface PortfolioManager {
 
 	GroupRights getRightsOnPortfolio(Long userId, Long groupId, UUID portfolioId);
 
-	int changePortfolioActive(UUID portfolioId, Boolean active);
-
 	UUID postPortfolioParserights(UUID portfolioId, Long userId) throws JsonProcessingException, BusinessException;
-
-	boolean changePortfolioDate(final UUID nodeId, final UUID portfolioId);
 
 	boolean isOwner(Long userId, UUID portfolioId);
 
@@ -117,8 +113,6 @@ public interface PortfolioManager {
 
 	UUID copyPortfolio(UUID portfolioId, String srccode, String tgtcode, Long userId, boolean setOwner)
 			throws Exception;
-
-	UUID getPortfolioUuidFromNode(UUID nodeId);
 
 	void updateTime(UUID portfolioId);
 

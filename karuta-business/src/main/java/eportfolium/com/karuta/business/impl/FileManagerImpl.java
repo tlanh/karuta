@@ -29,18 +29,12 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import org.apache.http.HttpEntity;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.ContentType;
-import org.apache.http.entity.StringEntity;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.entity.mime.content.FileBody;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
-import org.json.simple.JSONValue;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,35 +43,6 @@ import eportfolium.com.karuta.business.contract.FileManager;
 @Service
 @Transactional
 public class FileManagerImpl implements FileManager {
-
-	public boolean sendFile(String sessionid, String backend, String user, String uuid, String lang, File file)
-			throws Exception {
-		CloseableHttpClient httpclient = HttpClients.createDefault();
-
-		try {
-			String url = backend + "/resources/resource/file/" + uuid + "?lang=" + lang;
-			HttpPost post = new HttpPost(url);
-			post.setHeader("Cookie", "JSESSIONID=" + sessionid); // So that the receiving servlet allow us
-
-			/// Remove import language tag
-			String filename = file.getName(); /// NOTE: Since it's used with zip import, specific code.
-			int langindex = filename.lastIndexOf("_");
-			filename = filename.substring(0, langindex) + filename.substring(langindex + 3);
-
-			FileBody bin = new FileBody(file, ContentType.DEFAULT_BINARY, filename); // File from import
-
-			/// Form info
-			HttpEntity reqEntity = MultipartEntityBuilder.create().addPart("uploadfile", bin).build();
-			post.setEntity(reqEntity);
-
-			httpclient.execute(post);
-
-		} finally {
-			httpclient.close();
-		}
-
-		return true;
-	}
 
 	@Override
 	public boolean rewriteFile(String sessionid, String backend, String user, UUID id, String lang, File file)
@@ -106,49 +71,6 @@ public class FileManagerImpl implements FileManager {
 		}
 
 		return true;
-	}
-
-	public boolean updateResource(String sessionid, String backend, String uuid, String lang, String json)
-			throws Exception {
-		/// Parse and create xml from JSON
-		JSONObject files = (JSONObject) JSONValue.parse(json);
-		JSONArray array = (JSONArray) files.get("files");
-
-		if ("".equals(lang) || lang == null)
-			lang = "fr";
-
-		JSONObject obj = (JSONObject) array.get(0);
-		String ressource = "";
-		String attLang = " lang=\"" + lang + "\"";
-		ressource += "<asmResource>" + "<filename" + attLang + ">" + obj.get("name") + "</filename>" + // filename
-				"<size" + attLang + ">" + obj.get("size") + "</size>" + "<type" + attLang + ">" + obj.get("type")
-				+ "</type>" +
-//		obj.get("url");	// Backend source, when there is multiple backend
-				"<fileid" + attLang + ">" + obj.get("fileid") + "</fileid>" + "</asmResource>";
-
-		/// Send data to resource
-		/// Server + "/resources/resource/file/" + uuid +"?lang="+ lang
-		CloseableHttpClient httpclient = HttpClients.createDefault();
-		try {
-			HttpPut put = new HttpPut("http://" + backend + "/rest/api/resources/resource/" + uuid);
-			put.setHeader("Cookie", "JSESSIONID=" + sessionid); // So that the receiving servlet allow us
-
-			StringEntity se = new StringEntity(ressource);
-			se.setContentEncoding("application/xml");
-			put.setEntity(se);
-
-			CloseableHttpResponse response = httpclient.execute(put);
-
-			try {
-				response.getEntity();
-			} finally {
-				response.close();
-			}
-		} finally {
-			httpclient.close();
-		}
-
-		return false;
 	}
 
 	public String[] findFiles(String directoryPath, String id) {

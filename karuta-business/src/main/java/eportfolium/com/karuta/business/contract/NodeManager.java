@@ -71,8 +71,6 @@ public interface NodeManager {
 				   boolean rewriteId, Map<UUID, UUID> resolve, boolean parseRights)
 			throws BusinessException, JsonProcessingException;
 
-	boolean isCodeExist(String code, UUID uuid);
-
 	boolean isCodeExist(String code);
 
 	String executeMacroOnNode(long userId, UUID nodeId, String macroName)
@@ -119,8 +117,6 @@ public interface NodeManager {
 	NodeList getNodes(String rootNodeCode, String childSemtag, Long userId, Long groupId,
 			String parentSemtag, String parentNodeCode, Integer cutoff) throws BusinessException;
 
-	String executeAction(Long userId, UUID nodeId, String action, String role);
-
 	UUID copyNode(UUID destId, String tag, String code, UUID sourceId, Long userId,
 			Long groupId) throws BusinessException, JsonProcessingException;
 
@@ -128,8 +124,6 @@ public interface NodeManager {
 			throws BusinessException, JsonProcessingException;
 
 	int updateNodeCode(UUID nodeId, String code);
-
-	UUID getChildUuidBySemtag(UUID rootId, String semantictag);
 
 	List<Node> getChildren(UUID nodeId);
 }

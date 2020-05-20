@@ -79,10 +79,6 @@ public class ConfigurationManagerImpl implements ConfigurationManager {
 		return get(key, null);
 	}
 
-	public Map<String, String> getMultiple(List<String> keys) {
-		return getMultiple(keys, null);
-	}
-
 	/**
 	 * Get several configuration values (in one language only)
 	 *
@@ -102,58 +98,6 @@ public class ConfigurationManagerImpl implements ConfigurationManager {
 		}
 
 		return results;
-	}
-
-	/**
-	 * @TODO Fix saving HTML values in Configuration model
-	 *
-	 * @param key
-	 * @param values
-	 * @return
-	 */
-	public boolean updateValue(String key, final Map<Integer, String> values) {
-		if (!StringUtils.isAlphanumeric(key)) {
-			throw new RuntimeException(String.format("[%s] n'est pas une clé de configuration valide", key));
-		}
-
-		List<Configuration> settings = new ArrayList<>();
-
-		values.forEach((lang, value) -> {
-			Object stored_value = get(key, lang);
-
-			// if there isn't a stored_value, we must insert value
-			if ((!NumberUtils.isCreatable(value) && value.equals(stored_value))
-					|| (NumberUtils.isCreatable(value) && value.equals(stored_value) && hasKey(key, lang))) {
-				return;
-			}
-
-			// If key already exists, update value
-			if (hasKey(key, lang)) {
-				if (lang == null || lang == 0) {
-					Optional<Configuration> setting = configurationRepository.findByName(key);
-
-					if (setting.isPresent()) {
-						Configuration configuration = setting.get();
-						configuration.setValue(value);
-
-						settings.add(configuration);
-					}
-				}
-			}
-			// If key does not exists, create it
-			else if (!configurationRepository.existsByName(key)) {
-				Configuration configuration = new Configuration();
-				configuration.setName(key);
-				configuration.setValue(!(lang == null || lang == 0) ? null : value);
-
-				settings.add(configuration);
-			}
-		});
-
-		configurationRepository.saveAll(settings);
-		set(key, values);
-
-		return true;
 	}
 
 	public void set(String key, Map<Integer, String> values) {

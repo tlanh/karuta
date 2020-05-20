@@ -66,6 +66,8 @@ import eportfolium.com.karuta.util.JavaTimeUtil;
 @Transactional
 public class PortfolioManagerImpl extends BaseManager implements PortfolioManager {
 
+	static private final Logger logger = LoggerFactory.getLogger(PortfolioManagerImpl.class);
+
 	@Autowired
 	private NodeManager nodeManager;
 
@@ -148,28 +150,6 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		Map<String, Long> groups = new HashMap<String, Long>();
 	}
 
-	static private final Logger logger = LoggerFactory.getLogger(PortfolioManagerImpl.class);
-
-	@Override
-	public boolean changePortfolioDate(UUID nodeId, UUID portfolioId) {
-		final Date now = JavaTimeUtil.toJavaDate(LocalDateTime.now(JavaTimeUtil.date_default_timezone));
-
-		Portfolio portfolio = null;
-
-		if (nodeId != null) {
-			UUID portfolioUUID = nodeRepository.getPortfolioIdFromNode(nodeId);
-			portfolio = portfolioRepository.findById(portfolioUUID).get();
-			portfolio.setModifDate(now);
-		} else if (portfolioId != null) {
-			portfolio = portfolioRepository.findById(portfolioId).get();
-			portfolio.setModifDate(now);
-		}
-
-		portfolioRepository.save(portfolio);
-
-		return true;
-	}
-
 	public boolean removePortfolioGroups(Long portfolioGroupId) {
 		Optional<PortfolioGroup> pg = portfolioGroupRepository.findById(portfolioGroupId);
 
@@ -212,15 +192,6 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		return new PortfolioGroupDocument(portfolioGroupId, portfolios.stream()
 				.map(p -> new PortfolioDocument(p.getId()))
 				.collect(Collectors.toList()));
-	}
-
-	@Override
-	public int changePortfolioActive(UUID portfolioId, Boolean active) {
-		Portfolio portfolio = portfolioRepository.findById(portfolioId).get();
-		portfolio.setActive(BooleanUtils.toInteger(active));
-		portfolioRepository.save(portfolio);
-
-		return 0;
 	}
 
 	@Override
@@ -1416,11 +1387,6 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		} catch (Exception e) {
 			return null;
 		}
-	}
-
-	@Override
-	public UUID getPortfolioUuidFromNode(UUID nodeId) {
-		return portfolioRepository.getPortfolioUuidFromNode(nodeId);
 	}
 
 	private String passwdGen(Integer length) {

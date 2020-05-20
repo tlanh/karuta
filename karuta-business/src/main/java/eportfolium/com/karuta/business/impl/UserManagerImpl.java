@@ -68,16 +68,6 @@ public class UserManagerImpl implements UserManager {
 	}
 
 	@Override
-	public GroupInfoList getUserGroupByPortfolio(UUID portfolioId, Long userId) {
-		List<GroupUser> groups = groupUserRepository.getByPortfolioAndUser(portfolioId, userId);
-
-		return new GroupInfoList(groups.stream()
-				.map(GroupUser::getGroupInfo)
-				.map(GroupInfoDocument::new)
-				.collect(Collectors.toList()));
-	}
-
-	@Override
 	public CredentialList getUsersByRole(Long userId, UUID portfolioId, String role) {
 		List<Credential> users = credentialRepository.getUsersByRole(portfolioId, role);
 
@@ -112,11 +102,6 @@ public class UserManagerImpl implements UserManager {
 				.map(GroupUser::getGroupInfo)
 				.map(GroupInfoDocument::new)
 				.collect(Collectors.toList()));
-	}
-
-	@Override
-	public Long getPublicUserId() {
-		return credentialRepository.getPublicId();
 	}
 
 	@Override

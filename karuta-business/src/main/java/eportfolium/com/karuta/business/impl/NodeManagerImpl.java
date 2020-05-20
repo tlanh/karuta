@@ -385,11 +385,6 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 	}
 
 	@Override
-	public boolean isCodeExist(String code, UUID uuid) {
-		return nodeRepository.isCodeExist(code, uuid);
-	}
-
-	@Override
 	public boolean isCodeExist(String code) {
 		return nodeRepository.isCodeExist(code);
 	}
@@ -1192,29 +1187,6 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		return emptyList;
 	}
 
-	@Override
-	public String executeAction(Long userId, UUID nodeId, String action, String role) {
-		String val = "erreur";
-
-		if ("showto".equals(action)) {
-
-			if (credentialRepository.isAdmin(userId)) // Can activate it
-			{
-				String[] showto = role.split(" ");
-
-				//// Il faut qu'il y a un showtorole
-				if (ArrayUtils.isNotEmpty(showto)) {
-					// Update rights
-					updateNodeRights(nodeId, Arrays.asList(showto), "show");
-				}
-			}
-
-			val = "OK";
-		}
-
-		return val;
-	}
-
 	private List<Pair<Node, GroupRights>> getNodePerLevel(UUID nodeId, Long userId, Long rrgId, Integer cutoff) {
 
 		Node n = nodeRepository.findById(nodeId).get();
@@ -1904,34 +1876,6 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 
 		return allNodes.get(searchedNode).getId();
 
-	}
-
-	@Override
-	public UUID getChildUuidBySemtag(UUID rootId, String semantictag) {
-		final Optional<Node> root = nodeRepository.findById(rootId);
-
-		if (root.isPresent()) {
-			return getChildUuidBySemtag(Collections.singletonList(root.get()), semantictag);
-		} else {
-			return null;
-		}
-	}
-
-	// TODO: Test that there is no side effect to optimizing the search.
-	// (The previous implementation skimmed the whole children tree)
-	private UUID getChildUuidBySemtag(List<Node> nodes, String semantictag) {
-		List<Node> children = childrenFor(nodes);
-
-		if (!children.isEmpty()) {
-			return children
-					.stream()
-					.filter(n -> semantictag.equals(n.getSemantictag()))
-					.map(Node::getId)
-					.findFirst()
-					.orElse(getChildUuidBySemtag(children, semantictag));
-		} else {
-			return null;
-		}
 	}
 
 	@Override

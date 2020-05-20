@@ -43,8 +43,6 @@ public interface ConfigurationManager {
 	 */
 	String get(String key);
 
-	Map<String, String> getMultiple(List<String> keys);
-
 	/**
 	 * Get several configuration values (in one language only)
 	 * @param array   keys Keys wanted
@@ -54,17 +52,6 @@ public interface ConfigurationManager {
 	 */
 	public Map<String, String> getMultiple(List<String> keys, Integer langID);
 
-	/**
-	 * Update configuration key and value into database (automatically insert if key
-	 * does not exist)
-	 *
-	 * Values are inserted/updated directly using SQL, because using (Configuration)
-	 * ObjectModel may not insert values correctly (for example, HTML is escaped,
-	 * when it should not be).
-	 *
-	 * @return boolean Update result
-	 */
-	boolean updateValue(String key, Map<Integer, String> values);
 
 	/**
 	 * Set TEMPORARY a single configuration value (in one language only)
