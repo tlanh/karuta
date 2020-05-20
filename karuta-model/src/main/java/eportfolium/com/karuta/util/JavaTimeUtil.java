@@ -17,39 +17,21 @@ package eportfolium.com.karuta.util;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
 public class JavaTimeUtil {
-	public static ZoneId paris = ZoneId.of("Europe/Paris");
-	public static ZoneId date_default_timezone = ZoneId.of("Europe/Paris");
-	public static final DateTimeFormatter localDateFormatter = DateTimeFormatter.ofPattern("YYYYMMDD");
+	public static ZoneId defaultTimezone = ZoneId.of("Europe/Paris");
 
-
-	public static java.util.Date toJavaDate(LocalDate ld) {
-		return (ld == null ? null : Date.from(ld.atStartOfDay(paris).toInstant()));
+	public static Date toJavaDate(LocalDate ld) {
+		return (ld == null ? null : Date.from(ld.atStartOfDay(defaultTimezone).toInstant()));
 	}
 
-	public static String toString(LocalDate ld) {
-		String s = (ld == null ? null : localDateFormatter.withZone(ZoneId.of("UTC")).format(ld));
-		return s;
+	public static Date toJavaDate(LocalDateTime ldt) {
+		return (ldt == null ? null : Date.from(ldt.atZone(defaultTimezone).toInstant()));
 	}
-
-	public static java.util.Date toJavaDate(LocalDateTime ldt) {
-		java.util.Date d = (ldt == null ? null : Date.from(ldt.atZone(paris).toInstant()));
-		return d;
-	}
-
-	public static String toString(LocalTime lt) {
-		String s = (lt == null ? null : lt.toString());
-		return s;
-	}
-
 
 	public static LocalDate toLocalDate(java.util.Date d) {
-		LocalDate ld = (d == null ? null : d.toInstant().atZone(paris).toLocalDate());
-		return ld;
+		return (d == null ? null : d.toInstant().atZone(defaultTimezone).toLocalDate());
 	}
 }

@@ -227,7 +227,7 @@ public class ResourceManagerImpl extends BaseManager implements ResourceManager 
 		if (xsiType != null) {
 			resourceTableRepository.deleteById(id);
 
-			Date now = JavaTimeUtil.toJavaDate(LocalDateTime.now(JavaTimeUtil.date_default_timezone));
+			Date now = JavaTimeUtil.toJavaDate(LocalDateTime.now(JavaTimeUtil.defaultTimezone));
 
 			ResourceTable rt = new ResourceTable(
 				id,
