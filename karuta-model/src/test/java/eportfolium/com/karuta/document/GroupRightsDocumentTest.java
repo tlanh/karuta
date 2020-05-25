@@ -50,8 +50,6 @@ public class GroupRightsDocumentTest extends DocumentTest {
 
         assertContains("typeId=\"foo\"", output);
 
-        System.out.println(output);
-
         // Ensure that <item> is not wrapped twice
         refuteContains("<item>", output);
     }
