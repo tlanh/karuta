@@ -3,6 +3,7 @@ package eportfolium.com.karuta.document;
 import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonRootName;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import eportfolium.com.karuta.model.bean.Node;
@@ -66,14 +67,17 @@ public class PortfolioDocument {
 
         List<MetadataDocument> metadata = new ArrayList<>();
 
-        if (rootNode.getMetadataWad() != null)
-            metadata.add(new MetadataWadDocument(rootNode.getMetadata()));
+        try {
+            metadata.add(MetadataWadDocument.from(rootNode.getMetadataWad()));
+        } catch (JsonProcessingException ignored) { }
 
-        if (rootNode.getMetadataEpm() != null)
-            metadata.add(new MetadataEpmDocument(rootNode.getMetadataEpm()));
+        try {
+            metadata.add(MetadataEpmDocument.from(rootNode.getMetadataEpm()));
+        } catch (JsonProcessingException ignored) { }
 
-        if (rootNode.getMetadata() != null)
-            metadata.add(new MetadataDocument(rootNode.getMetadata()));
+        try {
+            metadata.add(MetadataDocument.from(rootNode.getMetadata()));
+        } catch (JsonProcessingException ignored) { }
 
         child.setMetadata(metadata);
         child.setResources(Stream.of(

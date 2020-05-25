@@ -197,7 +197,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 	@Override
 	public PortfolioDocument getPortfolio(UUID portfolioId, Long userId, Long groupId, String label,
 			boolean resource, boolean files, long substid, Integer cutoff)
-			throws BusinessException {
+			throws BusinessException, JsonProcessingException {
 
 		Node rootNode = portfolioRepository.getPortfolioRootNode(portfolioId);
 
@@ -259,7 +259,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 										   Long groupId,
 										   boolean owner,
 										   String role,
-										   Integer cutoff) {
+										   Integer cutoff) throws JsonProcessingException {
 		/// Node -> parent
 		Map<UUID, Tree> entries = new HashMap<>();
 		List<Pair<Node, GroupRights>> structure = getPortfolioStructure(portfolioId, userId, groupId);
@@ -423,7 +423,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 
 	@Override
 	public PortfolioDocument getPortfolioByCode(String portfolioCode, Long userId, Long groupId,
-			boolean resources, long substid) throws BusinessException {
+			boolean resources, long substid) throws BusinessException, JsonProcessingException {
 		Portfolio portfolio = portfolioRepository.getPortfolioFromNodeCode(portfolioCode);
 
 		if (portfolio == null) {

@@ -28,7 +28,7 @@ import eportfolium.com.karuta.model.exception.BusinessException;
 public interface NodeManager {
 
 	NodeDocument getNode(UUID nodeId, boolean withChildren, Long userId, Long groupId, String label,
-			Integer cutoff) throws BusinessException;
+			Integer cutoff) throws BusinessException, JsonProcessingException;
 
 	GroupRights getRights(Long userId, Long groupId, UUID nodeId);
 
@@ -39,10 +39,10 @@ public interface NodeManager {
 	UUID getPortfolioIdFromNode(Long userId, UUID nodeId) throws BusinessException;
 
 	NodeDocument getNode(UUID nodeId, boolean withChildren, String withChildrenOfXsiType, Long userId,
-			Long groupId, String label, boolean checkSecurity);
+			Long groupId, String label, boolean checkSecurity) throws JsonProcessingException;
 
 	NodeDocument getNodeBySemanticTag(UUID portfolioId, String semantictag, Long userId, Long groupId)
-			throws BusinessException;
+			throws BusinessException, JsonProcessingException;
 
 	NodeList getNodesBySemanticTag(Long userId, Long groupId, UUID portfolioId,
 								   String semanticTag) throws BusinessException;
@@ -77,7 +77,7 @@ public interface NodeManager {
 			throws JsonProcessingException, BusinessException;
 
 	MetadataWadDocument getNodeMetadataWad(UUID nodeId, Long userId, Long groupId)
-			throws BusinessException;
+			throws BusinessException, JsonProcessingException;
 
 	Integer changeNode(UUID nodeId, NodeDocument node, Long userId, Long groupId)
 			throws Exception;
@@ -112,7 +112,7 @@ public interface NodeManager {
 			boolean forcedUuid) throws JsonProcessingException, BusinessException;
 
 	NodeDocument getNodeWithXSL(UUID nodeId, String xslFile, String parameters, Long id, Long groupId)
-			throws BusinessException;
+			throws BusinessException, JsonProcessingException;
 
 	NodeList getNodes(String rootNodeCode, String childSemtag, Long userId, Long groupId,
 			String parentSemtag, String parentNodeCode, Integer cutoff) throws BusinessException;

@@ -61,7 +61,8 @@ public class NodesController extends AbstractController {
     public HttpEntity<NodeDocument> getNode(@RequestParam("group") long groupId,
                                             @PathVariable("node-id") UUID nodeId,
                                             @RequestParam("level") Integer cutoff,
-                                            HttpServletRequest request) throws BusinessException {
+                                            HttpServletRequest request)
+            throws BusinessException, JsonProcessingException {
 
         UserInfo ui = checkCredential(request);
 
@@ -84,7 +85,8 @@ public class NodesController extends AbstractController {
     public HttpEntity<NodeDocument> getNodeWithChildren(@RequestParam("group") long groupId,
                                                         @PathVariable("node-id") UUID nodeId,
                                                         @RequestParam("level") Integer cutoff,
-                                                        HttpServletRequest request) throws BusinessException {
+                                                        HttpServletRequest request)
+            throws BusinessException, JsonProcessingException {
 
         UserInfo ui = checkCredential(request);
 
@@ -105,7 +107,8 @@ public class NodesController extends AbstractController {
             produces = {"application/json", "application/xml"})
     public HttpEntity<MetadataWadDocument> getNodeMetadataWad(@RequestParam("group") long groupId,
                                                               @PathVariable("nodeid") UUID nodeId,
-                                                              HttpServletRequest request) throws BusinessException {
+                                                              HttpServletRequest request)
+            throws BusinessException, JsonProcessingException {
 
         UserInfo ui = checkCredential(request);
 
@@ -212,7 +215,8 @@ public class NodesController extends AbstractController {
     public HttpEntity<NodeDocument> getNodeBySemanticTag(@RequestParam("group") long groupId,
                                                          @PathVariable("portfolio-uuid") UUID portfolioId,
                                                          @PathVariable("semantictag") String semantictag,
-                                                         HttpServletRequest request) throws BusinessException {
+                                                         HttpServletRequest request)
+            throws BusinessException, JsonProcessingException {
 
         UserInfo ui = checkCredential(request);
 
@@ -595,7 +599,8 @@ public class NodesController extends AbstractController {
                                                    @PathVariable("node-id") UUID nodeId,
                                                    @RequestParam("lang") String lang,
                                                    @RequestParam("xsl-file") String xslFile,
-                                                   HttpServletRequest request) throws BusinessException {
+                                                   HttpServletRequest request)
+            throws BusinessException, JsonProcessingException {
 
         UserInfo ui = checkCredential(request);
 

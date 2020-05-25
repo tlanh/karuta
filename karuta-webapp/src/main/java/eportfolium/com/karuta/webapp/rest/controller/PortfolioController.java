@@ -237,7 +237,8 @@ public class PortfolioController extends AbstractController {
     public HttpEntity<PortfolioDocument> getPortfolioByCode(@RequestParam("group") long groupId,
                                                             @PathVariable("code") String code,
                                                             @RequestParam("resources") boolean resources,
-                                                            HttpServletRequest request) throws BusinessException {
+                                                            HttpServletRequest request)
+            throws BusinessException, JsonProcessingException {
         UserInfo ui = checkCredential(request);
 
         if (ui.userId == 0) {
@@ -279,7 +280,8 @@ public class PortfolioController extends AbstractController {
                                             @RequestParam("level") Integer cutoff,
                                             @RequestParam("public") String public_var,
                                             @RequestParam("project") boolean project,
-                                            HttpServletRequest request) throws BusinessException {
+                                            HttpServletRequest request)
+            throws BusinessException, JsonProcessingException {
 
         UserInfo ui = checkCredential(request);
 

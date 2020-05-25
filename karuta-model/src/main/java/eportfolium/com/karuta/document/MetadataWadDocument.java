@@ -1,9 +1,7 @@
 package eportfolium.com.karuta.document;
 
-import com.fasterxml.jackson.annotation.JsonGetter;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonRootName;
+import com.fasterxml.jackson.annotation.*;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
 import java.util.Date;
@@ -24,8 +22,11 @@ public class MetadataWadDocument extends MetadataDocument {
     private boolean submitted;
     private Date submitteddate;
 
-    public MetadataWadDocument(String content) {
-        super(content);
+    public static MetadataWadDocument from(String xml) throws JsonProcessingException {
+        String withTag = "<metadata-wad " + (xml != null ? xml : "")  + " />";
+
+        return xmlMapper.readerFor(MetadataWadDocument.class)
+                .readValue(withTag);
     }
 
     @JsonGetter("seenoderoles")
@@ -92,6 +93,7 @@ public class MetadataWadDocument extends MetadataDocument {
     }
 
     @JsonProperty("submitteddate")
+    @JsonFormat(timezone = "UTC")
     public Date getSubmitteddate() {
         return submitteddate;
     }

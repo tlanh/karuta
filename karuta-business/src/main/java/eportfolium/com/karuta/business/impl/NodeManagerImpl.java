@@ -23,12 +23,10 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import eportfolium.com.karuta.consumer.repositories.*;
 import eportfolium.com.karuta.document.*;
 import eportfolium.com.karuta.model.bean.*;
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -97,7 +95,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 
 	@Override
 	public NodeDocument getNode(UUID nodeId, boolean withChildren, Long userId, Long groupId,
-			String label, Integer cutoff) throws BusinessException {
+			String label, Integer cutoff) throws BusinessException, JsonProcessingException {
 		final GroupRights rights = getRights(userId, groupId, nodeId);
 
 		if (!rights.isRead()) {
@@ -267,7 +265,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 
 	@Override
 	public NodeDocument getNode(UUID nodeId, boolean withChildren, String withChildrenOfXsiType, Long userId,
-			Long groupId, String label, boolean checkSecurity) {
+			Long groupId, String label, boolean checkSecurity) throws JsonProcessingException {
 		if (checkSecurity) {
 			GroupRights rights = getRights(userId, groupId, nodeId);
 
@@ -296,9 +294,9 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		} else {
 			nodeDocument = new NodeDocument(node);
 
-			MetadataWadDocument metadataWad = new MetadataWadDocument(node.getMetadataWad());
-			MetadataEpmDocument metadataEpm = new MetadataEpmDocument(node.getMetadataEpm());
-			MetadataDocument metadataNode = new MetadataDocument(node.getMetadata());
+			MetadataWadDocument metadataWad = MetadataWadDocument.from(node.getMetadataWad());
+			MetadataEpmDocument metadataEpm = MetadataEpmDocument.from(node.getMetadataEpm());
+			MetadataDocument metadataNode = MetadataDocument.from(node.getMetadata());
 
 			nodeDocument.setCode(node.getCode());
 			nodeDocument.setLabel(node.getLabel());
@@ -350,7 +348,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 
 	@Override
 	public NodeDocument getNodeBySemanticTag(UUID portfolioId, String semantictag, Long userId,
-			Long groupId) throws BusinessException {
+			Long groupId) throws BusinessException, JsonProcessingException {
 
 		final List<Node> nodes = nodeRepository.getNodesBySemanticTag(portfolioId, semantictag);
 
@@ -414,19 +412,11 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
             label = gr.getGroupRightInfo().getLabel();
         }
 
-        String meta;
         String tmp = nodeRepository.getMetadataWad(nodeId);
-
-        if (tmp != null)
-            meta = "<metadata-wad " + tmp + "></metadata-wad>";
-        else
-            meta = "<metadata-wad></metadata-wad>";
 
         // FIXME: Check if user has indeed the right to
 
-        XmlMapper mapper = new XmlMapper();
-        MetadataWadDocument document = mapper.readerFor(MetadataWadDocument.class)
-                                        .readValue(meta);
+        MetadataWadDocument document = MetadataWadDocument.from(tmp);
 
         long resetgroup = getRoleByNode(1L, nodeId, "resetter");
 
@@ -523,7 +513,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 			}
 
 			// FIXME MARCHE PAS !
-			MetadataWadDocument metadata = new MetadataWadDocument(meta);
+			MetadataWadDocument metadata = MetadataWadDocument.from(meta);
 
 			if (metadata.getSeenoderoles() != null) {
 				for (String role : metadata.getSeenoderoles().split(" ")) {
@@ -685,7 +675,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 
 	@Override
 	public MetadataWadDocument getNodeMetadataWad(UUID nodeId, Long userId, Long groupId)
-			throws BusinessException {
+			throws BusinessException, JsonProcessingException {
 
 		GroupRights rightsOnNode = getRights(userId, groupId, nodeId);
 
@@ -698,7 +688,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		if (!node.isPresent() || !node.get().getAsmType().equals("asmResource"))
 			return null;
 
-		return new MetadataWadDocument(node.get().getMetadataWad());
+		return MetadataWadDocument.from(node.get().getMetadataWad());
 	}
 
 	@Override
@@ -1036,7 +1026,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 
 	@Override
 	public NodeDocument getNodeWithXSL(UUID nodeId, String xslFile, String parameters, Long userId,
-			Long groupId) throws BusinessException {
+			Long groupId) throws BusinessException, JsonProcessingException {
 		String result = null;
 		/// Préparation des paramètres pour les besoins futurs, format:
 		/// "par1:par1val;par2:par2val;..."
@@ -1634,9 +1624,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
                     t_set_groupRightInfo.add(groupRightInfo);
                 }
 
-                MetadataWadDocument metadata = new XmlMapper()
-                                                    .readerFor(MetadataWadDocument.class)
-                                                    .readValue("<metadata-wad " + meta + "></metadata-wad>");
+                MetadataWadDocument metadata = MetadataWadDocument.from(meta);
 
                 // FIXME: à améliorer pour faciliter le changement des droits
                 String nodeRole;
@@ -2100,12 +2088,25 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 		NodeDocument nodeDocument = new NodeDocument(node);
 
 		List<ResourceDocument> resources = new ArrayList<>();
+		List<MetadataDocument> metadata = new ArrayList<>();
 
-		nodeDocument.setMetadata(Arrays.asList(
-				new MetadataDocument(node.getMetadata()),
-				new MetadataEpmDocument(node.getMetadataEpm()),
-				new MetadataWadDocument(node.getMetadataWad())
-		));
+		if (node.getMetadata() != null) {
+			try {
+				metadata.add(MetadataDocument.from(node.getMetadata()));
+			} catch (JsonProcessingException ignored)  { }
+		}
+
+		if (node.getMetadataEpm() != null) {
+			try {
+				metadata.add(MetadataEpmDocument.from(node.getMetadataEpm()));
+			} catch (JsonProcessingException ignored)  { }
+		}
+
+		if (node.getMetadataWad() != null) {
+			try {
+				metadata.add(MetadataWadDocument.from(node.getMetadataWad()));
+			} catch (JsonProcessingException ignored) { }
+		}
 
 		if (node.getResource() != null) {
 			resources.add(new ResourceDocument(node.getResource(), node));
@@ -2119,6 +2120,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 			resources.add(new ResourceDocument(node.getContextResource(), node));
 		}
 
+		nodeDocument.setMetadata(metadata);
 		nodeDocument.setResources(resources);
 
 		return nodeDocument;

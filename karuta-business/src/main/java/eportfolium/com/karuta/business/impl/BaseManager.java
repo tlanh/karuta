@@ -109,7 +109,7 @@ public abstract class BaseManager {
 
 	protected void processQuery(List<Pair<Node, GroupRights>> nodes,
 								Map<UUID, Tree> entries,
-								String role) {
+								String role) throws JsonProcessingException {
 		if (!CollectionUtils.isNotEmpty(nodes)) {
 			return;
 		}
@@ -123,9 +123,9 @@ public abstract class BaseManager {
 				continue;
 
 			List<MetadataDocument> metadata = Arrays.asList(
-					new MetadataWadDocument(node.getMetadataWad()),
-					new MetadataEpmDocument(node.getMetadataEpm()),
-					new MetadataDocument(node.getMetadata())
+					MetadataWadDocument.from(node.getMetadataWad()),
+					MetadataEpmDocument.from(node.getMetadataEpm()),
+					MetadataDocument.from(node.getMetadata())
 			);
 
 			// TODO: Check whether data is always consistent regarding xsiType

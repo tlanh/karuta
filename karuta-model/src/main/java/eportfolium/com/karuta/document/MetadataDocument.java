@@ -1,13 +1,15 @@
 package eportfolium.com.karuta.document;
 
 import com.fasterxml.jackson.annotation.JsonGetter;
-import com.fasterxml.jackson.annotation.JsonRawValue;
 import com.fasterxml.jackson.annotation.JsonRootName;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
 @JsonRootName("metadata")
 public class MetadataDocument {
-    protected String content;
+    protected static XmlMapper xmlMapper = new XmlMapper();
+
     protected boolean isPublic;
     protected boolean isPrivate;
 
@@ -17,19 +19,24 @@ public class MetadataDocument {
 
     protected String semantictag;
 
-    public MetadataDocument(String content) {
-        this.content = content;
-    }
+    public MetadataDocument() { }
 
-    @JsonRawValue
-    public String getContent() {
-        return content;
+    public static MetadataDocument from(String xml) throws JsonProcessingException {
+        String withTag = "<metadata " + (xml != null ? xml : "") + " />";
+
+        return xmlMapper.readerFor(MetadataDocument.class)
+                    .readValue(withTag);
+
     }
 
     @JsonGetter("public")
     @JacksonXmlProperty(isAttribute = true)
     public boolean getPublic() {
         return isPublic;
+    }
+
+    public void setPublic(boolean isPublic) {
+        this.isPublic = isPublic;
     }
 
     @JsonGetter("private")
@@ -48,10 +55,18 @@ public class MetadataDocument {
         return sharedResource;
     }
 
+    public void setSharedResource(boolean sharedResource) {
+        this.sharedResource = sharedResource;
+    }
+
     @JsonGetter("sharedNode")
     @JacksonXmlProperty(isAttribute = true)
     public boolean getSharedNode() {
         return sharedNode;
+    }
+
+    public void setSharedNode(boolean sharedNode) {
+        this.sharedNode = sharedNode;
     }
 
     @JsonGetter("sharedNodeResource")
@@ -60,9 +75,17 @@ public class MetadataDocument {
         return sharedNodeResource;
     }
 
+    public void setSharedNodeResource(boolean sharedNodeResource) {
+        this.sharedNodeResource = sharedNodeResource;
+    }
+
     @JsonGetter("semantictag")
     @JacksonXmlProperty(isAttribute = true)
     public String getSemantictag() {
         return semantictag;
+    }
+
+    public void setSemantictag(String semantictag) {
+        this.semantictag = semantictag;
     }
 }

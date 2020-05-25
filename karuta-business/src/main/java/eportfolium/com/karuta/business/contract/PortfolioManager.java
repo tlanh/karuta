@@ -49,7 +49,7 @@ public interface PortfolioManager {
 								   boolean resource,
 								   boolean files,
 								   long substid,
-								   Integer cutoff) throws BusinessException;
+								   Integer cutoff) throws BusinessException, JsonProcessingException;
 
 	String getZippedPortfolio(PortfolioDocument portfolio) throws IOException;
 
@@ -57,7 +57,7 @@ public interface PortfolioManager {
 										 Long userId,
 										 Long groupId,
 										 boolean resources,
-										 long substid) throws BusinessException;
+										 long substid) throws BusinessException, JsonProcessingException;
 
 	PortfolioGroupDocument getPortfoliosByPortfolioGroup(Long portfolioGroupId);
 
