@@ -58,11 +58,11 @@ public class ResourceTable implements Serializable {
 	}
 
 	public ResourceTable(ResourceTable resource) {
-		this.xsiType = resource.getXsiType() != null ? new String(resource.getXsiType()) : null;
-		this.content = resource.getContent() != null ? new String(resource.getContent()) : null;
+		this.xsiType = resource.getXsiType();
+		this.content = resource.getContent();
 		this.credential = resource.getCredential() != null ? new Credential(resource.getCredential().getId()) : null;
-		this.modifUserId = resource.getModifUserId() != null ? Long.valueOf(resource.getModifUserId()) : null;
-		this.modifDate = resource.getModifDate() != null ? new Date(resource.getModifDate().getTime()) : null;
+		this.modifUserId = resource.getModifUserId();
+		this.modifDate = (Date) resource.getModifDate().clone();
 	}
 
 	public ResourceTable(UUID id) {

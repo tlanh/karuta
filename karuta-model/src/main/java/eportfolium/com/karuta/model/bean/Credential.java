@@ -294,19 +294,6 @@ public class Credential implements Serializable {
 		this.subUser = subUser;
 	}
 
-	public void addPortfolio(Portfolio portfolio) {
-		portfolio.setCredential(this);
-	}
-
-	/**
-	 * Beware - in JPA to persist this change you must merge or remove the child.
-	 * Merging the parent will not cascade to the child because it no longer has a
-	 * reference to the child.
-	 */
-	public void removePortfolio(Portfolio portfolio) {
-		portfolio.setCredential(null);
-	}
-
 	public void internalAddPortfolio(Portfolio portfolio) {
 		portfolios.add(portfolio);
 	}

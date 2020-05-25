@@ -1421,8 +1421,8 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		Node node = rootNode.get();
 		Credential cr = credential.get();
 
-		node.addPortfolio(portfolio);
-		cr.addPortfolio(portfolio);
+		portfolio.setRootNode(node);
+		portfolio.setCredential(cr);
 
 		portfolio.setModifUserId(cr.getId());
 

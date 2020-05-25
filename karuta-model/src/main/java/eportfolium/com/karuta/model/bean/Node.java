@@ -423,19 +423,6 @@ public class Node implements Serializable {
 		this.portfolio = portfolio;
 	}
 
-	public void addPortfolio(Portfolio portfolio) {
-		portfolio.setRootNode(this);
-	}
-
-	/**
-	 * Beware - in JPA to persist this change you must merge or remove the child.
-	 * Merging the parent will not cascade to the child because it no longer has a
-	 * reference to the child.
-	 */
-	public void removePortfolio(Portfolio portfolio) {
-		portfolio.setRootNode(null);
-	}
-
 	@Override
 	public int hashCode() {
 		final int prime = 31;
