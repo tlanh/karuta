@@ -20,6 +20,8 @@ public class RoleDocument {
 
     private List<RightDocument> rights;
 
+    public RoleDocument() { }
+
     public RoleDocument(GroupRightInfo gri) {
         this.id = gri.getId();
         this.owner = gri.getOwner();

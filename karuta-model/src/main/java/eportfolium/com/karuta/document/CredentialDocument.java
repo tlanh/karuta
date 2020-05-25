@@ -24,6 +24,8 @@ public class CredentialDocument {
     private Integer substitute;
     private Long substituteId;
 
+    public CredentialDocument() { }
+
     public CredentialDocument(Credential credential) {
         this.id = credential.getId();
         this.username = credential.getLogin();

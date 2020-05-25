@@ -37,6 +37,7 @@ public class CredentialGroupDocument {
         return label;
     }
 
+    @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "user")
     public List<CredentialDocument> getUsers() {
         return users;

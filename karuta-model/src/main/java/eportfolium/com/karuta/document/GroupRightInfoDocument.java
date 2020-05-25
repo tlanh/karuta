@@ -18,7 +18,7 @@ public class GroupRightInfoDocument {
     }
 
     @JsonGetter("grid")
-    @JacksonXmlProperty(isAttribute = true)
+    @JacksonXmlProperty(isAttribute = true, localName = "grid")
     public Long getId() {
         return id;
     }

@@ -12,9 +12,7 @@ public class RoleList {
     private List<RoleDocument> roles;
     private String action;
 
-    public RoleList(List<RoleDocument> roles) {
-        this.roles = roles;
-    }
+    public RoleList() { }
 
     @JsonGetter("action")
     public String getAction() {

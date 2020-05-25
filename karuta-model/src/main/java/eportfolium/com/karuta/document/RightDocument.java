@@ -10,6 +10,8 @@ public class RightDocument {
     private boolean SB;
     private boolean DL;
 
+    public RightDocument() { }
+
     public RightDocument(boolean read, boolean write, boolean submit, boolean delete) {
         this.RD = read;
         this.WR = write;
@@ -22,9 +24,17 @@ public class RightDocument {
         return RD;
     }
 
+    public void setRD(boolean read) {
+        this.RD = read;
+    }
+
     @JsonGetter("WR")
     public boolean getWR() {
         return WR;
+    }
+
+    public void setWR(boolean write) {
+        this.WR = write;
     }
 
     @JsonGetter("SB")
@@ -32,8 +42,16 @@ public class RightDocument {
         return SB;
     }
 
+    public void setSB(boolean submit) {
+        this.SB = submit;
+    }
+
     @JsonGetter("DL")
     public boolean getDL() {
         return DL;
+    }
+
+    public void setDL(boolean delete) {
+        this.DL = delete;
     }
 }
