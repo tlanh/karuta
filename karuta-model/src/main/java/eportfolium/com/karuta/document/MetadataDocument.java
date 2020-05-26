@@ -37,6 +37,7 @@ public class MetadataDocument {
 
     public void setPublic(boolean isPublic) {
         this.isPublic = isPublic;
+        this.isPrivate = !isPublic;
     }
 
     @JsonGetter("private")
@@ -47,6 +48,7 @@ public class MetadataDocument {
 
     public void setPrivate(boolean isPrivate) {
         this.isPrivate = isPrivate;
+        this.isPublic = !isPrivate;
     }
 
     @JsonGetter("sharedResource")
