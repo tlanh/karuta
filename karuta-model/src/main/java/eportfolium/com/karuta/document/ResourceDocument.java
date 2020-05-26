@@ -1,14 +1,12 @@
 package eportfolium.com.karuta.document;
 
-import com.fasterxml.jackson.annotation.JsonGetter;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonRawValue;
-import com.fasterxml.jackson.annotation.JsonRootName;
+import com.fasterxml.jackson.annotation.*;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import eportfolium.com.karuta.model.bean.Node;
 import eportfolium.com.karuta.model.bean.ResourceTable;
 
 import java.util.Date;
+import java.util.Map;
 import java.util.UUID;
 
 @JsonRootName("asmResource")
@@ -26,6 +24,8 @@ public class ResourceDocument {
     // For file resources
     private String filename;
     private String fileid;
+
+    public ResourceDocument() { }
 
     public ResourceDocument(UUID id) {
         this.id = id;
@@ -48,7 +48,7 @@ public class ResourceDocument {
     }
 
     @JsonGetter("contextid")
-    @JacksonXmlProperty(isAttribute = true)
+    @JacksonXmlProperty(isAttribute = true, localName = "contextid")
     public UUID getNodeId() {
         return nodeId;
     }
@@ -58,20 +58,16 @@ public class ResourceDocument {
     }
 
     @JsonGetter("xsi_type")
-    @JacksonXmlProperty(isAttribute = true)
+    @JacksonXmlProperty(isAttribute = true, localName = "xsi_type")
     public String getXsiType() {
         return xsiType;
     }
 
     @JsonGetter("last_modif")
-    @JacksonXmlProperty(isAttribute = true)
+    @JacksonXmlProperty(isAttribute = true, localName = "last_modif")
+    @JsonFormat(timezone = "UTC")
     public Date getModifDate() {
         return modifDate;
-    }
-
-    @JsonRawValue
-    public String getContent() {
-        return content;
     }
 
     public void setContent(String content) {
@@ -81,6 +77,10 @@ public class ResourceDocument {
     @JsonGetter("lang")
     public String getLang() {
         return lang;
+    }
+
+    public void setLang(String lang) {
+        this.lang = lang;
     }
 
     @JsonGetter("code")
@@ -102,5 +102,38 @@ public class ResourceDocument {
         return fileid;
     }
 
+    @JsonRawValue
+    public String getContent() {
+        return content;
+    }
 
+    // FIXME: Remove that once we no longer rely on raw XML storage.
+    @JsonAnySetter
+    public void ignored(String name, Object value) {
+        if (this.content == null)
+            this.content = "";
+
+        StringBuilder builder = new StringBuilder("<");
+        builder.append(name);
+
+        if (value instanceof Map) {
+            Map<String, Object> attributes = (Map<String, Object>)value;
+
+            attributes.forEach((n, v) -> {
+                if (!n.equals(""))
+                    builder.append(" ").append(n).append("=\"").append(v).append("\"");
+            });
+
+            builder.append(">")
+                    .append(attributes.get(""));
+        } else {
+            builder.append(">").append(value);
+        }
+
+        builder.append("</")
+                .append(name)
+                .append(">");
+
+        content += builder.toString();
+    }
 }
