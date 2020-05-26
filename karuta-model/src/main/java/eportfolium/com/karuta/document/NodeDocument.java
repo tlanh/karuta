@@ -1,18 +1,12 @@
 package eportfolium.com.karuta.document;
 
-import com.fasterxml.jackson.annotation.JsonGetter;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonRootName;
+import com.fasterxml.jackson.annotation.*;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import eportfolium.com.karuta.model.bean.GroupRights;
 import eportfolium.com.karuta.model.bean.Node;
 
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @JsonRootName("node")
 @JsonInclude(JsonInclude.Include.NON_ABSENT)
@@ -36,17 +30,20 @@ public class NodeDocument {
     private String role;
     private Date modifDate;
 
-    private List<MetadataDocument> metadataDocuments;
+    private MetadataDocument metadataDocument;
+    private MetadataEpmDocument metadataEpmDocument;
+    private MetadataWadDocument metadataWadDocument;
     private List<ResourceDocument> resourceDocuments;
     private List<NodeDocument> children;
 
     transient private NodeDocument parent;
 
+    public NodeDocument() { }
+
     public NodeDocument(UUID id) {
         this.id = id;
 
         this.resourceDocuments = Collections.emptyList();
-        this.metadataDocuments = Collections.emptyList();
         this.children = Collections.emptyList();
 
         this.parent = null;
@@ -93,7 +90,7 @@ public class NodeDocument {
     }
 
     @JsonGetter("xsi_type")
-    @JacksonXmlProperty(isAttribute = true)
+    @JacksonXmlProperty(isAttribute = true, localName = "xsi_type")
     public String getXsiType() {
         return xsiType;
     }
@@ -156,23 +153,35 @@ public class NodeDocument {
     }
 
     @JsonGetter("last_modif")
-    @JacksonXmlProperty(isAttribute = true)
+    @JacksonXmlProperty(isAttribute = true, localName = "last_modif")
+    @JsonFormat(timezone = "UTC")
     public Date getModifDate() {
         return modifDate;
     }
 
-    @JacksonXmlElementWrapper(useWrapping = false)
-    public List<MetadataDocument> getMetadata() {
-        return metadataDocuments;
+    public MetadataDocument getMetadata() {
+        return metadataDocument;
+    }
+
+    @JacksonXmlProperty(localName = "metadata-epm")
+    public MetadataEpmDocument getMetadataEpm() {
+        return metadataEpmDocument;
+    }
+
+    @JacksonXmlProperty(localName = "metadata-wad")
+    public MetadataWadDocument getMetadataWad() {
+        return metadataWadDocument;
     }
 
     @JacksonXmlElementWrapper(useWrapping = false)
+    @JacksonXmlProperty(localName = "asmResource")
     public List<ResourceDocument> getResources() {
         return resourceDocuments;
     }
 
-    @JacksonXmlElementWrapper(useWrapping = false)
-    @JacksonXmlProperty(localName = "node")
+    // FIXME: Uncomment that once Jackson 2.12 or 2.11.1 is released
+    // @JacksonXmlElementWrapper(useWrapping = false)
+    // @JacksonXmlProperty(localName = "node")
     public List<NodeDocument> getChildren() {
         return children;
     }
@@ -202,8 +211,16 @@ public class NodeDocument {
         this.parent = parent;
     }
 
-    public void setMetadata(List<MetadataDocument> documents) {
-        this.metadataDocuments = documents;
+    public void setMetadata(MetadataDocument document) {
+        this.metadataDocument = document;
+    }
+
+    public void setMetadataEpm(MetadataEpmDocument document) {
+        this.metadataEpmDocument = document;
+    }
+
+    public void setMetadataWad(MetadataWadDocument document) {
+        this.metadataWadDocument = document;
     }
 
     public void setResources(List<ResourceDocument> documents) {
