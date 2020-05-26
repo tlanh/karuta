@@ -1,7 +1,6 @@
 package eportfolium.com.karuta.document;
 
-import com.fasterxml.jackson.annotation.JsonGetter;
-import com.fasterxml.jackson.annotation.JsonRootName;
+import com.fasterxml.jackson.annotation.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
@@ -42,6 +41,7 @@ public class MetadataDocument {
 
     @JsonGetter("private")
     @JacksonXmlProperty(isAttribute = true)
+    @JsonInclude(JsonInclude.Include.NON_DEFAULT)
     public boolean getPrivate() {
         return isPrivate;
     }
@@ -53,6 +53,7 @@ public class MetadataDocument {
 
     @JsonGetter("sharedResource")
     @JacksonXmlProperty(isAttribute = true)
+    @JsonInclude(JsonInclude.Include.NON_DEFAULT)
     public boolean getSharedResource() {
         return sharedResource;
     }
@@ -63,6 +64,7 @@ public class MetadataDocument {
 
     @JsonGetter("sharedNode")
     @JacksonXmlProperty(isAttribute = true)
+    @JsonInclude(JsonInclude.Include.NON_DEFAULT)
     public boolean getSharedNode() {
         return sharedNode;
     }
@@ -73,6 +75,7 @@ public class MetadataDocument {
 
     @JsonGetter("sharedNodeResource")
     @JacksonXmlProperty(isAttribute = true)
+    @JsonInclude(JsonInclude.Include.NON_DEFAULT)
     public boolean getSharedNodeResource() {
         return sharedNodeResource;
     }

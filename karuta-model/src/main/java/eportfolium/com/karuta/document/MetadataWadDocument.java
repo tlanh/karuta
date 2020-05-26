@@ -78,12 +78,13 @@ public class MetadataWadDocument extends MetadataDocument {
     }
 
     @JsonGetter("menuroles")
-    @JacksonXmlProperty
+    @JacksonXmlProperty(isAttribute = true)
     public String getMenuroles() {
         return menuroles;
     }
 
     @JsonProperty("submitted")
+    @JacksonXmlProperty(isAttribute = true)
     public boolean getSubmitted() {
         return submitted;
     }
@@ -93,6 +94,7 @@ public class MetadataWadDocument extends MetadataDocument {
     }
 
     @JsonProperty("submitteddate")
+    @JacksonXmlProperty(isAttribute = true)
     @JsonFormat(timezone = "UTC")
     public Date getSubmitteddate() {
         return submitteddate;
