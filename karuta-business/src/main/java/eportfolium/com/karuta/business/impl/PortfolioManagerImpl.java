@@ -47,7 +47,6 @@ import eportfolium.com.karuta.model.bean.*;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
-import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
@@ -115,39 +114,39 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 
 	/// temp class
 
-	class groupright {
-		right getGroup(String label) {
-			right r = rights.get(label.trim());
+	class GroupRight {
+		Right getGroup(String label) {
+			Right r = rights.get(label.trim());
 			if (r == null) {
-				r = new right();
+				r = new Right();
 				rights.put(label, r);
 			}
 			return r;
 		}
 
 		void setNotify(String roles) {
-			Iterator<right> iter = rights.values().iterator();
+			Iterator<Right> iter = rights.values().iterator();
 			while (iter.hasNext()) {
-				right r = iter.next();
+				Right r = iter.next();
 				r.notify = roles.trim();
 			}
 		}
 
-		Map<String, right> rights = new HashMap<String, right>();
+		Map<String, Right> rights = new HashMap<>();
 	}
 
-	class resolver {
-		groupright getUuid(String uuid) {
-			groupright gr = resolve.get(uuid);
+	class Resolver {
+		GroupRight getUuid(String uuid) {
+			GroupRight gr = resolve.get(uuid);
 			if (gr == null) {
-				gr = new groupright();
+				gr = new GroupRight();
 				resolve.put(uuid, gr);
 			}
 			return gr;
 		};
 
-		Map<String, groupright> resolve = new HashMap<String, groupright>();
-		Map<String, Long> groups = new HashMap<String, Long>();
+		Map<String, GroupRight> resolve = new HashMap<>();
+		Map<String, Long> groups = new HashMap<>();
 	}
 
 	public boolean removePortfolioGroups(Long portfolioGroupId) {
@@ -557,7 +556,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 
 		if (portfolio.isPresent()) {
 			Portfolio p = portfolio.get();
-			p.setActive(BooleanUtils.toInteger(portfolioActive));
+			p.setActive(portfolioActive ? 1 : 0);
 
 			portfolioRepository.save(p);
 
@@ -599,19 +598,19 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 
 		// On récupère le noeud root généré précédemment et on l'affecte au portfolio.
 		portfolioRecord.setRootNode(nodeRepository.getRootNodeByPortfolio(portfolioRecord.getId()));
-		portfolioRecord.setActive(BooleanUtils.toInteger(portfolioActive));
+		portfolioRecord.setActive(portfolioActive ? 1 : 0);
 
 		portfolioRepository.save(portfolioRecord);
 
 		return true;
 	}
 
-	class right {
-		int rd = 0;
-		int wr = 0;
-		int dl = 0;
-		int sb = 0;
-		int ad = 0;
+	class Right {
+		boolean rd = false;
+		boolean wr = false;
+		boolean dl = false;
+		boolean sb = false;
+		boolean ad = false;
 		String types = "";
 		String rules = "";
 		String notify = "";
@@ -625,7 +624,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 
 		boolean setPublic = false;
 
-		resolver resolve = new resolver();
+		Resolver resolve = new Resolver();
 
 		// Sélection des méta-données
 		List<Node> nodes = nodeRepository.getNodes(portfolioId);
@@ -640,11 +639,11 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 												.readerFor(MetadataWadDocument.class)
 												.readValue("<metadata-ward " + meta + "></metadata-wad>");
 
-			groupright role = resolve.getUuid(uuid);
+			GroupRight role = resolve.getUuid(uuid);
 
 			if (metadataWad.getSeenoderoles() != null) {
 				for (String nodeRole : metadataWad.getSeenoderoles().split(" ")) {
-					role.getGroup(nodeRole).rd = 1;
+					role.getGroup(nodeRole).rd = true;
 
 					resolve.groups.put(nodeRole, 0L);
 				}
@@ -652,7 +651,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 
 			if (metadataWad.getShowtoroles() != null) {
 				for (String nodeRole : metadataWad.getShowtoroles().split(" ")) {
-					role.getGroup(nodeRole).rd = 0;
+					role.getGroup(nodeRole).rd = false;
 
 					resolve.groups.put(nodeRole, 0L);
 				}
@@ -660,7 +659,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 
 			if (metadataWad.getDelnoderoles() != null) {
 				for (String nodeRole : metadataWad.getDelnoderoles().split(" ")) {
-					role.getGroup(nodeRole).dl = 1;
+					role.getGroup(nodeRole).dl = true;
 
 					resolve.groups.put(nodeRole, 0L);
 				}
@@ -668,7 +667,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 
 			if (metadataWad.getEditnoderoles() != null) {
 				for (String nodeRole : metadataWad.getEditnoderoles().split(" ")) {
-					role.getGroup(nodeRole).wr = 1;
+					role.getGroup(nodeRole).wr = true;
 
 					resolve.groups.put(nodeRole, 0L);
 				}
@@ -676,7 +675,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 
 			if (metadataWad.getEditresroles() != null) {
 				for (String nodeRole : metadataWad.getEditresroles().split(" ")) {
-					role.getGroup(nodeRole).wr = 1;
+					role.getGroup(nodeRole).wr = true;
 
 					resolve.groups.put(nodeRole, 0L);
 				}
@@ -684,7 +683,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 
 			if (metadataWad.getSubmitroles() != null) {
 				for (String nodeRole : metadataWad.getSubmitroles().split(" ")) {
-					role.getGroup(nodeRole).sb = 1;
+					role.getGroup(nodeRole).sb = true;
 
 					resolve.groups.put(nodeRole, 0L);
 				}
@@ -738,22 +737,22 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 			/// Ajout des droits des noeuds
 			GroupRights groupRights = null;
 
-			for (Entry<String, groupright> entry : resolve.resolve.entrySet()) {
-				groupright gr = entry.getValue();
+			for (Entry<String, GroupRight> entry : resolve.resolve.entrySet()) {
+				GroupRight gr = entry.getValue();
 
-				for (Entry<String, right> rightelem : gr.rights.entrySet()) {
+				for (Entry<String, Right> rightelem : gr.rights.entrySet()) {
 					String group = rightelem.getKey();
 					long grid = resolve.groups.get(group);
-					right rightval = rightelem.getValue();
+					Right rightval = rightelem.getValue();
 					groupRights = new GroupRights();
 					groupRights.setId(new GroupRightsId());
 					groupRights.setGroupRightInfo(new GroupRightInfo(grid));
 					groupRights.setGroupRightsId(UUID.fromString(entry.getKey()));
-					groupRights.setRead(BooleanUtils.toBoolean(rightval.rd));
-					groupRights.setWrite(BooleanUtils.toBoolean(rightval.wr));
-					groupRights.setDelete(BooleanUtils.toBoolean(rightval.dl));
-					groupRights.setSubmit(BooleanUtils.toBoolean(rightval.sb));
-					groupRights.setAdd(BooleanUtils.toBoolean(rightval.ad));
+					groupRights.setRead(rightval.rd);
+					groupRights.setWrite(rightval.wr);
+					groupRights.setDelete(rightval.dl);
+					groupRights.setSubmit(rightval.sb);
+					groupRights.setAdd(rightval.ad);
 					groupRights.setTypesId(rightval.types);
 					groupRights.setRulesId(rightval.rules);
 					groupRights.setNotifyRoles(rightval.notify);

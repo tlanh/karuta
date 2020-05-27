@@ -22,7 +22,6 @@ import java.util.stream.StreamSupport;
 import eportfolium.com.karuta.consumer.repositories.*;
 import eportfolium.com.karuta.document.*;
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -216,25 +215,8 @@ public class GroupManagerImpl implements GroupManager {
 		GroupRights res2 = null;
 		GroupRightInfo gri = null;
 		GroupRights gr = null;
-		int RD = 0;
-		int WR = 0;
-		int DL = 0;
-		int SB = 0;
-		int AD = 0;
 		Long grid = -1L;
 		boolean reponse = true;
-
-		if (GroupRights.READ.equalsIgnoreCase(right)) {
-			RD = 1;
-		} else if (GroupRights.WRITE.equalsIgnoreCase(right)) {
-			WR = 1;
-		} else if (GroupRights.DELETE.equalsIgnoreCase(right)) {
-			DL = 1;
-		} else if (GroupRights.SUBMIT.equalsIgnoreCase(right)) {
-			SB = 1;
-		} else if (GroupRights.ADD.equalsIgnoreCase(right)) {
-			AD = 1;
-		}
 
 		try {
 
@@ -287,16 +269,16 @@ public class GroupManagerImpl implements GroupManager {
 						res2.setGroupRightsId(nodeId);
 					}
 					if (GroupRights.READ.equalsIgnoreCase(right)) {
-						res2.setRead(BooleanUtils.toBoolean(RD));
+						res2.setRead(true);
 					} else if (GroupRights.WRITE.equalsIgnoreCase(right)) {
-						res2.setWrite(BooleanUtils.toBoolean(WR));
+						res2.setWrite(true);
 					} else if (GroupRights.DELETE.equalsIgnoreCase(right)) {
-						res2.setDelete(BooleanUtils.toBoolean(DL));
+						res2.setDelete(true);
 					} else if (GroupRights.SUBMIT.equalsIgnoreCase(right)) {
 						//// FIXME: ajoute le rules_id prÃ©-cannÃ© pour certaine valeurs
-						res2.setSubmit(BooleanUtils.toBoolean(SB));
+						res2.setSubmit(true);
 					} else if (GroupRights.ADD.equalsIgnoreCase(right)) {
-						res2.setAdd(BooleanUtils.toBoolean(AD));
+						res2.setAdd(true);
 					} else {
 						// Le droit d'executer des actions.
 						// FIXME Pas propre, à changer plus tard.
@@ -309,6 +291,7 @@ public class GroupManagerImpl implements GroupManager {
 		} catch (Exception ex) {
 			reponse = false;
 		}
+
 		return reponse;
 	}
 

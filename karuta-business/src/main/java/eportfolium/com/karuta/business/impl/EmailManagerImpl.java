@@ -45,7 +45,6 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
 import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.commons.validator.routines.EmailValidator;
@@ -362,7 +361,7 @@ public class EmailManagerImpl implements EmailManager {
 		String PS_LOGO = configurationManager.get("PS_LOGO");
 		template_vars.put("shop_logo", "");
 
-		if (PS_LOGO_IN_MAIL != null && PS_LOGO != null && BooleanUtils.toBoolean(Integer.parseInt(PS_LOGO_IN_MAIL))
+		if (PS_LOGO_IN_MAIL != null && PS_LOGO != null && Integer.parseInt(PS_LOGO_IN_MAIL) == 1
 				&& resourceLoader.getResource(Consts._PS_IMG_DIR_ + PS_LOGO) != null) {
 			logo = StringUtils.join(Consts._PS_IMG_DIR_ + PS_LOGO);
 		} else if (PS_LOGO != null

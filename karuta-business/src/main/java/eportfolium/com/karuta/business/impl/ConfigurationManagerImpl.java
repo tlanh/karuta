@@ -19,7 +19,6 @@ import java.util.*;
 
 import eportfolium.com.karuta.consumer.repositories.ConfigurationRepository;
 import eportfolium.com.karuta.model.bean.Configuration;
-import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Validate;
 import org.apache.commons.lang3.math.NumberUtils;
@@ -121,13 +120,13 @@ public class ConfigurationManagerImpl implements ConfigurationManager {
 	}
 
 	public String getKarutaURL(Boolean ssl) {
-		boolean ssl_enabled = BooleanUtils.toBoolean(Integer.parseInt(get("PS_SSL_ENABLED")));
+		boolean ssl_enabled = Integer.parseInt(get("PS_SSL_ENABLED")) == 1;
 
 		if (ssl == null) {
 			String sslEverywhere = get("PS_SSL_ENABLED_EVERYWHERE");
 
 			if (sslEverywhere != null) {
-				ssl = (ssl_enabled && BooleanUtils.toBoolean(Integer.parseInt(sslEverywhere)));
+				ssl = (ssl_enabled && Integer.parseInt(sslEverywhere) == 1);
 			}
 		}
 
