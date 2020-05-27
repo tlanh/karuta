@@ -88,46 +88,10 @@ public class EmailManagerImpl implements EmailManager {
 		return myMap;
 	}
 
-	public boolean send(Integer id_lang, String template, String subject, Map<String, String> template_vars, String to)
-			throws UnsupportedEncodingException, MessagingException {
-		return send(id_lang, template, subject, template_vars, to, null, null, null, null, null, Consts._PS_MAIL_DIR_,
-				false, null, null);
-	}
-
 	public boolean send(Integer id_lang, String template, String subject, Map<String, String> template_vars, String to,
 			Object to_name) throws UnsupportedEncodingException, MessagingException {
 		return send(id_lang, template, subject, template_vars, to, to_name, null, null, null, null,
 				Consts._PS_MAIL_DIR_, false, null, null);
-	}
-
-	/**
-	 * 
-	 * @param id_lang
-	 * @param template
-	 * @param subject
-	 * @param template_vars
-	 * @param to
-	 * @param to_name
-	 * @param from
-	 * @param from_name
-	 * @param file_attachment
-	 * @return
-	 * @throws UnsupportedEncodingException
-	 * @throws MessagingException
-	 */
-	public boolean send(Integer id_lang, String template, String subject, Map<String, String> template_vars, Object to,
-			Object to_name, String from, String from_name, List<File> file_attachment)
-			throws UnsupportedEncodingException, MessagingException {
-		return send(id_lang, template, subject, template_vars, to, to_name, from, from_name, file_attachment, null,
-				Consts._PS_MAIL_DIR_, false, null, null);
-	}
-
-	public boolean send(Integer id_lang, String template, String subject, Map<String, String> template_vars, String to,
-			Object to_name, String from, String from_name, List<File> file_attachment, Boolean mode_smtp,
-			String template_path, boolean die, Integer id_shop)
-			throws UnsupportedEncodingException, MessagingException {
-		return send(id_lang, template, subject, template_vars, to, to_name, from, from_name, file_attachment, mode_smtp,
-				template_path, die, null, null);
 	}
 
 	/**
@@ -469,17 +433,6 @@ public class EmailManagerImpl implements EmailManager {
 	 * @return mixed
 	 */
 	public String getTranslation(String sentence) {
-		return LANGMAIL.get(sentence);
-	}
-
-	/**
-	 * This method is used to get the translation for email Object. For an object is
-	 * forbidden to use htmlentities, we have to return a sentence with accents.
-	 *
-	 * @param sentence raw sentence (write directly in file)
-	 * @return mixed
-	 */
-	public String getTranslation(String sentence, Integer id_lang) {
 		return LANGMAIL.get(sentence);
 	}
 
