@@ -46,21 +46,6 @@ DELIMITER ;
 -- --------------------------------------------------------
 
 --
--- Structure de la table `annotation`
---
-
-CREATE TABLE `annotation` (
-  `nodeid` binary(16) NOT NULL,
-  `rank` int(11) NOT NULL,
-  `text` text COLLATE utf8_unicode_ci,
-  `c_date` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `a_user` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `wad_identifier` varchar(45) COLLATE utf8_unicode_ci DEFAULT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-
--- --------------------------------------------------------
-
---
 -- Structure de la table `configuration`
 --
 
@@ -122,23 +107,6 @@ CREATE TABLE `credential_substitution` (
   `userid` bigint(20) NOT NULL,
   `id` bigint(20) NOT NULL,
   `type` enum('USER','GROUP') COLLATE utf8_unicode_ci NOT NULL DEFAULT 'USER'
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-
--- --------------------------------------------------------
-
---
--- Structure de la table `data_table`
---
-
-CREATE TABLE `data_table` (
-  `id` binary(16) NOT NULL,
-  `owner` bigint(20) NOT NULL,
-  `creator` bigint(20) NOT NULL,
-  `type` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `mimetype` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
-  `filename` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
-  `c_date` bigint(20) DEFAULT NULL,
-  `data` blob
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
 -- --------------------------------------------------------
@@ -207,22 +175,6 @@ CREATE TABLE `group_user` (
   `userid` bigint(20) NOT NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
 
---
--- Structure de la table `log_table`
---
-
-CREATE TABLE `log_table` (
-  `log_id` int(12) NOT NULL,
-  `log_date` datetime NOT NULL,
-  `log_url` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-  `log_method` varchar(50) COLLATE utf8_unicode_ci NOT NULL,
-  `log_headers` text COLLATE utf8_unicode_ci NOT NULL,
-  `log_in_body` text COLLATE utf8_unicode_ci,
-  `log_out_body` text COLLATE utf8_unicode_ci,
-  `log_code` int(12) NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
-
--- --------------------------------------------------------
 
 --
 -- Structure de la table `node`
@@ -319,12 +271,6 @@ CREATE TABLE `resource_table` (
 --
 
 --
--- Index pour la table `annotation`
---
-ALTER TABLE `annotation`
-  ADD PRIMARY KEY (`nodeid`,`rank`);
-
---
 -- Index pour la table `configuration`
 --
 ALTER TABLE `configuration`
@@ -358,12 +304,6 @@ ALTER TABLE `credential_substitution`
   ADD PRIMARY KEY (`userid`,`id`,`type`);
 
 --
--- Index pour la table `data_table`
---
-ALTER TABLE `data_table`
-  ADD PRIMARY KEY (`id`);
-
---
 -- Index pour la table `group_group`
 --
 ALTER TABLE `group_group`
@@ -392,12 +332,6 @@ ALTER TABLE `group_right_info`
 --
 ALTER TABLE `group_user`
   ADD PRIMARY KEY (`gid`,`userid`);
-
---
--- Index pour la table `log_table`
---
-ALTER TABLE `log_table`
-  ADD PRIMARY KEY (`log_id`);
 
 --
 -- Index pour la table `node`
@@ -468,11 +402,6 @@ ALTER TABLE `group_info`
 --
 ALTER TABLE `group_right_info`
   MODIFY `grid` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
---
--- AUTO_INCREMENT pour la table `log_table`
---
-ALTER TABLE `log_table`
-  MODIFY `log_id` int(12) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT pour la table `portfolio_group`
 --
