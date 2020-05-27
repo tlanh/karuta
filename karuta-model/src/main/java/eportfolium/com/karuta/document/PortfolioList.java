@@ -16,7 +16,7 @@ public class PortfolioList {
     }
 
     @JsonGetter("count")
-    @JacksonXmlProperty(isAttribute = false)
+    @JacksonXmlProperty(isAttribute = true)
     public int getCount() {
         return portfolioDocuments.size();
     }

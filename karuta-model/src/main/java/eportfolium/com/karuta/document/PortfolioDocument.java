@@ -1,5 +1,6 @@
 package eportfolium.com.karuta.document;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonRootName;
@@ -25,6 +26,8 @@ public class PortfolioDocument {
     private Date modifDate;
 
     private List<NodeDocument> nodes;
+
+    public PortfolioDocument() { }
 
     public PortfolioDocument(UUID id) {
         this.id = id;
@@ -105,8 +108,14 @@ public class PortfolioDocument {
         return id;
     }
 
-    @JsonGetter("root_node_id")
+    @JsonGetter("gid")
     @JacksonXmlProperty(isAttribute = true)
+    public Long getGid() {
+        return gid;
+    }
+
+    @JsonGetter("root_node_id")
+    @JacksonXmlProperty(isAttribute = true, localName = "root_node_id")
     public UUID getRootNodeId() {
         return rootNodeId;
     }
@@ -118,18 +127,20 @@ public class PortfolioDocument {
     }
 
     @JsonGetter("owner_id")
-    @JacksonXmlProperty(isAttribute = true)
+    @JacksonXmlProperty(isAttribute = true, localName = "owner_id")
     public Long getOwnerId() {
         return ownerId;
     }
 
     @JsonGetter("modified")
-    @JacksonXmlProperty(isAttribute = true)
+    @JacksonXmlProperty(isAttribute = true, localName = "modified")
+    @JsonFormat(timezone = "UTC")
     public Date getModifDate() {
         return modifDate;
     }
 
     @JacksonXmlElementWrapper(useWrapping = false)
+    @JacksonXmlProperty(localName = "node")
     public List<NodeDocument> getNodes() {
         return nodes;
     }
