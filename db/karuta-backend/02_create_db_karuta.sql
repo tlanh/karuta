@@ -50,10 +50,10 @@ DELIMITER ;
 --
 
 CREATE TABLE `configuration` (
-  `id_configuration` int(10) UNSIGNED NOT NULL,
+  `id` int(10) PRIMARY KEY AUTO_INCREMENT,
   `name` varchar(254) NOT NULL,
   `value` text,
-  `modifDate` datetime NOT NULL
+  `modif_date` datetime DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
@@ -274,7 +274,6 @@ CREATE TABLE `resource_table` (
 -- Index pour la table `configuration`
 --
 ALTER TABLE `configuration`
-  ADD PRIMARY KEY (`id_configuration`),
   ADD KEY `name` (`name`);
 
 --
@@ -377,11 +376,6 @@ ALTER TABLE `resource_table` ADD FULLTEXT KEY `content` (`content`);
 -- AUTO_INCREMENT pour les tables exportées
 --
 
---
--- AUTO_INCREMENT pour la table `configuration`
---
-ALTER TABLE `configuration`
-  MODIFY `id_configuration` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=426;
 --
 -- AUTO_INCREMENT pour la table `credential`
 --

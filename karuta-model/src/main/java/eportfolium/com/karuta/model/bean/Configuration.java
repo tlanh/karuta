@@ -59,7 +59,7 @@ public class Configuration implements Serializable {
 	}
 
 	@Id
-	@Column(name = "id_configuration", unique = true, nullable = false)
+	@Column(name = "id", unique = true, nullable = false)
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	public Long getId() {
 		return this.id;
