@@ -122,12 +122,6 @@ public abstract class BaseManager {
 			if (node.getId() == null)
 				continue;
 
-			List<MetadataDocument> metadata = Arrays.asList(
-					MetadataWadDocument.from(node.getMetadataWad()),
-					MetadataEpmDocument.from(node.getMetadataEpm()),
-					MetadataDocument.from(node.getMetadata())
-			);
-
 			// TODO: Check whether data is always consistent regarding xsiType
 			List<ResourceDocument> resources = Stream.of(
 					node.getResResource(),
@@ -139,7 +133,10 @@ public abstract class BaseManager {
 
 			NodeDocument nodeDocument = new NodeDocument(node, groupRights, role);
 
-			nodeDocument.setMetadata(metadata);
+			nodeDocument.setMetadataWad(MetadataWadDocument.from(node.getMetadataWad()));
+			nodeDocument.setMetadataEpm(MetadataEpmDocument.from(node.getMetadataEpm()));
+			nodeDocument.setMetadata(MetadataDocument.from(node.getMetadata()));
+
 			nodeDocument.setResources(resources);
 
 			/// Prepare data to reconstruct tree
