@@ -38,13 +38,9 @@ public class RightGroupController extends AbstractController {
     private static Logger logger;
 
     /**
-     * Change the group right associated to a user group. <br>
-     * POST /rest/api/RightGroup
+     * Change the group right associated to a user group.
      *
-     * @param groupId            user group id
-     * @param groupRightId       group right
-     * @param request
-     * @return
+     * POST /rest/api/RightGroup
      */
     @PostMapping(produces = "application/xml")
     public ResponseEntity<String> postRightGroup(@RequestParam("group") Long groupId,

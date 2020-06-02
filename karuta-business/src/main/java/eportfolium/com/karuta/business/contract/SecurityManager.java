@@ -26,58 +26,26 @@ import eportfolium.com.karuta.model.bean.Credential;
 import eportfolium.com.karuta.model.exception.AuthenticationException;
 import eportfolium.com.karuta.model.exception.BusinessException;
 
-/**
- * Cette classe rassemble la gestion et la modification des utilisateurs, des
- * groupes et des rôles. Le cycle de vie entier de l’utilisateur, de la création
- * à la suppression de son identité au sein du système, est alors contrôlé en un
- * seul endroit.
- * 
- * @author mlengagne
- *
- */
 public interface SecurityManager {
 
 	/**
-	 * 
 	 * This method provides a way for security officers to"reset" the userPassword.
-	 * 
-	 * @param username
-	 * @param password
-	 * @return
 	 */
 	boolean changePassword(String username, String password);
 
 	/**
 	 * This method provides a way for users to change their own userPassword.
-	 * 
-	 * @param userId
-	 * @param currentPassword
-	 * @param newPassword
-	 * @throws BusinessException
 	 */
 	void changeUserPassword(Long userId, String currentPassword, String newPassword) throws BusinessException;
 
 	/**
-	 * 
 	 * This method provides a way for security officers to change info of other
 	 * users.
-	 * 
-	 * @param byUserId
-	 * @param forUserId
-	 * @param user
-	 * @return
-	 * @throws BusinessException
 	 */
 	Long changeUser(Long byUserId, Long forUserId, CredentialDocument user) throws BusinessException;
 
 	/**
 	 * This method provides a way for users to change their personal info.
-	 * 
-	 * @param byUserId
-	 * @param forUserId
-	 * @param user
-	 * @return
-	 * @throws BusinessException
 	 */
 	Long changeUserInfo(Long byUserId, Long forUserId, CredentialDocument user) throws BusinessException;
 
@@ -107,15 +75,6 @@ public interface SecurityManager {
 
 	Long addRole(UUID portfolioId, String role, Long userId) throws BusinessException;
 
-	/**
-	 * Add user to a role
-	 * 
-	 * @param byUserId
-	 * @param grid      roleId
-	 * @param forUserId
-	 * @return
-	 * @throws BusinessException
-	 */
 	String addUserRole(Long byUserId, Long grid, Long forUserId) throws BusinessException;
 
 	void removeUserRole(Long userId, Long groupRightInfoId) throws BusinessException;
@@ -130,22 +89,8 @@ public interface SecurityManager {
 
 	void addUserToGroup(Long byUser, Long forUser, Long groupId) throws BusinessException;
 
-	/**
-	 * Add user in user groups.
-	 * 
-	 * @param userId
-	 * @param credentialGroupIds
-	 * @return
-	 */
 	boolean addUserInCredentialGroups(Long userId, List<Long> credentialGroupIds);
 
-	/**
-	 * Remove a user from a user group,
-	 * 
-	 * @param userId
-	 * @param credentialGroupId
-	 * @return
-	 */
 	void deleteUserFromCredentialGroup(Long userId, Long credentialGroupId);
 
 }

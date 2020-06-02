@@ -37,13 +37,9 @@ public class UserRoleController extends AbstractController {
     private static Logger logger;
 
     /**
-     * Add user to a role. <br>
-     * POST /rest/api/roleUser
+     * Add user to a role.
      *
-     * @param grid
-     * @param userid
-     * @param request
-     * @return
+     * POST /rest/api/roleUser
      */
     @PostMapping(value = "/roleUser", produces = "application/xml")
     public String postRoleUser(@RequestParam("grid") long grid,

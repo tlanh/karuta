@@ -46,9 +46,6 @@ import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.model.exception.GenericBusinessException;
 import eportfolium.com.karuta.util.InMemoryCache;
 
-/**
- * @author mlengagne
- */
 @Service
 @Transactional
 public class NodeManagerImpl extends BaseManager implements NodeManager {

@@ -41,11 +41,10 @@ public class GroupRightsInfoController extends AbstractController {
     private static Logger logger;
 
     /**
-     * Get role list from portfolio from uuid. <br>
+     * Get role list from portfolio from uuid.
+     *
      * GET /rest/api/groupRightsInfos
      *
-     * @param portfolioId        portfolio uuid
-     * @param request
      * @return <groupRightsInfos> <groupRightInfo grid="grouprightid">
      *         <label></label> <owner>UID</owner> </groupRightInfo>
      *         </groupRightsInfos>

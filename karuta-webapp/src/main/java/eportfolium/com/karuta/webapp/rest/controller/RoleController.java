@@ -48,11 +48,9 @@ public class RoleController extends AbstractController {
     private PortfolioManager portfolioManager;
 
     /**
-     * Fetch rights in a role. <br>
-     * GET /rest/api/roles/role/{role-id}
+     * Fetch rights in a role.
      *
-     * @param roleId
-     * @return
+     * GET /rest/api/roles/role/{role-id}
      */
     @GetMapping(value = "/role/{role-id}", produces = {"application/xml"})
     public HttpEntity<RoleDocument> getRole(@PathVariable("role-id") Long roleId) {
@@ -60,13 +58,9 @@ public class RoleController extends AbstractController {
     }
 
     /**
-     * Fetch a role in a portfolio. <br>
-     * GET /rest/api/roles/portfolio/{portfolio-id}
+     * Fetch a role in a portfolio.
      *
-     * @param role
-     * @param portfolioId
-     * @param request
-     * @return
+     * GET /rest/api/roles/portfolio/{portfolio-id}
      */
     @GetMapping(value = "/portfolio/{portfolio-id}", produces = {"application/xml"})
     public String getRolePortfolio(@RequestParam("role") String role,
@@ -79,13 +73,9 @@ public class RoleController extends AbstractController {
     }
 
     /**
-     * Modify a role. <br>
-     * PUT /rest/api/roles/role/{role-id}
+     * Modify a role.
      *
-     * @param role
-     * @param roleId
-     * @param request
-     * @return
+     * PUT /rest/api/roles/role/{role-id}
      */
     @PutMapping(value = "/role/{role-id}", produces = "application/xml")
     public String putRole(@RequestBody RoleDocument role,

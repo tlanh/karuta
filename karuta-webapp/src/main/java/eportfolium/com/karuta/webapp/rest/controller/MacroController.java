@@ -27,12 +27,6 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpServletRequest;
 import java.util.UUID;
 
-/**
- * Partie utilisation des macro-commandes et gestion
- *
- * @author mlengagne
- *
- */
 @RestController
 public class MacroController extends AbstractController {
     @InjectLogger
@@ -42,13 +36,9 @@ public class MacroController extends AbstractController {
     private NodeManager nodeManager;
 
     /**
-     * Executing pre-defined macro command on a node. <br>
-     * POST /rest/api/action/{uuid}/{macro-name}
+     * Executing pre-defined macro command on a node.
      *
-     * @param uuid
-     * @param macroName
-     * @param httpServletRequest
-     * @return
+     * POST /rest/api/action/{uuid}/{macro-name}
      */
     @PostMapping(value = "/action/{uuid}/{macro-name}", produces = "text/plain")
     public String postMacro(@PathVariable("uuid") UUID uuid,

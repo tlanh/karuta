@@ -38,11 +38,10 @@ public class GroupRightsController extends AbstractController {
     private static Logger logger;
 
     /**
-     * Get rights in a role from a groupid <br>
+     * Get rights in a role from a groupid
+     *
      * GET /rest/api/groupRights
      *
-     * @param groupId            role id
-     * @param request
      * @return <groupRights> <groupRight gid="groupid" templateId="grouprightid>
      *         <item AD="True/False" creator="uid"; date=""; DL="True/False" id=uuid
      *         owner=uid"; RD="True/False" SB="True"/"False" typeId=" ";
@@ -58,12 +57,9 @@ public class GroupRightsController extends AbstractController {
     }
 
     /**
-     * Delete a right definition. <br>
-     * DELETE /rest/api/groupRights
+     * Delete a right definition.
      *
-     * @param groupId
-     * @param request
-     * @return
+     * DELETE /rest/api/groupRights
      */
     @DeleteMapping(produces = "application/xml")
     public String deleteGroupRights(@RequestParam("group") long groupId,

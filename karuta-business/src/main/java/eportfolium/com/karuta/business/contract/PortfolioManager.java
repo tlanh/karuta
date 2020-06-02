@@ -26,10 +26,6 @@ import eportfolium.com.karuta.model.bean.GroupRights;
 import eportfolium.com.karuta.model.bean.Portfolio;
 import eportfolium.com.karuta.model.exception.BusinessException;
 
-/**
- * @author mlengagne
- *
- */
 public interface PortfolioManager {
 
 	int addPortfolioInGroup(UUID portfolioUuid, Long portfolioGroupId, String label, Long userId);
@@ -79,10 +75,6 @@ public interface PortfolioManager {
 
 	/**
 	 * Has rights, whether ownership, or given by someone
-	 * 
-	 * @param userId
-	 * @param portfolioUuid
-	 * @return
 	 */
 	boolean hasRights(Long userId, UUID portfolioUuid);
 

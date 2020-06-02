@@ -47,13 +47,10 @@ public class NodesController extends AbstractController {
     private Logger logger;
 
     /**
-     * Get a node without children. <br>
+     * Get a node without children.
+     *
      * GET /rest/api/nodes/node/{node-id}
      *
-     * @param groupId
-     * @param nodeId
-     * @param cutoff
-     * @param request
      * @return nodes in the ASM format
      */
     @GetMapping(value = "/node/{node-id}", produces = {"application/json", "application/xml"},
@@ -71,13 +68,10 @@ public class NodesController extends AbstractController {
     }
 
     /**
-     * Fetch nodes and children from node uuid <br>
+     * Fetch nodes and children from node uuid.
+     *
      * GET /rest/api/nodes/node/{node-id}/children
      *
-     * @param groupId
-     * @param nodeId
-     * @param cutoff
-     * @param request
      * @return nodes in the ASM format
      */
     @GetMapping(value = "/node/{node-id}/children", consumes = "application/xml",
@@ -95,12 +89,10 @@ public class NodesController extends AbstractController {
     }
 
     /**
-     * Fetch nodes metdata <br>
+     * Fetch nodes metdata
+     *
      * GET /rest/api/nodes/node/{node-id}/metadatawad
      *
-     * @param groupId
-     * @param nodeId
-     * @param request
      * @return <metadata-wad/>
      */
     @GetMapping(value = "/node/{nodeid}/metadatawad",
@@ -116,12 +108,10 @@ public class NodesController extends AbstractController {
     }
 
     /**
-     * Fetch rights per role for a node. <br>
+     * Fetch rights per role for a node.
+     *
      * GET /rest/api/nodes/node/{node-id}/rights
      *
-     * @param groupId
-     * @param nodeId
-     * @param request
      * @return <node uuid=""> <role name=""> <right RD="" WR="" DL="" /> </role>
      *         </node>
      */
@@ -144,11 +134,10 @@ public class NodesController extends AbstractController {
     }
 
     /**
-     * Fetch portfolio id from a given node id. <br>
+     * Fetch portfolio id from a given node id.
+     *
      * GET /rest/api/nodes/node/{node-id}/portfolioid
      *
-     * @param nodeId
-     * @param request
      * @return portfolioid
      */
     @GetMapping(value = "/node/{node-id}/portfolioid", produces = "text/plain")
@@ -160,13 +149,12 @@ public class NodesController extends AbstractController {
     }
 
     /**
-     * Change nodes rights. <br>
+     * Change nodes rights.
+     *
      * POST /rest/api/nodes/node/{node-id}/rights
      *
      * @param roleList           <node uuid=""> <role name="">
      *                           <right RD="" WR="" DL="" /> </role> </node>
-     * @param nodeId
-     * @param request
      * @return
      */
     @PostMapping(value = "/node/{node-id}/rights", consumes = "application/xml",
@@ -201,13 +189,10 @@ public class NodesController extends AbstractController {
     }
 
     /**
-     * Get the single first semantic tag node inside specified portfolio <br>
+     * Get the single first semantic tag node inside specified portfolio
+     *
      * GET /rest/api/nodes/firstbysemantictag/{portfolio-uuid}/{semantictag}
      *
-     * @param groupId
-     * @param portfolioId
-     * @param semantictag
-     * @param request
      * @return node in ASM format
      */
     @GetMapping(value = "/firstbysemantictag/{portfolio-uuid}/{semantictag}", consumes = "application/xml",
@@ -225,13 +210,10 @@ public class NodesController extends AbstractController {
     }
 
     /**
-     * Get multiple semantic tag nodes inside specified portfolio. <br>
+     * Get multiple semantic tag nodes inside specified portfolio.
+     *
      * GET /rest/api/nodes/nodes/bysemantictag/{portfolio-uuid}/{semantictag}
      *
-     * @param groupId
-     * @param portfolioId
-     * @param semantictag
-     * @param request
      * @return nodes in ASM format
      */
     @GetMapping(value = "/bysemantictag/{portfolio-uuid}/{semantictag}", consumes = "application/xml",
@@ -249,14 +231,9 @@ public class NodesController extends AbstractController {
     }
 
     /**
-     * Rewrite node <br>
-     * PUT /rest/api/nodes/node/{node-id}
+     * Rewrite node.
      *
-     * @param node
-     * @param groupId
-     * @param nodeId
-     * @param request
-     * @return
+     * PUT /rest/api/nodes/node/{node-id}
      */
     @PutMapping(value = "/node/{node-id}", produces = "application/xml")
     public String putNode(@RequestBody NodeDocument node,
@@ -271,14 +248,9 @@ public class NodesController extends AbstractController {
     }
 
     /**
-     * Rewrite node metadata. <br>
-     * PUT /rest/api/nodes/node/{node-id}/metadata
+     * Rewrite node metadata.
      *
-     * @param metadata
-     * @param groupId
-     * @param nodeId
-     * @param request
-     * @return
+     * PUT /rest/api/nodes/node/{node-id}/metadata
      */
     @PutMapping(value = "/node/{nodeid}/metadata", produces = "application/xml")
     public String putNodeMetadata(@RequestBody MetadataDocument metadata,
@@ -294,14 +266,9 @@ public class NodesController extends AbstractController {
     }
 
     /**
-     * Rewrite node wad metadata. <br>
-     * PUT /rest/api/nodes/node/{node-id}/metadatawas
+     * Rewrite node wad metadata.
      *
-     * @param metadata
-     * @param groupId
-     * @param nodeId
-     * @param request
-     * @return
+     * PUT /rest/api/nodes/node/{node-id}/metadatawas
      */
     @PutMapping(value = "/node/{nodeid}/metadatawad", produces = "application/xml")
     public String putNodeMetadataWad(@RequestBody MetadataWadDocument metadata,
@@ -317,14 +284,9 @@ public class NodesController extends AbstractController {
     }
 
     /**
-     * Rewrite node epm metadata.<br>
-     * PUT /rest/api/nodes/node/{node-id}/metadataepm
+     * Rewrite node epm metadata.
      *
-     * @param metadata
-     * @param nodeId
-     * @param groupId
-     * @param request
-     * @return
+     * PUT /rest/api/nodes/node/{node-id}/metadataepm
      */
     @PutMapping(value = "/node/{nodeid}/metadataepm", produces = "application/xml")
     public String putNodeMetadataEpm(@RequestBody MetadataEpmDocument metadata,
@@ -339,14 +301,9 @@ public class NodesController extends AbstractController {
     }
 
     /**
-     * Rewrite node nodecontext. <br>
-     * PUT /rest/api/nodes/node/{node-id}/nodecontext parameters: return:
+     * Rewrite node nodecontext.
      *
-     * @param resource
-     * @param groupId
-     * @param nodeId
-     * @param request
-     * @return
+     * PUT /rest/api/nodes/node/{node-id}/nodecontext
      */
     @PutMapping(value = "/node/{nodeid}/nodecontext", produces = "application/xml")
     public String putNodeNodeContext(@RequestBody ResourceDocument resource,
@@ -360,14 +317,9 @@ public class NodesController extends AbstractController {
     }
 
     /**
-     * Rewrite node resource. <br>
-     * PUT /rest/api/nodes/node/{node-id}/noderesource
+     * Rewrite node resource.
      *
-     * @param resource
-     * @param groupId
-     * @param nodeId
-     * @param request
-     * @return
+     * PUT /rest/api/nodes/node/{node-id}/noderesource
      */
     @PutMapping(value = "/node/{nodeid}/noderesource", produces = "application/xml")
     public String putNodeNodeResource(@RequestBody ResourceDocument resource,
@@ -381,16 +333,9 @@ public class NodesController extends AbstractController {
     }
 
     /**
-     * Instanciate a node with right parsing <br>
-     * POST /rest/api/nodes/node/import/{dest-id}
+     * Instanciate a node with right parsing
      *
-     * @param groupId
-     * @param parentId
-     * @param semtag
-     * @param code
-     * @param sourceId
-     * @param request
-     * @return
+     * POST /rest/api/nodes/node/import/{dest-id}
      */
     @PostMapping("/node/import/{dest-id}")
     public UUID postImportNode(@RequestParam("group") long groupId,
@@ -406,16 +351,9 @@ public class NodesController extends AbstractController {
     }
 
     /**
-     * Raw copy a node. <br>
-     * POST /rest/api/nodes/node/copy/{dest-id}
+     * Raw copy a node.
      *
-     * @param groupId
-     * @param parentId
-     * @param semtag
-     * @param code
-     * @param sourceId
-     * @param request
-     * @return
+     * POST /rest/api/nodes/node/copy/{dest-id}
      */
     @PostMapping("/node/copy/{dest-id}")
     public UUID postCopyNode(@RequestParam("group") long groupId,
@@ -431,19 +369,15 @@ public class NodesController extends AbstractController {
     }
 
     /**
-     * Fetch nodes. <br>
+     * Fetch nodes.
+     *
      * GET /rest/api/nodes
      *
-     * @param groupId
      * @param portfoliocode      mandatory
      * @param semtag             mandatory, find the semtag under portfoliocode, or
      *                           the selection from semtag_parent/code_parent
-     * @param semtag_parent
      * @param code_parent        From a code_parent, find the children that have
      *                           semtag_parent
-     * @param cutoff
-     * @param request
-     * @return
      */
     @GetMapping(consumes = "application/xml", produces = "application/xml")
     public HttpEntity<NodeList> getNodes(@RequestParam("group") long groupId,
@@ -462,13 +396,9 @@ public class NodesController extends AbstractController {
 
     /**
      * Insert XML in a node. Mostly used by admin, other people use the import/copy
-     * node <br>
-     * POST /rest/api/nodes/node/{parent-id}
+     * node.
      *
-     * @param node
-     * @param parentId
-     * @param groupId
-     * @return
+     * POST /rest/api/nodes/node/{parent-id}
      */
     @PostMapping(value = "/node/{parent-id}", consumes = "application/xml", produces = "application/xml")
     public HttpEntity<NodeList> postNode(@RequestBody NodeDocument node,
@@ -482,11 +412,9 @@ public class NodesController extends AbstractController {
     }
 
     /**
-     * Move a node up between siblings. <br>
-     * POST /rest/api/nodes/node/{node-id}/moveup
+     * Move a node up between siblings.
      *
-     * @param nodeId
-     * @return
+     * POST /rest/api/nodes/node/{node-id}/moveup
      */
     @PostMapping(value = "/node/{node-id}/moveup", consumes = "application/xml", produces = "application/xml")
     public ResponseEntity<String> postMoveNodeUp(@PathVariable("node-id") UUID nodeId) {
@@ -509,13 +437,9 @@ public class NodesController extends AbstractController {
     }
 
     /**
-     * Move a node to another parent. <br>
-     * POST /rest/api/nodes/node/{node-id}/parentof/{parent-id}
+     * Move a node to another parent.
      *
-     * @param nodeId
-     * @param parentId
-     * @param request
-     * @return
+     * POST /rest/api/nodes/node/{node-id}/parentof/{parent-id}
      */
     @PostMapping(value = "/node/{node-id}/parentof/{parent-id}", consumes = "application/xml",
             produces = "application/xml")
@@ -535,13 +459,9 @@ public class NodesController extends AbstractController {
     }
 
     /**
-     * Execute a macro command on a node, changing rights related. <br>
-     * POST /rest/api/nodes/node/{node-id}/action/{action-name} *
+     * Execute a macro command on a node, changing rights related.
      *
-     * @param nodeId
-     * @param macro
-     * @param request
-     * @return
+     * POST /rest/api/nodes/node/{node-id}/action/{action-name}
      */
     @PostMapping(value = "/node/{node-id}/action/{action-name}", consumes = "application/xml",
         produces = "application/xml")
@@ -563,13 +483,9 @@ public class NodesController extends AbstractController {
     }
 
     /**
-     * Delete a node<br>
-     * DELETE /rest/api/nodes/node/{node-uuid}
+     * Delete a node.
      *
-     * @param groupId
-     * @param nodeId
-     * @param request
-     * @return
+     * DELETE /rest/api/nodes/node/{node-uuid}
      */
     @DeleteMapping(value = "/node/{node-uuid}", produces = "application/xml")
     public String deleteNode(@RequestParam("group") long groupId,
@@ -584,15 +500,9 @@ public class NodesController extends AbstractController {
     }
 
     /**
-     * Fetch node content. <br>
-     * GET /rest/api/nodes/{node-id}
+     * Fetch node content.
      *
-     * @param groupId
-     * @param nodeId
-     * @param lang
-     * @param xslFile
-     * @param request
-     * @return
+     * GET /rest/api/nodes/{node-id}
      */
     @GetMapping(value = "/{node-id}", consumes = "application/xml")
     public HttpEntity<NodeDocument> getNodeWithXSL(@RequestParam("group") long groupId,
@@ -620,14 +530,7 @@ public class NodesController extends AbstractController {
     }
 
     /**
-     *
      * POST /rest/api/nodes/{node-id}/frommodelbysemantictag/{semantic-tag}
-     *
-     * @param groupId
-     * @param nodeId
-     * @param semantictag
-     * @param request
-     * @return
      */
     @PostMapping(value = "/{node-id}/frommodelbysemantictag/{semantic-tag}", consumes = "application/xml",
         produces = "application/xml")

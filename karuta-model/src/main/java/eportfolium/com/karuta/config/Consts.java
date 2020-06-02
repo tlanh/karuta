@@ -15,10 +15,6 @@
 
 package eportfolium.com.karuta.config;
 
-/**
- * @author mathieu
- *
- */
 public final class Consts {
 
 	/**

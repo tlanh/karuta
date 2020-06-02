@@ -27,8 +27,8 @@ public interface ConfigurationManager {
 
 	/**
 	 * Get a single configuration value (in one language only)
-	 * @param string key Key wanted
-	 * @param langID Language ID
+	 * @param key - Key wanted
+	 * @param id_lang - Language ID
 	 *
 	 * @return string Value
 	 */
@@ -38,15 +38,15 @@ public interface ConfigurationManager {
 	/**
 	 * Get a single configuration value (in one language only)
 	 *
-	 * @param string key Key wanted
+	 * @param key - Key wanted
 	 * @return string Value
 	 */
 	String get(String key);
 
 	/**
 	 * Get several configuration values (in one language only)
-	 * @param array   keys Keys wanted
-	 * @param integer id_lang Language ID
+	 * @param keys - Keys wanted
+	 * @param langID - Language ID
 	 *
 	 * @return array Values
 	 */
@@ -55,12 +55,9 @@ public interface ConfigurationManager {
 
 	/**
 	 * Set TEMPORARY a single configuration value (in one language only)
-	 * @param string key Key wanted
-	 * @param mixed  values values is an array if the configuration is multilingual,
+	 * @param key - Key wanted
+	 * @param values - values is an array if the configuration is multilingual,
 	 *               a single string else.
-	 *
-	 * @param int    id_shop_group
-	 * @param int    id_shop
 	 */
 	void set(String key, Map<Integer, String> values);
 

@@ -27,12 +27,6 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpServletRequest;
 import java.util.UUID;
 
-/**
- * Managing and listing portfolio groups.
- *
- * @author mlengagne
- *
- */
 @RestController
 @RequestMapping("/portfoliogroups")
 public class PortfolioGroupController extends AbstractController {
@@ -44,13 +38,12 @@ public class PortfolioGroupController extends AbstractController {
     private PortfolioManager portfolioManager;
 
     /**
-     * Create a new portfolio group. <br>
+     * Create a new portfolio group.
+     *
      * POST /rest/api/portfoliogroups
      *
      * @param groupname          Name of the group we are creating
      * @param type               group/portfolio
-     * @param parent             parentid
-     * @param request
      * @return groupid
      */
 
@@ -67,14 +60,9 @@ public class PortfolioGroupController extends AbstractController {
     }
 
     /**
-     * Put a portfolio in portfolio group. <br>
-     * PUT /rest/api/portfoliogroups
+     * Put a portfolio in portfolio group.
      *
-     * @param group              group id
-     * @param uuid               portfolio id
-     * @param label
-     * @param request
-     * @return Code 200
+     * PUT /rest/api/portfoliogroups
      */
     @PutMapping
     public ResponseEntity<Integer> putPortfolioInPortfolioGroup(@RequestParam("group") Long group,
@@ -97,10 +85,6 @@ public class PortfolioGroupController extends AbstractController {
      * - With group id <group id={groupid}> <portfolio id={uuid}></portfolio> ...
      * </group>
      *
-     * @param group              group id
-     * @param portfolioId
-     * @param groupLabel         group label
-     * @param request
      * @return group id or empty str if group id not found
      */
     @GetMapping
@@ -132,7 +116,8 @@ public class PortfolioGroupController extends AbstractController {
     }
 
     /**
-     * Remove a portfolio from a portfolio group, or remove a portfoliogroup. <br>
+     * Remove a portfolio from a portfolio group, or remove a portfoliogroup.
+     *
      * DELETE /rest/api/portfoliogroups
      *
      * @param groupId            group id

@@ -42,10 +42,10 @@ public class GroupsController extends AbstractController {
     private static Logger logger;
 
     /**
-     * Get groups from a user id <br>
+     * Get groups from a user id.
+     *
      * GET /rest/api/groups
      *
-     * @param request
      * @return <groups> <group id="gid" owner="uid" templateId="rrgid">GROUP
      *         LABEL</group> ... </groups>
      */
@@ -57,12 +57,9 @@ public class GroupsController extends AbstractController {
     }
 
     /**
-     * Get roles in a portfolio <br>
-     * GET /rest/api/groups/{portfolio-id}
+     * Get roles in a portfolio.
      *
-     * @param portfolioId
-     * @param request
-     * @return
+     * GET /rest/api/groups/{portfolio-id}
      */
     @GetMapping(value = "/{portfolio-id}", produces = "application/xml")
     public HttpEntity<GroupInfoList> getGroupsPortfolio(@PathVariable("portfolio-id") UUID portfolioId,

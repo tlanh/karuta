@@ -25,12 +25,6 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 
-/**
- * Managing and listing user groups
- *
- * @author mlengagne
- *
- */
 @RestController
 @RequestMapping("/groupsUsers")
 public class UserGroupController extends AbstractController {
@@ -42,13 +36,9 @@ public class UserGroupController extends AbstractController {
     private SecurityManager securityManager;
 
     /**
-     * Insert a user in a user group. <br>
-     * POST /rest/api/groupsUsers
+     * Insert a user in a user group.
      *
-     * @param groupId            group: gid
-     * @param userId             userId
-     * @param request
-     * @return <ok/>
+     * POST /rest/api/groupsUsers
      */
     @PostMapping(produces = "application/xml")
     public String postGroupsUsers(@RequestParam("group") long groupId,

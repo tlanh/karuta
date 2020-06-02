@@ -29,12 +29,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
 
-/**
- * Managing and listing Credential groups
- *
- * @author mlengagne
- *
- */
 @RestController
 @RequestMapping("/usergroups")
 public class CredentialGroupController {
@@ -96,12 +90,9 @@ public class CredentialGroupController {
 
     /**
      * Get users by usergroup or if there's no group id give he list of user group.
-     * <br>
+     *
      * GET /rest/api/usersgroups
      *
-     * @param cgId               group id
-     * @param userId
-     * @param groupName
      * @return Without group id <groups> <group id={groupid}> <label>{group
      *         name}</label> </group> ... </groups>
      *
@@ -135,12 +126,9 @@ public class CredentialGroupController {
     }
 
     /**
-     * Remove a user from a user group, or remove a usergroup <br>
-     * DELETE /rest/api/usersgroups
+     * Remove a user from a user group, or remove a usergroup
      *
-     * @param group              group id
-     * @param user               user id
-     * @return Code 200
+     * DELETE /rest/api/usersgroups
      */
     @DeleteMapping
     public String deleteUsersByUserGroup(@RequestParam Long group, @RequestParam Long user) {

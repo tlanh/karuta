@@ -38,11 +38,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
-/**
- * @author mlengagne
- *
- */
-
 @RestController
 @RequestMapping("/users")
 public class UserController extends AbstractController {
@@ -60,7 +55,8 @@ public class UserController extends AbstractController {
     private static Logger logger;
 
     /**
-     * Add a user. <br>
+     * Add a user.
+     *
      * POST /rest/api/users
      *
      * @param xmluser            <users> <user id="uid"> <username></username>
@@ -68,7 +64,6 @@ public class UserController extends AbstractController {
      *                           <admin>1/0</admin> <designer>1/0</designer>
      *                           <email></email> <active>1/0</active>
      *                           <substitute>1/0</substitute> </user> ... </users>
-     * @param request
      * @return
      */
     @PostMapping(consumes = "application/xml", produces = "application/xml")
@@ -79,15 +74,11 @@ public class UserController extends AbstractController {
         return new HttpEntity<>(securityManager.addUsers(xmluser, ui.userId));
     }
 
-    /***
+    /**
+     * Get user list.
      *
-     * Get user list. <br>
      * GET/rest/api/users*parameters:*return:
      *
-     * @param username
-     * @param firstname
-     * @param lastname
-     * @param request
      * @return *<users>*<user id="uid"> <username></username>
      *         <firstname></firstname> <lastname></lastname> <admin>1/0</admin>
      *         <designer>1/0</designer> <email></email> <active>1/0</active>
@@ -113,10 +104,10 @@ public class UserController extends AbstractController {
     }
 
     /**
-     * Get a specific user info. <br>
+     * Get a specific user info.
+     *
      * GET /rest/api/users/user/{user-id}
      *
-     * @param userid
      * @return <user id="uid"> <username></username> <firstname></firstname>
      *         <lastname></lastname> <admin>1/0</admin> <designer>1/0</designer>
      *         <email></email> <active>1/0</active> <substitute>1/0</substitute>
@@ -128,10 +119,10 @@ public class UserController extends AbstractController {
     }
 
     /**
-     * Get user id from username. <br>
+     * Get user id from username.
+     *
      * GET /rest/api/users/user/username/{username}
      *
-     * @param username
      * @return userid (long)
      */
     @GetMapping(value = "/user/username/{username}", produces = "application/xml")
@@ -147,10 +138,10 @@ public class UserController extends AbstractController {
     }
 
     /**
-     * Get a list of role/group for this user. <br>
+     * Get a list of role/group for this user.
+     *
      * GET /rest/api/users/user/{user-id}/groups
      *
-     * @param userIdCible
      * @return <profiles> <profile> <group id="gid"> <label></label> <role></role>
      *         </group> </profile> </profiles>
      */
@@ -160,13 +151,9 @@ public class UserController extends AbstractController {
     }
 
     /**
-     * Fetch userlist from a role and portfolio id. <br>
-     * GET /rest/api/users/Portfolio/{portfolio-id}/Role/{role}/users
+     * Fetch userlist from a role and portfolio id.
      *
-     * @param portfolioId
-     * @param role
-     * @param request
-     * @return
+     * GET /rest/api/users/Portfolio/{portfolio-id}/Role/{role}/users
      */
     @GetMapping(value = "/Portfolio/{portfolio-id}/Role/{role}/users", produces = "application/xml")
     public HttpEntity<CredentialList> getUsersByRole(@PathVariable("portfolio-id") UUID portfolioId,
@@ -179,14 +166,11 @@ public class UserController extends AbstractController {
     }
 
     /**
-     * Delete users. <br>
+     * Delete users.
+     *
      * DELETE /rest/api/users
      *
      * @see #deleteUser(Long, HttpServletRequest)
-     *
-     * @param userId
-     * @param request
-     * @return
      */
     @DeleteMapping(produces = "application/xml")
     public String deleteUsers(@RequestParam("userId") Long userId,
@@ -203,12 +187,9 @@ public class UserController extends AbstractController {
     }
 
     /**
-     * Delete specific user. <br>
-     * DELETE /rest/api/users/user/{user-id}
+     * Delete specific user.
      *
-     * @param userid
-     * @param request
-     * @return
+     * DELETE /rest/api/users/user/{user-id}
      */
     @DeleteMapping(value = "/user/{user-id}", produces = "application/xml")
     public String deleteUser(@PathVariable("user-id") Long userid,
@@ -222,15 +203,13 @@ public class UserController extends AbstractController {
     }
 
     /**
-     * Modify user info. <br>
+     * Modify user info.
+     *
      * PUT /rest/api/users/user/{user-id} body: <user id="uid">
      * <username></username> <firstname></firstname> <lastname></lastname>
      * <admin>1/0</admin> <designer>1/0</designer> <email></email>
      * <active>1/0</active> <substitute>1/0</substitute> </user>
      *
-     * @param user
-     * @param userid
-     * @param request
      * @return <user id="uid"> <username></username> <firstname></firstname>
      *         <lastname></lastname> <admin>1/0</admin> <designer>1/0</designer>
      *         <email></email> <active>1/0</active> <substitute>1/0</substitute>
@@ -255,12 +234,9 @@ public class UserController extends AbstractController {
     }
 
     /**
-     * Fetch groups from a role and portfolio id <br>
-     * GET /rest/api/users/Portfolio/{portfolio-id}/Role/{role}/groups.
+     * Fetch groups from a role and portfolio id.
      *
-     * @param portfolioId
-     * @param role
-     * @return
+     * GET /rest/api/users/Portfolio/{portfolio-id}/Role/{role}/groups.
      */
     @GetMapping(value = "/Portfolio/{portfolio-id}/Role/{role}/groups")
     public HttpEntity<RoleGroupList> getGroupsByRole(@PathVariable("portfolio-id") UUID portfolioId,

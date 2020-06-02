@@ -55,14 +55,9 @@ public class RoleRightsGroupsController extends AbstractController {
     private GroupManager groupManager;
 
     /**
-     * List roles. <br>
-     * GET /rest/api/rolerightsgroups
+     * List roles.
      *
-     * @param portfolioId
-     * @param user
-     * @param role
-     * @param request
-     * @return
+     * GET /rest/api/rolerightsgroups
      */
     @GetMapping(produces = "application/xml")
     public HttpEntity<Object> getRightsGroup(@RequestParam("portfolio") UUID portfolioId,
@@ -81,12 +76,9 @@ public class RoleRightsGroupsController extends AbstractController {
     }
 
     /**
-     * List all users in a specified roles. <br>
-     * GET /rest/api/rolerightsgroups/all/users
+     * List all users in a specified roles.
      *
-     * @param portfolioId
-     * @param request
-     * @return
+     * GET /rest/api/rolerightsgroups/all/users
      */
     @GetMapping(value = "/all/users", produces = "application/xml")
     public HttpEntity<GroupUserList> getPortfolioRightInfo(@RequestParam("portfolio") UUID portfolioId,
@@ -99,11 +91,9 @@ public class RoleRightsGroupsController extends AbstractController {
     }
 
     /**
-     * List rights in the specified role <br>
-     * GET /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}
+     * List rights in the specified role
      *
-     * @param rrgId
-     * @return
+     * GET /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}
      */
     @GetMapping(value = "/rolerightsgroup/{rolerightsgroup-id}", produces = "application/xml")
     public HttpEntity<RoleRightsGroupDocument> getRightInfo(@PathVariable("rolerightsgroup-id") Long rrgId) {
@@ -111,14 +101,9 @@ public class RoleRightsGroupsController extends AbstractController {
     }
 
     /**
-     * Add user in a role. <br>
-     * POST
-     * /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}/users/user/{user-id}
+     * Add user in a role.
      *
-     * @param rrgId
-     * @param queryuser
-     * @param request
-     * @return
+     * POST /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}/users/user/{user-id}
      */
     @PostMapping(value = "/rolerightsgroup/{rolerightsgroup-id}/users/user/{user-id}",
             produces = "application/xml")
@@ -131,13 +116,9 @@ public class RoleRightsGroupsController extends AbstractController {
     }
 
     /**
-     * Add user in a role. <br>
-     * POST /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}/users
+     * Add user in a role.
      *
-     * @param users
-     * @param rrgId
-     * @param request
-     * @return
+     * POST /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}/users
      */
     @PostMapping(value = "/rolerightsgroup/{rolerightsgroup-id}/users", produces = "application/xml")
     public String postRightGroupUser(@RequestBody CredentialList users,
@@ -149,12 +130,9 @@ public class RoleRightsGroupsController extends AbstractController {
     }
 
     /**
-     * Delete a role. <br>
-     * DELETE /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}
+     * Delete a role.
      *
-     * @param groupRightInfoId
-     * @param request
-     * @return
+     * DELETE /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}
      */
     @DeleteMapping(value = "/rolerightsgroup/{rolerightsgroup-id}", produces = "application/xml")
     public String deleteRightGroup(@PathVariable("rolerightsgroup-id") Long groupRightInfoId,
@@ -167,11 +145,10 @@ public class RoleRightsGroupsController extends AbstractController {
     }
 
     /**
-     * Remove user from a role. <br>
-     * DELETE
-     * /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}/users/user/{user-id}
+     * Remove user from a role.
      *
-     **/
+     * DELETE /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}/users/user/{user-id}
+     */
     @DeleteMapping(value = "/rolerightsgroup/{rolerightsgroup-id}/users/user/{user-id}",
             produces = "application/xml")
     public String deleteRightGroupUser(@PathVariable("rolerightsgroup-id") Long rrgId,
@@ -185,12 +162,9 @@ public class RoleRightsGroupsController extends AbstractController {
     }
 
     /**
-     * Remove all users from a role. <br>
-     * DELETE /rest/api/rolerightsgroups/all/users
+     * Remove all users from a role.
      *
-     * @param portfolioId
-     * @param request
-     * @return
+     * DELETE /rest/api/rolerightsgroups/all/users
      */
     @DeleteMapping(value = "/all/users", produces = "application/xml")
     public String deletePortfolioRightInfo(@RequestParam("portfolio") UUID portfolioId,
@@ -205,13 +179,9 @@ public class RoleRightsGroupsController extends AbstractController {
     }
 
     /**
-     * Change a right in role. <br>
-     * PUT /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}
+     * Change a right in role.
      *
-     * @param role
-     * @param rrgId
-     * @param request
-     * @return
+     * PUT /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}
      */
     @PutMapping(value = "/rolerightsgroup/{rolerightsgroup-id}", produces = "application/xml")
     public String putRightInfo(@RequestBody RoleDocument role,

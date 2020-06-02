@@ -76,16 +76,12 @@ public class PortfolioController extends AbstractController {
     static private Logger logger;
 
     /**
-     * Get a portfolio from uuid. <br>
+     * Get a portfolio from uuid.
+     *
      * GET /rest/api/portfolios/portfolio/{portfolio-id}
      *
-     * @param portfolioId
-     * @param resources
      * @param files              if set with resource, return a zip file
      * @param export             if set, return XML as a file download
-     * @param lang
-     * @param cutoff
-     * @param request
      * @return zip as file download content. <br>
      *         <?xml version=\"1.0\" encoding=\"UTF-8\"?> <portfolio code=\"0\"
      *         id=\""+portfolioUuid+"\" owner=\""+isOwner+"\"><version>4</version>
@@ -222,16 +218,11 @@ public class PortfolioController extends AbstractController {
     }
 
     /**
-     * Return the portfolio from its code. <br>
+     * Return the portfolio from its code.
+     *
      * GET /rest/api/portfolios/code/{code}
      *
      * @see #putPortfolio(PortfolioDocument, UUID, boolean, HttpServletRequest)
-     *
-     * @param groupId
-     * @param code
-     * @param resources
-     * @param request
-     * @return
      */
     @GetMapping(value = "/portfolio/code/{code}", produces = {"application/json", "application/xml"})
     public HttpEntity<PortfolioDocument> getPortfolioByCode(@RequestParam("group") long groupId,
@@ -251,18 +242,12 @@ public class PortfolioController extends AbstractController {
 
     /**
      * List portfolios for current user (return also other things, but should be
-     * removed). <br>
+     * removed).
+     *
      * GET /rest/api/portfolios.
      *
-     * @param groupId
-     * @param active             false/0 (also show inactive portoflios)
+     * @param active             false (also show inactive portoflios)
      * @param userId             for this user (only with root)
-     * @param code
-     * @param portfolioId
-     * @param cutoff
-     * @param public_var
-     * @param project
-     * @param request
      * @return <?xml version=\"1.0\" encoding=\"UTF-8\"?> <portfolios>
      *         <portfolio id="uuid" root_node_id="uuid" owner="Y/N" ownerid="uid"
      *         modified= "DATE"> <asmRoot id="uuid"> <metadata-wad/> <metadata-epm/>
@@ -310,15 +295,12 @@ public class PortfolioController extends AbstractController {
     }
 
     /**
-     * Rewrite portfolio content. <br>
+     * Rewrite portfolio content.
+     *
      * PUT /rest/api/portfolios/portfolios/{portfolio-id}
      *
      * @param portfolio       GET /rest/api/portfolios/portfolio/{portfolio-id}
      *                           and/or the asm format
-     * @param portfolioId
-     * @param active
-     * @param request
-     * @return
      */
     @PutMapping(value = "/portfolio/{portfolio-id}", consumes = "application/xml", produces = "application/xml")
     public String putPortfolio(@RequestBody PortfolioDocument portfolio,
@@ -334,12 +316,9 @@ public class PortfolioController extends AbstractController {
     }
 
     /**
-     * Reparse portfolio rights. <br>
-     * POST /rest/api/portfolios/portfolios/{portfolio-id}/parserights
+     * Reparse portfolio rights.
      *
-     * @param portfolioId
-     * @param request
-     * @return
+     * POST /rest/api/portfolios/portfolios/{portfolio-id}/parserights
      */
     @PostMapping("/portfolio/{portfolio-id}/parserights")
     public ResponseEntity<String> postPortfolio(@PathVariable("portfolio-id") UUID portfolioId,
@@ -357,13 +336,9 @@ public class PortfolioController extends AbstractController {
     }
 
     /**
-     * Change portfolio owner. <br>
-     * PUT /rest/api/portfolios/portfolios/{portfolio-id}/setOwner/{newOwnerId}
+     * Change portfolio owner.
      *
-     * @param portfolioId      portfolio-id
-     * @param newOwner           newOwnerId
-     * @param request
-     * @return
+     * PUT /rest/api/portfolios/portfolios/{portfolio-id}/setOwner/{newOwnerId}
      */
     @PutMapping(value = "/portfolio/{portfolio-id}/setOwner/{newOwnerId}", consumes = "application/xml",
             produces = "application/xml")
@@ -383,13 +358,9 @@ public class PortfolioController extends AbstractController {
     }
 
     /**
-     * Modify some portfolio option. <br>
-     * PUT /rest/api/portfolios/portfolios/{portfolio-id}
+     * Modify some portfolio option.
      *
-     * @param portfolioId
-     * @param portfolioActive    0/1, true/false
-     * @param request
-     * @return
+     * PUT /rest/api/portfolios/portfolios/{portfolio-id}
      */
     @PutMapping(consumes = "application/xml", produces = "application/xml")
     public String putPortfolioConfiguration(@RequestParam("portfolio") UUID portfolioId,
@@ -407,21 +378,18 @@ public class PortfolioController extends AbstractController {
 
     /**
      * From a base portfolio, make an instance with parsed rights in the attributes.
+     *
      * POST /rest/api/portfolios/instanciate/{portfolio-id}
      *
-     * @param groupId
-     * @param portfolioId
      * @param srccode            if set, rather than use the provided portfolio
      *                           uuid, search for the portfolio by code
      * @param tgtcode            code we want the portfolio to have. If code already
      *                           exists, adds a number after
      * @param copyshared         y/null Make a copy of shared nodes, rather than
      *                           keeping the link to the original data
-     * @param groupname
      * @param setOwner           true/null Set the current user instanciating the
      *                           portfolio as owner. Otherwise keep the one that
      *                           created it.
-     * @param request
      * @return instanciated portfolio uuid
      */
     @PostMapping("/instanciate/{portfolio-id}")
@@ -464,18 +432,12 @@ public class PortfolioController extends AbstractController {
     }
 
     /**
-     * From a base portfolio, just make a direct copy without rights parsing. <br>
+     * From a base portfolio, just make a direct copy without rights parsing.
+     *
      * POST /rest/api/portfolios/copy/{portfolio-id}
      *
      * @see #postInstanciatePortfolio(int, String,
      *      String, String, boolean, String, boolean, HttpServletRequest)
-     *
-     * @param portfolioId
-     * @param srccode
-     * @param tgtcode
-     * @param setowner
-     * @param request
-     * @return
      */
     @PostMapping("/copy/{portfolio-id}")
     public ResponseEntity<String> postCopyPortfolio(@PathVariable("portfolio-id") UUID portfolioId,
@@ -506,12 +468,9 @@ public class PortfolioController extends AbstractController {
     }
 
     /**
-     * Return a list of portfolio shared to a user. <br>
-     * GET /portfolios/shared/{userid}
+     * Return a list of portfolio shared to a user.
      *
-     * @param userid
-     * @param request
-     * @return
+     * GET /portfolios/shared/{userid}
      */
     @PostMapping(value = "/shared/{userid}", produces = "application/xml")
     public HttpEntity<PortfolioList> getPortfolioShared(@PathVariable("userid") long userid,
@@ -531,8 +490,6 @@ public class PortfolioController extends AbstractController {
      * GET /rest/api/portfolios
      *
      * @param portfolioList      list of portfolios, separated with ','
-     * @param lang
-     * @param request
      * @return zipped portfolio (with files) inside zip file
      */
     @GetMapping(value = "/zip", consumes = "application/zip")
@@ -628,15 +585,9 @@ public class PortfolioController extends AbstractController {
 
     /**
      * As a form, import zip, extract data and put everything into the database.
-     * <br>
+     *
      * POST /rest/api/portfolios From a zip export of the system
      *
-     * @param groupId
-     * @param fileInputStream
-     * @param modelId
-     * @param instance
-     * @param projectName
-     * @param request
      * @return portfolio uuid
      */
     @PostMapping(value = "/zip", consumes = "multipart/form-data")
@@ -664,13 +615,9 @@ public class PortfolioController extends AbstractController {
     }
 
     /**
-     * Delete portfolio. <br>
-     * DELETE /rest/api/portfolios/portfolio/{portfolio-id}
+     * Delete portfolio.
      *
-     * @param groupId
-     * @param portfolioId
-     * @param request
-     * @return
+     * DELETE /rest/api/portfolios/portfolio/{portfolio-id}
      */
     @DeleteMapping(value = "/portfolio/{portfolio-id}", produces = "application/xml")
     public String deletePortfolio(@RequestParam("group") long groupId,
@@ -685,16 +632,13 @@ public class PortfolioController extends AbstractController {
     }
 
     /**
-     * As a form, import xml into the database. <br>
+     * As a form, import xml into the database.
+     *
      * POST /rest/api/portfolios
      *
-     * @param portfolio
-     * @param groupId
      * @param modelId            another uuid, not sure why it's here
      * @param instance           true/null if as an instance, parse rights.
      *                           Otherwise just write nodes xml: ASM format
-     * @param projectName
-     * @param request
      * @return <portfolios> <portfolio id="uuid"/> </portfolios>
      */
     @PostMapping(consumes = {"multipart/form-data", "application/xml"}, produces = "application/xml")
@@ -712,16 +656,9 @@ public class PortfolioController extends AbstractController {
     }
 
     /**
-     * Import zip file. <br>
-     * POST /rest/api/portfolios/zip
+     * Import zip file.
      *
-     * @param groupId
-     * @param modelId
-     * @param uploadedInputStream
-     * @param instance
-     * @param projectName
-     * @param request
-     * @return
+     * POST /rest/api/portfolios/zip
      */
     @PostMapping(value = "/zip2", consumes = "multipart/form-data", produces = "text/plain")
     public String postPortfolioByForm(@RequestParam("group") long groupId,

@@ -61,15 +61,6 @@ import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.model.exception.GenericBusinessException;
 import eportfolium.com.karuta.model.exception.ValueRequiredException;
 
-/**
- * Cette classe rassemble la gestion et la modification des utilisateurs, des
- * groupes et des rôles. Le cycle de vie entier de l’utilisateur, de la création
- * à la suppression de son identité au sein du système, est alors contrôlé en un
- * seul endroit.
- * 
- * @author mlengagne
- *
- */
 @Service
 @Transactional
 public class SecurityManagerImpl implements SecurityManager {

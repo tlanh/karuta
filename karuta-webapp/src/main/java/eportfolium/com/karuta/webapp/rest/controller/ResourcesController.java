@@ -30,10 +30,6 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpServletRequest;
 import java.util.UUID;
 
-/**
- * @author mlengagne
- *
- */
 @RestController
 @RequestMapping("/resources")
 public class ResourcesController extends AbstractController {
@@ -45,13 +41,9 @@ public class ResourcesController extends AbstractController {
     private static Logger logger;
 
     /**
-     * Fetch resource from node uuid. <br>
-     * GET /rest/api/resources/resource/{node-parent-id}
+     * Fetch resource from node uuid.
      *
-     * @param groupId
-     * @param nodeParentId
-     * @param request
-     * @return
+     * GET /rest/api/resources/resource/{node-parent-id}
      */
     @GetMapping(value = "/resource/{node-parent-id}", consumes = "application/xml",
             produces = {"application/json", "application/xml"})
@@ -64,13 +56,9 @@ public class ResourcesController extends AbstractController {
     }
 
     /**
-     * Fetch all resource in a portfolio. <br>
-     * GET /rest/api/resources/portfolios/{portfolio-id}
+     * Fetch all resource in a portfolio.
      *
-     * @param groupId
-     * @param portfolioId      portfolio-id
-     * @param request
-     * @return
+     * GET /rest/api/resources/portfolios/{portfolio-id}
      */
     @GetMapping(value = "/portfolios/{portfolio-id}", produces = {"application/xml"})
     public HttpEntity<ResourceList> getResources(@RequestParam("group") long groupId,
@@ -83,14 +71,9 @@ public class ResourcesController extends AbstractController {
     }
 
     /**
-     * Modify resource content. <br>
-     * PUT /rest/api/resources/resource/{node-parent-uuid}
+     * Modify resource content.
      *
-     * @param resource
-     * @param groupId
-     * @param parentNodeId
-     * @param request
-     * @return
+     * PUT /rest/api/resources/resource/{node-parent-uuid}
      */
     @PutMapping(value = "/resource/{node-parent-uuid}", produces = "application/xml")
     public String putResource(@RequestBody ResourceDocument resource,
@@ -105,14 +88,9 @@ public class ResourcesController extends AbstractController {
     }
 
     /**
-     * Add a resource (?). <br>
-     * POST /rest/api/resources/{node-parent-uuid}
+     * Add a resource (?).
      *
-     * @param resource
-     * @param groupId
-     * @param parentNodeId
-     * @param request
-     * @return
+     * POST /rest/api/resources/{node-parent-uuid}
      */
     @PostMapping(value = "/{node-parent-uuid}", produces = "application/xml")
     public String postResource(@RequestBody ResourceDocument resource,
@@ -127,12 +105,6 @@ public class ResourcesController extends AbstractController {
 
     /**
      * (?) POST /rest/api/resources
-     *
-     * @param resource
-     * @param groupId
-     * @param resourceId
-     * @param request
-     * @return
      */
     @PostMapping(produces = "application/xml")
     public String postResources(@RequestBody ResourceDocument resource,
@@ -145,13 +117,9 @@ public class ResourcesController extends AbstractController {
     }
 
     /**
-     * Delete a resource <br>
-     * DELETE /rest/api/resources/{resource-id}
+     * Delete a resource
      *
-     * @param groupId
-     * @param resourceId
-     * @param request
-     * @return
+     * DELETE /rest/api/resources/{resource-id}
      */
     @DeleteMapping(value = "/{resource-id}", produces = "application/xml")
     public String deleteResource(@RequestParam("group") long groupId,

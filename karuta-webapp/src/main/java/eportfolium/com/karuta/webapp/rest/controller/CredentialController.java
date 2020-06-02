@@ -67,7 +67,6 @@ public class CredentialController extends AbstractController {
      * Fetch current user info. <br>
      * GET /rest/api/credential
      *
-     * @param request
      * @return <user id="uid"> <username></username> <firstname></firstname>
      *         <lastname></lastname> <email></email> <admin>1/0</admin>
      *         <designer>1/0</designer> <active>1/0</active>
@@ -85,12 +84,9 @@ public class CredentialController extends AbstractController {
     }
 
     /**
-     * Send login information. <br>
-     * POST /rest/api/credential/login
+     * Send login information.
      *
-     * @param credentials
-     * @param request
-     * @return
+     * POST /rest/api/credential/login
      */
     @RequestMapping(value = "/login", consumes = "application/xml", produces = "application/xml",
         method = { RequestMethod.POST, RequestMethod.PUT })
@@ -147,12 +143,9 @@ public class CredentialController extends AbstractController {
     }
 
     /**
-     * Tell system to forgot your password. <br>
-     * POST /rest/api/credential/forgot
+     * Tell system to forgot your password.
      *
-     * @param document
-     * @param request
-     * @return
+     * POST /rest/api/credential/forgot
      */
     @PostMapping(value = "/forgot", consumes = "application/xml")
     public ResponseEntity<String> postForgotCredential(@RequestBody LoginDocument document,
@@ -301,11 +294,9 @@ public class CredentialController extends AbstractController {
     }
 
     /**
-     * Ask to logout, clear session. <br>
-     * POST /rest/api/credential/logout
+     * Ask to logout, clear session.
      *
-     * @param request
-     * @return
+     * POST /rest/api/credential/logout
      */
     @PostMapping("/logout")
     public ResponseEntity<String> logout(HttpServletRequest request) {
