@@ -49,82 +49,82 @@ public class NodesController extends AbstractController {
     /**
      * Get a node without children.
      *
-     * GET /rest/api/nodes/node/{node-id}
+     * GET /rest/api/nodes/node/{id}
      *
      * @return nodes in the ASM format
      */
-    @GetMapping(value = "/node/{node-id}", produces = {"application/json", "application/xml"},
+    @GetMapping(value = "/node/{id}", produces = {"application/json", "application/xml"},
         consumes = "application/xml")
-    public HttpEntity<NodeDocument> getNode(@RequestParam("group") long groupId,
-                                            @PathVariable("node-id") UUID nodeId,
-                                            @RequestParam("level") Integer cutoff,
+    public HttpEntity<NodeDocument> getNode(@RequestParam long group,
+                                            @PathVariable UUID id,
+                                            @RequestParam Integer level,
                                             HttpServletRequest request)
             throws BusinessException, JsonProcessingException {
 
         UserInfo ui = checkCredential(request);
 
-        return new HttpEntity<>(nodeManager.getNode(nodeId, false,
-                ui.userId, groupId, null, cutoff));
+        return new HttpEntity<>(nodeManager.getNode(id, false,
+                ui.userId, group, null, level));
     }
 
     /**
      * Fetch nodes and children from node uuid.
      *
-     * GET /rest/api/nodes/node/{node-id}/children
+     * GET /rest/api/nodes/node/{id}/children
      *
      * @return nodes in the ASM format
      */
-    @GetMapping(value = "/node/{node-id}/children", consumes = "application/xml",
+    @GetMapping(value = "/node/{id}/children", consumes = "application/xml",
             produces = {"application/json", "application/xml"})
-    public HttpEntity<NodeDocument> getNodeWithChildren(@RequestParam("group") long groupId,
-                                                        @PathVariable("node-id") UUID nodeId,
-                                                        @RequestParam("level") Integer cutoff,
+    public HttpEntity<NodeDocument> getNodeWithChildren(@RequestParam long group,
+                                                        @PathVariable UUID id,
+                                                        @RequestParam Integer level,
                                                         HttpServletRequest request)
             throws BusinessException, JsonProcessingException {
 
         UserInfo ui = checkCredential(request);
 
-        return new HttpEntity<>(nodeManager.getNode(nodeId, true,
-                ui.userId, groupId, null, cutoff));
+        return new HttpEntity<>(nodeManager.getNode(id, true,
+                ui.userId, group, null, level));
     }
 
     /**
      * Fetch nodes metdata
      *
-     * GET /rest/api/nodes/node/{node-id}/metadatawad
+     * GET /rest/api/nodes/node/{id}/metadatawad
      *
      * @return <metadata-wad/>
      */
-    @GetMapping(value = "/node/{nodeid}/metadatawad",
+    @GetMapping(value = "/node/{id}/metadatawad",
             produces = {"application/json", "application/xml"})
-    public HttpEntity<MetadataWadDocument> getNodeMetadataWad(@RequestParam("group") long groupId,
-                                                              @PathVariable("nodeid") UUID nodeId,
+    public HttpEntity<MetadataWadDocument> getNodeMetadataWad(@RequestParam long group,
+                                                              @PathVariable UUID id,
                                                               HttpServletRequest request)
             throws BusinessException, JsonProcessingException {
 
         UserInfo ui = checkCredential(request);
 
-        return new HttpEntity<>(nodeManager.getNodeMetadataWad(nodeId, ui.userId, groupId));
+        return new HttpEntity<>(nodeManager.getNodeMetadataWad(id, ui.userId, group));
     }
 
     /**
      * Fetch rights per role for a node.
      *
-     * GET /rest/api/nodes/node/{node-id}/rights
+     * GET /rest/api/nodes/node/{id}/rights
      *
      * @return <node uuid=""> <role name=""> <right RD="" WR="" DL="" /> </role>
      *         </node>
      */
-    @GetMapping(value = "/node/{node-id}/rights", consumes = "application/xml",
+    @GetMapping(value = "/node/{id}/rights", consumes = "application/xml",
             produces = { "application/json", "application/xml"})
-    public String getNodeRights(@RequestParam("group") long groupId,
-                                @PathVariable("node-id") UUID nodeId,
+    public String getNodeRights(@RequestParam long group,
+                                @PathVariable UUID id,
                                 HttpServletRequest request) throws BusinessException {
 
         UserInfo ui = checkCredential(request);
 
         // TODO: Check with original code ; implementation is wrong for sure
-        GroupRights gr = nodeManager.getRights(ui.userId, groupId, nodeId);
+        GroupRights gr = nodeManager.getRights(ui.userId, group, id);
 
         if (gr == null) {
             throw new GenericBusinessException("Vous n'avez pas les droits necessaires");
@@ -136,31 +136,30 @@ public class NodesController extends AbstractController {
     /**
      * Fetch portfolio id from a given node id.
      *
-     * GET /rest/api/nodes/node/{node-id}/portfolioid
+     * GET /rest/api/nodes/node/{id}/portfolioid
      *
      * @return portfolioid
      */
-    @GetMapping(value = "/node/{node-id}/portfolioid", produces = "text/plain")
-    public String getNodePortfolioId(@PathVariable("node-id") UUID nodeId,
-                                     HttpServletRequest request) throws BusinessException {
+    @GetMapping(value = "/node/{id}/portfolioid", produces = "text/plain")
+    public String getPortfolioId(@PathVariable UUID id,
+                                 HttpServletRequest request) throws BusinessException {
         UserInfo ui = checkCredential(request);
 
-        return nodeManager.getPortfolioIdFromNode(ui.userId, nodeId).toString();
+        return nodeManager.getPortfolioIdFromNode(ui.userId, id).toString();
     }
 
     /**
      * Change nodes rights.
      *
-     * POST /rest/api/nodes/node/{node-id}/rights
+     * POST /rest/api/nodes/node/{id}/rights
      *
      * @param roleList           <node uuid=""> <role name="">
      *                           <right RD="" WR="" DL="" /> </role> </node>
-     * @return
      */
-    @PostMapping(value = "/node/{node-id}/rights", consumes = "application/xml",
+    @PostMapping(value = "/node/{id}/rights", consumes = "application/xml",
             produces = {"application/json", "application/xml"})
     public String postNodeRights(@RequestBody RoleList roleList,
-                                 @PathVariable("node-id") UUID nodeId,
+                                 @PathVariable UUID id,
                                  HttpServletRequest request)
             throws BusinessException, JsonProcessingException {
 
@@ -170,7 +169,7 @@ public class NodesController extends AbstractController {
             throw new GenericBusinessException("403 FORBIDDEN : No admin right");
 
         if (roleList.getAction() != null)
-            nodeManager.executeMacroOnNode(ui.userId, nodeId, "reset");
+            nodeManager.executeMacroOnNode(ui.userId, id, "reset");
 
         roleList.getRoles().forEach(role -> {
             role.getRights().forEach(right -> {
@@ -181,7 +180,7 @@ public class NodesController extends AbstractController {
                 nodeRights.setDelete(right.getDL());
                 nodeRights.setSubmit(right.getSB());
 
-                nodeManager.changeRights(ui.userId, nodeId, role.getLabel(), nodeRights);
+                nodeManager.changeRights(ui.userId, id, role.getLabel(), nodeRights);
             });
         });
 
@@ -191,181 +190,181 @@ public class NodesController extends AbstractController {
     /**
      * Get the single first semantic tag node inside specified portfolio
      *
-     * GET /rest/api/nodes/firstbysemantictag/{portfolio-uuid}/{semantictag}
+     * GET /rest/api/nodes/firstbysemantictag/{portfolioId}/{semantictag}
      *
      * @return node in ASM format
      */
-    @GetMapping(value = "/firstbysemantictag/{portfolio-uuid}/{semantictag}", consumes = "application/xml",
+    @GetMapping(value = "/firstbysemantictag/{portfolioId}/{semantictag}", consumes = "application/xml",
         produces = "application/xml")
-    public HttpEntity<NodeDocument> getNodeBySemanticTag(@RequestParam("group") long groupId,
-                                                         @PathVariable("portfolio-uuid") UUID portfolioId,
-                                                         @PathVariable("semantictag") String semantictag,
+    public HttpEntity<NodeDocument> getNodeBySemanticTag(@RequestParam long group,
+                                                         @PathVariable UUID portfolioId,
+                                                         @PathVariable String semantictag,
                                                          HttpServletRequest request)
             throws BusinessException, JsonProcessingException {
 
         UserInfo ui = checkCredential(request);
 
         return new HttpEntity<>(nodeManager
-                .getNodeBySemanticTag(portfolioId, semantictag, ui.userId, groupId));
+                .getNodeBySemanticTag(portfolioId, semantictag, ui.userId, group));
     }
 
     /**
      * Get multiple semantic tag nodes inside specified portfolio.
      *
-     * GET /rest/api/nodes/nodes/bysemantictag/{portfolio-uuid}/{semantictag}
+     * GET /rest/api/nodes/nodes/bysemantictag/{portfolioId}/{semantictag}
      *
      * @return nodes in ASM format
      */
-    @GetMapping(value = "/bysemantictag/{portfolio-uuid}/{semantictag}", consumes = "application/xml",
+    @GetMapping(value = "/bysemantictag/{portfolioId}/{semantictag}", consumes = "application/xml",
         produces = "application/xml")
-    public HttpEntity<NodeList> getNodesBySemanticTag(@RequestParam("group") long groupId,
-                                                      @PathVariable("portfolio-uuid") UUID portfolioId,
-                                                      @PathVariable("semantictag") String semantictag,
+    public HttpEntity<NodeList> getNodesBySemanticTag(@RequestParam long group,
+                                                      @PathVariable UUID portfolioId,
+                                                      @PathVariable String semantictag,
                                                       HttpServletRequest request) throws BusinessException {
 
         UserInfo ui = checkCredential(request);
 
         return new HttpEntity<>(nodeManager
-                        .getNodesBySemanticTag(ui.userId, groupId, portfolioId, semantictag));
+                        .getNodesBySemanticTag(ui.userId, group, portfolioId, semantictag));
 
     }
 
     /**
      * Rewrite node.
      *
-     * PUT /rest/api/nodes/node/{node-id}
+     * PUT /rest/api/nodes/node/{id}
      */
-    @PutMapping(value = "/node/{node-id}", produces = "application/xml")
+    @PutMapping(value = "/node/{id}", produces = "application/xml")
     public String putNode(@RequestBody NodeDocument node,
-                          @RequestParam("group") long groupId,
-                          @PathVariable("node-id") UUID nodeId,
+                          @RequestParam long group,
+                          @PathVariable UUID id,
                           HttpServletRequest request) throws Exception {
 
         UserInfo ui = checkCredential(request);
 
-        return nodeManager.changeNode(nodeId, node, ui.userId, groupId)
+        return nodeManager.changeNode(id, node, ui.userId, group)
                     .toString();
     }
 
     /**
      * Rewrite node metadata.
      *
-     * PUT /rest/api/nodes/node/{node-id}/metadata
+     * PUT /rest/api/nodes/node/{id}/metadata
      */
-    @PutMapping(value = "/node/{nodeid}/metadata", produces = "application/xml")
-    public String putNodeMetadata(@RequestBody MetadataDocument metadata,
-                                  @RequestParam("group") int groupId,
-                                  @PathVariable("nodeid") UUID nodeId,
-                                  HttpServletRequest request)
+    @PutMapping(value = "/node/{id}/metadata", produces = "application/xml")
+    public String putMetadata(@RequestBody MetadataDocument metadata,
+                              @RequestParam int group,
+                              @PathVariable UUID id,
+                              HttpServletRequest request)
             throws BusinessException, JsonProcessingException {
 
         UserInfo ui = checkCredential(request);
 
         return nodeManager
-                .changeNodeMetadata(nodeId, metadata, ui.userId, groupId);
+                .changeNodeMetadata(id, metadata, ui.userId, group);
     }
 
     /**
      * Rewrite node wad metadata.
      *
-     * PUT /rest/api/nodes/node/{node-id}/metadatawas
+     * PUT /rest/api/nodes/node/{id}/metadatawas
      */
-    @PutMapping(value = "/node/{nodeid}/metadatawad", produces = "application/xml")
-    public String putNodeMetadataWad(@RequestBody MetadataWadDocument metadata,
-                                     @RequestParam("group") Long groupId,
-                                     @PathVariable("nodeid") UUID nodeId,
-                                     HttpServletRequest request)
+    @PutMapping(value = "/node/{id}/metadatawad", produces = "application/xml")
+    public String putMetadataWad(@RequestBody MetadataWadDocument metadata,
+                                 @RequestParam Long group,
+                                 @PathVariable UUID id,
+                                 HttpServletRequest request)
             throws BusinessException, JsonProcessingException {
 
         UserInfo ui = checkCredential(request);
 
         return nodeManager
-                .changeNodeMetadataWad(nodeId, metadata, ui.userId, groupId);
+                .changeNodeMetadataWad(id, metadata, ui.userId, group);
     }
 
     /**
      * Rewrite node epm metadata.
      *
-     * PUT /rest/api/nodes/node/{node-id}/metadataepm
+     * PUT /rest/api/nodes/node/{id}/metadataepm
      */
-    @PutMapping(value = "/node/{nodeid}/metadataepm", produces = "application/xml")
-    public String putNodeMetadataEpm(@RequestBody MetadataEpmDocument metadata,
-                                     @PathVariable("nodeid") UUID nodeId,
-                                     @RequestParam("group") long groupId,
-                                     HttpServletRequest request)
+    @PutMapping(value = "/node/{id}/metadataepm", produces = "application/xml")
+    public String putMetadataEpm(@RequestBody MetadataEpmDocument metadata,
+                                 @PathVariable UUID id,
+                                 @RequestParam long group,
+                                 HttpServletRequest request)
             throws BusinessException, JsonProcessingException {
 
         UserInfo ui = checkCredential(request);
 
-        return nodeManager.changeNodeMetadataEpm(nodeId, metadata, ui.userId, groupId);
+        return nodeManager.changeNodeMetadataEpm(id, metadata, ui.userId, group);
     }
 
     /**
      * Rewrite node nodecontext.
      *
-     * PUT /rest/api/nodes/node/{node-id}/nodecontext
+     * PUT /rest/api/nodes/node/{id}/nodecontext
      */
-    @PutMapping(value = "/node/{nodeid}/nodecontext", produces = "application/xml")
-    public String putNodeNodeContext(@RequestBody ResourceDocument resource,
-                                     @RequestParam("group") long groupId,
-                                     @PathVariable("nodeid") UUID nodeId,
-                                     HttpServletRequest request) throws BusinessException {
+    @PutMapping(value = "/node/{id}/nodecontext", produces = "application/xml")
+    public String putNodeContext(@RequestBody ResourceDocument resource,
+                                 @RequestParam long group,
+                                 @PathVariable UUID id,
+                                 HttpServletRequest request) throws BusinessException {
 
         UserInfo ui = checkCredential(request);
 
-        return nodeManager.changeNodeContext(nodeId, resource, ui.userId, groupId);
+        return nodeManager.changeNodeContext(id, resource, ui.userId, group);
     }
 
     /**
      * Rewrite node resource.
      *
-     * PUT /rest/api/nodes/node/{node-id}/noderesource
+     * PUT /rest/api/nodes/node/{id}/noderesource
      */
-    @PutMapping(value = "/node/{nodeid}/noderesource", produces = "application/xml")
+    @PutMapping(value = "/node/{id}/noderesource", produces = "application/xml")
     public String putNodeNodeResource(@RequestBody ResourceDocument resource,
-                                      @RequestParam("group") long groupId,
-                                      @PathVariable("nodeid") UUID nodeId,
+                                      @RequestParam long group,
+                                      @PathVariable UUID id,
                                       HttpServletRequest request) throws Exception {
 
         UserInfo ui = checkCredential(request);
 
-        return nodeManager.changeNodeResource(nodeId, resource, ui.userId, groupId);
+        return nodeManager.changeNodeResource(id, resource, ui.userId, group);
     }
 
     /**
      * Instanciate a node with right parsing
      *
-     * POST /rest/api/nodes/node/import/{dest-id}
+     * POST /rest/api/nodes/node/import/{parentId}
      */
-    @PostMapping("/node/import/{dest-id}")
-    public UUID postImportNode(@RequestParam("group") long groupId,
-                               @PathVariable("dest-id") UUID parentId,
-                               @RequestParam("srcetag") String semtag,
-                               @RequestParam("srcecode") String code,
-                               @RequestParam("uuid") UUID sourceId,
-                               HttpServletRequest request) throws JsonProcessingException, BusinessException {
+    @PostMapping("/node/import/{parentId}")
+    public UUID importNode(@RequestParam long group,
+                           @PathVariable UUID parentId,
+                           @RequestParam String srcetag,
+                           @RequestParam String srcecode,
+                           @RequestParam UUID uuid,
+                           HttpServletRequest request) throws JsonProcessingException, BusinessException {
 
         UserInfo ui = checkCredential(request);
 
-        return nodeManager.importNode(parentId, semtag, code, sourceId, ui.userId, groupId);
+        return nodeManager.importNode(parentId, srcetag, srcecode, uuid, ui.userId, group);
     }
 
     /**
      * Raw copy a node.
      *
-     * POST /rest/api/nodes/node/copy/{dest-id}
+     * POST /rest/api/nodes/node/copy/{parentId}
      */
-    @PostMapping("/node/copy/{dest-id}")
-    public UUID postCopyNode(@RequestParam("group") long groupId,
-                             @PathVariable("dest-id") UUID parentId,
-                             @RequestParam("srcetag") String semtag,
-                             @RequestParam("srcecode") String code,
-                             @RequestParam("uuid") UUID sourceId,
-                             HttpServletRequest request) throws JsonProcessingException, BusinessException {
+    @PostMapping("/node/copy/{parentId}")
+    public UUID copyNode(@RequestParam long group,
+                         @PathVariable UUID parentId,
+                         @RequestParam String srcetag,
+                         @RequestParam String srcecode,
+                         @RequestParam UUID uuid,
+                         HttpServletRequest request) throws JsonProcessingException, BusinessException {
 
         UserInfo ui = checkCredential(request);
 
-        return nodeManager.copyNode(parentId, semtag, code, sourceId, ui.userId, groupId);
+        return nodeManager.copyNode(parentId, srcetag, srcecode, uuid, ui.userId, group);
     }
 
     /**
@@ -380,17 +379,17 @@ public class NodesController extends AbstractController {
      *                           semtag_parent
      */
     @GetMapping(consumes = "application/xml", produces = "application/xml")
-    public HttpEntity<NodeList> getNodes(@RequestParam("group") long groupId,
-                                         @RequestParam("portfoliocode") String portfoliocode,
-                                         @RequestParam("semtag") String semtag,
-                                         @RequestParam("semtag_parent") String semtag_parent,
-                                         @RequestParam("code_parent") String code_parent,
-                                         @RequestParam("level") Integer cutoff,
+    public HttpEntity<NodeList> getNodes(@RequestParam long group,
+                                         @RequestParam String portfoliocode,
+                                         @RequestParam String semtag,
+                                         @RequestParam String semtag_parent,
+                                         @RequestParam String code_parent,
+                                         @RequestParam Integer level,
                                          HttpServletRequest request) throws BusinessException {
         UserInfo ui = checkCredential(request);
 
-        return new HttpEntity<>(nodeManager.getNodes(portfoliocode, semtag, ui.userId, groupId,
-                    semtag_parent, code_parent, cutoff));
+        return new HttpEntity<>(nodeManager.getNodes(portfoliocode, semtag, ui.userId, group,
+                    semtag_parent, code_parent, level));
 
     }
 
@@ -398,54 +397,48 @@ public class NodesController extends AbstractController {
      * Insert XML in a node. Mostly used by admin, other people use the import/copy
      * node.
      *
-     * POST /rest/api/nodes/node/{parent-id}
+     * POST /rest/api/nodes/node/{parentId}
      */
-    @PostMapping(value = "/node/{parent-id}", consumes = "application/xml", produces = "application/xml")
+    @PostMapping(value = "/node/{parentId}", consumes = "application/xml", produces = "application/xml")
     public HttpEntity<NodeList> postNode(@RequestBody NodeDocument node,
-                                         @PathVariable("parent-id") UUID parentId,
-                                         @RequestParam("group") long groupId,
+                                         @PathVariable UUID parentId,
+                                         @RequestParam long group,
                                          HttpServletRequest request) throws BusinessException, JsonProcessingException {
         UserInfo ui = checkCredential(request);
 
         return new HttpEntity<>(nodeManager
-                .addNode(parentId, node, ui.userId, groupId, false));
+                .addNode(parentId, node, ui.userId, group, false));
     }
 
     /**
      * Move a node up between siblings.
      *
-     * POST /rest/api/nodes/node/{node-id}/moveup
+     * POST /rest/api/nodes/node/{id}/moveup
      */
-    @PostMapping(value = "/node/{node-id}/moveup", consumes = "application/xml", produces = "application/xml")
-    public ResponseEntity<String> postMoveNodeUp(@PathVariable("node-id") UUID nodeId) {
+    @PostMapping(value = "/node/{id}/moveup", consumes = "application/xml", produces = "application/xml")
+    public ResponseEntity<String> moveNodeUp(@PathVariable UUID id) {
 
-        if (nodeId == null) {
-            return ResponseEntity
-                        .status(HttpStatus.BAD_REQUEST)
-                        .body("Missing uuid");
+        Long returnValue = nodeManager.moveNodeUp(id);
+
+        if (returnValue == -1L) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Non-existing node");
+        } else if (returnValue == -2L) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("Cannot move first node");
         } else {
-            Long returnValue = nodeManager.moveNodeUp(nodeId);
-
-            if (returnValue == -1L) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Non-existing node");
-            } else if (returnValue == -2L) {
-                return ResponseEntity.status(HttpStatus.CONFLICT).body("Cannot move first node");
-            } else {
-                return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
-            }
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
         }
     }
 
     /**
      * Move a node to another parent.
      *
-     * POST /rest/api/nodes/node/{node-id}/parentof/{parent-id}
+     * POST /rest/api/nodes/node/{id}/parentof/{parentId}
      */
-    @PostMapping(value = "/node/{node-id}/parentof/{parent-id}", consumes = "application/xml",
+    @PostMapping(value = "/node/{id}/parentof/{parentId}", consumes = "application/xml",
             produces = "application/xml")
-    public ResponseEntity<String> postChangeNodeParent(@PathVariable("node-id") UUID nodeId,
-                                                       @PathVariable("parent-id") UUID parentId,
-                                                       HttpServletRequest request) throws BusinessException {
+    public ResponseEntity<String> changeNodeParent(@PathVariable UUID nodeId,
+                                                   @PathVariable UUID parentId,
+                                                   HttpServletRequest request) throws BusinessException {
 
         UserInfo ui = checkCredential(request);
 
@@ -461,18 +454,18 @@ public class NodesController extends AbstractController {
     /**
      * Execute a macro command on a node, changing rights related.
      *
-     * POST /rest/api/nodes/node/{node-id}/action/{action-name}
+     * POST /rest/api/nodes/node/{id}/action/{action}
      */
-    @PostMapping(value = "/node/{node-id}/action/{action-name}", consumes = "application/xml",
+    @PostMapping(value = "/node/{id}/action/{action}", consumes = "application/xml",
         produces = "application/xml")
-    public String postActionNode(@PathVariable("node-id") UUID nodeId,
-                                 @PathVariable("action-name") String macro,
+    public String postActionNode(@PathVariable UUID id,
+                                 @PathVariable String action,
                                  HttpServletRequest request)
             throws BusinessException, JsonProcessingException {
 
         UserInfo ui = checkCredential(request);
 
-        String returnValue = nodeManager.executeMacroOnNode(ui.userId, nodeId, macro);
+        String returnValue = nodeManager.executeMacroOnNode(ui.userId, id, action);
 
         if (returnValue == "erreur") {
             throw new GenericBusinessException("Vous n'avez pas les droits d'acces");
@@ -485,16 +478,16 @@ public class NodesController extends AbstractController {
     /**
      * Delete a node.
      *
-     * DELETE /rest/api/nodes/node/{node-uuid}
+     * DELETE /rest/api/nodes/node/{id}
      */
-    @DeleteMapping(value = "/node/{node-uuid}", produces = "application/xml")
-    public String deleteNode(@RequestParam("group") long groupId,
-                             @PathVariable("node-uuid") UUID nodeId,
+    @DeleteMapping(value = "/node/{id}", produces = "application/xml")
+    public String deleteNode(@RequestParam long group,
+                             @PathVariable UUID id,
                              HttpServletRequest request) throws BusinessException {
 
         UserInfo ui = checkCredential(request);
 
-        nodeManager.removeNode(nodeId, ui.userId, groupId);
+        nodeManager.removeNode(id, ui.userId, group);
 
         return "";
     }
@@ -502,12 +495,12 @@ public class NodesController extends AbstractController {
     /**
      * Fetch node content.
      *
-     * GET /rest/api/nodes/{node-id}
+     * GET /rest/api/nodes/{id}
      */
-    @GetMapping(value = "/{node-id}", consumes = "application/xml")
-    public HttpEntity<NodeDocument> getNodeWithXSL(@RequestParam("group") long groupId,
-                                                   @PathVariable("node-id") UUID nodeId,
-                                                   @RequestParam("lang") String lang,
+    @GetMapping(value = "/{id}", consumes = "application/xml")
+    public HttpEntity<NodeDocument> getNodeWithXSL(@RequestParam long group,
+                                                   @PathVariable UUID id,
+                                                   @RequestParam String lang,
                                                    @RequestParam("xsl-file") String xslFile,
                                                    HttpServletRequest request)
             throws BusinessException, JsonProcessingException {
@@ -525,25 +518,25 @@ public class NodesController extends AbstractController {
         ppath = ppath.substring(0, ppath.lastIndexOf(File.separator, ppath.length() - 2) + 1);
         xslFile = ppath + xslFile;
 
-        return new HttpEntity<>(nodeManager.getNodeWithXSL(nodeId, xslFile,
-                parameters, ui.userId, groupId));
+        return new HttpEntity<>(nodeManager.getNodeWithXSL(id, xslFile,
+                parameters, ui.userId, group));
     }
 
     /**
-     * POST /rest/api/nodes/{node-id}/frommodelbysemantictag/{semantic-tag}
+     * POST /rest/api/nodes/{id}/frommodelbysemantictag/{tag}
      */
-    @PostMapping(value = "/{node-id}/frommodelbysemantictag/{semantic-tag}", consumes = "application/xml",
+    @PostMapping(value = "/{id}/frommodelbysemantictag/{tag}", consumes = "application/xml",
         produces = "application/xml")
-    public HttpEntity<NodeList> postNodeFromModelBySemanticTag(@RequestParam("group") long groupId,
-                                                 @PathVariable("node-id") UUID nodeId,
-                                                 @PathVariable("semantic-tag") String semantictag,
-                                                 HttpServletRequest request)
+    public HttpEntity<NodeList> addNodeFromModelByTag(@RequestParam long group,
+                                                      @PathVariable UUID id,
+                                                      @PathVariable String tag,
+                                                      HttpServletRequest request)
             throws BusinessException, JsonProcessingException {
 
         UserInfo ui = checkCredential(request);
 
         return new HttpEntity<>(nodeManager
-                        .addNodeFromModelBySemanticTag(nodeId, semantictag, ui.userId, groupId));
+                        .addNodeFromModelBySemanticTag(id, tag, ui.userId, group));
     }
 
 }

@@ -48,12 +48,12 @@ public class GroupRightsController extends AbstractController {
      *         WR="True/False"/>"; </groupRight> </groupRights>
      */
     @GetMapping(produces = "application/xml")
-    public HttpEntity<GroupRightsList> getGroupRights(@RequestParam("group") long groupId,
-                                                      HttpServletRequest request) throws BusinessException {
+    public HttpEntity<GroupRightsList> getAll(@RequestParam long group,
+                                              HttpServletRequest request) throws BusinessException {
 
         UserInfo ui = checkCredential(request);
 
-        return new HttpEntity<>(groupManager.getGroupRights(ui.userId, groupId));
+        return new HttpEntity<>(groupManager.getGroupRights(ui.userId, group));
     }
 
     /**
@@ -62,11 +62,11 @@ public class GroupRightsController extends AbstractController {
      * DELETE /rest/api/groupRights
      */
     @DeleteMapping(produces = "application/xml")
-    public String deleteGroupRights(@RequestParam("group") long groupId,
-                                    HttpServletRequest request) throws BusinessException {
+    public String delete(@RequestParam long group,
+                         HttpServletRequest request) throws BusinessException {
         UserInfo ui = checkCredential(request);
 
-        groupManager.removeRights(groupId, ui.userId);
+        groupManager.removeRights(group, ui.userId);
 
         return "supprimé";
     }

@@ -42,7 +42,7 @@ public class UserRoleController extends AbstractController {
      * POST /rest/api/roleUser
      */
     @PostMapping(value = "/roleUser", produces = "application/xml")
-    public String postRoleUser(@RequestParam("grid") long grid,
+    public String postRoleUser(@RequestParam  long grid,
                                @RequestParam("user-id") Long userid,
                                HttpServletRequest request) throws BusinessException {
         UserInfo ui = checkCredential(request);

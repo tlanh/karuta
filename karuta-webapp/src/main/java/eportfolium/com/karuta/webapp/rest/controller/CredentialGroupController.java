@@ -49,33 +49,33 @@ public class CredentialGroupController {
      * Create a new user group <br>
      * POST /rest/api/usersgroups
      *
-     * @param groupName          Name of the group we are creating
+     * @param label - Name of the group we are creating
      * @return groupid
      */
     @PostMapping()
-    public String postUserGroup(@RequestParam("label") String groupName) {
-        return Long.toString(groupManager.addCredentialGroup(groupName));
+    public String post(@RequestParam String label) {
+        return Long.toString(groupManager.addCredentialGroup(label));
     }
 
     /**
      * Put a user in user group <br>
      * PUT /rest/api/usersgroups
      *
-     * @param groupId            group id
-     * @param user               user id
-     * @param label              new name of the group.
+     * @param group - Group id.
+     * @param user - User id.
+     * @param label - New name of the group.
      * @return Code 200
      */
     @PutMapping
-    public ResponseEntity<String> putUserInUserGroup(@RequestParam("group") Long groupId,
-                                       @RequestParam("user") Long user,
-                                       @RequestParam String label) {
+    public ResponseEntity<String> addUser(@RequestParam Long group,
+                                          @RequestParam Long user,
+                                          @RequestParam String label) {
         boolean isOK;
 
         if (label != null) {
-            isOK = groupManager.renameCredentialGroup(groupId, label);
+            isOK = groupManager.renameCredentialGroup(group, label);
         } else {
-            isOK = securityManager.addUserInCredentialGroups(user, Arrays.asList(groupId));
+            isOK = securityManager.addUserInCredentialGroups(user, Arrays.asList(group));
         }
 
         if (isOK)
@@ -100,12 +100,12 @@ public class CredentialGroupController {
      *         </group>
      */
     @GetMapping
-    public HttpEntity<Object> getUsersByUserGroup(@RequestParam("group") Long cgId,
-                                                  @RequestParam("user") Long userId,
-                                                  @RequestParam("label") String groupName) {
+    public HttpEntity<Object> getUsers(@RequestParam Long group,
+                                       @RequestParam Long user,
+                                       @RequestParam String label) {
 
-        if (groupName != null) {
-            CredentialGroup crGroup = groupManager.getCredentialGroupByName(groupName);
+        if (label != null) {
+            CredentialGroup crGroup = groupManager.getCredentialGroupByName(label);
 
             if (crGroup == null) {
                 return ResponseEntity.notFound().build();
@@ -114,14 +114,14 @@ public class CredentialGroupController {
             // TODO: Check whether we return just a number in original implementation
             return new HttpEntity<>(crGroup.getId());
 
-        } else if (userId != null) {
-            return new HttpEntity<>(groupManager.getCredentialGroupByUser(userId));
+        } else if (user != null) {
+            return new HttpEntity<>(groupManager.getCredentialGroupByUser(user));
 
-        } else if (cgId == null) {
+        } else if (group == null) {
             return new HttpEntity<>(groupManager.getCredentialGroupList());
 
         } else {
-            return new HttpEntity<>(userManager.getUsersByCredentialGroup(cgId));
+            return new HttpEntity<>(userManager.getUsersByCredentialGroup(group));
         }
     }
 
@@ -131,7 +131,8 @@ public class CredentialGroupController {
      * DELETE /rest/api/usersgroups
      */
     @DeleteMapping
-    public String deleteUsersByUserGroup(@RequestParam Long group, @RequestParam Long user) {
+    public String deleteUser(@RequestParam Long group,
+                             @RequestParam Long user) {
         if (user == null)
             groupManager.removeCredentialGroup(group);
         else

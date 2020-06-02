@@ -50,21 +50,21 @@ public class RoleController extends AbstractController {
     /**
      * Fetch rights in a role.
      *
-     * GET /rest/api/roles/role/{role-id}
+     * GET /rest/api/roles/role/{roleId}
      */
-    @GetMapping(value = "/role/{role-id}", produces = {"application/xml"})
-    public HttpEntity<RoleDocument> getRole(@PathVariable("role-id") Long roleId) {
+    @GetMapping(value = "/role/{roleId}", produces = {"application/xml"})
+    public HttpEntity<RoleDocument> getRole(@PathVariable Long roleId) {
         return new HttpEntity<>(userManager.getRole(roleId));
     }
 
     /**
      * Fetch a role in a portfolio.
      *
-     * GET /rest/api/roles/portfolio/{portfolio-id}
+     * GET /rest/api/roles/portfolio/{portfolioId}
      */
-    @GetMapping(value = "/portfolio/{portfolio-id}", produces = {"application/xml"})
-    public String getRolePortfolio(@RequestParam("role") String role,
-                                   @RequestParam("portfolio-id") UUID portfolioId,
+    @GetMapping(value = "/portfolio/{portfolioId}", produces = {"application/xml"})
+    public String getRolePortfolio(@RequestParam String role,
+                                   @PathVariable UUID portfolioId,
                                    HttpServletRequest request) {
 
         UserInfo ui = checkCredential(request);
@@ -75,11 +75,11 @@ public class RoleController extends AbstractController {
     /**
      * Modify a role.
      *
-     * PUT /rest/api/roles/role/{role-id}
+     * PUT /rest/api/roles/role/{roleId}
      */
-    @PutMapping(value = "/role/{role-id}", produces = "application/xml")
+    @PutMapping(value = "/role/{roleId}", produces = "application/xml")
     public String putRole(@RequestBody RoleDocument role,
-                          @PathVariable("role-id") long roleId,
+                          @PathVariable long roleId,
                           HttpServletRequest request) throws Exception {
 
         UserInfo ui = checkCredential(request);

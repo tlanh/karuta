@@ -50,7 +50,7 @@ public class GroupsController extends AbstractController {
      *         LABEL</group> ... </groups>
      */
     @GetMapping(produces = "application/xml")
-    public HttpEntity<GroupInfoList> getGroups(HttpServletRequest request) {
+    public HttpEntity<GroupInfoList> getUserGroups(HttpServletRequest request) {
         UserInfo ui = checkCredential(request);
 
         return new HttpEntity<>(groupManager.getUserGroups(ui.userId));
@@ -59,14 +59,14 @@ public class GroupsController extends AbstractController {
     /**
      * Get roles in a portfolio.
      *
-     * GET /rest/api/groups/{portfolio-id}
+     * GET /rest/api/groups/{id}
      */
-    @GetMapping(value = "/{portfolio-id}", produces = "application/xml")
-    public HttpEntity<GroupInfoList> getGroupsPortfolio(@PathVariable("portfolio-id") UUID portfolioId,
-                                                        HttpServletRequest request) {
+    @GetMapping(value = "/{id}", produces = "application/xml")
+    public HttpEntity<GroupInfoList> getRoles(@PathVariable UUID id,
+                                              HttpServletRequest request) {
 
         UserInfo ui = checkCredential(request);
 
-        return new HttpEntity<>(portfolioManager.getRolesByPortfolio(portfolioId, ui.userId));
+        return new HttpEntity<>(portfolioManager.getRolesByPortfolio(id, ui.userId));
     }
 }

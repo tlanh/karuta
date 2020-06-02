@@ -210,9 +210,10 @@ public class CredentialController extends AbstractController {
     }
 
     @RequestMapping(value = "/login/cas", method = {RequestMethod.GET, RequestMethod.POST})
-    public ResponseEntity<String> getCredentialFromCas(@RequestParam("ticket") String ticket,
-                                         @RequestParam("redir") String redir,
-                                         HttpServletRequest httpServletRequest) throws ParserConfigurationException, SAXException, IOException {
+    public ResponseEntity<String> getCredentialFromCas(@RequestParam String ticket,
+                                                       @RequestParam String redir,
+                                                       HttpServletRequest httpServletRequest)
+            throws ParserConfigurationException, SAXException, IOException {
 
         HttpSession session = httpServletRequest.getSession(true); // FIXME
         String userId = null;

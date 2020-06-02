@@ -50,8 +50,8 @@ public class GroupRightsInfoController extends AbstractController {
      *         </groupRightsInfos>
      */
     @GetMapping(produces = "application/xml")
-    public HttpEntity<GroupRightInfoList> getGroupRightsInfos(@RequestParam("portfolioId") UUID portfolioId,
-                                                              HttpServletRequest request) throws BusinessException {
+    public HttpEntity<GroupRightInfoList> getAll(@RequestParam UUID portfolioId,
+                                                 HttpServletRequest request) throws BusinessException {
         UserInfo ui = checkCredential(request);
 
         return new HttpEntity<>(portfolioManager.getGroupRightsInfos(ui.userId, portfolioId));

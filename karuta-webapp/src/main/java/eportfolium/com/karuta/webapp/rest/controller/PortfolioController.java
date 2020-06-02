@@ -78,33 +78,26 @@ public class PortfolioController extends AbstractController {
     /**
      * Get a portfolio from uuid.
      *
-     * GET /rest/api/portfolios/portfolio/{portfolio-id}
+     * GET /rest/api/portfolios/portfolio/{id}
      *
      * @param files              if set with resource, return a zip file
      * @param export             if set, return XML as a file download
-     * @return zip as file download content. <br>
-     *         <?xml version=\"1.0\" encoding=\"UTF-8\"?> <portfolio code=\"0\"
-     *         id=\""+portfolioUuid+"\" owner=\""+isOwner+"\"><version>4</version>
-     *         <asmRoot> <asm*> <metadata-wad></metadata-wad> <metadata></metadata>
-     *         <metadata-epm></metadata-epm> <asmResource xsi_type="nodeRes">
-     *         <asmResource xsi_type="context">
-     *         <asmResource xsi_type="SPECIFIC TYPE"> </asm*> </asmRoot>
-     *         </portfolio>
+     * @return zip as file download content.
      */
-    @GetMapping(value = "/portfolio/{portfolio-id}", produces = {"application/xml", "application/json",
+    @GetMapping(value = "/portfolio/{id}", produces = {"application/xml", "application/json",
             "application/zip", "application/octet-stream"})
-    public HttpEntity<Object> getPortfolio(@PathVariable("portfolio-id") UUID portfolioId,
-                                           @RequestParam("resources") boolean resources,
-                                           @RequestParam("files") boolean files,
-                                           @RequestParam("export") String export,
-                                           @RequestParam("lang") String lang,
-                                           @RequestParam("level") Integer cutoff,
+    public HttpEntity<Object> getPortfolio(@PathVariable UUID id,
+                                           @RequestParam boolean resources,
+                                           @RequestParam boolean files,
+                                           @RequestParam String export,
+                                           @RequestParam String lang,
+                                           @RequestParam Integer level,
                                            HttpServletRequest request) throws BusinessException, IOException {
 
         UserInfo ui = checkCredential(request);
 
-        PortfolioDocument portfolio = portfolioManager.getPortfolio(portfolioId, ui.userId, 0L,
-                this.label, resources, false, ui.subId, cutoff);
+        PortfolioDocument portfolio = portfolioManager.getPortfolio(id, ui.userId, 0L,
+                this.label, resources, false, ui.subId, level);
 
         SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
         String timeFormat = dt.format(new Date());
@@ -225,10 +218,10 @@ public class PortfolioController extends AbstractController {
      * @see #putPortfolio(PortfolioDocument, UUID, boolean, HttpServletRequest)
      */
     @GetMapping(value = "/portfolio/code/{code}", produces = {"application/json", "application/xml"})
-    public HttpEntity<PortfolioDocument> getPortfolioByCode(@RequestParam("group") long groupId,
-                                                            @PathVariable("code") String code,
-                                                            @RequestParam("resources") boolean resources,
-                                                            HttpServletRequest request)
+    public HttpEntity<PortfolioDocument> getByCode(@RequestParam long group,
+                                                   @PathVariable String code,
+                                                   @RequestParam boolean resources,
+                                                   HttpServletRequest request)
             throws BusinessException, JsonProcessingException {
         UserInfo ui = checkCredential(request);
 
@@ -237,7 +230,7 @@ public class PortfolioController extends AbstractController {
         }
 
         return new HttpEntity<>(portfolioManager
-                .getPortfolioByCode(code, ui.userId, groupId, resources, ui.subId));
+                .getPortfolioByCode(code, ui.userId, group, resources, ui.subId));
     }
 
     /**
@@ -247,36 +240,29 @@ public class PortfolioController extends AbstractController {
      * GET /rest/api/portfolios.
      *
      * @param active             false (also show inactive portoflios)
-     * @param userId             for this user (only with root)
-     * @return <?xml version=\"1.0\" encoding=\"UTF-8\"?> <portfolios>
-     *         <portfolio id="uuid" root_node_id="uuid" owner="Y/N" ownerid="uid"
-     *         modified= "DATE"> <asmRoot id="uuid"> <metadata-wad/> <metadata-epm/>
-     *         <metadata/> <code></code> <label/> <description/> <semanticTag/>
-     *         <asmResource xsi_type="nodeRes"></asmResource>
-     *         <asmResource xsi_type="context"/> </asmRoot> </portfolio> ...
-     *         </portfolios>
+     * @param userid             for this user (only with root)
      */
     @GetMapping(consumes = "application/xml", produces = {"application/json", "application/xml"})
-    public HttpEntity<Object> getPortfolios(@RequestParam("group") long groupId,
-                                            @RequestParam("active") boolean active,
-                                            @RequestParam("userid") Integer userId,
-                                            @RequestParam("code") String code,
-                                            @RequestParam("portfolio") UUID portfolioId,
-                                            @RequestParam("level") Integer cutoff,
+    public HttpEntity<Object> getPortfolios(@RequestParam long group,
+                                            @RequestParam boolean active,
+                                            @RequestParam Integer userid,
+                                            @RequestParam String code,
+                                            @RequestParam UUID portfolio,
+                                            @RequestParam Integer level,
                                             @RequestParam("public") String public_var,
-                                            @RequestParam("project") boolean project,
+                                            @RequestParam boolean project,
                                             HttpServletRequest request)
             throws BusinessException, JsonProcessingException {
 
         UserInfo ui = checkCredential(request);
 
-        if (portfolioId != null) {
-            return new HttpEntity<>(portfolioManager.getPortfolio(portfolioId, ui.userId,
-                    groupId, this.label, false, false, ui.subId, cutoff));
+        if (portfolio != null) {
+            return new HttpEntity<>(portfolioManager.getPortfolio(portfolio, ui.userId,
+                    group, this.label, false, false, ui.subId, level));
 
         } else if (code != null) {
             return new HttpEntity<>(portfolioManager.getPortfolioByCode(code, ui.userId,
-                        groupId, false, ui.subId));
+                        group, false, ui.subId));
 
         } else if (public_var != null) {
             long publicid = userManager.getUserId("public");
@@ -284,8 +270,8 @@ public class PortfolioController extends AbstractController {
             return new HttpEntity<>(portfolioManager.getPortfolios(publicid,
                         active, 0, project));
 
-        } else if (userId != null && securityManager.isAdmin(ui.userId)) {
-            return new HttpEntity<>(portfolioManager.getPortfolios(userId,
+        } else if (userid != null && securityManager.isAdmin(ui.userId)) {
+            return new HttpEntity<>(portfolioManager.getPortfolios(userid,
                         active, ui.subId, project));
 
         } else {
@@ -297,20 +283,20 @@ public class PortfolioController extends AbstractController {
     /**
      * Rewrite portfolio content.
      *
-     * PUT /rest/api/portfolios/portfolios/{portfolio-id}
+     * PUT /rest/api/portfolios/portfolios/{id}
      *
-     * @param portfolio       GET /rest/api/portfolios/portfolio/{portfolio-id}
+     * @param portfolio       GET /rest/api/portfolios/portfolio/{id}
      *                           and/or the asm format
      */
-    @PutMapping(value = "/portfolio/{portfolio-id}", consumes = "application/xml", produces = "application/xml")
+    @PutMapping(value = "/portfolio/{id}", consumes = "application/xml", produces = "application/xml")
     public String putPortfolio(@RequestBody PortfolioDocument portfolio,
-                               @PathVariable("portfolio-id") UUID portfolioId,
-                               @RequestParam("active") boolean active,
+                               @PathVariable UUID id,
+                               @RequestParam boolean active,
                                HttpServletRequest request) throws BusinessException, JsonProcessingException {
 
         UserInfo ui = checkCredential(request);
 
-        portfolioManager.rewritePortfolioContent(portfolio, portfolioId, ui.userId, active);
+        portfolioManager.rewritePortfolioContent(portfolio, id, ui.userId, active);
 
         return "";
     }
@@ -318,10 +304,10 @@ public class PortfolioController extends AbstractController {
     /**
      * Reparse portfolio rights.
      *
-     * POST /rest/api/portfolios/portfolios/{portfolio-id}/parserights
+     * POST /rest/api/portfolios/portfolios/{id}/parserights
      */
-    @PostMapping("/portfolio/{portfolio-id}/parserights")
-    public ResponseEntity<String> postPortfolio(@PathVariable("portfolio-id") UUID portfolioId,
+    @PostMapping("/portfolio/{id}/parserights")
+    public ResponseEntity<String> postPortfolio(@PathVariable UUID id,
                                                 HttpServletRequest request)
             throws BusinessException, JsonProcessingException {
 
@@ -330,7 +316,7 @@ public class PortfolioController extends AbstractController {
         if (!securityManager.isAdmin(ui.userId))
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
 
-        portfolioManager.postPortfolioParserights(portfolioId, ui.userId);
+        portfolioManager.postPortfolioParserights(id, ui.userId);
 
         return ResponseEntity.ok().build();
     }
@@ -338,20 +324,20 @@ public class PortfolioController extends AbstractController {
     /**
      * Change portfolio owner.
      *
-     * PUT /rest/api/portfolios/portfolios/{portfolio-id}/setOwner/{newOwnerId}
+     * PUT /rest/api/portfolios/portfolios/{id}/setOwner/{ownerId}
      */
-    @PutMapping(value = "/portfolio/{portfolio-id}/setOwner/{newOwnerId}", consumes = "application/xml",
+    @PutMapping(value = "/portfolio/{id}/setOwner/{ownerId}", consumes = "application/xml",
             produces = "application/xml")
-    public Boolean putPortfolioOwner(@PathVariable("portfolio-id") UUID portfolioId,
-                                     @PathVariable("newOwnerId") long newOwner,
-                                     HttpServletRequest request) {
+    public Boolean changeOwner(@PathVariable UUID id,
+                               @PathVariable long ownerId,
+                               HttpServletRequest request) {
 
         UserInfo ui = checkCredential(request);
 
         // Vérifie si l'utilisateur connecté est administrateur ou propriétaire du
         // portfolio actuel.
-        if (securityManager.isAdmin(ui.userId) || portfolioManager.isOwner(ui.userId, portfolioId)) {
-            return portfolioManager.changePortfolioOwner(portfolioId, newOwner);
+        if (securityManager.isAdmin(ui.userId) || portfolioManager.isOwner(ui.userId, id)) {
+            return portfolioManager.changePortfolioOwner(id, ownerId);
         } else {
             return false;
         }
@@ -363,15 +349,13 @@ public class PortfolioController extends AbstractController {
      * PUT /rest/api/portfolios/portfolios/{portfolio-id}
      */
     @PutMapping(consumes = "application/xml", produces = "application/xml")
-    public String putPortfolioConfiguration(@RequestParam("portfolio") UUID portfolioId,
-                                            @RequestParam("active") Boolean portfolioActive,
-                                            HttpServletRequest request) throws BusinessException {
+    public String changeConfiguration(@RequestParam UUID portfolio,
+                                      @RequestParam Boolean active,
+                                      HttpServletRequest request) throws BusinessException {
 
         UserInfo ui = checkCredential(request);
 
-        if (portfolioId != null && portfolioActive != null) {
-            portfolioManager.changePortfolioConfiguration(portfolioId, portfolioActive, ui.userId);
-        }
+        portfolioManager.changePortfolioConfiguration(portfolio, active, ui.userId);
 
         return "";
     }
@@ -381,26 +365,26 @@ public class PortfolioController extends AbstractController {
      *
      * POST /rest/api/portfolios/instanciate/{portfolio-id}
      *
-     * @param srccode            if set, rather than use the provided portfolio
+     * @param sourcecode         if set, rather than use the provided portfolio
      *                           uuid, search for the portfolio by code
-     * @param tgtcode            code we want the portfolio to have. If code already
+     * @param targetcode         code we want the portfolio to have. If code already
      *                           exists, adds a number after
      * @param copyshared         y/null Make a copy of shared nodes, rather than
      *                           keeping the link to the original data
-     * @param setOwner           true/null Set the current user instanciating the
+     * @param owner              true/null Set the current user instanciating the
      *                           portfolio as owner. Otherwise keep the one that
      *                           created it.
      * @return instanciated portfolio uuid
      */
-    @PostMapping("/instanciate/{portfolio-id}")
-    public ResponseEntity<String> postInstanciatePortfolio(@RequestParam("group") int groupId,
-                                                           @PathVariable("portfolio-id") String portfolioId,
-                                                           @RequestParam("sourcecode") String srccode,
-                                                           @RequestParam("targetcode") String tgtcode,
-                                                           @RequestParam("copyshared") boolean copyshared,
-                                                           @RequestParam("groupname") String groupname,
-                                                           @RequestParam("owner") boolean setOwner,
-                                                           HttpServletRequest request) throws BusinessException {
+    @PostMapping("/instanciate/{id}")
+    public ResponseEntity<String> instanciate(@RequestParam int group,
+                                              @PathVariable String id,
+                                              @RequestParam String sourcecode,
+                                              @RequestParam String targetcode,
+                                              @RequestParam boolean copyshared,
+                                              @RequestParam String groupname,
+                                              @RequestParam boolean owner,
+                                              HttpServletRequest request) throws BusinessException {
 
         UserInfo ui = checkCredential(request);
 
@@ -410,14 +394,14 @@ public class PortfolioController extends AbstractController {
         }
 
         /// Vérifiez si le code existe, trouvez-en un qui convient, sinon. Eh.
-        String newcode = tgtcode;
+        String newcode = targetcode;
         int num = 0;
         while (nodeManager.isCodeExist(newcode))
-            newcode = tgtcode + " (" + num++ + ")";
-        tgtcode = newcode;
+            newcode = targetcode + " (" + num++ + ")";
+        targetcode = newcode;
 
-        String returnValue = portfolioManager.instanciatePortfolio(portfolioId, srccode,
-                tgtcode, ui.userId, groupId, copyshared, groupname, setOwner);
+        String returnValue = portfolioManager.instanciatePortfolio(id, sourcecode,
+                targetcode, ui.userId, group, copyshared, groupname, owner);
 
         if (returnValue.startsWith("no rights"))
             throw new GenericBusinessException(returnValue);
@@ -436,15 +420,15 @@ public class PortfolioController extends AbstractController {
      *
      * POST /rest/api/portfolios/copy/{portfolio-id}
      *
-     * @see #postInstanciatePortfolio(int, String,
+     * @see #instanciate(int, String,
      *      String, String, boolean, String, boolean, HttpServletRequest)
      */
-    @PostMapping("/copy/{portfolio-id}")
-    public ResponseEntity<String> postCopyPortfolio(@PathVariable("portfolio-id") UUID portfolioId,
-                                                    @RequestParam("sourcecode") String srccode,
-                                                    @RequestParam("targetcode") String tgtcode,
-                                                    @RequestParam("owner") boolean setowner,
-                                                    HttpServletRequest request) throws Exception {
+    @PostMapping("/copy/{id}")
+    public ResponseEntity<String> copyPortfolio(@PathVariable UUID id,
+                                                @RequestParam String sourcecode,
+                                                @RequestParam String targetcode,
+                                                @RequestParam boolean owner,
+                                                HttpServletRequest request) throws Exception {
 
         UserInfo ui = checkCredential(request);
 
@@ -456,12 +440,12 @@ public class PortfolioController extends AbstractController {
 
         /// Check if code exist, find a suitable one otherwise. Eh.
         // FIXME : Check original Karuta version ; no new code found.
-        if (nodeManager.isCodeExist(tgtcode)) {
+        if (nodeManager.isCodeExist(targetcode)) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("code exist");
         }
 
         String returnValue = portfolioManager
-                .copyPortfolio(portfolioId, srccode, tgtcode, ui.userId, setowner)
+                .copyPortfolio(id, sourcecode, targetcode, ui.userId, owner)
                 .toString();
 
         return ResponseEntity.ok().body(returnValue);
@@ -473,8 +457,8 @@ public class PortfolioController extends AbstractController {
      * GET /portfolios/shared/{userid}
      */
     @PostMapping(value = "/shared/{userid}", produces = "application/xml")
-    public HttpEntity<PortfolioList> getPortfolioShared(@PathVariable("userid") long userid,
-                                                        HttpServletRequest request) {
+    public HttpEntity<PortfolioList> getShared(@PathVariable long userid,
+                                               HttpServletRequest request) {
         UserInfo ui = checkCredential(request);
 
         if (securityManager.isAdmin(ui.userId)) {
@@ -486,20 +470,18 @@ public class PortfolioController extends AbstractController {
 
     /**
      * GET /portfolios/zip ? portfolio={}, toujours avec files zip sépares zip des
-     * zip Fetching multiple portfolio in a zip. <br>
-     * GET /rest/api/portfolios
+     * zip Fetching multiple portfolio in a zip.
      *
-     * @param portfolioList      list of portfolios, separated with ','
+     * @param portfolios      list of portfolios, separated with ','
      * @return zipped portfolio (with files) inside zip file
      */
     @GetMapping(value = "/zip", consumes = "application/zip")
-    public Object getPortfolioZip(@RequestParam("portfolios") String portfolioList,
-                                  @RequestParam("lang") String lang,
+    public Object getZip(@RequestParam String portfolios,
+                                  @RequestParam String lang,
                                   HttpServletRequest request) throws Exception {
         UserInfo ui = checkCredential(request);
 
-        List<UUID> uuids = Arrays.asList(portfolioList.split(","))
-                .stream()
+        List<UUID> uuids = Arrays.stream(portfolios.split(","))
                 .map(UUID::fromString)
                 .collect(Collectors.toList());
 
@@ -591,12 +573,12 @@ public class PortfolioController extends AbstractController {
      * @return portfolio uuid
      */
     @PostMapping(value = "/zip", consumes = "multipart/form-data")
-    public String postPortfolioZip(@RequestParam("group") long groupId,
-                                   @RequestParam("fileupload") InputStream fileInputStream,
-                                   @RequestParam("model") String modelId,
-                                   @RequestParam("instance") String instance,
-                                   @RequestParam("project") String projectName,
-                                   HttpServletRequest request)
+    public String importZip(@RequestParam long group,
+                            @RequestParam InputStream fileupload,
+                            @RequestParam String model,
+                            @RequestParam boolean instance,
+                            @RequestParam String project,
+                            HttpServletRequest request)
             throws BusinessException, IOException {
 
         UserInfo ui = checkCredential(request);
@@ -605,28 +587,24 @@ public class PortfolioController extends AbstractController {
 
         final String userName = ui.User;
 
-        boolean instantiate = false;
-        if ("true".equals(instance))
-            instantiate = true;
-
         return portfolioManager
-                .importZippedPortfolio(path, userName, fileInputStream, ui.userId, groupId, modelId,
-                        ui.subId, instantiate, projectName);
+                .importZippedPortfolio(path, userName, fileupload, ui.userId, group, model,
+                        ui.subId, instance, project);
     }
 
     /**
      * Delete portfolio.
      *
-     * DELETE /rest/api/portfolios/portfolio/{portfolio-id}
+     * DELETE /rest/api/portfolios/portfolio/{id}
      */
-    @DeleteMapping(value = "/portfolio/{portfolio-id}", produces = "application/xml")
-    public String deletePortfolio(@RequestParam("group") long groupId,
-                                  @PathVariable("portfolio-id") UUID portfolioId,
-                                  HttpServletRequest request) throws Exception {
+    @DeleteMapping(value = "/portfolio/{id}", produces = "application/xml")
+    public String delete(@RequestParam long group,
+                         @PathVariable UUID id,
+                         HttpServletRequest request) throws Exception {
 
         UserInfo ui = checkCredential(request);
 
-        portfolioManager.removePortfolio(portfolioId, ui.userId, groupId);
+        portfolioManager.removePortfolio(id, ui.userId, group);
 
         return "";
     }
@@ -636,22 +614,22 @@ public class PortfolioController extends AbstractController {
      *
      * POST /rest/api/portfolios
      *
-     * @param modelId            another uuid, not sure why it's here
+     * @param model              another uuid, not sure why it's here
      * @param instance           true/null if as an instance, parse rights.
      *                           Otherwise just write nodes xml: ASM format
      * @return <portfolios> <portfolio id="uuid"/> </portfolios>
      */
     @PostMapping(consumes = {"multipart/form-data", "application/xml"}, produces = "application/xml")
     public HttpEntity<PortfolioList> postPortfolio(@RequestBody PortfolioDocument portfolio,
-                                                   @RequestParam("group") int groupId,
-                                                   @RequestParam("model") UUID modelId,
-                                                   @RequestParam("instance") boolean instance,
-                                                   @RequestParam("project") String projectName,
+                                                   @RequestParam int group,
+                                                   @RequestParam UUID model,
+                                                   @RequestParam boolean instance,
+                                                   @RequestParam String project,
                                                    HttpServletRequest request) throws BusinessException, JsonProcessingException {
 
         UserInfo ui = checkCredential(request);
 
-        return new HttpEntity<>(portfolioManager.addPortfolio(portfolio, ui.userId, groupId, modelId,
-                ui.subId, instance, projectName));
+        return new HttpEntity<>(portfolioManager.addPortfolio(portfolio, ui.userId, group, model,
+                ui.subId, instance, project));
     }
 }

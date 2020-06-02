@@ -60,18 +60,19 @@ public class RoleRightsGroupsController extends AbstractController {
      * GET /rest/api/rolerightsgroups
      */
     @GetMapping(produces = "application/xml")
-    public HttpEntity<Object> getRightsGroup(@RequestParam("portfolio") UUID portfolioId,
-                                             @RequestParam("user") Long user,
-                                             @RequestParam("role") String role,
-                                             HttpServletRequest request) {
+    public HttpEntity<Object> getGroups(@RequestParam UUID portfolio,
+                                        @RequestParam Long user,
+                                        @RequestParam String role,
+                                        HttpServletRequest request) {
 
         checkCredential(request);
-        if (portfolioId != null && role != null && user == null) {
-            GroupRightInfo gri = groupManager.getByPortfolioAndLabel(portfolioId, role);
+
+        if (portfolio != null && role != null && user == null) {
+            GroupRightInfo gri = groupManager.getByPortfolioAndLabel(portfolio, role);
 
             return new HttpEntity<>(gri.getId());
         } else {
-            return new HttpEntity<>(userManager.getRoleList(portfolioId, user));
+            return new HttpEntity<>(userManager.getRoleList(portfolio, user));
         }
     }
 
@@ -81,65 +82,65 @@ public class RoleRightsGroupsController extends AbstractController {
      * GET /rest/api/rolerightsgroups/all/users
      */
     @GetMapping(value = "/all/users", produces = "application/xml")
-    public HttpEntity<GroupUserList> getPortfolioRightInfo(@RequestParam("portfolio") UUID portfolioId,
-                                                           HttpServletRequest request) {
+    public HttpEntity<GroupUserList> getPortfolioUsers(@RequestParam UUID portfolio,
+                                                       HttpServletRequest request) {
 
         UserInfo ui = checkCredential(request);
 
         // Retourne le contenu du type
-        return new HttpEntity<>(userManager.getUserRolesByPortfolio(portfolioId, ui.userId));
+        return new HttpEntity<>(userManager.getUserRolesByPortfolio(portfolio, ui.userId));
     }
 
     /**
      * List rights in the specified role
      *
-     * GET /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}
+     * GET /rest/api/rolerightsgroups/rolerightsgroup/{id}
      */
-    @GetMapping(value = "/rolerightsgroup/{rolerightsgroup-id}", produces = "application/xml")
-    public HttpEntity<RoleRightsGroupDocument> getRightInfo(@PathVariable("rolerightsgroup-id") Long rrgId) {
-        return new HttpEntity<>(userManager.getUserRole(rrgId));
+    @GetMapping(value = "/rolerightsgroup/{id}", produces = "application/xml")
+    public HttpEntity<RoleRightsGroupDocument> getRightInfo(@PathVariable Long id) {
+        return new HttpEntity<>(userManager.getUserRole(id));
     }
 
     /**
      * Add user in a role.
      *
-     * POST /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}/users/user/{user-id}
+     * POST /rest/api/rolerightsgroups/rolerightsgroup/{id}/users/user/{userId}
      */
-    @PostMapping(value = "/rolerightsgroup/{rolerightsgroup-id}/users/user/{user-id}",
+    @PostMapping(value = "/rolerightsgroup/{id}/users/user/{userId}",
             produces = "application/xml")
-    public String postRightGroupUsers(@PathVariable("rolerightsgroup-id") Long rrgId,
-                                      @PathVariable("user-id") Long queryuser,
-                                      HttpServletRequest request) throws BusinessException {
+    public String addUserRole(@PathVariable Long id,
+                              @PathVariable Long userId,
+                              HttpServletRequest request) throws BusinessException {
         UserInfo ui = checkCredential(request);
 
-        return securityManager.addUserRole(ui.userId, rrgId, queryuser);
+        return securityManager.addUserRole(ui.userId, id, userId);
     }
 
     /**
      * Add user in a role.
      *
-     * POST /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}/users
+     * POST /rest/api/rolerightsgroups/rolerightsgroup/{id}/users
      */
-    @PostMapping(value = "/rolerightsgroup/{rolerightsgroup-id}/users", produces = "application/xml")
-    public String postRightGroupUser(@RequestBody CredentialList users,
-                                     @PathVariable("rolerightsgroup-id") Long rrgId,
-                                     HttpServletRequest request) throws BusinessException {
+    @PostMapping(value = "/rolerightsgroup/{id}/users", produces = "application/xml")
+    public String postUsers(@RequestBody CredentialList users,
+                            @PathVariable Long id,
+                            HttpServletRequest request) throws BusinessException {
         UserInfo ui = checkCredential(request);
 
-        return securityManager.addUsersToRole(ui.userId, rrgId, users);
+        return securityManager.addUsersToRole(ui.userId, id, users);
     }
 
     /**
      * Delete a role.
      *
-     * DELETE /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}
+     * DELETE /rest/api/rolerightsgroups/rolerightsgroup/{id}
      */
-    @DeleteMapping(value = "/rolerightsgroup/{rolerightsgroup-id}", produces = "application/xml")
-    public String deleteRightGroup(@PathVariable("rolerightsgroup-id") Long groupRightInfoId,
-                                   HttpServletRequest request) throws Exception {
+    @DeleteMapping(value = "/rolerightsgroup/{id}", produces = "application/xml")
+    public String removeRole(@PathVariable Long id,
+                             HttpServletRequest request) throws Exception {
         UserInfo ui = checkCredential(request);
 
-        securityManager.removeRole(ui.userId, groupRightInfoId);
+        securityManager.removeRole(ui.userId, id);
 
         return "";
     }
@@ -147,16 +148,16 @@ public class RoleRightsGroupsController extends AbstractController {
     /**
      * Remove user from a role.
      *
-     * DELETE /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}/users/user/{user-id}
+     * DELETE /rest/api/rolerightsgroups/rolerightsgroup/{id}/users/user/{user-id}
      */
-    @DeleteMapping(value = "/rolerightsgroup/{rolerightsgroup-id}/users/user/{user-id}",
+    @DeleteMapping(value = "/rolerightsgroup/{id}/users/user/{userId}",
             produces = "application/xml")
-    public String deleteRightGroupUser(@PathVariable("rolerightsgroup-id") Long rrgId,
-                                       @PathVariable("user-id") Integer queryuser,
-                                       HttpServletRequest httpServletRequest) throws BusinessException {
-        UserInfo ui = checkCredential(httpServletRequest);
+    public String removeUserRole(@PathVariable Long id,
+                                 @PathVariable Integer userId,
+                                 HttpServletRequest request) throws BusinessException {
+        UserInfo ui = checkCredential(request);
 
-        securityManager.removeUserRole(ui.userId, rrgId);
+        securityManager.removeUserRole(ui.userId, id);
 
         return "";
     }
@@ -167,13 +168,11 @@ public class RoleRightsGroupsController extends AbstractController {
      * DELETE /rest/api/rolerightsgroups/all/users
      */
     @DeleteMapping(value = "/all/users", produces = "application/xml")
-    public String deletePortfolioRightInfo(@RequestParam("portfolio") UUID portfolioId,
-                                           HttpServletRequest request) throws Exception {
+    public String removeUsersFromRole(@RequestParam UUID portfolio,
+                                      HttpServletRequest request) throws Exception {
         UserInfo ui = checkCredential(request);
 
-        if (portfolioId != null) {
-            securityManager.removeUsersFromRole(ui.userId, portfolioId);
-        }
+        securityManager.removeUsersFromRole(ui.userId, portfolio);
 
         return "";
     }
@@ -181,18 +180,16 @@ public class RoleRightsGroupsController extends AbstractController {
     /**
      * Change a right in role.
      *
-     * PUT /rest/api/rolerightsgroups/rolerightsgroup/{rolerightsgroup-id}
+     * PUT /rest/api/rolerightsgroups/rolerightsgroup/{id}
      */
-    @PutMapping(value = "/rolerightsgroup/{rolerightsgroup-id}", produces = "application/xml")
-    public String putRightInfo(@RequestBody RoleDocument role,
-                               @PathVariable("rolerightsgroup-id") Long rrgId,
-                               HttpServletRequest request) throws Exception {
+    @PutMapping(value = "/rolerightsgroup/{id}", produces = "application/xml")
+    public String changeROle(@RequestBody RoleDocument role,
+                             @PathVariable Long id,
+                             HttpServletRequest request) throws Exception {
 
         UserInfo ui = checkCredential(request);
 
-        if (rrgId != null) {
-            securityManager.changeRole(ui.userId, rrgId, role);
-        }
+        securityManager.changeRole(ui.userId, id, role);
 
         return "";
     }

@@ -41,13 +41,14 @@ public class UserGroupController extends AbstractController {
      * POST /rest/api/groupsUsers
      */
     @PostMapping(produces = "application/xml")
-    public String postGroupsUsers(@RequestParam("group") long groupId,
-                                  @RequestParam("userId") long userId,
-                                  HttpServletRequest request) throws BusinessException {
+    public String addUserToGroup(@RequestParam long group,
+                                 @RequestParam long userId,
+                                 HttpServletRequest request) throws BusinessException {
 
         UserInfo ui = checkCredential(request);
 
-        securityManager.addUserToGroup(ui.userId, userId, groupId);
+        securityManager.addUserToGroup(ui.userId, userId, group);
+
         return "<ok/>";
     }
 

@@ -43,92 +43,92 @@ public class ResourcesController extends AbstractController {
     /**
      * Fetch resource from node uuid.
      *
-     * GET /rest/api/resources/resource/{node-parent-id}
+     * GET /rest/api/resources/resource/{parentNodeId}
      */
-    @GetMapping(value = "/resource/{node-parent-id}", consumes = "application/xml",
+    @GetMapping(value = "/resource/{parentNodeId}", consumes = "application/xml",
             produces = {"application/json", "application/xml"})
-    public HttpEntity<ResourceDocument> getResource(@RequestParam("group") long groupId,
-                                                    @PathVariable("node-parent-id") UUID nodeParentId,
+    public HttpEntity<ResourceDocument> getResource(@RequestParam long group,
+                                                    @PathVariable UUID parentNodeId,
                                                     HttpServletRequest request) throws BusinessException {
         UserInfo ui = checkCredential(request);
 
-        return new HttpEntity<>(resourceManager.getResource(nodeParentId, ui.userId, groupId));
+        return new HttpEntity<>(resourceManager.getResource(parentNodeId, ui.userId, group));
     }
 
     /**
      * Fetch all resource in a portfolio.
      *
-     * GET /rest/api/resources/portfolios/{portfolio-id}
+     * GET /rest/api/resources/portfolios/{id}
      */
-    @GetMapping(value = "/portfolios/{portfolio-id}", produces = {"application/xml"})
-    public HttpEntity<ResourceList> getResources(@RequestParam("group") long groupId,
-                                                 @PathVariable("portfolio-id") UUID portfolioId,
+    @GetMapping(value = "/portfolios/{id}", produces = {"application/xml"})
+    public HttpEntity<ResourceList> getResources(@RequestParam long group,
+                                                 @PathVariable UUID id,
                                                  HttpServletRequest request) {
 
         UserInfo ui = checkCredential(request);
 
-        return new HttpEntity<>(resourceManager.getResources(portfolioId, ui.userId, groupId));
+        return new HttpEntity<>(resourceManager.getResources(id, ui.userId, group));
     }
 
     /**
      * Modify resource content.
      *
-     * PUT /rest/api/resources/resource/{node-parent-uuid}
+     * PUT /rest/api/resources/resource/{parentNodeId}
      */
-    @PutMapping(value = "/resource/{node-parent-uuid}", produces = "application/xml")
+    @PutMapping(value = "/resource/{parentNodeId}", produces = "application/xml")
     public String putResource(@RequestBody ResourceDocument resource,
-                              @RequestParam("group") long groupId,
-                              @PathVariable("node-parent-uuid") UUID parentNodeId,
+                              @RequestParam long group,
+                              @PathVariable UUID parentNodeId,
                               HttpServletRequest request) throws BusinessException, JsonProcessingException {
 
         UserInfo ui = checkCredential(request);
 
-        return resourceManager.changeResource(parentNodeId, resource, ui.userId, groupId)
+        return resourceManager.changeResource(parentNodeId, resource, ui.userId, group)
                     .toString();
     }
 
     /**
      * Add a resource (?).
      *
-     * POST /rest/api/resources/{node-parent-uuid}
+     * POST /rest/api/resources/{parentNodeId}
      */
-    @PostMapping(value = "/{node-parent-uuid}", produces = "application/xml")
+    @PostMapping(value = "/{parentNodeId}", produces = "application/xml")
     public String postResource(@RequestBody ResourceDocument resource,
-                               @RequestParam("group") long groupId,
-                               @PathVariable("node-parent-uuid") UUID parentNodeId,
+                               @RequestParam long group,
+                               @PathVariable UUID parentNodeId,
                                HttpServletRequest request) throws BusinessException {
 
         UserInfo ui = checkCredential(request);
 
-        return resourceManager.addResource(parentNodeId, resource, ui.userId, groupId);
+        return resourceManager.addResource(parentNodeId, resource, ui.userId, group);
     }
 
     /**
      * (?) POST /rest/api/resources
      */
     @PostMapping(produces = "application/xml")
-    public String postResources(@RequestBody ResourceDocument resource,
-                               @RequestParam("group") long groupId,
-                               @RequestParam("resource") UUID resourceId,
-                               HttpServletRequest request) throws BusinessException {
+    public String postResources(@RequestBody ResourceDocument document,
+                                @RequestParam long group,
+                                @RequestParam UUID resource,
+                                HttpServletRequest request) throws BusinessException {
         UserInfo ui = checkCredential(request);
 
-        return resourceManager.addResource(resourceId, resource, ui.userId, groupId);
+        return resourceManager.addResource(resource, document, ui.userId, group);
     }
 
     /**
      * Delete a resource
      *
-     * DELETE /rest/api/resources/{resource-id}
+     * DELETE /rest/api/resources/{id}
      */
-    @DeleteMapping(value = "/{resource-id}", produces = "application/xml")
-    public String deleteResource(@RequestParam("group") long groupId,
-                                 @PathVariable("resource-id") UUID resourceId,
+    @DeleteMapping(value = "/{id}", produces = "application/xml")
+    public String deleteResource(@RequestParam long group,
+                                 @PathVariable UUID id,
                                  HttpServletRequest request) throws BusinessException {
 
         UserInfo ui = checkCredential(request);
 
-        resourceManager.removeResource(resourceId, ui.userId, groupId);
+        resourceManager.removeResource(id, ui.userId, group);
 
         return "";
     }

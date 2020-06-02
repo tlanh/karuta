@@ -43,12 +43,12 @@ public class RightGroupController extends AbstractController {
      * POST /rest/api/RightGroup
      */
     @PostMapping(produces = "application/xml")
-    public ResponseEntity<String> postRightGroup(@RequestParam("group") Long groupId,
-                                                 @RequestParam("groupRightId") Long groupRightId,
-                                                 HttpServletRequest request) throws BusinessException {
+    public ResponseEntity<String> post(@RequestParam Long group,
+                                       @RequestParam Long groupRightId,
+                                       HttpServletRequest request) throws BusinessException {
         UserInfo ui = checkCredential(request);
 
-        groupManager.changeUserGroup(groupRightId, groupId, ui.userId);
+        groupManager.changeUserGroup(groupRightId, group, ui.userId);
 
         return ResponseEntity.ok().build();
     }

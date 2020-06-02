@@ -38,20 +38,16 @@ public class MacroController extends AbstractController {
     /**
      * Executing pre-defined macro command on a node.
      *
-     * POST /rest/api/action/{uuid}/{macro-name}
+     * POST /rest/api/action/{id}/{macroName}
      */
-    @PostMapping(value = "/action/{uuid}/{macro-name}", produces = "text/plain")
-    public String postMacro(@PathVariable("uuid") UUID uuid,
-                            @PathVariable("macro-name") String macroName,
+    @PostMapping(value = "/action/{uuid}/{macroName}", produces = "text/plain")
+    public String postMacro(@PathVariable UUID id,
+                            @PathVariable String macroName,
                             HttpServletRequest httpServletRequest)
             throws BusinessException, JsonProcessingException {
 
         UserInfo ui = checkCredential(httpServletRequest);
 
-        if (uuid != null && macroName != null) {
-            return nodeManager.executeMacroOnNode(ui.userId, uuid, macroName);
-        } else {
-            return "";
-        }
+        return nodeManager.executeMacroOnNode(ui.userId, id, macroName);
     }
 }
