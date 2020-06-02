@@ -15,7 +15,6 @@
 
 package eportfolium.com.karuta.util;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
@@ -23,15 +22,7 @@ import java.util.Date;
 public class JavaTimeUtil {
 	public static ZoneId defaultTimezone = ZoneId.of("Europe/Paris");
 
-	public static Date toJavaDate(LocalDate ld) {
-		return (ld == null ? null : Date.from(ld.atStartOfDay(defaultTimezone).toInstant()));
-	}
-
 	public static Date toJavaDate(LocalDateTime ldt) {
 		return (ldt == null ? null : Date.from(ldt.atZone(defaultTimezone).toInstant()));
-	}
-
-	public static LocalDate toLocalDate(java.util.Date d) {
-		return (d == null ? null : d.toInstant().atZone(defaultTimezone).toLocalDate());
 	}
 }

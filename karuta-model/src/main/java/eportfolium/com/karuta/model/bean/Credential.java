@@ -37,10 +37,6 @@ public class Credential implements Serializable {
 
 	private static final long serialVersionUID = -8685729959105792177L;
 
-	public static final String defaultDateInputPattern = "dd/MM/yy";
-	public static final String defaultDateViewPattern = "dd MMM yyyy";
-	public static final String defaultDateListPattern = "yyyy-MM-dd";
-
 	private Long id;
 	private String login;
 	private int canSubstitute;
