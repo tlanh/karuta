@@ -654,34 +654,4 @@ public class PortfolioController extends AbstractController {
         return new HttpEntity<>(portfolioManager.addPortfolio(portfolio, ui.userId, groupId, modelId,
                 ui.subId, instance, projectName));
     }
-
-    /**
-     * Import zip file.
-     *
-     * POST /rest/api/portfolios/zip
-     */
-    @PostMapping(value = "/zip2", consumes = "multipart/form-data", produces = "text/plain")
-    public String postPortfolioByForm(@RequestParam("group") long groupId,
-                                      @RequestParam("model") String modelId,
-                                      @RequestParam("uploadfile") InputStream uploadedInputStream,
-                                      @RequestParam("instance") String instance,
-                                      @RequestParam("project") String projectName,
-                                      HttpServletRequest request) throws Exception {
-
-        UserInfo ui = checkCredential(request);
-
-        boolean instantiate = false;
-        if ("true".equals(instance))
-            instantiate = true;
-
-        javax.servlet.ServletContext servletContext = request.getSession().getServletContext();
-        String path = servletContext.getRealPath("/");
-
-        final Long credentialId = ui.userId;
-        final String userName = ui.User;
-
-        return portfolioManager
-                .importZippedPortfolio(path, userName, uploadedInputStream, credentialId, groupId, modelId,
-                        ui.subId, instantiate, projectName);
-    }
 }
