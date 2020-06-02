@@ -24,11 +24,6 @@ public interface ResourceTableRepository extends CrudRepository<ResourceTable, U
     List<ResourceTable> getResourcesOfResourceByPortfolioUUID(@Param("portfolioId") UUID portfolioId);
 
     @Query("SELECT r FROM ResourceTable r " +
-            "WHERE r.xsiType LIKE :xsiType " +
-            "AND r.id = :id")
-    ResourceTable getResourceByXsiType(@Param("id") UUID id, @Param("xsiType") String xsiType);
-
-    @Query("SELECT r FROM ResourceTable r " +
             "INNER JOIN r.node n WITH n.id = :parentNodeId")
     ResourceTable getResourceByParentNodeUuid(@Param("parentNodeId") UUID parentNodeId);
 

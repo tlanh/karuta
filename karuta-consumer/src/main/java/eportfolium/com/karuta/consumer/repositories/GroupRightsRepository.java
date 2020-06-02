@@ -95,13 +95,6 @@ public interface GroupRightsRepository extends CrudRepository<GroupRights, Group
             "WHERE gi.id = :groupId")
     List<GroupRights> getRightsByGroupId(@Param("groupId") Long groupId);
 
-    @Query("SELECT gr FROM GroupRights gr " +
-            "INNER JOIN FETCH gr.id.groupRightInfo gri " +
-            "INNER JOIN gri.groupInfo gi WITH gi.id = :groupId " +
-            "WHERE gr.id.id = :id")
-    List<GroupRights> getRightsByIdAndGroup(@Param("id") UUID id,
-                                            @Param("groupId") Long groupId);
-
     @Query("SELECT gr FROM GroupRights gr WHERE gr.id.id = :id")
     List<GroupRights> getRightsById(@Param("id") UUID id);
 
@@ -113,16 +106,6 @@ public interface GroupRightsRepository extends CrudRepository<GroupRights, Group
                                                 @Param("id1") Long id1,
                                                 @Param("id2") Long id2,
                                                 @Param("id3") Long id3);
-
-    @Query("SELECT cr.id FROM GroupRights gr, GroupInfo gi, GroupUser gu " +
-            "INNER JOIN gu.id.credential cr " +
-            "INNER JOIN gr.id.groupRightInfo gri " +
-            "INNER JOIN gi.groupRightInfo gri2 " +
-            "WHERE gr.id.id = :id " +
-            "AND gri.id = gri2.id " +
-            "AND gi.label LIKE gri.label " +
-            "AND gu.id.groupInfo.id = gi.id")
-    Long getUserIdFromNode(@Param("id") UUID id);
 
     @Query("SELECT gr FROM GroupRights gr " +
             "WHERE gr.id.id = :id " +

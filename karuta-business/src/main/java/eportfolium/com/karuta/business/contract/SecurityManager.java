@@ -130,8 +130,6 @@ public interface SecurityManager {
 
 	void addUserToGroup(Long byUser, Long forUser, Long groupId) throws BusinessException;
 
-	Credential authenticateUser(String login, String password) throws AuthenticationException;
-
 	/**
 	 * Add user in user groups.
 	 * 

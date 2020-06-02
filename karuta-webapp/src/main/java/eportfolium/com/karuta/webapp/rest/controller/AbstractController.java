@@ -19,12 +19,8 @@ import eportfolium.com.karuta.webapp.util.UserInfo;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
-import java.util.UUID;
 
 public abstract class AbstractController {
-    protected static final String logFormat = "[%1$s] %2$s %3$s: %4$s -- %5$s (%6$s) === %7$s\n";
-    protected static final String logFormatShort = "%7$s\n";
-
     public UserInfo checkCredential(HttpServletRequest request) {
         HttpSession session = request.getSession(true);
 

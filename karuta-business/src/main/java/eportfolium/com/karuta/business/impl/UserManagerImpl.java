@@ -152,10 +152,4 @@ public class UserManagerImpl implements UserManager {
 				.collect(Collectors.toList()));
 	}
 
-	@Override
-	public Credential getUser(Long userId) {
-		return credentialRepository.findById(userId)
-				.orElseGet(null);
-	}
-
 }

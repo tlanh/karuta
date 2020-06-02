@@ -12,12 +12,6 @@ import java.util.UUID;
 @Repository
 public interface GroupInfoRepository extends CrudRepository<GroupInfo, Long> {
 
-    List<GroupInfo> findByLabelAndOwner(String label, String owner);
-
-    boolean existsByLabel(String label);
-
-    boolean existsByLabelAndOwner(String label, String owner);
-
     @Query("SELECT DISTINCT gi FROM GroupInfo gi " +
             "INNER JOIN gi.groupUser gu" +
             "INNER JOIN gi.groupRightInfo gri " +

@@ -676,19 +676,6 @@ public class SecurityManagerImpl implements SecurityManager {
 	}
 
 	@Override
-	public Credential authenticateUser(String login, String password) throws AuthenticationException {
-		Credential user = credentialRepository.findByLogin(login);
-		if (user != null) {
-			if (!authenticate(password.toCharArray(), user.getPassword())) {
-				throw new AuthenticationException("User_password_incorrect");
-			}
-		} else {
-			throw new AuthenticationException("User_loginId_unknown", login);
-		}
-		return user;
-	}
-
-	@Override
 	public void deleteUserFromCredentialGroup(Long userId, Long credentialGroupId) {
 		credentialGroupMembersRepository.deleteUserFromGroup(userId, credentialGroupId);
 	}

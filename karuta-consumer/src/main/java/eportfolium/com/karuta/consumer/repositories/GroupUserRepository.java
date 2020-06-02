@@ -14,11 +14,6 @@ import java.util.UUID;
 @Repository
 public interface GroupUserRepository extends CrudRepository<GroupUser, GroupUserId> {
     @Query("SELECT gu FROM GroupUser gu " +
-            "WHERE gu.id.credential.id = :userId " +
-            "AND gu.id.groupInfo.id = :groupId")
-    boolean isUserInGroup(@Param("userId") Long userId, @Param("groupId") Long groupId);
-
-    @Query("SELECT gu FROM GroupUser gu " +
             "INNER JOIN FETCH gu.id.credential cr " +
             "INNER JOIN FETCH gu.id.groupInfo gi " +
             "INNER JOIN FETCH gi.groupRightInfo gri " +
@@ -47,12 +42,6 @@ public interface GroupUserRepository extends CrudRepository<GroupUser, GroupUser
             "INNER JOIN FETCH gi.groupRightInfo gri " +
             "WHERE gri.id = :grid")
     List<GroupUser> getByRole(@Param("grid") Long grid);
-
-    @Query("SELECT gu FROM GroupUser gu " +
-            "INNER JOIN FETCH gu.id.groupInfo gi " +
-            "INNER JOIN FETCH gi.groupRightInfo gri " +
-            "WHERE gri.portfolio.id = :portfolioId")
-    List<GroupUser> getByPortfolio(@Param("portfolioId") UUID portfolioId);
 
     @Query("SELECT gu FROM GroupUser gu " +
             "INNER JOIN FETCH gu.id.credential cr " +

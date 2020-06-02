@@ -42,25 +42,6 @@ public interface GroupRightInfoRepository extends CrudRepository<GroupRightInfo,
             "AND gri.label = :label")
     Long getIdByNodeAndLabel(@Param("nodeId") UUID nodeId, @Param("label") String label);
 
-    @Query("SELECT gri FROM GroupRightInfo gri, Node n " +
-            "INNER JOIN gri.portfolio p1 " +
-            "INNER JOIN n.portfolio p2 " +
-            "INNER JOIN gri.groupInfo gi " +
-            "WHERE p1.id = p2.id " +
-            "AND n.id = :nodeId")
-    List<GroupRightInfo> getByNode(@Param("nodeId") UUID nodeId);
-
-    @Query("SELECT new map(portfolio.id as portfolioUUID, gr.notifyRoles AS notifyRoles) " +
-            "FROM GroupUser gu " +
-            "INNER JOIN gu.id.groupInfo gi WITH gi.id = :groupInfoId " +
-            "INNER JOIN gi.groupRightInfo gri " +
-            "INNER JOIN gri.portfolio portfolio " +
-            "INNER JOIN gri.groupRights gr WITH gr.id.id = :groupRightId " +
-            "WHERE gu.id.credential.id = :userId")
-    Map<String, Object> getRolesToBeNotified(@Param("groupInfoId") Long groupId,
-                                             @Param("userId") Long userId,
-                                             @Param("groupRightId") UUID groupRightId);
-
     @Query("SELECT DISTINCT gri FROM ResourceTable r, GroupRights gr " +
             "INNER JOIN gr.id.groupRightInfo gri " +
             "WHERE r.credential.id = :userId " +

@@ -54,6 +54,4 @@ public interface UserManager {
 
 	RoleRightsGroupDocument getUserRole(Long rrgid);
 
-	Credential getUser(Long userId);
-
 }

@@ -12,8 +12,6 @@ import java.util.UUID;
 @Repository
 public interface NodeRepository extends CrudRepository<Node, UUID> {
 
-    Node findByIdAndSemantictag(UUID id, String semantictag);
-
     @Query("SELECT CASE WHEN COUNT(n) > 0 THEN true ELSE false END FROM Node n " +
             "INNER JOIN n.portfolio p " +
             "INNER JOIN p.groupRightInfo gri WITH gri.label='all' " +
@@ -77,14 +75,6 @@ public interface NodeRepository extends CrudRepository<Node, UUID> {
     List<Node> getFirstLevelChildren(@Param("id") UUID id);
 
     @Query("SELECT n FROM Node n " +
-            "WHERE n.portfolio.id = :id " +
-            "AND n.metadata LIKE CONCAT('%semantictag=%', :semantictag, '%') " +
-            "AND n.code = :code")
-    Node getNodeBySemtagAndCode(@Param("id") UUID id,
-                                @Param("semantictag") String semantictag,
-                                @Param("code") String code);
-
-    @Query("SELECT n FROM Node n " +
             "INNER JOIN n.portfolio p WITH p.id = :portfolioId " +
             "WHERE n.semantictag LIKE CONCAT('%', :semantictag, '%') " +
             "ORDER BY n.code, n.nodeOrder")
@@ -97,12 +87,6 @@ public interface NodeRepository extends CrudRepository<Node, UUID> {
 
     @Query("SELECT n FROM Node n WHERE n.parentNode.id IN :ids")
     List<Node> getDirectChildren(@Param("ids") List<UUID> ids);
-
-    @Query("SELECT n FROM Node n " +
-            "WHERE n.semantictag LIKE CONCAT('%', :semantictag, '%') " +
-            "AND n.parentNode.id = :parentId")
-    Node getParentNode(@Param("parentId") UUID parentId,
-                       @Param("semantictag") String semantictag);
 
     @Query("SELECT COUNT(n) FROM Node n " +
             "WHERE n.parentNode.id  = :parentNodeId " +
