@@ -26,9 +26,6 @@ import eportfolium.com.karuta.document.CredentialDocument;
 import eportfolium.com.karuta.document.LoginDocument;
 import eportfolium.com.karuta.webapp.util.UserInfo;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogConfigurationException;
-import org.apache.commons.logging.LogFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -95,14 +92,10 @@ public class CredentialController extends AbstractController {
         HttpSession session = request.getSession(true);
 
         String authlog = configurationManager.get("auth_log");
-        Log authLog = null;
+        Logger authLog = null;
 
         if (StringUtils.isNotEmpty(authlog)) {
-            try {
-                authLog = LogFactory.getLog(authlog);
-            } catch (LogConfigurationException e1) {
-                logger.error("Could not create authentification log file");
-            }
+            authLog = LoggerFactory.getLogger(authlog);
         }
 
         String login = credentials.getLogin();
