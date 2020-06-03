@@ -27,10 +27,12 @@ public interface CredentialRepository extends CrudRepository<Credential, Long> {
             "FROM Credential c WHERE c.id = :id AND c.isAdmin = 1")
     boolean isAdmin(@Param("id") Long id);
 
-    @Query("SELECT c.isDesigner FROM Credential c WHERE c.id = :id")
+    @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END " +
+            "FROM Credential c WHERE c.id = :id AND c.isDesigner = 1")
     boolean isCreator(@Param("id") Long id);
 
-    @Query("SELECT gu.id.credential.id FROM Node n " +
+    @Query("SELECT CASE WHEN COUNT(gu.id.credential) > 0 THEN true ELSE false END " +
+            "FROM Node n " +
             "INNER JOIN n.portfolio p " +
             "INNER JOIN p.groupRightInfo gri WITH gri.label = 'designer' " +
             "INNER JOIN gri.groupInfo gi " +
