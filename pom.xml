@@ -31,7 +31,6 @@
 
 
 	<modules>
-		<module>karuta-batch</module>
 		<module>karuta-webapp</module>
 		<module>karuta-business</module>
 		<module>karuta-consumer</module>
@@ -42,12 +41,6 @@
 	<dependencyManagement>
 		<dependencies>
 			<!-- ===== Modules ===== -->
-			<dependency>
-				<groupId>eportfolium.com</groupId>
-				<artifactId>karuta-batch</artifactId>
-				<version>1.0-SNAPSHOT</version>
-			</dependency>
-
 			<dependency>
 				<groupId>eportfolium.com</groupId>
 				<artifactId>karuta-webapp</artifactId>
