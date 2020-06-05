@@ -44,7 +44,6 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.commons.validator.routines.EmailValidator;
@@ -195,7 +194,7 @@ public class EmailManagerImpl implements EmailManager {
 		List<InternetAddress> to_list = new ArrayList<InternetAddress>();
 		List<InternetAddress> bcc_list = new ArrayList<InternetAddress>();
 		String current_to_name = null;
-		if (to instanceof List<?> && CollectionUtils.isNotEmpty((Collection<?>) to)) {
+		if (to instanceof List<?> && !((Collection<?>) to).isEmpty()) {
 			List<String> tmp_to = (List<String>) to;
 			java.util.Iterator<String> it = tmp_to.iterator();
 			for (int key = 0; key < tmp_to.size(); key++) {
@@ -207,7 +206,7 @@ public class EmailManagerImpl implements EmailManager {
 
 				if (to_name instanceof List<?>) {
 					List<String> tmp_to_name = (List<String>) to_name;
-					if (CollectionUtils.isNotEmpty(tmp_to_name) && nameValidator.test(tmp_to_name.get(key)))
+					if (!tmp_to_name.isEmpty() && nameValidator.test(tmp_to_name.get(key)))
 						current_to_name = tmp_to_name.get(key);
 				}
 

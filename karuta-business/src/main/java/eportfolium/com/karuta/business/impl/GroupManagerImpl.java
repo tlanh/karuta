@@ -21,7 +21,6 @@ import java.util.stream.StreamSupport;
 
 import eportfolium.com.karuta.consumer.repositories.*;
 import eportfolium.com.karuta.document.*;
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -111,7 +110,7 @@ public class GroupManagerImpl implements GroupManager {
 			// S'assure qu'il y ait au moins un groupe de base
 			List<GroupRightInfo> rs = groupRightInfoRepository.getDefaultByPortfolio(portfolioId);
 			long gid = 0;
-			if (CollectionUtils.isNotEmpty(rs))
+			if (!rs.isEmpty())
 				gid = rs.get(0).getGroupInfo().getId();
 
 			if (gid == 0) // If not exist, create 'all' groups

@@ -26,7 +26,6 @@ import eportfolium.com.karuta.consumer.repositories.CredentialRepository;
 import eportfolium.com.karuta.consumer.repositories.GroupRightsRepository;
 import eportfolium.com.karuta.consumer.repositories.NodeRepository;
 import eportfolium.com.karuta.document.*;
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -110,7 +109,7 @@ public abstract class BaseManager {
 	protected void processQuery(List<Pair<Node, GroupRights>> nodes,
 								Map<UUID, Tree> entries,
 								String role) throws JsonProcessingException {
-		if (!CollectionUtils.isNotEmpty(nodes)) {
+		if (nodes.isEmpty()) {
 			return;
 		}
 

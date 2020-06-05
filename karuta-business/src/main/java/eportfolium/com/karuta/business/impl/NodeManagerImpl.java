@@ -26,7 +26,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import eportfolium.com.karuta.consumer.repositories.*;
 import eportfolium.com.karuta.document.*;
 import eportfolium.com.karuta.model.bean.*;
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -824,7 +823,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 			}
 			t_map_parentid.put(level + 1, t_set_parentid);
 			nodesToDelete.addAll(t_set_parent);
-			added = CollectionUtils.isNotEmpty(t_set_parentid); // On s'arrete quand rien n'a été ajouté
+			added = !t_set_parentid.isEmpty(); // On s'arrete quand rien n'a été ajouté
 			level = level + 1; // Prochaine étape
 		}
 
@@ -1139,7 +1138,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 				level = level + 1;
 
 				// We stop once nothing is added anymore
-				added = CollectionUtils.isNotEmpty(found);
+				added = !found.isEmpty();
 			}
 
 			Set<Node> semtagSet = new HashSet<>();
@@ -1217,7 +1216,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 			}
 			t_map_parentid.put(level + 1, t_struc_parentid_2);
 			t_set_parentid.addAll(t_struc_parentid_2);
-			added = CollectionUtils.isNotEmpty(t_struc_parentid_2); // On s'arrete quand rien n'a été ajouté
+			added = !t_struc_parentid_2.isEmpty(); // On s'arrete quand rien n'a été ajouté
 			level = level + 1; // Prochaine étape
 		}
 
@@ -1332,7 +1331,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 				log.info("Portfolio présent dans le cache pour le code : " + code + " -> " + portfolioId);
 
 				// Vérifier si le cache est toujours à jour.
-				if (CollectionUtils.isEmpty(nodes) || portfolio.getModifDate() == null
+				if (nodes.isEmpty() || portfolio.getModifDate() == null
 						|| !portfolio.getModifDate().equals(nodes.get(0).getModifDate())) {
 					// le cache est obsolète
 					log.info("Cache obsolète pour : " + code);
@@ -1471,7 +1470,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
             parentIdMap.put(level + 1, parentIds);
             nodesUuidToCopy.addAll(parentIds);
             nodesToCopy.addAll(parentNodes);
-            added = CollectionUtils.isNotEmpty(parentIds);
+            added = !parentIds.isEmpty();
             level = level + 1;
         }
 
@@ -1901,7 +1900,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 	}
 
 	public void updateNodeRights(UUID nodeUuid, List<String> labels, String macroName) {
-		if (CollectionUtils.isNotEmpty(labels)) {
+		if (!labels.isEmpty()) {
 			for (int i = 0; i < labels.size(); i++) {
 				labels.set(i, StringUtils.prependIfMissing(labels.get(i), "'", "\""));
 				labels.set(i, StringUtils.appendIfMissing(labels.get(i), "'", "\""));
@@ -1942,14 +1941,14 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 			}
 		}
 
-		return CollectionUtils.isNotEmpty(nodes);
+		return !nodes.isEmpty();
 	}
 
 	public boolean updateAllNodesRights(List<Node> nodes, Long grid) {
 		for (Node node : nodes) {
 			List<GroupRights> grList = groupRightsRepository.getRightsById(node.getId());
 
-			if (CollectionUtils.isNotEmpty(grList)) {
+			if (!grList.isEmpty()) {
 				for (GroupRights tmpGr : grList) {
 					tmpGr.setWrite(false);
 					tmpGr.setDelete(false);
@@ -1968,7 +1967,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 			}
 		}
 
-		return CollectionUtils.isNotEmpty(nodes);
+		return !nodes.isEmpty();
 	}
 
 	@Override

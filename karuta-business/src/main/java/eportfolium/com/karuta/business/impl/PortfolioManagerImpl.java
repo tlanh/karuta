@@ -45,8 +45,6 @@ import eportfolium.com.karuta.consumer.repositories.*;
 import eportfolium.com.karuta.document.*;
 import eportfolium.com.karuta.model.bean.*;
 import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
@@ -392,7 +390,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 				}
 				parentIdMap.put(level + 1, parentIdSet2);
 				parentIdSet.addAll(parentIdSet2);
-				added = CollectionUtils.isNotEmpty(parentIdSet2); // On s'arrete quand rien n'a été ajouté
+				added = !parentIdSet2.isEmpty(); // On s'arrete quand rien n'a été ajouté
 				level = level + 1; // Prochaine étape
 			}
 
@@ -416,7 +414,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		return new PortfolioList(portfolios.stream()
 				.map(current -> new PortfolioDocument(
 						(UUID)current.get("portfolio"),
-						MapUtils.getLong(current, "gid")))
+						(Long)current.get("gid")))
 				.collect(Collectors.toList()));
 	}
 
@@ -474,7 +472,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 			} else // Vérifier les autres droits partagés
 			{
 				List<GroupUser> gu = groupUserRepository.getByPortfolioAndUser(portfolioId, userId);
-				if (CollectionUtils.isNotEmpty(gu)) {
+				if (!gu.isEmpty()) {
 					hasRights = true;
 				}
 			}
