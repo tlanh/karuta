@@ -13,7 +13,6 @@ import java.util.UUID;
 public interface GroupInfoRepository extends CrudRepository<GroupInfo, Long> {
 
     @Query("SELECT DISTINCT gi FROM GroupInfo gi " +
-            "INNER JOIN gi.groupUser gu" +
             "INNER JOIN gi.groupRightInfo gri " +
             "WHERE gri.portfolio.id = :portfolioId " +
             "AND gri.label = :label")

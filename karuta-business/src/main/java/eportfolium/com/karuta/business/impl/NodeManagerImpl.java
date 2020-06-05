@@ -1393,7 +1393,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
         if (sourceId != null) {
             // Puisque nous ne savons pas si ces noeuds doivent être mis en cache, on
             // recherche les informations dans la base.
-            UUID portfolioUuid = nodeRepository.getPortfolioIdFromNode(sourceId);
+            UUID portfolioUuid = portfolioRepository.getPortfolioUuidFromNode(sourceId);
 
             // Récupération des noeuds du portfolio à copier depuis la base.
             nodes = nodeRepository.getNodes(portfolioUuid);
@@ -1572,7 +1572,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
         final String login = credentialRepository.getLoginById(userId);
 
         /// Copier les rôles actuel @Override pour faciliter le référencement.
-        final UUID tmpPortfolioUuid = nodeRepository.getPortfolioIdFromNode(destId);
+        final UUID tmpPortfolioUuid = portfolioRepository.getPortfolioUuidFromNode(destId);
 
         // Récupération des rôles dans la BDD.
         final List<GroupRightInfo> griList = groupRightInfoRepository.getByPortfolioID(tmpPortfolioUuid);

@@ -1,6 +1,7 @@
 package eportfolium.com.karuta.consumer.repositories;
 
 import eportfolium.com.karuta.consumer.RepositoryTest;
+import eportfolium.com.karuta.consumer.TestHelpers;
 import eportfolium.com.karuta.model.bean.*;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -14,7 +15,7 @@ import static org.junit.Assert.*;
 
 @RunWith(SpringRunner.class)
 @RepositoryTest
-public class CredentialRepositoryTest {
+public class CredentialRepositoryTest extends TestHelpers {
     @Autowired
     private CredentialRepository repository;
 
@@ -38,18 +39,6 @@ public class CredentialRepositoryTest {
 
     @Autowired
     private TestEntityManager testEntityManager;
-
-    private Credential savableCredential() {
-        Credential credential = new Credential();
-
-        credential.setLogin("");
-        credential.setOther("");
-        credential.setDisplayFirstname("");
-        credential.setDisplayLastname("");
-        credential.setPassword("");
-
-        return credential;
-    }
 
     @Test
     public void findByLoginAndAdmin() {

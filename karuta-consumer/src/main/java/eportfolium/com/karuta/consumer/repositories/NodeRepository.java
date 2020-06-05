@@ -21,11 +21,6 @@ public interface NodeRepository extends CrudRepository<Node, UUID> {
             "WHERE n.id = :nodeId")
     boolean isPublic(@Param("nodeId") UUID nodeId);
 
-    @Query("SELECT p.id FROM Node n " +
-            "LEFT JOIN n.portfolio p " +
-            "WHERE n.id = :nodeId")
-    UUID getPortfolioIdFromNode(@Param("nodeId") UUID nodeId);
-
     @Query("SELECT n FROM Node n " +
             "LEFT JOIN FETCH n.resource r1 " +
             "LEFT JOIN FETCH n.resResource r2 " +
@@ -34,7 +29,7 @@ public interface NodeRepository extends CrudRepository<Node, UUID> {
     List<Node> getNodesWithResources(@Param("portfolioId") UUID portfolioId);
 
     @Query("SELECT n FROM Node n " +
-            "INNER JOIN n.portfolio p WITH p.id = :portfolioId" +
+            "INNER JOIN n.portfolio p WITH p.id = :portfolioId " +
             "LEFT JOIN FETCH n.parentNode")
     List<Node> getNodes(@Param("portfolioId") UUID portfoioId);
 
@@ -55,13 +50,14 @@ public interface NodeRepository extends CrudRepository<Node, UUID> {
             "WHERE n.asmType = 'asmRoot'")
     Node getRootNodeByPortfolio(@Param("portfolioId") UUID portfolioId);
 
-    @Query("SELECT p.id FROM Node n1 " +
-            "INNER JOIN n1.portfolio p " +
-            "WHERE n1.asmType = 'asmRoot' " +
-            "AND n1.code = :code")
+    @Query("SELECT CASE WHEN COUNT(n) > 0 THEN true ELSE false END " +
+            "FROM Node n " +
+            "WHERE n.asmType = 'asmRoot' " +
+            "AND n.code = :code")
     boolean isCodeExist(@Param("code") String code);
 
-    @Query("SELECT p.id FROM Node n1 " +
+    @Query("SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END " +
+            "FROM Node n1 " +
             "INNER JOIN n1.portfolio p " +
             "WHERE n1.asmType = 'asmRoot' " +
             "AND n1.code = :code " +
@@ -96,7 +92,7 @@ public interface NodeRepository extends CrudRepository<Node, UUID> {
     @Query("SELECT n FROM Node n " +
             "WHERE n.nodeOrder IN (:order - 1, :order) " +
             "AND n.parentNode.id = :nodeId")
-    List<Node> getNodesByOrder(UUID nodeId, int order);
+    List<Node> getNodesByOrder(@Param("nodeId") UUID nodeId, @Param("order") int order);
 
     @Query("SELECT n.id FROM Node n " +
             "INNER JOIN n.portfolio p WITH p.modelId = :modelId " +
@@ -106,7 +102,6 @@ public interface NodeRepository extends CrudRepository<Node, UUID> {
 
     @Query("SELECT COALESCE(n.sharedNodeUuid, n.id) AS value FROM Node n " +
             "INNER JOIN n.parentNode pNode WITH pNode.id = :nodeId " +
-            "GROUP BY pNode.id " +
             "ORDER BY n.nodeOrder")
     List<UUID> getParentNodeUUIDs(@Param("nodeId") UUID nodeId);
 }

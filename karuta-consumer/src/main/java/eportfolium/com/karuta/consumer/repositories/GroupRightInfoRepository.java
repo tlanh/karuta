@@ -7,7 +7,6 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @Repository
@@ -27,16 +26,13 @@ public interface GroupRightInfoRepository extends CrudRepository<GroupRightInfo,
                                                @Param("userId") Long userId);
 
     @Query("SELECT gri FROM GroupRightInfo gri " +
-            "LEFT JOIN FETCH gri.groupInfo gi " +
-            "LEFT JOIN FETCH gri.groupRights gr " +
-            "LEFT JOIN FETCH gi.groupUser gu " +
+            "INNER JOIN FETCH gri.portfolio p " +
             "WHERE gri.portfolio.id = :portfolioId")
     List<GroupRightInfo> getByPortfolioID(@Param("portfolioId") UUID portfolioId);
 
     @Query("SELECT gri.id FROM GroupRightInfo gri, Node n " +
             "INNER JOIN gri.portfolio p1 " +
             "INNER JOIN n.portfolio p2 " +
-            "INNER JOIN gri.groupInfo gi " +
             "WHERE p1.id = p2.id " +
             "AND n.id = :nodeId " +
             "AND gri.label = :label")
@@ -54,7 +50,8 @@ public interface GroupRightInfoRepository extends CrudRepository<GroupRightInfo,
             "AND gri.label = 'all'")
     List<GroupRightInfo> getDefaultByPortfolio(@Param("portfolioId") UUID portfolioId);
 
-    @Query("SELECT gri FROM GroupRightInfo gri " +
+    @Query("SELECT CASE WHEN COUNT(gri) > 0 THEN true ELSE false END " +
+            "FROM GroupRightInfo gri " +
             "INNER JOIN gri.portfolio p WITH p.modifUserId = :userId " +
             "WHERE gri.id = :id")
     boolean isOwner(@Param("userId") Long userId, @Param("id") Long id);

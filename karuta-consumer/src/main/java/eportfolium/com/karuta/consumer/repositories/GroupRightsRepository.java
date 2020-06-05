@@ -32,7 +32,7 @@ public interface GroupRightsRepository extends CrudRepository<GroupRights, Group
                                         @Param("groupId") Long groupId);
 
     @Query("SELECT gr FROM GroupRights gr " +
-            "WHERE gr.id.id = :uuid " +
+            "WHERE gr.id.id = :id " +
             "AND id.groupRightInfo.id = (" +
             "SELECT gri.id FROM Credential c, GroupRightInfo gri, Node n " +
             "WHERE c.login = gri.label " +
