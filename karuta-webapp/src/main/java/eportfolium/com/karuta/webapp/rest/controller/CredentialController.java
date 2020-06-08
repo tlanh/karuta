@@ -37,7 +37,6 @@ import eportfolium.com.karuta.business.contract.ConfigurationManager;
 import eportfolium.com.karuta.business.contract.EmailManager;
 import eportfolium.com.karuta.business.contract.SecurityManager;
 import eportfolium.com.karuta.business.contract.UserManager;
-import eportfolium.com.karuta.config.Consts;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import org.xml.sax.SAXException;
 
@@ -179,18 +178,18 @@ public class CredentialController extends AbstractController {
                         "[%s] [%s] a demandé la réinitialisation de son mot de passe\n", ip, username));
             }
 
-            final Map<String, String> template_vars = new HashMap<String, String>();
-            template_vars.put("firstname", username);
-            template_vars.put("lastname", "");
-            template_vars.put("email", email);
-            template_vars.put("passwd", password);
+            final Map<String, String> locals = new HashMap<>();
+
+            locals.put("firstname", username);
+            locals.put("lastname", "");
+            locals.put("email", email);
+            locals.put("passwd", password);
 
             String cc_email = configurationManager.get("sys_email");
             // Envoie d'un email
-            final Integer langId = Integer.valueOf(configurationManager.get("PS_LANG_DEFAULT"));
-            emailManager.send(langId, "employee_password",
-                    emailManager.getTranslation("Your new password!"), template_vars, email, username, null,
-                    null, null, null, Consts._PS_MAIL_DIR_, false, cc_email, null);
+            emailManager.send("employee_password",
+                    "Your new password!",
+                    locals, email, username, cc_email);
 
             return ResponseEntity
                         .ok()

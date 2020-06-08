@@ -61,5 +61,5 @@ public interface ConfigurationManager {
 	 */
 	void set(String key, Map<Integer, String> values);
 
-	String getKarutaURL(Boolean ssl);
+	String getKarutaURL();
 }

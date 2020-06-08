@@ -15,16 +15,13 @@
 
 package eportfolium.com.karuta.business.impl;
 
-import static org.springframework.ui.freemarker.FreeMarkerTemplateUtils.processTemplateIntoString;
+import org.springframework.ui.freemarker.FreeMarkerTemplateUtils;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
+import java.security.cert.X509Certificate;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.function.Predicate;
@@ -44,6 +41,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
+import freemarker.template.TemplateException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.commons.validator.routines.EmailValidator;
@@ -57,12 +55,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import eportfolium.com.karuta.business.contract.ConfigurationManager;
 import eportfolium.com.karuta.business.contract.EmailManager;
-import eportfolium.com.karuta.config.Consts;
 import freemarker.template.Configuration;
 
 @Service
 @Transactional
 public class EmailManagerImpl implements EmailManager {
+	private static final String MAIL_DIR =  "classpath:/META-INF/assets/core/mails/";
+	private static final String IMG_DIR = "classpath:/META-INF/assets/images/";
+
 	public static final int TYPE_HTML = 1;
 	public static final int TYPE_TEXT = 2;
 	public static final int TYPE_BOTH = 3;
@@ -81,196 +81,134 @@ public class EmailManagerImpl implements EmailManager {
 	private static final Map<String, String> LANGMAIL = createMap();
 
 	private static Map<String, String> createMap() {
-		Map<String, String> myMap = new HashMap<String, String>();
+		Map<String, String> myMap = new HashMap<>();
+
 		myMap.put("Your new password", "Votre nouveau mot de passe");
 		myMap.put("Welcome!", "Bienvenue !");
+
 		return myMap;
 	}
 
-	public boolean send(Integer id_lang, String template, String subject, Map<String, String> template_vars, String to,
-			Object to_name) throws UnsupportedEncodingException, MessagingException {
-		return send(id_lang, template, subject, template_vars, to, to_name, null, null, null, null,
-				Consts._PS_MAIL_DIR_, false, null, null);
+	@Override
+	public boolean send(String template, String subject, Map<String, String> locals, String to,
+			String to_name) throws UnsupportedEncodingException, MessagingException {
+		return send(template, subject, locals, to, to_name, null);
 	}
 
-	/**
-	 * Send Email
-	 * 
-	 * @param template The name of template not be a var but a
-	 *               string !
-	 * @param subject Subject of the email
-	 * @param template_vars Template variables for the email
-	 * @param to To email
-	 * @param to_name To name
-	 * @param from From email
-	 * @param from_name To email
-	 * @param file_attachment Array with three parameters (content, mime and
-	 *               name). You can use an array of array to attach multiple files
-	 * @param mode_smtp SMTP mode (deprecated)
-	 * @param template_path Template path
-	 * @param die Die after error
-	 * @param bcc Bcc recipient (email address)
-	 * @param reply_to Email address for setting the Reply-To header
-	 * @return bool|int Whether sending was successful. If not at all, false,
-	 *         otherwise amount of recipients succeeded.
-	 */
-
-	@SuppressWarnings("unchecked")
-	public boolean send(Integer langId, String template, String subject, Map<String, String> template_vars, Object to,
-			Object to_name, String from, String from_name, List<File> file_attachment, Boolean mode_smtp,
-			String template_path, boolean die, String bcc, String reply_to)
+	@Override
+	public boolean send(String template, String subjectKey, Map<String, String> locals,
+						String to, String to_name, String bcc)
 			throws MessagingException, UnsupportedEncodingException {
 
 		final Map<String, String> configuration = configurationManager.getMultiple(
-				Arrays.asList("PS_SHOP_EMAIL", "PS_MAIL_METHOD", "PS_MAIL_SERVER", "PS_MAIL_USER", "PS_MAIL_PASSWD",
-						"PS_SHOP_NAME", "PS_MAIL_SMTP_ENCRYPTION", "PS_MAIL_SMTP_PORT", "PS_MAIL_TYPE"),
-				null);
+				Arrays.asList("app_email", "mail_method", "mail_server", "mail_user",
+						"mail_passwd", "app_name", "mail_smtp_encryption", "mail_smtp_port",
+						"mail_type", "mail_color", "logo", "logo_mail"),
+				Integer.valueOf(configurationManager.get("lang_default")));
+
+		final int mailMethod = Integer.parseInt(configuration.get("mail_method"));
+		final int mailType = Integer.parseInt(configuration.get("mail_type"));
+		final int logoMail = Integer.parseInt(configuration.get("logo_mail"));
+		final String color = configuration.get("mail_color");
+		final String logo = configuration.get("logo_mail");
+		final String appName = configuration.get("app_name");
+
+		final boolean htmlSupported = mailType == TYPE_BOTH ||  mailType == TYPE_HTML;
+		final boolean txtSupported = mailType == TYPE_BOTH || mailType == TYPE_TEXT;
 
 		// Returns immediately if emails are deactivated
-		if (configurationManager.get("PS_MAIL_METHOD").equals("3"))
+		if (mailMethod == 3)
 			return true;
 
-		if (!configuration.containsKey("PS_MAIL_SMTP_ENCRYPTION"))
-			configuration.put("PS_MAIL_SMTP_ENCRYPTION", "off");
-		if (!configuration.containsKey("PS_MAIL_SMTP_PORT"))
-			configuration.put("PS_MAIL_SMTP_PORT", "default");
+		final String from = configuration.get("app_email");
+		final String fromName = configuration.get("app_name");
+
+		final String subject = LANGMAIL.get(subjectKey);
+
+		if (!configuration.containsKey("mail_smtp_encryption"))
+			configuration.put("mail_smtp_encryption", "off");
+		if (!configuration.containsKey("mail_smtp_port"))
+			configuration.put("mail_smtp_port", "default");
+
+		final String mailServer = configuration.get("mail_server");
+		final String mailUser = configuration.get("mail_user");
+		final String mailPasswd = configuration.get("mail_passwd");
+		final String smtpPort = configuration.get("mail_smtp_port");
+		final String encryption = configuration.get("mail_smtp_encryption");
 
 		// Sending an e-mail can be of vital importance for the merchant, when his
 		// password is lost for example, so we
 		// must not die but do our best to send the e-mail
 		EmailValidator emailValidator = EmailValidator.getInstance();
 
-		Predicate<String> nameValidator = Pattern.compile("^[^<>;=#{}]*$", Pattern.UNICODE_CASE)
-											.asPredicate();
+		Predicate<String> nameValidator = Pattern
+				.compile("^[^<>;=#{}]*$", Pattern.UNICODE_CASE)
+				.asPredicate();
 
-		Predicate<String> subjectValidator = Pattern.compile("^[^<>;{}]*$", Pattern.UNICODE_CASE)
-												.asPredicate();
+		Predicate<String> subjectValidator = Pattern
+				.compile("^[^<>;{}]*$", Pattern.UNICODE_CASE)
+				.asPredicate();
 
 		Predicate<String> templateValidator = Pattern.compile("^[a-z0-9_-]+$").asPredicate();
 
-		boolean validFrom = emailValidator.isValid(from);
-
-		if (from == null || validFrom)
-			from = configuration.get("PS_SHOP_EMAIL");
-		if (!validFrom)
-			from = null;
-
-		// from_name is not that important, no need to die if it is not valid
-		if (from_name == null || !nameValidator.test(from_name))
-			from_name = configuration.get("PS_SHOP_NAME");
-		if (!nameValidator.test(from_name))
-			from_name = null;
 
 		// It would be difficult to send an e-mail if the e-mail is not valid, so this
 		// time we can die if there is a
 		// problem
-		if (!(to instanceof Collection) && !emailValidator.isValid((String) to)) {
-			LOGGER.info("Error: parameter \"to\" is corrupted");
+		if (!emailValidator.isValid(to)) {
+			LOGGER.error("Parameter \"to\" is corrupted");
 			return false;
 		}
 
-		if (template_vars == null || template_vars.isEmpty()) {
-			template_vars = new HashMap<String, String>(0);
-		}
-
 		// Do not crash for this error, that may be a complicated customer name
-		if (to_name instanceof String && StringUtils.isNotEmpty((String) to_name)
-				&& !nameValidator.test((String) to_name)) {
+		if (StringUtils.isNotEmpty(to_name) && !nameValidator.test(to_name)) {
 			to_name = null;
 		}
 
 		if (!templateValidator.test(template)) {
-			LOGGER.info("Error: invalid e-mail template");
+			LOGGER.error("Invalid e-mail template");
 			return false;
 		}
 
 		if (!subjectValidator.test(subject)) {
-			LOGGER.info("Error: invalid e-mail subject");
+			LOGGER.error("Invalid e-mail subject");
 			return false;
 		}
 
-		/* Construct multiple recipients list if needed */
-		Map<String, List<InternetAddress>> recipients_list = new HashMap<String, List<InternetAddress>>();
-		List<InternetAddress> to_list = new ArrayList<InternetAddress>();
-		List<InternetAddress> bcc_list = new ArrayList<InternetAddress>();
-		String current_to_name = null;
-		if (to instanceof List<?> && !((Collection<?>) to).isEmpty()) {
-			List<String> tmp_to = (List<String>) to;
-			java.util.Iterator<String> it = tmp_to.iterator();
-			for (int key = 0; key < tmp_to.size(); key++) {
-				String addr = it.next().trim();
-				if (!emailValidator.isValid(addr)) {
-					LOGGER.info("Error: invalid e-mail address");
-					return false;
-				}
+		Map<String, InternetAddress> recipients = new HashMap<>();
 
-				if (to_name instanceof List<?>) {
-					List<String> tmp_to_name = (List<String>) to_name;
-					if (!tmp_to_name.isEmpty() && nameValidator.test(tmp_to_name.get(key)))
-						current_to_name = tmp_to_name.get(key);
-				}
-
-				if (current_to_name == null || current_to_name.equalsIgnoreCase(addr)) {
-					current_to_name = "";
-				}
-				to_list.add(new InternetAddress(addr, current_to_name));
-			}
-		} else {
-			/* Simple recipient, one address */
-			if (to_name == null || to_name.equals(to)) {
-				to_name = "";
-			} else {
-				to_name = (String) to_name;
-			}
-			to_list.add(new InternetAddress((String) to, (String) to_name));
-		}
 		if (StringUtils.isNotBlank(bcc)) {
-			bcc_list.add(new InternetAddress(bcc));
+			recipients.put("bcc", new InternetAddress(bcc));
 		}
-		recipients_list.put("to", to_list);
-		recipients_list.put("bcc", bcc_list);
-		to = to_list;
+
+		if (to_name == null || to_name.equals(to)) {
+			to_name = "";
+		}
+
+		recipients.put("to", new InternetAddress(to, to_name));
 
 		// Create a Properties object to contain connection configuration information.
 		Properties properties = System.getProperties();
 		/* Connect with the appropriate configuration */
-		if (configuration.get("PS_MAIL_METHOD").equals("2")) {
-			if (configuration.get("PS_MAIL_SERVER").isEmpty() || configuration.get("PS_MAIL_SMTP_PORT").isEmpty()) {
-				LOGGER.info("Error: invalid SMTP server or SMTP port");
+		if (mailMethod == 2) {
+			if (mailServer.isEmpty() || smtpPort.isEmpty()) {
+				LOGGER.error("Invalid SMTP server or SMTP port");
 
 				return false;
 			}
 
-			// String The SMTP server to connect to.
-			properties.setProperty("mail.smtp.host", configuration.get("PS_MAIL_SERVER"));
-			// int The SMTP server port to connect to, if the connect() method doesn't
-			// explicitly specify one. Defaults
-			// to 25.
-			properties.setProperty("mail.smtp.port", configuration.get("PS_MAIL_SMTP_PORT"));
-			// If true, enables the use of the STARTTLS command (if supported by the server)
-			// to switch the connection to
-			// a TLS-protected connection before issuing any login commands. Note that an
-			// appropriate trust store must
-			// configured so that the client will trust the server's certificate. Defaults
-			// to false.
+			properties.setProperty("mail.smtp.host", mailServer);
+			properties.setProperty("mail.smtp.port", smtpPort);
+
 			properties.setProperty("mail.smtp.starttls.enable",
-					configuration.get("PS_MAIL_SMTP_ENCRYPTION").equalsIgnoreCase("tls") ? "true" : "false");
-			// If set to true, use SSL to connect and use the SSL port by default. Defaults
-			// to false for the "smtp"
-			// protocol and true for the "smtps" protocol.
+					encryption.equalsIgnoreCase("tls") ? "true" : "false");
+
 			properties.setProperty("mail.smtp.ssl.enable",
-					configuration.get("PS_MAIL_SMTP_ENCRYPTION").equalsIgnoreCase("ssl") ? "true" : "false");
-			// int Socket connection timeout value in milliseconds. This timeout is
-			// implemented by java.net.Socket.
-			// Default is inullnfinite timeout.
+					encryption.equalsIgnoreCase("ssl") ? "true" : "false");
+
 			properties.setProperty("mail.smtp.connectiontimeout", "4000");
 			properties.setProperty("mail.transport.protocol", "smtp");
 			properties.setProperty("mail.smtp.auth", "true");
-		}
-
-		String mailDomain = configurationManager.get("PS_MAIL_DOMAIN");
-		if (mailDomain != null && StringUtils.isNotBlank(mailDomain)) {
-			properties.setProperty("mail.smtp.auth.ntlm.domain", mailDomain);
 		}
 
 		// Create a Session object to represent a mail session with the specified
@@ -283,121 +221,69 @@ public class EmailManagerImpl implements EmailManager {
 		// Create a message with the specified information.
 		MimeMessage message = new MimeMessage(session);
 
-		// Set From: header field of the header.
-		message.setFrom(new InternetAddress(from, from_name));
-
-		// Set To: header field of the header.
-		message.addRecipients(Message.RecipientType.TO, recipients_list.get("to").toArray(new InternetAddress[0]));
-
-		// Set Bcc: header field of the header.
-		message.addRecipients(Message.RecipientType.BCC, recipients_list.get("bcc").toArray(new InternetAddress[0]));
-
-		// Set Subject: header field
+		message.setFrom(new InternetAddress(from, fromName));
+		message.addRecipients(Message.RecipientType.TO, recipients.get("to").toString());
+		message.addRecipients(Message.RecipientType.BCC, recipients.get("bcc").toString());
 		message.setSubject(subject, "UTF-8");
 
-		String iso = "fr";
-		if (StringUtils.isBlank(iso)) {
-			LOGGER.info("Error - No ISO code for email");
-			return false;
-		}
-
 		// get templatePath
-		String iso_template = iso + "/" + template;
-		Resource templateHtml = null;
-		Resource templateTxt = null;
-		templateTxt = resourceLoader.getResource(template_path + iso_template + ".txt.ftl");
-		templateHtml = resourceLoader.getResource(template_path + iso_template + ".html.ftl");
+		String isoTemplate = "fr/" + template;
+		String htmlTemplatePath = MAIL_DIR + isoTemplate + ".html.ftl";
+		String txtTemplatePath = MAIL_DIR + isoTemplate + ".txt.ftl";
 
-		if (templateTxt == null && (Integer.parseInt(configuration.get("PS_MAIL_TYPE")) == TYPE_BOTH
-				|| Integer.parseInt(configuration.get("PS_MAIL_TYPE")) == TYPE_TEXT)) {
-			LOGGER.info("Error - The following e-mail template is missing : " + template_path + iso_template
-					+ ".txt.ftl" + die);
+		Resource htmlTemplate = resourceLoader.getResource(htmlTemplatePath);
+		Resource txtTemplate = resourceLoader.getResource(txtTemplatePath);
+
+		if (txtSupported && !txtTemplate.exists()) {
+			LOGGER.error("The following e-mail template is missing: " + txtTemplatePath);
 			return false;
-		} else if (templateHtml == null && (Integer.parseInt(configuration.get("PS_MAIL_TYPE")) == TYPE_BOTH
-				|| Integer.parseInt(configuration.get("PS_MAIL_TYPE")) == TYPE_HTML)) {
-			LOGGER.info("Error - The following e-mail template is missing: " + template_path + iso_template
-					+ ".html.ftl" + die);
+		} else if (htmlSupported && !htmlTemplate.exists()) {
+			LOGGER.error("The following e-mail template is missing: " + htmlTemplatePath);
 			return false;
 		}
-		String logo = null;
-		String PS_LOGO_IN_MAIL = configurationManager.get("PS_LOGO_MAIL");
-		String PS_LOGO = configurationManager.get("PS_LOGO");
-		template_vars.put("shop_logo", "");
 
-		if (PS_LOGO_IN_MAIL != null && PS_LOGO != null && Integer.parseInt(PS_LOGO_IN_MAIL) == 1
-				&& resourceLoader.getResource(Consts._PS_IMG_DIR_ + PS_LOGO) != null) {
-			logo = StringUtils.join(Consts._PS_IMG_DIR_ + PS_LOGO);
-		} else if (PS_LOGO != null
-				&& resourceLoader.getResource(StringUtils.join(Consts._PS_IMG_DIR_ + PS_LOGO)) != null) {
-			logo = StringUtils.join(Consts._PS_IMG_DIR_ + PS_LOGO);
-		}
+		final String logoPath = IMG_DIR + logo;
+		locals.put("shop_logo", "");
 
-		/* don't attach the logo as */
-		if (logo != null) {
-			Resource asset = resourceLoader.getResource(logo);
+		if (logo != null && logoMail == 1 && resourceLoader.getResource(logoPath).exists()) {
+			Resource asset = resourceLoader.getResource(logoPath);
+
 			try {
-				template_vars.put("shop_logo", asset.getURL().toExternalForm());
-			} catch (IOException e) {
-			}
+				locals.put("shop_logo", asset.getURL().toExternalForm());
+			} catch (IOException ignored) { }
 		}
 
-		template_vars.put("shop_name", StringEscapeUtils.escapeHtml4(configurationManager.get("PS_SHOP_NAME")));
-		template_vars.put("color", StringEscapeUtils.escapeHtml4(configurationManager.get("PS_MAIL_COLOR")));
 
-		if (!template_vars.containsKey("shop_url")) {
-			template_vars.put("shop_url", configurationManager.getKarutaURL(null));
-		}
-		if (!template_vars.containsKey("my_account_url")) {
-			template_vars.put("my_account_url", configurationManager.getKarutaURL(null));
-		}
-		if (!template_vars.containsKey("my_account_url")) {
-			template_vars.put("my_account_url", configurationManager.getKarutaURL(null));
-		}
-		if (!template_vars.containsKey("guest_tracking_url")) {
-			template_vars.put("guest_tracking_url", configurationManager.getKarutaURL(null));
-		}
-		if (!template_vars.containsKey("history_url")) {
-			template_vars.put("history_url", configurationManager.getKarutaURL(null));
+		locals.put("shop_name", StringEscapeUtils.escapeHtml4(appName));
+		locals.put("color", StringEscapeUtils.escapeHtml4(color));
+
+		if (!locals.containsKey("shop_url")) {
+			locals.put("shop_url", configurationManager.getKarutaURL());
 		}
 
-		String template_html = null, template_txt = null;
+		String htmlPart, txtPart;
+
 		try {
-			template_html = processTemplateIntoString(freemarkerConfiguration.getTemplate(iso_template + ".html.ftl"),
-					template_vars);
-			template_txt = processTemplateIntoString(freemarkerConfiguration.getTemplate(iso_template + ".txt.ftl"),
-					template_vars);
-		} catch (Exception e1) {
-			e1.printStackTrace();
+			htmlPart = parseTemplate(isoTemplate + ".html.ftl", locals);
+			txtPart = parseTemplate(isoTemplate + ".txt.ftl", locals);
+		} catch (Exception e) {
+			e.printStackTrace();
 			return false;
 		}
 
 		MimeBodyPart messageBodyPart = new MimeBodyPart();
-		if (Integer.parseInt(configuration.get("PS_MAIL_TYPE")) == TYPE_BOTH
-				|| Integer.parseInt(configuration.get("PS_MAIL_TYPE")) == TYPE_TEXT) {
-			// Now set the actual message
-			messageBodyPart.setContent(template_txt, "text/plain; charset=UTF-8");
+
+		if (mailType == TYPE_BOTH || mailType == TYPE_TEXT) {
+			messageBodyPart.setContent(txtPart, "text/plain; charset=UTF-8");
 		}
-		if (Integer.parseInt(configuration.get("PS_MAIL_TYPE")) == TYPE_BOTH
-				|| Integer.parseInt(configuration.get("PS_MAIL_TYPE")) == TYPE_HTML) {
-			messageBodyPart.setContent(template_html, "text/html; charset=UTF-8");
+
+		if (mailType == TYPE_BOTH || mailType == TYPE_HTML) {
+			messageBodyPart.setContent(htmlPart, "text/html; charset=UTF-8");
 		}
 
 		// attach differents parts
 		Multipart multipart = new MimeMultipart();
 		multipart.addBodyPart(messageBodyPart);
-
-		// Multiple attachments?
-		if (file_attachment != null && file_attachment.size() > 0) {
-			for (File file : file_attachment) {
-				MimeBodyPart attachPart = new MimeBodyPart();
-				try {
-					attachPart.attachFile(file);
-					multipart.addBodyPart(attachPart);
-				} catch (IOException e) {
-					LOGGER.error("Cannot attach file", e);
-				}
-			}
-		}
 
 		// Create email
 		message.setContent(multipart);
@@ -406,33 +292,30 @@ public class EmailManagerImpl implements EmailManager {
 		try {
 			LOGGER.info("Sending email...");
 			turnedOffSecurity();
-			// Connect to SES using the SMTP username and password from DB.
-			transport.connect(configuration.get("PS_MAIL_SERVER"), configuration.get("PS_MAIL_USER"),
-					configuration.get("PS_MAIL_PASSWD"));
 
-			// Send the email.
+			// 1. Connect to SES using the SMTP username and password from DB.
+			// 2. Send the message.
+			transport.connect(mailServer, mailUser, mailPasswd);
 			transport.sendMessage(message, message.getAllRecipients());
+
 			LOGGER.info("Email sent!");
 		} catch (Exception ex) {
 			LOGGER.error("The email was not sent.");
 			LOGGER.error("Error message: " + ex.getMessage());
 			return false;
 		} finally {
-			// Close and terminate the connection.
 			transport.close();
 		}
+
 		return true;
 	}
 
-	/**
-	 * This method is used to get the translation for email Object. For an object is
-	 * forbidden to use htmlentities, we have to return a sentence with accents.
-	 *
-	 * @param sentence raw sentence (write directly in file)
-	 * @return mixed
-	 */
-	public String getTranslation(String sentence) {
-		return LANGMAIL.get(sentence);
+	private String parseTemplate(String path, Map<String, String> vars)
+			throws IOException, TemplateException {
+		return FreeMarkerTemplateUtils.processTemplateIntoString(
+				freemarkerConfiguration.getTemplate(path),
+				vars
+		);
 	}
 
 	/**
@@ -442,15 +325,15 @@ public class EmailManagerImpl implements EmailManager {
 	public void turnedOffSecurity() {
 		TrustManager[] trustAllCerts = new TrustManager[] { new X509TrustManager() {
 
-			public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+			public X509Certificate[] getAcceptedIssuers() {
 				return null;
 			}
 
-			public void checkClientTrusted(java.security.cert.X509Certificate[] certs, String authType) {
+			public void checkClientTrusted(X509Certificate[] certs, String authType) {
 				// No need to implement.
 			}
 
-			public void checkServerTrusted(java.security.cert.X509Certificate[] certs, String authType) {
+			public void checkServerTrusted(X509Certificate[] certs, String authType) {
 				// No need to implement.
 			}
 		} };
@@ -461,7 +344,7 @@ public class EmailManagerImpl implements EmailManager {
 			sc.init(null, trustAllCerts, new java.security.SecureRandom());
 			HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
 		} catch (Exception e) {
-			System.out.println(e);
+			e.printStackTrace();
 		}
 	}
 

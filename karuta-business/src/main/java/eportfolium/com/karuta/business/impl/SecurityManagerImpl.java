@@ -89,9 +89,6 @@ public class SecurityManagerImpl implements SecurityManager {
 	@Autowired
 	private PortfolioRepository portfolioRepository;
 
-	@Autowired
-	private ConfigurationManager configurationManager;
-
 	/**
 	 * Each token produced by this class uses this identifier as a prefix.
 	 */
@@ -347,17 +344,16 @@ public class SecurityManagerImpl implements SecurityManager {
 
 				credentialRepository.save(newUser);
 
-				final Map<String, String> template_vars = new HashMap<String, String>();
-				template_vars.put("firstname", username);
-				template_vars.put("lastname", "");
-				template_vars.put("email", email);
-				template_vars.put("passwd", passwd);
+				final Map<String, String> locals = new HashMap<>();
 
-				final Integer langId = Integer.valueOf(configurationManager.get("PS_LANG_DEFAULT"));
+				locals.put("firstname", username);
+				locals.put("lastname", "");
+				locals.put("email", email);
+				locals.put("passwd", passwd);
+
 				try {
 					// Envoie d'un e-mail à l'utilisateur
-					emailManager.send(langId, "account", emailManager.getTranslation("Welcome!"), template_vars, email,
-							username);
+					emailManager.send("account", "Welcome!", locals, email, username);
 				} catch (Exception e) {
 					e.printStackTrace();
 				}

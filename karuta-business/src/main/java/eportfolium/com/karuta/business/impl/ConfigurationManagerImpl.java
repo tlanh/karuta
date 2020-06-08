@@ -119,21 +119,14 @@ public class ConfigurationManagerImpl implements ConfigurationManager {
 					|| cache.get(langID).get("global").containsKey(key));
 	}
 
-	public String getKarutaURL(Boolean ssl) {
-		boolean ssl_enabled = Integer.parseInt(get("PS_SSL_ENABLED")) == 1;
+	@Override
+	public String getKarutaURL() {
+		boolean sslEnabled = Integer.parseInt(get("ssl_enabled")) == 1;
 
-		if (ssl == null) {
-			String sslEverywhere = get("PS_SSL_ENABLED_EVERYWHERE");
-
-			if (sslEverywhere != null) {
-				ssl = (ssl_enabled && Integer.parseInt(sslEverywhere) == 1);
-			}
-		}
-
-		if (ssl && ssl_enabled) {
-			return "https://" + get("PS_SHOP_DOMAIN_SSL");
+		if (sslEnabled) {
+			return "https://" + get("domain_ssl");
 		} else {
-			return "http://" + get("PS_SHOP_DOMAIN");
+			return "http://" + get("domain");
 		}
 	}
 
