@@ -61,7 +61,6 @@ import eportfolium.com.karuta.model.bean.GroupUser;
 import eportfolium.com.karuta.model.bean.GroupUserId;
 import eportfolium.com.karuta.model.bean.Node;
 import eportfolium.com.karuta.model.bean.Portfolio;
-import eportfolium.com.karuta.model.exception.AuthenticationException;
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.model.exception.GenericBusinessException;
 import eportfolium.com.karuta.model.exception.ValueRequiredException;
@@ -156,11 +155,6 @@ public class SecurityManagerImpl implements SecurityManager {
 
 	/**
 	 * This method provides a way for users to change their own userPassword.
-	 * 
-	 * @param userId
-	 * @param currentPassword
-	 * @param newPassword
-	 * @throws BusinessException
 	 */
 	public void changeUserPassword(Long userId, String currentPassword, String newPassword) throws BusinessException {
 		Credential user = credentialRepository
@@ -168,7 +162,7 @@ public class SecurityManagerImpl implements SecurityManager {
 							.orElse(new Credential());
 
 		if (!authenticate(currentPassword.toCharArray(), user.getPassword())) {
-			throw new AuthenticationException("User_password_incorrect");
+			throw new GenericBusinessException("User_password_incorrect");
 		}
 
 		if (user.getPassword() != null && authenticate(newPassword.toCharArray(), user.getPassword())) {
