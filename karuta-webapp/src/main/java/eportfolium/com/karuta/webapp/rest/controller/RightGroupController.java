@@ -15,14 +15,10 @@
 
 package eportfolium.com.karuta.webapp.rest.controller;
 
-import javax.servlet.http.HttpServletRequest;
-
-import eportfolium.com.karuta.webapp.util.UserInfo;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import eportfolium.com.karuta.business.contract.GroupManager;
-import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -44,11 +40,9 @@ public class RightGroupController extends AbstractController {
      */
     @PostMapping(produces = "application/xml")
     public ResponseEntity<String> post(@RequestParam Long group,
-                                       @RequestParam Long groupRightId,
-                                       HttpServletRequest request) throws BusinessException {
-        UserInfo ui = checkCredential(request);
+                                       @RequestParam Long groupRightId) {
 
-        groupManager.changeUserGroup(groupRightId, group, ui.userId);
+        groupManager.changeUserGroup(groupRightId, group);
 
         return ResponseEntity.ok().build();
     }

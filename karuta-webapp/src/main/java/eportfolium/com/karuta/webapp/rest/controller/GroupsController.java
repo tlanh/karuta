@@ -17,15 +17,15 @@ package eportfolium.com.karuta.webapp.rest.controller;
 
 import eportfolium.com.karuta.business.contract.GroupManager;
 import eportfolium.com.karuta.business.contract.PortfolioManager;
+import eportfolium.com.karuta.business.UserInfo;
 import eportfolium.com.karuta.document.GroupInfoList;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
-import eportfolium.com.karuta.webapp.util.UserInfo;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpServletRequest;
 import java.util.UUID;
 
 @RestController
@@ -50,10 +50,10 @@ public class GroupsController extends AbstractController {
      *         LABEL</group> ... </groups>
      */
     @GetMapping(produces = "application/xml")
-    public HttpEntity<GroupInfoList> getUserGroups(HttpServletRequest request) {
-        UserInfo ui = checkCredential(request);
+    public HttpEntity<GroupInfoList> getUserGroups(Authentication authentication) {
+        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
-        return new HttpEntity<>(groupManager.getUserGroups(ui.userId));
+        return new HttpEntity<>(groupManager.getUserGroups(userInfo.getId()));
     }
 
     /**
@@ -63,10 +63,9 @@ public class GroupsController extends AbstractController {
      */
     @GetMapping(value = "/{id}", produces = "application/xml")
     public HttpEntity<GroupInfoList> getRoles(@PathVariable UUID id,
-                                              HttpServletRequest request) {
+                                              Authentication authentication) {
+        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
-        UserInfo ui = checkCredential(request);
-
-        return new HttpEntity<>(portfolioManager.getRolesByPortfolio(id, ui.userId));
+        return new HttpEntity<>(portfolioManager.getRolesByPortfolio(id, userInfo.getId()));
     }
 }

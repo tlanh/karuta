@@ -16,18 +16,18 @@
 package eportfolium.com.karuta.webapp.rest.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import eportfolium.com.karuta.business.UserInfo;
 import eportfolium.com.karuta.business.contract.ResourceManager;
 import eportfolium.com.karuta.document.ResourceDocument;
 import eportfolium.com.karuta.document.ResourceList;
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
-import eportfolium.com.karuta.webapp.util.UserInfo;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpServletRequest;
 import java.util.UUID;
 
 @RestController
@@ -49,10 +49,10 @@ public class ResourcesController extends AbstractController {
             produces = {"application/json", "application/xml"})
     public HttpEntity<ResourceDocument> getResource(@RequestParam long group,
                                                     @PathVariable UUID parentNodeId,
-                                                    HttpServletRequest request) throws BusinessException {
-        UserInfo ui = checkCredential(request);
+                                                    Authentication authentication) throws BusinessException {
+        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
-        return new HttpEntity<>(resourceManager.getResource(parentNodeId, ui.userId, group));
+        return new HttpEntity<>(resourceManager.getResource(parentNodeId, userInfo.getId(), group));
     }
 
     /**
@@ -63,11 +63,11 @@ public class ResourcesController extends AbstractController {
     @GetMapping(value = "/portfolios/{id}", produces = {"application/xml"})
     public HttpEntity<ResourceList> getResources(@RequestParam long group,
                                                  @PathVariable UUID id,
-                                                 HttpServletRequest request) {
+                                                 Authentication authentication) {
 
-        UserInfo ui = checkCredential(request);
+        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
-        return new HttpEntity<>(resourceManager.getResources(id, ui.userId, group));
+        return new HttpEntity<>(resourceManager.getResources(id, userInfo.getId(), group));
     }
 
     /**
@@ -79,11 +79,11 @@ public class ResourcesController extends AbstractController {
     public String putResource(@RequestBody ResourceDocument resource,
                               @RequestParam long group,
                               @PathVariable UUID parentNodeId,
-                              HttpServletRequest request) throws BusinessException, JsonProcessingException {
+                              Authentication authentication) throws BusinessException, JsonProcessingException {
 
-        UserInfo ui = checkCredential(request);
+        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
-        return resourceManager.changeResource(parentNodeId, resource, ui.userId, group)
+        return resourceManager.changeResource(parentNodeId, resource, userInfo.getId(), group)
                     .toString();
     }
 
@@ -96,11 +96,11 @@ public class ResourcesController extends AbstractController {
     public String postResource(@RequestBody ResourceDocument resource,
                                @RequestParam long group,
                                @PathVariable UUID parentNodeId,
-                               HttpServletRequest request) throws BusinessException {
+                               Authentication authentication) throws BusinessException {
 
-        UserInfo ui = checkCredential(request);
+        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
-        return resourceManager.addResource(parentNodeId, resource, ui.userId, group);
+        return resourceManager.addResource(parentNodeId, resource, userInfo.getId(), group);
     }
 
     /**
@@ -110,10 +110,10 @@ public class ResourcesController extends AbstractController {
     public String postResources(@RequestBody ResourceDocument document,
                                 @RequestParam long group,
                                 @RequestParam UUID resource,
-                                HttpServletRequest request) throws BusinessException {
-        UserInfo ui = checkCredential(request);
+                                Authentication authentication) throws BusinessException {
+        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
-        return resourceManager.addResource(resource, document, ui.userId, group);
+        return resourceManager.addResource(resource, document, userInfo.getId(), group);
     }
 
     /**
@@ -124,11 +124,11 @@ public class ResourcesController extends AbstractController {
     @DeleteMapping(value = "/{id}", produces = "application/xml")
     public String deleteResource(@RequestParam long group,
                                  @PathVariable UUID id,
-                                 HttpServletRequest request) throws BusinessException {
+                                 Authentication authentication) throws BusinessException {
 
-        UserInfo ui = checkCredential(request);
+        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
-        resourceManager.removeResource(id, ui.userId, group);
+        resourceManager.removeResource(id, userInfo.getId(), group);
 
         return "";
     }

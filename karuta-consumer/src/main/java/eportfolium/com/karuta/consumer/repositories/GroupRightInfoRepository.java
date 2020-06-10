@@ -18,13 +18,6 @@ public interface GroupRightInfoRepository extends CrudRepository<GroupRightInfo,
     GroupRightInfo getByPortfolioAndLabel(@Param("portfolioId") UUID portfolioId,
                                           @Param("label") String label);
 
-    @Query("SELECT DISTINCT gri FROM ResourceTable r, GroupRights gr " +
-            "INNER JOIN gr.id.groupRightInfo gri WITH gri.portfolio.id = :portfolioId " +
-            "WHERE r.credential.id = :userId " +
-            "AND gr.id.id = r.id")
-    List<GroupRightInfo> getByPortfolioAndUser(@Param("portfolioId") UUID portfolioId,
-                                               @Param("userId") Long userId);
-
     @Query("SELECT gri FROM GroupRightInfo gri " +
             "INNER JOIN FETCH gri.portfolio p " +
             "WHERE gri.portfolio.id = :portfolioId")

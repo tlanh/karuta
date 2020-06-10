@@ -17,14 +17,12 @@ package eportfolium.com.karuta.webapp.rest.controller;
 
 import eportfolium.com.karuta.business.contract.PortfolioManager;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
-import eportfolium.com.karuta.webapp.util.UserInfo;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpServletRequest;
 import java.util.UUID;
 
 @RestController
@@ -50,12 +48,10 @@ public class PortfolioGroupController extends AbstractController {
     @PostMapping
     public ResponseEntity<Long> create(@RequestParam String label,
                                      @RequestParam String type,
-                                     @RequestParam Long parent,
-                                     HttpServletRequest request) {
-        UserInfo ui = checkCredential(request);
+                                     @RequestParam Long parent) {
 
         return ResponseEntity.ok()
-                    .body(portfolioManager.addPortfolioGroup(label, type, parent, ui.userId));
+                    .body(portfolioManager.addPortfolioGroup(label, type, parent));
 
     }
 
@@ -67,12 +63,9 @@ public class PortfolioGroupController extends AbstractController {
     @PutMapping
     public ResponseEntity<Integer> addPortfolio(@RequestParam Long group,
                                                 @RequestParam UUID uuid,
-                                                @RequestParam String label,
-                                                HttpServletRequest request) {
-        UserInfo ui = checkCredential(request);
-
+                                                @RequestParam String label) {
         return ResponseEntity.ok()
-                .body(portfolioManager.addPortfolioInGroup(uuid, group, label, ui.userId));
+                .body(portfolioManager.addPortfolioInGroup(uuid, group, label));
     }
 
     /**
@@ -90,12 +83,10 @@ public class PortfolioGroupController extends AbstractController {
     @GetMapping
     public HttpEntity<Object> getPortfolio(@RequestParam Long group,
                                            @RequestParam UUID uuid,
-                                           @RequestParam String label,
-                                           HttpServletRequest request) {
-        UserInfo ui = checkCredential(request);
+                                           @RequestParam String label) {
 
         if (label != null) {
-            Long groupid = portfolioManager.getPortfolioGroupIdFromLabel(label, ui.userId);
+            Long groupid = portfolioManager.getPortfolioGroupIdFromLabel(label);
 
             if (groupid == -1) {
                 return ResponseEntity.notFound().build();

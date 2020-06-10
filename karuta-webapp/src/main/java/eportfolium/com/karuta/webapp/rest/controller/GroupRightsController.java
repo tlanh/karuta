@@ -17,15 +17,11 @@ package eportfolium.com.karuta.webapp.rest.controller;
 
 import eportfolium.com.karuta.business.contract.GroupManager;
 import eportfolium.com.karuta.document.GroupRightsList;
-import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
-import eportfolium.com.karuta.webapp.util.UserInfo;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.web.bind.annotation.*;
-
-import javax.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/groupRights")
@@ -48,12 +44,8 @@ public class GroupRightsController extends AbstractController {
      *         WR="True/False"/>"; </groupRight> </groupRights>
      */
     @GetMapping(produces = "application/xml")
-    public HttpEntity<GroupRightsList> getAll(@RequestParam long group,
-                                              HttpServletRequest request) throws BusinessException {
-
-        UserInfo ui = checkCredential(request);
-
-        return new HttpEntity<>(groupManager.getGroupRights(ui.userId, group));
+    public HttpEntity<GroupRightsList> getAll(@RequestParam long group) {
+        return new HttpEntity<>(groupManager.getGroupRights(group));
     }
 
     /**
@@ -62,11 +54,8 @@ public class GroupRightsController extends AbstractController {
      * DELETE /rest/api/groupRights
      */
     @DeleteMapping(produces = "application/xml")
-    public String delete(@RequestParam long group,
-                         HttpServletRequest request) throws BusinessException {
-        UserInfo ui = checkCredential(request);
-
-        groupManager.removeRights(group, ui.userId);
+    public String delete(@RequestParam long group) {
+        groupManager.removeRights(group);
 
         return "supprimé";
     }

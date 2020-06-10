@@ -16,16 +16,12 @@
 package eportfolium.com.karuta.webapp.rest.controller;
 
 import eportfolium.com.karuta.business.contract.SecurityManager;
-import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
-import eportfolium.com.karuta.webapp.util.UserInfo;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import javax.servlet.http.HttpServletRequest;
 
 @RestController
 public class UserRoleController extends AbstractController {
@@ -43,11 +39,8 @@ public class UserRoleController extends AbstractController {
      */
     @PostMapping(value = "/roleUser", produces = "application/xml")
     public String postRoleUser(@RequestParam  long grid,
-                               @RequestParam("user-id") Long userid,
-                               HttpServletRequest request) throws BusinessException {
-        UserInfo ui = checkCredential(request);
-
-        return securityManager.addUserRole(ui.userId, grid, userid);
+                               @RequestParam("user-id") Long userid) {
+        return securityManager.addUserRole(grid, userid);
     }
 }
 

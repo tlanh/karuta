@@ -26,7 +26,7 @@ import java.util.regex.Pattern;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 
-import eportfolium.com.karuta.business.contract.ConfigurationManager;
+import eportfolium.com.karuta.business.UserInfo;
 import eportfolium.com.karuta.consumer.repositories.*;
 import eportfolium.com.karuta.document.CredentialDocument;
 import eportfolium.com.karuta.document.CredentialList;
@@ -39,6 +39,11 @@ import org.passay.PasswordGenerator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -266,19 +271,16 @@ public class SecurityManagerImpl implements SecurityManager {
 		}
 	}
 
-	public void removeUsers(Long byUser, Long forUser) throws BusinessException {
-		if (!credentialRepository.isAdmin(byUser) && byUser != forUser)
-			throw new GenericBusinessException("FORBIDDEN : No admin right");
-
+	@Override
+	@PreAuthorize("hasRole('admin') or principal.id == #forUser")
+	public void removeUsers(Long forUser) {
 		groupUserRepository.deleteAll(groupUserRepository.getByUser(forUser));
 		credentialRepository.deleteById(forUser);
 	}
 
 	@Override
-	public CredentialList addUsers(CredentialList users, Long userId) throws BusinessException {
-		if (!credentialRepository.isAdmin(userId) && !credentialRepository.isCreator(userId))
-			throw new GenericBusinessException("403 FORBIDDEN : No admin right");
-
+	@PreAuthorize("hasRole('admin') or hasRole('designer')")
+	public CredentialList addUsers(CredentialList users) {
 		List<CredentialDocument> processed = new ArrayList<>();
 
 		for (CredentialDocument document : users.getUsers()) {
@@ -371,10 +373,6 @@ public class SecurityManagerImpl implements SecurityManager {
 
 	@Override
 	public Long changeUser(Long byUserId, Long forUserId, CredentialDocument user) throws BusinessException {
-		if (credentialRepository.existsById(forUserId)) {
-			throw new GenericBusinessException("Unknown user id");
-		}
-
 		if (!checkPassword(byUserId, user.getPrevpass()) && !credentialRepository.isAdmin(byUserId)) {
 			throw new GenericBusinessException("Not authorized");
 		}
@@ -487,14 +485,7 @@ public class SecurityManagerImpl implements SecurityManager {
 		return forUserId;
 	}
 
-	/**
-	 * Crée le role
-	 * 
-	 * @param portfolioId
-	 * @param role
-	 * @param userId
-	 * @return
-	 */
+	@Override
 	public Long addRole(UUID portfolioId, String role, Long userId) throws BusinessException {
 		Long groupId = 0L;
 		Node rootNode = portfolioRepository.getPortfolioRootNode(portfolioId);
@@ -524,10 +515,9 @@ public class SecurityManagerImpl implements SecurityManager {
 		return groupId;
 	}
 
-	public void addUserToGroup(Long byUser, Long forUser, Long groupId) throws BusinessException {
-		if (!credentialRepository.isAdmin(byUser))
-			throw new GenericBusinessException("403 FORBIDDEN : No admin right");
-
+	@Override
+	@PreAuthorize("hasRole('admin')")
+	public void addUserToGroup(Long forUser, Long groupId) {
 		GroupUserId gid = new GroupUserId();
 		gid.setCredential(new Credential(forUser));
 		gid.setGroupInfo(new GroupInfo(groupId));
@@ -553,9 +543,9 @@ public class SecurityManagerImpl implements SecurityManager {
 		return added;
 	}
 
-	public String addUserRole(Long byUserId, Long rrgid, Long forUser) throws BusinessException {
-		if (!credentialRepository.isAdmin(byUserId) && !groupRightInfoRepository.isOwner(byUserId, rrgid))
-			throw new GenericBusinessException("403 FORBIDDEN : No admin right");
+	@Override
+	@PreAuthorize("hasRole('admin')")
+	public String addUserRole(Long rrgid, Long forUser) {
 
 		// Vérifie si un group_info/grid existe
 		GroupInfo gi = groupInfoRepository.getGroupByGrid(rrgid);
@@ -568,7 +558,7 @@ public class SecurityManagerImpl implements SecurityManager {
 		}
 
 		// Ajout de l'utilisateur
-		addUserToGroup(byUserId, forUser, gi.getId());
+		addUserToGroup(forUser, gi.getId());
 		return "user " + forUser + " rajoute au groupd gid " + gi.getId() + " pour correspondre au groupRight grid "
 				+ rrgid;
 	}
@@ -591,6 +581,16 @@ public class SecurityManagerImpl implements SecurityManager {
 			credential = credentialRepository.findByLoginAndAdmin(substitute, 0);
 		}
 
+		// Apply the login as per se
+		UserInfo userInfo = new UserInfo(credential);
+
+		SecurityContext context = SecurityContextHolder.createEmptyContext();
+		Authentication authentication = new UsernamePasswordAuthenticationToken(
+			userInfo, user.getPassword(), userInfo.getAuthorities());
+		context.setAuthentication(authentication);
+
+		SecurityContextHolder.setContext(context);
+
 		return new CredentialDocument(credential, true);
 	}
 
@@ -599,42 +599,27 @@ public class SecurityManagerImpl implements SecurityManager {
 		return groupUserRepository.hasRole(userId, roleId);
 	}
 
-	public void removeRole(Long userId, Long groupRightInfoId) throws Exception {
-		if (!credentialRepository.isAdmin(userId) && !groupRightInfoRepository.isOwner(userId, groupRightInfoId))
-			throw new GenericBusinessException("403 FORBIDDEN : no admin rights");
-
+	@Override
+	@PreAuthorize("hasRole('admin')")
+	public void removeRole(Long groupRightInfoId) {
 		groupRightInfoRepository.deleteById(groupRightInfoId);
 	}
 
-	public void removeUserRole(Long userId, Long groupRightInfoId) throws BusinessException {
-		if (!credentialRepository.isAdmin(userId) && !groupRightInfoRepository.isOwner(userId, groupRightInfoId))
-			throw new GenericBusinessException("403 FORBIDDEN : no admin rights");
-
-		try {
-			groupUserRepository.delete(groupUserRepository.getByUserAndRole(userId, groupRightInfoId));
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
-
-	public void removeUsersFromRole(Long userId, UUID portfolioId) throws Exception {
-		if (!credentialRepository.isAdmin(userId))
-			throw new GenericBusinessException("403 FORBIDDEN : no admin rights");
-		groupUserRepository.deleteByPortfolio(portfolioId);
-	}
-
-	public void removeRights(Long userId, Long groupId) throws BusinessException {
-		if (!credentialRepository.isAdmin(userId))
-			throw new GenericBusinessException("403 FORBIDDEN : no admin rights");
-
-		groupInfoRepository.deleteById(groupId);
+	@Override
+	@PreAuthorize("hasRole('admin')")
+	public void removeUserRole(Long userId, Long groupRightInfoId) {
+		groupUserRepository.delete(groupUserRepository.getByUserAndRole(userId, groupRightInfoId));
 	}
 
 	@Override
-	public Long changeRole(Long userId, Long rrgId, RoleDocument role) throws BusinessException {
-		if (!credentialRepository.isAdmin(userId) && !groupRightInfoRepository.isOwner(userId, rrgId))
-			throw new GenericBusinessException("403 FORBIDDEN, no admin rights");
+	@PreAuthorize("hasRole('admin')")
+	public void removeUsersFromRole(UUID portfolioId) {
+		groupUserRepository.deleteByPortfolio(portfolioId);
+	}
 
+	@Override
+	@PreAuthorize("hasRole('admin')")
+	public Long changeRole(Long rrgId, RoleDocument role) {
 		GroupRightInfo gri = groupRightInfoRepository.findById(rrgId).get();
 
 		if (role.getLabel() != null) {
@@ -651,12 +636,10 @@ public class SecurityManagerImpl implements SecurityManager {
 	}
 
 	@Override
-	public String addUsersToRole(Long userId, Long rrgid, CredentialList users) throws BusinessException {
-		if (!credentialRepository.isAdmin(userId) && !groupRightInfoRepository.isOwner(userId, rrgid))
-			throw new GenericBusinessException("403 FORBIDDEN : no admin right");
-
+	@PreAuthorize("hasRole('admin')")
+	public String addUsersToRole(Long rrgid, CredentialList users) {
 		for (CredentialDocument user : users.getUsers()) {
-			addUserRole(userId, rrgid, user.getId());
+			addUserRole(rrgid, user.getId());
 		}
 
 		return "";

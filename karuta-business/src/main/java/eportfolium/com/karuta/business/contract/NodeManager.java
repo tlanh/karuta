@@ -34,7 +34,7 @@ public interface NodeManager {
 
 	void resetRights(List<Node> children) throws JsonProcessingException;
 
-	String changeRights(Long userId, UUID nodeId, String label, GroupRights rights);
+	void changeRights(UUID nodeId, String label, GroupRights rights);
 
 	UUID getPortfolioIdFromNode(Long userId, UUID nodeId) throws BusinessException;
 
@@ -80,7 +80,7 @@ public interface NodeManager {
 			throws BusinessException, JsonProcessingException;
 
 	Integer changeNode(UUID nodeId, NodeDocument node, Long userId, Long groupId)
-			throws Exception;
+			throws BusinessException, JsonProcessingException;
 
 	void removeNode(UUID nodeId, Long userId, long groupId) throws BusinessException;
 

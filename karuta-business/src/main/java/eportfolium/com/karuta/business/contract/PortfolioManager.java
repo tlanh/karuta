@@ -28,9 +28,9 @@ import eportfolium.com.karuta.model.exception.BusinessException;
 
 public interface PortfolioManager {
 
-	int addPortfolioInGroup(UUID portfolioUuid, Long portfolioGroupId, String label, Long userId);
+	int addPortfolioInGroup(UUID portfolioUuid, Long portfolioGroupId, String label);
 
-	Long addPortfolioGroup(String groupname, String type, Long parentId, Long userId);
+	Long addPortfolioGroup(String groupname, String type, Long parentId);
 
 	void removePortfolio(UUID portfolioId, Long userId, Long groupId) throws Exception;
 
@@ -41,10 +41,6 @@ public interface PortfolioManager {
 	PortfolioDocument getPortfolio(UUID portfolioId,
 								   Long userId,
 								   Long groupId,
-								   String label,
-								   boolean resource,
-								   boolean files,
-								   long substid,
 								   Integer cutoff) throws BusinessException, JsonProcessingException;
 
 	String getZippedPortfolio(PortfolioDocument portfolio) throws IOException;
@@ -52,12 +48,11 @@ public interface PortfolioManager {
 	PortfolioDocument getPortfolioByCode(String portfolioCode,
 										 Long userId,
 										 Long groupId,
-										 boolean resources,
-										 long substid) throws BusinessException, JsonProcessingException;
+										 boolean resources) throws BusinessException, JsonProcessingException;
 
 	PortfolioGroupDocument getPortfoliosByPortfolioGroup(Long portfolioGroupId);
 
-	Long getPortfolioGroupIdFromLabel(String groupLabel, Long userId);
+	Long getPortfolioGroupIdFromLabel(String groupLabel);
 
 	String getPortfolioGroupList();
 
@@ -80,8 +75,7 @@ public interface PortfolioManager {
 
 	boolean changePortfolioOwner(UUID portfolioId, long newOwner);
 
-	Portfolio changePortfolioConfiguration(UUID portfolioId, Boolean portfolioActive, Long userId)
-			throws BusinessException;
+	Portfolio changePortfolioConfiguration(UUID portfolioId, Boolean portfolioActive);
 
 	boolean rewritePortfolioContent(PortfolioDocument portfolio, UUID portfolioId, Long userId, Boolean portfolioActive)
 			throws BusinessException, JsonProcessingException;
@@ -94,17 +88,16 @@ public interface PortfolioManager {
 			throws BusinessException, IOException;
 
 	PortfolioList addPortfolio(PortfolioDocument portfolio, long userId, long groupId,
-			UUID portfolioModelId, long substid, boolean parseRights, String projectName)
+			UUID portfolioModelId, boolean parseRights, String projectName)
 			throws BusinessException, JsonProcessingException;
 
-	GroupRightInfoList getGroupRightsInfos(Long id, UUID portfolioId) throws BusinessException;
+	GroupRightInfoList getGroupRightsInfos(UUID portfolioId);
 
-	String getRoleByPortfolio(String role, UUID portfolioId, Long userId);
+	String getRoleByPortfolio(String role, UUID portfolioId);
 
 	GroupInfoList getRolesByPortfolio(UUID portfolioId, Long userId);
 
-	UUID copyPortfolio(UUID portfolioId, String srccode, String tgtcode, Long userId, boolean setOwner)
-			throws Exception;
+	UUID copyPortfolio(UUID portfolioId, String srccode, String tgtcode, Long userId, boolean setOwner);
 
 	void updateTime(UUID portfolioId);
 

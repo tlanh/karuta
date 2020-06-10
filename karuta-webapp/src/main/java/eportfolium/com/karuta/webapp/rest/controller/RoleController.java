@@ -15,10 +15,7 @@
 
 package eportfolium.com.karuta.webapp.rest.controller;
 
-import javax.servlet.http.HttpServletRequest;
-
 import eportfolium.com.karuta.document.RoleDocument;
-import eportfolium.com.karuta.webapp.util.UserInfo;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -64,12 +61,8 @@ public class RoleController extends AbstractController {
      */
     @GetMapping(value = "/portfolio/{portfolioId}", produces = {"application/xml"})
     public String getRolePortfolio(@RequestParam String role,
-                                   @PathVariable UUID portfolioId,
-                                   HttpServletRequest request) {
-
-        UserInfo ui = checkCredential(request);
-
-        return portfolioManager.getRoleByPortfolio(role, portfolioId, ui.userId);
+                                   @PathVariable UUID portfolioId) {
+        return portfolioManager.getRoleByPortfolio(role, portfolioId);
     }
 
     /**
@@ -79,11 +72,7 @@ public class RoleController extends AbstractController {
      */
     @PutMapping(value = "/role/{roleId}", produces = "application/xml")
     public String putRole(@RequestBody RoleDocument role,
-                          @PathVariable long roleId,
-                          HttpServletRequest request) throws Exception {
-
-        UserInfo ui = checkCredential(request);
-
-        return securityManager.changeRole(ui.userId, roleId, role).toString();
+                          @PathVariable long roleId) {
+        return securityManager.changeRole(roleId, role).toString();
     }
 }

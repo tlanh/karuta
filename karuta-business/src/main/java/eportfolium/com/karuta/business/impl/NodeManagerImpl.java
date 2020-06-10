@@ -692,7 +692,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 	}
 
 	@Override
-	public Integer changeNode(UUID nodeId, NodeDocument node, Long userId, Long groupId) throws Exception {
+	public Integer changeNode(UUID nodeId, NodeDocument node, Long userId, Long groupId) throws BusinessException, JsonProcessingException {
 		if (!hasRight(userId, groupId, nodeId, GroupRights.WRITE))
 			throw new GenericBusinessException("403 Forbidden : no write credential ");
 
@@ -1064,7 +1064,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 	}
 
 	@Override
-	public String changeRights(Long userId, UUID nodeId, String label, GroupRights rights) {
+	public void changeRights(UUID nodeId, String label, GroupRights rights) {
 		GroupRights gr = groupRightsRepository.getRightsByIdAndLabel(nodeId, label);
 
 		if (gr != null) {
@@ -1075,8 +1075,6 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 
 			groupRightsRepository.save(gr);
 		}
-
-		return "ok";
 	}
 
 	@Override
@@ -1613,7 +1611,7 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
                     // S'assurer qu'un groupe d'utilisateurs spécifique existe en base et y ajouter
                     // l'utilisateur.
                     long ngid = getRoleByNode(1L, destId, login);
-                    securityManager.addUserToGroup(1L, userId, ngid);
+                    securityManager.addUserToGroup(userId, ngid);
 
                     /// Ensure entry is there in temp table, just need a skeleton info
                     GroupRightInfo groupRightInfo = new GroupRightInfo();

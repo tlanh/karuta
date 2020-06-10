@@ -52,6 +52,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -192,8 +193,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 	}
 
 	@Override
-	public PortfolioDocument getPortfolio(UUID portfolioId, Long userId, Long groupId, String label,
-			boolean resource, boolean files, long substid, Integer cutoff)
+	public PortfolioDocument getPortfolio(UUID portfolioId, Long userId, Long groupId, Integer cutoff)
 			throws BusinessException, JsonProcessingException {
 
 		Node rootNode = portfolioRepository.getPortfolioRootNode(portfolioId);
@@ -210,7 +210,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		}
 
 		Long ownerId = portfolioRepository.getOwner(portfolioId);
-		boolean owner = ownerId == userId;
+		boolean owner = ownerId.equals(userId);
 
         return getPortfolio(portfolioId, rootNode.getId(), userId,
                 rights.getGroupRightInfo().getId(), owner, rights.getGroupRightInfo().getLabel(), cutoff);
@@ -420,7 +420,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 
 	@Override
 	public PortfolioDocument getPortfolioByCode(String portfolioCode, Long userId, Long groupId,
-			boolean resources, long substid) throws BusinessException, JsonProcessingException {
+			boolean resources) throws BusinessException, JsonProcessingException {
 		Portfolio portfolio = portfolioRepository.getPortfolioFromNodeCode(portfolioCode);
 
 		if (portfolio == null) {
@@ -428,8 +428,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		}
 
 		if (resources) {
-			return getPortfolio(portfolio.getId(), userId, groupId, null, false, false, substid,
-					null);
+			return getPortfolio(portfolio.getId(), userId, groupId, null);
 		} else {
 			PortfolioDocument document = new PortfolioDocument(portfolio.getId());
 			document.setNodes(Collections.singletonList(nodeManager.getNode(portfolio.getRootNode().getId(), false, "nodeRes", userId,
@@ -544,11 +543,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 	}
 
 	@Override
-	public Portfolio changePortfolioConfiguration(UUID portfolioId, Boolean portfolioActive, Long userId)
-			throws BusinessException {
-		if (!credentialRepository.isAdmin(userId)) {
-			throw new GenericBusinessException("No admin right");
-		}
+	public Portfolio changePortfolioConfiguration(UUID portfolioId, Boolean portfolioActive) {
 
 		Optional<Portfolio> portfolio = portfolioRepository.findById(portfolioId);
 
@@ -616,9 +611,6 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 
 	@Override
 	public UUID postPortfolioParserights(UUID portfolioId, Long userId) throws JsonProcessingException, BusinessException {
-
-		if (!credentialRepository.isAdmin(userId) && !credentialRepository.isCreator(userId))
-			return null;
 
 		boolean setPublic = false;
 
@@ -782,7 +774,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 
 	@Override
 	public PortfolioList addPortfolio(PortfolioDocument portfolioDocument, long userId, long groupId, UUID portfolioModelId,
-							   long substid, boolean parseRights, String projectName)
+							   boolean parseRights, String projectName)
 			throws BusinessException, JsonProcessingException {
 		if (!credentialRepository.isAdmin(userId) && !credentialRepository.isCreator(userId))
 			throw new GenericBusinessException("FORBIDDEN : No admin right");
@@ -791,7 +783,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 		// du modèle a la place
 		// FIXME Inutilisé, nous instancions / copions un portfolio
 		if (portfolioModelId != null)
-			portfolioDocument = getPortfolio(portfolioModelId, userId, groupId, null, false, false, substid, null);
+			portfolioDocument = getPortfolio(portfolioModelId, userId, groupId, null);
 
 		Optional<NodeDocument> nodeDocument = portfolioDocument.getNodes()
 					.stream()
@@ -1063,7 +1055,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 	}
 
 	@Override
-	public int addPortfolioInGroup(UUID portfolioId, Long portfolioGroupId, String label, Long userId) {
+	public int addPortfolioInGroup(UUID portfolioId, Long portfolioGroupId, String label) {
 		try {
 			PortfolioGroup pg = portfolioGroupRepository.findById(portfolioGroupId).get();
 			Portfolio p = null;
@@ -1091,7 +1083,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 	}
 
 	@Override
-	public Long getPortfolioGroupIdFromLabel(String groupLabel, Long userId) {
+	public Long getPortfolioGroupIdFromLabel(String groupLabel) {
 		Optional<PortfolioGroup> portfolioGroup = portfolioGroupRepository.findByLabel(groupLabel);
 
 		if (portfolioGroup.isPresent()) {
@@ -1184,7 +1176,8 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 				.collect(Collectors.toList()));
 	}
 
-	public Long addPortfolioGroup(String groupname, String type, Long parentId, Long userId) {
+	@Override
+	public Long addPortfolioGroup(String groupname, String type, Long parentId) {
 		Long groupid = -1L;
 		boolean isOK = true;
 		try {
@@ -1213,7 +1206,8 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 
 	}
 
-	public String getRoleByPortfolio(String role, UUID portfolioId, Long userId) {
+	@Override
+	public String getRoleByPortfolio(String role, UUID portfolioId) {
 		GroupRightInfo gri = groupRightInfoRepository.getByPortfolioAndLabel(portfolioId, role);
 		Long grid = null;
 		if (gri != null) {
@@ -1238,11 +1232,9 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 	}
 
 	@Override
-	public GroupRightInfoList getGroupRightsInfos(Long userId, UUID portfolioId) throws BusinessException {
-		if (!credentialRepository.isAdmin(userId))
-			throw new GenericBusinessException("403 FORBIDDEN : no admin right");
-
-		List<GroupRightInfo> groups = groupRightInfoRepository.getByPortfolioAndUser(portfolioId, userId);
+	@PreAuthorize("hasRole('admin')")
+	public GroupRightInfoList getGroupRightsInfos(UUID portfolioId) {
+		List<GroupRightInfo> groups = groupRightInfoRepository.getByPortfolioID(portfolioId);
 
 		return new GroupRightInfoList(groups.stream()
 				.map(GroupRightInfoDocument::new)
@@ -1251,7 +1243,7 @@ public class PortfolioManagerImpl extends BaseManager implements PortfolioManage
 
 	@Override
 	public UUID copyPortfolio(UUID portfolioId, String srcCode, String newCode, Long userId,
-							  boolean setOwner) throws Exception {
+							  boolean setOwner) {
 		Portfolio originalPortfolio = null;
 
 		try {

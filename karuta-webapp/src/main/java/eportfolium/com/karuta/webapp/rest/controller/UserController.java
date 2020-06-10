@@ -15,14 +15,12 @@
 
 package eportfolium.com.karuta.webapp.rest.controller;
 
-import javax.servlet.http.HttpServletRequest;
-
+import eportfolium.com.karuta.business.UserInfo;
 import eportfolium.com.karuta.document.CredentialDocument;
 import eportfolium.com.karuta.document.CredentialList;
 import eportfolium.com.karuta.document.ProfileList;
 import eportfolium.com.karuta.document.RoleGroupList;
 import eportfolium.com.karuta.model.exception.GenericBusinessException;
-import eportfolium.com.karuta.webapp.util.UserInfo;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -32,8 +30,7 @@ import eportfolium.com.karuta.business.contract.UserManager;
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -67,11 +64,8 @@ public class UserController extends AbstractController {
      * @return
      */
     @PostMapping(consumes = "application/xml", produces = "application/xml")
-    public HttpEntity<CredentialList> postUser(@RequestBody CredentialList xmluser,
-                                               HttpServletRequest request) throws BusinessException {
-        UserInfo ui = checkCredential(request);
-
-        return new HttpEntity<>(securityManager.addUsers(xmluser, ui.userId));
+    public HttpEntity<CredentialList> postUser(@RequestBody CredentialList xmluser) {
+        return new HttpEntity<>(securityManager.addUsers(xmluser));
     }
 
     /**
@@ -88,19 +82,15 @@ public class UserController extends AbstractController {
     public HttpEntity<Object> getUsers(@RequestParam("username") String username,
                            @RequestParam("firstname") String firstname,
                            @RequestParam("lastname") String lastname,
-                           HttpServletRequest request) throws BusinessException {
+                           Authentication authentication) {
 
-        UserInfo ui = checkCredential(request);
+        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
-        if (ui.userId == 0)
-            throw new GenericBusinessException("Not logged in");
-
-        if (securityManager.isAdmin(ui.userId) || securityManager.isCreator(ui.userId))
+        if (userInfo.isAdmin() || userInfo.isDesigner())
             return new HttpEntity<>(userManager.getUserList(username, firstname, lastname));
-        else if (ui.userId != 0)
-            return new HttpEntity<>(userManager.getUserInfos(ui.userId));
         else
-            throw new GenericBusinessException("Not authorized");
+            return new HttpEntity<>(userManager.getUserInfos(userInfo.getId()));
+
     }
 
     /**
@@ -153,16 +143,12 @@ public class UserController extends AbstractController {
     /**
      * Fetch userlist from a role and portfolio id.
      *
-     * GET /rest/api/users/Portfolio/{portfolio-id}/Role/{role}/users
+     * GET /rest/api/users/Portfolio/{portfolioId}/Role/{role}/users
      */
-    @GetMapping(value = "/Portfolio/{portfolio-id}/Role/{role}/users", produces = "application/xml")
-    public HttpEntity<CredentialList> getUsersByRole(@PathVariable("portfolio-id") UUID portfolioId,
-                                                     @PathVariable("role") String role,
-                                                     HttpServletRequest request) {
-
-        UserInfo ui = checkCredential(request);
-
-        return new HttpEntity<>(userManager.getUsersByRole(ui.userId, portfolioId, role));
+    @GetMapping(value = "/Portfolio/{portfolioId}/Role/{role}/users", produces = "application/xml")
+    public HttpEntity<CredentialList> getUsersByRole(@PathVariable UUID portfolioId,
+                                                     @PathVariable String role) {
+        return new HttpEntity<>(userManager.getUsersByRole(portfolioId, role));
     }
 
     /**
@@ -170,18 +156,11 @@ public class UserController extends AbstractController {
      *
      * DELETE /rest/api/users
      *
-     * @see #deleteUser(Long, HttpServletRequest)
+     * @see #deleteUser(Long)
      */
     @DeleteMapping(produces = "application/xml")
-    public String deleteUsers(@RequestParam("userId") Long userId,
-                              HttpServletRequest request) throws BusinessException {
-
-        UserInfo ui = checkCredential(request);
-
-        if (!securityManager.isAdmin(ui.userId) && ui.userId != userId)
-            throw new GenericBusinessException("No admin right");
-
-        securityManager.removeUsers(ui.userId, userId);
+    public String deleteUsers(@RequestParam("userId") Long userId) {
+        securityManager.removeUsers(userId);
 
         return "user " + userId + " deleted";
     }
@@ -192,12 +171,8 @@ public class UserController extends AbstractController {
      * DELETE /rest/api/users/user/{user-id}
      */
     @DeleteMapping(value = "/user/{user-id}", produces = "application/xml")
-    public String deleteUser(@PathVariable("user-id") Long userid,
-                             HttpServletRequest request) throws BusinessException {
-
-        UserInfo ui = checkCredential(request);
-
-        securityManager.removeUsers(ui.userId, userid);
+    public String deleteUser(@PathVariable("user-id") Long userid) {
+        securityManager.removeUsers(userid);
 
         return "user " + userid + " deleted";
     }
@@ -217,17 +192,16 @@ public class UserController extends AbstractController {
      */
     @PutMapping(value = "/user/{user-id}", produces = "application/xml")
     public HttpEntity<Long> putUser(@RequestBody CredentialDocument user,
-                          @PathVariable("user-id") long userid,
-                          HttpServletRequest request) throws BusinessException {
+                                    @PathVariable("user-id") long userid,
+                                    Authentication authentication) throws BusinessException {
 
-        UserInfo ui = checkCredential(request);
+        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
-        if (securityManager.isAdmin(ui.userId) || securityManager.isCreator(ui.userId)) {
-            return new HttpEntity<>(securityManager.changeUser(ui.userId, userid, user));
+        if (userInfo.isAdmin() || userInfo.isDesigner()) {
+            return new HttpEntity<>(securityManager.changeUser(userInfo.getId(), userid, user));
 
-        } else if (ui.userId == userid) { /// Changing self
-            return new HttpEntity<>(securityManager.changeUserInfo(ui.userId, userid, user));
-
+        } else if (userInfo.getId() == userid) { /// Changing self
+            return new HttpEntity<>(securityManager.changeUserInfo(userInfo.getId(), userid, user));
         } else {
             throw new GenericBusinessException("Not authorized");
         }

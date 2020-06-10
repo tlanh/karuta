@@ -18,7 +18,6 @@ package eportfolium.com.karuta.business.contract;
 import java.util.UUID;
 
 import eportfolium.com.karuta.document.*;
-import eportfolium.com.karuta.model.bean.Credential;
 
 public interface UserManager {
 
@@ -26,7 +25,7 @@ public interface UserManager {
 
 	CredentialGroupDocument getUsersByCredentialGroup(Long userGroupId);
 
-	CredentialList getUsersByRole(Long userId, UUID portfolioId, String role);
+	CredentialList getUsersByRole(UUID portfolioId, String role);
 
 	RoleDocument getRole(Long groupRightInfoId);
 
@@ -42,14 +41,6 @@ public interface UserManager {
 
 	RoleRightsGroupList getRoleList(UUID portfolioId, Long userId);
 
-	/**
-	 * Liste des RRG utilisateurs d'un portfolio donné
-	 * 
-	 * @param portfolioId
-	 * @param id
-	 * @return
-	 * @throws Exception
-	 */
 	GroupUserList getUserRolesByPortfolio(UUID portfolioId, Long id);
 
 	RoleRightsGroupDocument getUserRole(Long rrgid);

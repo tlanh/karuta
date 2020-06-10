@@ -23,6 +23,7 @@ import eportfolium.com.karuta.consumer.repositories.*;
 import eportfolium.com.karuta.document.*;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -184,11 +185,8 @@ public class GroupManagerImpl implements GroupManager {
 	}
 
 	@Override
-	public void changeUserGroup(Long grid, Long groupId, Long userId) throws BusinessException {
-		if (!credentialRepository.isAdmin(userId))
-			throw new GenericBusinessException("403 FORBIDDEN : No admin right");
-
-
+	@PreAuthorize("hasRole('admin')")
+	public void changeUserGroup(Long grid, Long groupId) {
 		Optional<GroupInfo> gi = groupInfoRepository.findById(groupId);
 
 		if (gi.isPresent()) {
@@ -201,13 +199,7 @@ public class GroupManagerImpl implements GroupManager {
 
 	/**
 	 * Ajout des droits du portfolio dans GroupRightInfo et GroupRights
-	 * 
-	 * @param label
-	 * @param nodeId
-	 * @param right
-	 * @param portfolioId
-	 * @param userId
-	 * @return
+	 *
 	 */
 	public boolean addGroupRights(String label, UUID nodeId, String right, UUID portfolioId, Long userId) {
 		List<GroupUser> res = null;
@@ -295,10 +287,8 @@ public class GroupManagerImpl implements GroupManager {
 	}
 
 	@Override
-	public GroupRightsList getGroupRights(Long userId, Long groupId) throws BusinessException {
-		if (!credentialRepository.isAdmin(userId))
-			throw new GenericBusinessException("403 FORBIDDEN : No admin right");
-
+	@PreAuthorize("hasRole('admin')")
+	public GroupRightsList getGroupRights(Long groupId) {
 		List<GroupRights> groupRightsList = groupRightsRepository.getRightsByGroupId(groupId);
 
 		return new GroupRightsList(groupRightsList.stream()
@@ -306,10 +296,8 @@ public class GroupManagerImpl implements GroupManager {
 				.collect(Collectors.toList()));
 	}
 
-	public void removeRights(long groupId, Long userId) throws BusinessException {
-		if (!credentialRepository.isAdmin(userId))
-			throw new GenericBusinessException("403 FORBIDDEN : no admin right");
-
+	@PreAuthorize("hasRole('admin')")
+	public void removeRights(long groupId) {
 		groupInfoRepository.deleteById(groupId);
 	}
 

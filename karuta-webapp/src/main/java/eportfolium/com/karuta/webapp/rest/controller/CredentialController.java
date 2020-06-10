@@ -22,15 +22,16 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import javax.xml.parsers.ParserConfigurationException;
 
+import eportfolium.com.karuta.business.UserInfo;
 import eportfolium.com.karuta.document.CredentialDocument;
 import eportfolium.com.karuta.document.LoginDocument;
-import eportfolium.com.karuta.webapp.util.UserInfo;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
 
 import edu.yale.its.tp.cas.client.ServiceTicketValidator;
 import eportfolium.com.karuta.business.contract.ConfigurationManager;
@@ -69,14 +70,10 @@ public class CredentialController extends AbstractController {
      *         <substitute>1/0</substitute> </user>
      */
     @GetMapping(produces = "application/xml")
-    public HttpEntity<CredentialDocument> getCredential(HttpServletRequest request) {
-        UserInfo ui = checkCredential(request);
+    public HttpEntity<CredentialDocument> getCredential(Authentication authentication) {
+        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
-        if (ui.userId == 0) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-
-        return new HttpEntity<>(userManager.getUserInfos(ui.userId));
+        return new HttpEntity<>(userManager.getUserInfos(userInfo.getId()));
     }
 
     /**
@@ -86,9 +83,7 @@ public class CredentialController extends AbstractController {
      */
     @RequestMapping(value = "/login", consumes = "application/xml", produces = "application/xml",
         method = { RequestMethod.POST, RequestMethod.PUT })
-    public HttpEntity<Object> postCredentialFromXml(@RequestBody LoginDocument credentials,
-                                                    HttpServletRequest request) {
-        HttpSession session = request.getSession(true);
+    public HttpEntity<Object> postCredentialFromXml(@RequestBody LoginDocument credentials) {
 
         String authlog = configurationManager.get("auth_log");
         Logger authLog = null;
@@ -113,11 +108,6 @@ public class CredentialController extends AbstractController {
 
         } else {
             boolean substitute = credential.getSubstitute() == 1;
-
-            session.setAttribute("user", credential.getUsername());
-            session.setAttribute("uid", credential.getId());
-            session.setAttribute("subuser", substitute ? login : "");
-            session.setAttribute("subuid", substitute ? credential.getSubstituteId() : 0);
 
             if (authLog != null) {
 

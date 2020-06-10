@@ -22,12 +22,9 @@ import eportfolium.com.karuta.document.CredentialDocument;
 import eportfolium.com.karuta.document.CredentialList;
 import eportfolium.com.karuta.document.LoginDocument;
 import eportfolium.com.karuta.document.RoleDocument;
-import eportfolium.com.karuta.model.bean.Credential;
-import eportfolium.com.karuta.model.exception.AuthenticationException;
 import eportfolium.com.karuta.model.exception.BusinessException;
 
 public interface SecurityManager {
-
 	/**
 	 * This method provides a way for security officers to"reset" the userPassword.
 	 */
@@ -53,7 +50,7 @@ public interface SecurityManager {
 
 	String generatePassword();
 
-	void removeUsers(Long byUser, Long forUser) throws BusinessException;
+	void removeUsers(Long forUser);
 
 	boolean isAdmin(Long userId);
 
@@ -71,23 +68,23 @@ public interface SecurityManager {
 
 	boolean userHasRole(long userId, long roleId);
 
-	CredentialList addUsers(CredentialList users, Long userId) throws BusinessException;
+	CredentialList addUsers(CredentialList users);
 
 	Long addRole(UUID portfolioId, String role, Long userId) throws BusinessException;
 
-	String addUserRole(Long byUserId, Long grid, Long forUserId) throws BusinessException;
+	String addUserRole(Long grid, Long forUserId);
 
-	void removeUserRole(Long userId, Long groupRightInfoId) throws BusinessException;
+	void removeUserRole(Long userId, Long groupRightInfoId);
 
-	void removeUsersFromRole(Long userId, UUID portfolioId) throws Exception;
+	void removeUsersFromRole(UUID portfolioId);
 
-	void removeRole(Long userId, Long groupRightInfoId) throws Exception;
+	void removeRole(Long groupRightInfoId);
 
-	Long changeRole(Long userId, Long rrgId, RoleDocument role) throws BusinessException;
+	Long changeRole(Long rrgId, RoleDocument role);
 
-	String addUsersToRole(Long id, Long rrgId, CredentialList users) throws BusinessException;
+	String addUsersToRole(Long rrgId, CredentialList users);
 
-	void addUserToGroup(Long byUser, Long forUser, Long groupId) throws BusinessException;
+	void addUserToGroup(Long forUser, Long groupId);
 
 	boolean addUserInCredentialGroups(Long userId, List<Long> credentialGroupIds);
 

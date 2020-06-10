@@ -16,14 +16,10 @@
 package eportfolium.com.karuta.webapp.rest.controller;
 
 import eportfolium.com.karuta.business.contract.SecurityManager;
-import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
-import eportfolium.com.karuta.webapp.util.UserInfo;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-
-import javax.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/groupsUsers")
@@ -42,12 +38,8 @@ public class UserGroupController extends AbstractController {
      */
     @PostMapping(produces = "application/xml")
     public String addUserToGroup(@RequestParam long group,
-                                 @RequestParam long userId,
-                                 HttpServletRequest request) throws BusinessException {
-
-        UserInfo ui = checkCredential(request);
-
-        securityManager.addUserToGroup(ui.userId, userId, group);
+                                 @RequestParam long userId) {
+        securityManager.addUserToGroup(userId, group);
 
         return "<ok/>";
     }

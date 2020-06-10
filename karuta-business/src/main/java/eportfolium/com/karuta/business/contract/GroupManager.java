@@ -48,13 +48,13 @@ public interface GroupManager {
 
 	Boolean removeCredentialGroup(Long credentialGroupId);
 
-	void changeUserGroup(Long grid, Long groupId, Long userId) throws BusinessException;
+	void changeUserGroup(Long grid, Long groupId);
 
-	GroupRightsList getGroupRights(Long userId, Long groupId) throws BusinessException;
+	GroupRightsList getGroupRights(Long groupId);
 
 	boolean addGroupRights(String label, UUID nodeUuid, String right, UUID portfolioId, Long userId);
 
-	void removeRights(long groupId, Long userId) throws BusinessException;
+	void removeRights(long groupId);
 
 	GroupRightInfo getByPortfolioAndLabel(UUID portfolioId, String role);
 

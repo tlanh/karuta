@@ -15,26 +15,5 @@
 
 package eportfolium.com.karuta.webapp.rest.controller;
 
-import eportfolium.com.karuta.webapp.util.UserInfo;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
-
 public abstract class AbstractController {
-    public UserInfo checkCredential(HttpServletRequest request) {
-        HttpSession session = request.getSession(true);
-
-        UserInfo ui = new UserInfo();
-
-        Long val = (Long) session.getAttribute("uid");
-        if (val != null)
-            ui.userId = val;
-        val = (Long) session.getAttribute("subuid");
-        if (val != null)
-            ui.subId = val;
-        ui.User = (String) session.getAttribute("user");
-        ui.subUser = (String) session.getAttribute("subuser");
-
-        return ui;
-    }
 }

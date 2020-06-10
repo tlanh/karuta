@@ -68,7 +68,7 @@ public class UserManagerImpl implements UserManager {
 	}
 
 	@Override
-	public CredentialList getUsersByRole(Long userId, UUID portfolioId, String role) {
+	public CredentialList getUsersByRole(UUID portfolioId, String role) {
 		List<Credential> users = credentialRepository.getUsersByRole(portfolioId, role);
 
 		return new CredentialList(users.stream()
@@ -118,9 +118,7 @@ public class UserManagerImpl implements UserManager {
 	public RoleRightsGroupList getRoleList(UUID portfolioId, Long userId) {
 		Iterable<GroupRightInfo> griList;
 
-		if (portfolioId != null && userId != null) {
-			griList = groupRightInfoRepository.getByPortfolioAndUser(portfolioId, userId);
-		} else if (portfolioId != null) {
+		if (portfolioId != null) {
 			griList = groupRightInfoRepository.getByPortfolioID(portfolioId);
 		} else if (userId != null) {
 			griList = groupRightInfoRepository.getByUser(userId);

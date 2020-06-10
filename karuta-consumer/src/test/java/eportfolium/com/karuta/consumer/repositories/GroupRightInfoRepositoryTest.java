@@ -46,29 +46,6 @@ public class GroupRightInfoRepositoryTest extends TestHelpers {
     }
 
     @Test
-    public void getByPortfolioAndUser() {
-        Portfolio portfolio = portfolioRecord();
-        ResourceTable resource = resourceRecord();
-
-        GroupRightInfo groupRightInfo = new GroupRightInfo();
-        groupRightInfo.setLabel("");
-        groupRightInfo.setPortfolio(portfolio);
-        repository.save(groupRightInfo);
-
-        GroupRights groupRights = new GroupRights();
-        groupRights.setId(new GroupRightsId());
-        groupRights.setGroupRightInfo(groupRightInfo);
-        groupRights.setGroupRightsId(resource.getId());
-        groupRightsRepository.save(groupRights);
-
-        List<GroupRightInfo> groups = repository
-                .getByPortfolioAndUser(portfolio.getId(), resource.getCredential().getId());
-
-        assertEquals(1, groups.size());
-        assertEquals(groupRightInfo.getId(), groups.get(0).getId());
-    }
-
-    @Test
     public void getByPortfolioID() {
         Portfolio portfolio = portfolioRecord();
 
