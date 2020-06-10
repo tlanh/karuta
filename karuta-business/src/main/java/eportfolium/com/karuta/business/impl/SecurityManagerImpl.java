@@ -63,7 +63,6 @@ import eportfolium.com.karuta.model.bean.Node;
 import eportfolium.com.karuta.model.bean.Portfolio;
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.model.exception.GenericBusinessException;
-import eportfolium.com.karuta.model.exception.ValueRequiredException;
 
 @Service
 @Transactional
@@ -162,11 +161,11 @@ public class SecurityManagerImpl implements SecurityManager {
 							.orElse(new Credential());
 
 		if (!authenticate(currentPassword.toCharArray(), user.getPassword())) {
-			throw new GenericBusinessException("User_password_incorrect");
+			throw new GenericBusinessException("Password is not correct.");
 		}
 
 		if (user.getPassword() != null && authenticate(newPassword.toCharArray(), user.getPassword())) {
-			throw new GenericBusinessException("User_newpassword_is_same");
+			throw new GenericBusinessException("New Password cannot be the same as Current Password.");
 		}
 
 		setPassword(newPassword, user);
@@ -202,7 +201,7 @@ public class SecurityManagerImpl implements SecurityManager {
 	 */
 	private void setPassword(String newPassword, Credential credential) throws BusinessException {
 		if (StringUtils.isEmpty(newPassword)) {
-			throw new ValueRequiredException(credential, "User_newpassword_is_required");
+			throw new GenericBusinessException("New password is required.");
 		}
 
 		credential.setPassword(hash(newPassword.toCharArray()));
