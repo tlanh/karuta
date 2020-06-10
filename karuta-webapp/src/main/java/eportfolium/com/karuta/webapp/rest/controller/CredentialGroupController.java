@@ -27,7 +27,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Arrays;
+import java.util.Collections;
 
 @RestController
 @RequestMapping("/usergroups")
@@ -46,7 +46,8 @@ public class CredentialGroupController {
     private static Logger logger;
 
     /**
-     * Create a new user group <br>
+     * Create a new user group.
+     *
      * POST /rest/api/usersgroups
      *
      * @param label - Name of the group we are creating
@@ -58,13 +59,13 @@ public class CredentialGroupController {
     }
 
     /**
-     * Put a user in user group <br>
+     * Put a user in user group.
+     *
      * PUT /rest/api/usersgroups
      *
      * @param group - Group id.
      * @param user - User id.
      * @param label - New name of the group.
-     * @return Code 200
      */
     @PutMapping
     public ResponseEntity<String> addUser(@RequestParam Long group,
@@ -75,7 +76,7 @@ public class CredentialGroupController {
         if (label != null) {
             isOK = groupManager.renameCredentialGroup(group, label);
         } else {
-            isOK = securityManager.addUserInCredentialGroups(user, Arrays.asList(group));
+            isOK = securityManager.addUserInCredentialGroups(user, Collections.singletonList(group));
         }
 
         if (isOK)
