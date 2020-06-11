@@ -15,16 +15,7 @@
 
 package eportfolium.com.karuta.business.impl;
 
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.KeySpec;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.PBEKeySpec;
 
 import eportfolium.com.karuta.business.UserInfo;
 import eportfolium.com.karuta.consumer.repositories.*;
@@ -44,6 +35,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.crypto.password.Pbkdf2PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -92,45 +85,9 @@ public class SecurityManagerImpl implements SecurityManager {
 	@Autowired
 	private PortfolioRepository portfolioRepository;
 
-	/**
-	 * Each token produced by this class uses this identifier as a prefix.
-	 */
-	public static final String ID = "$31$";
-
-	/**
-	 * The minimum recommended cost, used by default
-	 */
-	public static final int DEFAULT_COST = 16;
-
-	private static final String ALGORITHM = "PBKDF2WithHmacSHA512";
-
-	/**
-	 * A keyLength of 256 would be safer :).
-	 */
-	private static final int SIZE = 128;
-
-	private static final Pattern layout = Pattern.compile("\\$31\\$(\\d\\d?)\\$(.{43})");
-
-	private final SecureRandom random;
-
-	private final int cost;
-
 	private static final Logger log = LoggerFactory.getLogger(SecurityManagerImpl.class);
 
-	public SecurityManagerImpl() {
-		this(DEFAULT_COST);
-	}
-
-	/**
-	 * Create a SecurityManager with a specified cost
-	 * 
-	 * @param cost the exponential computational cost of hashing a password, 0 to 30
-	 */
-	private SecurityManagerImpl(int cost) {
-		iterations(cost); /* Validate cost */
-		this.cost = cost;
-		this.random = new SecureRandom();
-	}
+	private PasswordEncoder passwordEncoder = new Pbkdf2PasswordEncoder();
 
 	/**
 	 * The token generated is stored at the server, and should be associated with
@@ -160,11 +117,11 @@ public class SecurityManagerImpl implements SecurityManager {
 							.findById(userId)
 							.orElse(new Credential());
 
-		if (!authenticate(currentPassword.toCharArray(), user.getPassword())) {
+		if (!passwordEncoder.matches(user.getPassword(), currentPassword)) {
 			throw new GenericBusinessException("Password is not correct.");
 		}
 
-		if (user.getPassword() != null && authenticate(newPassword.toCharArray(), user.getPassword())) {
+		if (user.getPassword() != null && passwordEncoder.matches(user.getPassword(), newPassword)) {
 			throw new GenericBusinessException("New Password cannot be the same as Current Password.");
 		}
 
@@ -189,8 +146,7 @@ public class SecurityManagerImpl implements SecurityManager {
 		PasswordGenerator generator = new PasswordGenerator();
 
 		// Generated password is 12 characters long, which complies with policy
-		String password = generator.generatePassword(12, rules);
-		return password;
+		return generator.generatePassword(12, rules);
 	}
 
 	/**
@@ -204,64 +160,7 @@ public class SecurityManagerImpl implements SecurityManager {
 			throw new GenericBusinessException("New password is required.");
 		}
 
-		credential.setPassword(hash(newPassword.toCharArray()));
-	}
-
-	private static int iterations(int cost) {
-		if ((cost < 0) || (cost > 31))
-			throw new IllegalArgumentException("cost: " + cost);
-		return 1 << cost;
-	}
-
-	/**
-	 * Hash a password for storage. *
-	 * 
-	 * <p>
-	 * Passwords should be stored in a {@code char[]} so that it can be filled with
-	 * zeros after use instead of lingering on the heap and elsewhere.
-	 * 
-	 * @return a secure authentication token to be stored for later authentication
-	 */
-	private String hash(char[] password) {
-		byte[] salt = new byte[SIZE / 8];
-		random.nextBytes(salt);
-		byte[] dk = pbkdf2(password, salt, 1 << cost);
-		byte[] hash = new byte[salt.length + dk.length];
-		System.arraycopy(salt, 0, hash, 0, salt.length);
-		System.arraycopy(dk, 0, hash, salt.length, dk.length);
-		Base64.Encoder enc = Base64.getUrlEncoder().withoutPadding();
-		return ID + cost + '$' + enc.encodeToString(hash);
-	}
-
-	/**
-	 * Authenticate with a password and a stored password token.
-	 * 
-	 * @return true if the password and token match
-	 */
-	private boolean authenticate(char[] password, String token) {
-		Matcher m = layout.matcher(token);
-		if (!m.matches())
-			throw new IllegalArgumentException("Invalid token format");
-		int iterations = iterations(Integer.parseInt(m.group(1)));
-		byte[] hash = Base64.getUrlDecoder().decode(m.group(2));
-		byte[] salt = Arrays.copyOfRange(hash, 0, SIZE / 8);
-		byte[] check = pbkdf2(password, salt, iterations);
-		int zero = 0;
-		for (int idx = 0; idx < check.length; ++idx)
-			zero |= hash[salt.length + idx] ^ check[idx];
-		return zero == 0;
-	}
-
-	private static byte[] pbkdf2(char[] password, byte[] salt, int iterations) {
-		KeySpec spec = new PBEKeySpec(password, salt, iterations, SIZE);
-		try {
-			SecretKeyFactory f = SecretKeyFactory.getInstance(ALGORITHM);
-			return f.generateSecret(spec).getEncoded();
-		} catch (NoSuchAlgorithmException ex) {
-			throw new IllegalStateException("Missing algorithm: " + ALGORITHM, ex);
-		} catch (InvalidKeySpecException ex) {
-			throw new IllegalStateException("Invalid SecretKeyFactory", ex);
-		}
+		credential.setPassword(passwordEncoder.encode(newPassword));
 	}
 
 	@Override
@@ -287,7 +186,7 @@ public class SecurityManagerImpl implements SecurityManager {
 			credential.setActive(document.getActive());
 			credential.setIsDesigner(document.getDesigner());
 			credential.setCanSubstitute(document.getSubstitute());
-			credential.setPassword(hash(credential.getPassword().toCharArray()));
+			credential.setPassword(passwordEncoder.encode(credential.getPassword()));
 
 			credential.setLogin(document.getUsername());
 			credential.setOther(document.getOther());
@@ -444,8 +343,9 @@ public class SecurityManagerImpl implements SecurityManager {
 			log.error("Fatal Error : illegal checkPassword parameters");
 			throw new RuntimeException();
 		}
+
 		Credential cr = credentialRepository.findActiveById(userId);
-		return cr != null ? authenticate(passwd.toCharArray(), cr.getPassword()) : false;
+		return cr != null && passwordEncoder.matches(passwd, cr.getPassword());
 	}
 
 	@Override
@@ -562,7 +462,7 @@ public class SecurityManagerImpl implements SecurityManager {
 
 		if (user == null)
 			return null;
-		else if (!authenticate(credentials.getPassword().toCharArray(), user.getPassword()))
+		else if (!passwordEncoder.matches(credentials.getPassword(), user.getPassword()))
 			return null;
 
 		Credential credential = user;
