@@ -28,6 +28,7 @@ import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -110,9 +111,11 @@ public class RoleRightsGroupsController extends AbstractController {
      * POST /rest/api/rolerightsgroups/rolerightsgroup/{id}/users
      */
     @PostMapping(value = "/rolerightsgroup/{id}/users", produces = "application/xml")
-    public String postUsers(@RequestBody CredentialList users,
-                            @PathVariable Long id) {
-        return securityManager.addUsersToRole(id, users);
+    public ResponseEntity<String> postUsers(@RequestBody CredentialList users,
+                                            @PathVariable Long id) {
+        securityManager.addUsersToRole(id, users);
+
+        return ResponseEntity.ok().build();
     }
 
     /**
