@@ -33,11 +33,11 @@ public interface UserManager {
 
 	Long getUserId(String userLogin);
 
+	Long getUserId(String userLogin, String email);
+
 	ProfileList getUserRolesByUserId(Long userId);
 
 	String getEmailByLogin(String userLogin);
-
-	Long getUserId(String userLogin, String email);
 
 	RoleRightsGroupList getRoleList(UUID portfolioId, Long userId);
 

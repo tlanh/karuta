@@ -95,6 +95,11 @@ public class UserManagerImpl implements UserManager {
 	}
 
 	@Override
+	public Long getUserId(String userLogin, String email) {
+		return credentialRepository.getIdByLoginAndEmail(userLogin, email);
+	}
+
+	@Override
 	public ProfileList getUserRolesByUserId(Long userId) {
 		List<GroupUser> groups = groupUserRepository.getByUser(userId);
 
@@ -107,11 +112,6 @@ public class UserManagerImpl implements UserManager {
 	@Override
 	public String getEmailByLogin(String userLogin) {
 		return credentialRepository.getEmailByLogin(userLogin);
-	}
-
-	@Override
-	public Long getUserId(String userLogin, String email) {
-		return credentialRepository.getIdByLoginAndEmail(userLogin, email);
 	}
 
 	@Override
