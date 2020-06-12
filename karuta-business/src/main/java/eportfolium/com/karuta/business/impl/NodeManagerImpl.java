@@ -72,7 +72,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	private CredentialRepository credentialRepository;
 
 	@Autowired
-	private ResourceTableRepository resourceTableRepository;
+	private ResourceRepository resourceRepository;
 
 	@Autowired
 	private GroupRightInfoRepository groupRightInfoRepository;
@@ -790,7 +790,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 			parentid = baseNodeToRemove.getParentNode().getId();
 
 		final Set<Node> nodesToDelete = new LinkedHashSet<Node>();
-		final Set<ResourceTable> resourcesToDelete = new LinkedHashSet<ResourceTable>();
+		final Set<Resource> resourcesToDelete = new LinkedHashSet<>();
 		final Map<Integer, Set<String>> t_map_parentid = new HashMap<Integer, Set<String>>();
 
 		Set<Node> t_set_parent = new LinkedHashSet<Node>();
@@ -849,7 +849,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 		nodeRepository.deleteAll(nodesToDelete);
 
 		// On efface les ressources
-		resourceTableRepository.deleteAll(resourcesToDelete);
+		resourceRepository.deleteAll(resourcesToDelete);
 
 		if (parentid != null)
 			updateNode(parentid);
@@ -1474,38 +1474,38 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 
         // Contain a mapping between original elements and their copy.
         final Map<Node, Node> allNodes = new HashMap<>();
-        final Map<ResourceTable, ResourceTable> resources = new HashMap<>();
+        final Map<Resource, Resource> resources = new HashMap<>();
 
         for (Node node : nodesToCopy) {
             Node nodeCopy = new Node(node);
             nodeCopy.setModifUserId(userId);
 
             if (node.getResource() != null) {
-                ResourceTable resourceCopy = nodeCopy.getResource();
+                Resource resourceCopy = nodeCopy.getResource();
                 resourceCopy.setModifUserId(userId);
 
                 if (!node.isSharedRes() || !node.getSharedNode() || !node.isSharedNodeRes()) {
-                    resourceTableRepository.save(resourceCopy);
+                    resourceRepository.save(resourceCopy);
                     resources.put(node.getResource(), resourceCopy);
                 }
             }
 
             if (node.getResResource() != null) {
-                ResourceTable resourceCopy = nodeCopy.getResResource();
+                Resource resourceCopy = nodeCopy.getResResource();
                 resourceCopy.setModifUserId(userId);
 
                 if (!node.isSharedRes() || !node.getSharedNode() || !node.isSharedNodeRes()) {
-                    resourceTableRepository.save(resourceCopy);
+                    resourceRepository.save(resourceCopy);
                     resources.put(node.getResource(), resourceCopy);
                 }
             }
 
             if (node.getContextResource() != null) {
-                ResourceTable resourceCopy = nodeCopy.getContextResource();
+                Resource resourceCopy = nodeCopy.getContextResource();
                 resourceCopy.setModifUserId(userId);
 
                 if (!node.isSharedRes() || !node.getSharedNode() || !node.isSharedNodeRes()) {
-                    resourceTableRepository.save(resourceCopy);
+                    resourceRepository.save(resourceCopy);
                     resources.put(node.getResource(), resourceCopy);
                 }
             }

@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import eportfolium.com.karuta.business.contract.PortfolioManager;
 import eportfolium.com.karuta.consumer.repositories.PortfolioRepository;
-import eportfolium.com.karuta.consumer.repositories.ResourceTableRepository;
+import eportfolium.com.karuta.consumer.repositories.ResourceRepository;
 import eportfolium.com.karuta.document.*;
 import eportfolium.com.karuta.model.bean.*;
 import eportfolium.com.karuta.util.JavaTimeUtil;
@@ -47,7 +47,7 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 	private NodeManager nodeManager;
 
 	@Autowired
-	private ResourceTableRepository resourceTableRepository;
+	private ResourceRepository resourceRepository;
 
 	@Autowired
 	private PortfolioRepository portfolioRepository;
@@ -60,7 +60,7 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 			throw new GenericBusinessException("403 FORBIDDEN : No READ credential");
 		}
 
-		ResourceTable resource = resourceTableRepository.getResourceByParentNodeUuid(parentNodeId);
+		Resource resource = resourceRepository.getResourceByParentNodeUuid(parentNodeId);
 
 		ResourceDocument document = new ResourceDocument(resource.getId());
 
@@ -72,8 +72,8 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 
 	@Override
 	public ResourceList getResources(UUID portfolioId, Long userId, Long groupId) {
-		List<ResourceTable> resources = resourceTableRepository
-											.getResourcesByPortfolioUUID(portfolioId);
+		List<Resource> resources = resourceRepository
+				.getResourcesByPortfolioUUID(portfolioId);
 
 		return new ResourceList(resources.stream()
 				.map(r -> new ResourceDocument(r.getNode().getId()))
@@ -87,11 +87,11 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 		if (!hasRight(userId, groupId, parentNodeId, GroupRights.WRITE))
 			throw new GenericBusinessException("403 FORBIDDEN : No WRITE credential");
 
-		ResourceTable rt = resourceTableRepository.getResourceByParentNodeUuid(parentNodeId);
+		Resource res = resourceRepository.getResourceByParentNodeUuid(parentNodeId);
 
 		portfolioManager.updateTimeByNode(parentNodeId);
 
-		return updateResource(rt.getId(), null, xmlAttributes(resource), userId);
+		return updateResource(res.getId(), null, xmlAttributes(resource), userId);
 	}
 
 	@Override
@@ -124,7 +124,7 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 			throw new GenericBusinessException("403 FORBIDDEN : No admin right");
 
 		if (hasRight(userId, groupId, resourceId, GroupRights.DELETE)) {
-			resourceTableRepository.deleteById(resourceId);
+			resourceRepository.deleteById(resourceId);
 		}
 	}
 
@@ -160,23 +160,15 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 			return 0;
 		}
 
-		Optional<ResourceTable> resourceTableOptional = resourceTableRepository.findById(id);
+		Resource resource = resourceRepository.findById(id)
+								.orElse(new Resource(id));
 
-		ResourceTable rt;
+		resource.setXsiType(xsiType);
+		resource.setContent(content);
+		resource.setCredential(new Credential(userId));
+		resource.setModifUserId(userId);
 
-		if (resourceTableOptional.isPresent()) {
-			rt = resourceTableOptional.get();
-		} else {
-			rt = new ResourceTable();
-			rt.setId(id);
-		}
-
-		rt.setXsiType(xsiType);
-		rt.setContent(content);
-		rt.setCredential(new Credential(userId));
-		rt.setModifUserId(userId);
-
-		resourceTableRepository.save(rt);
+		resourceRepository.save(resource);
 
 		Optional<Node> node = nodeRepository.findById(parentId);
 
@@ -187,16 +179,16 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 
 		// Ensuite on met à jour les id ressource au niveau du noeud parent
 		if (xsiType.equals("nodeRes")) {
-			n.setResResource(rt);
+			n.setResResource(resource);
 			if (sharedNodeRes) {
 				n.setSharedNodeResUuid(id);
 			} else {
 				n.setSharedNodeResUuid(null);
 			}
 		} else if (xsiType.equals("context")) {
-			n.setContextResource(rt);
+			n.setContextResource(resource);
 		} else {
-			n.setResource(rt);
+			n.setResource(resource);
 			if (sharedRes) {
 				n.setSharedResUuid(id);
 			} else {
@@ -211,13 +203,13 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 
 	@Override
 	public int updateResource(UUID nodeUuid, String content, Long userId) {
-		ResourceTable rt = resourceTableRepository.getResourceByParentNodeUuid(nodeUuid);
+		Resource resource = resourceRepository.getResourceByParentNodeUuid(nodeUuid);
 
-		rt.setContent(content);
-		rt.setCredential(new Credential(userId));
-		rt.setModifUserId(userId);
+		resource.setContent(content);
+		resource.setCredential(new Credential(userId));
+		resource.setModifUserId(userId);
 
-		resourceTableRepository.save(rt);
+		resourceRepository.save(resource);
 
 		return 0;
 	}
@@ -225,11 +217,11 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 	@Override
 	public int updateResource(UUID id, String xsiType, String content, Long userId) {
 		if (xsiType != null) {
-			resourceTableRepository.deleteById(id);
+			resourceRepository.deleteById(id);
 
 			Date now = JavaTimeUtil.toJavaDate(LocalDateTime.now(JavaTimeUtil.defaultTimezone));
 
-			ResourceTable rt = new ResourceTable(
+			Resource resource = new Resource(
 				id,
 				xsiType,
 				content,
@@ -238,22 +230,21 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 				now
 			);
 
-			resourceTableRepository.save(rt);
+			resourceRepository.save(resource);
 		} else {
-			Optional<ResourceTable> resourceTable = resourceTableRepository.findById(id);
+			Optional<Resource> resourceOptional = resourceRepository.findById(id);
 
-			if (resourceTable.isPresent()) {
-				ResourceTable rt = resourceTable.get();
+			if (resourceOptional.isPresent()) {
+				Resource resource = resourceOptional.get();
 
-				rt.setContent(content);
-				rt.setCredential(new Credential(userId));
-				rt.setModifUserId(userId);
+				resource.setContent(content);
+				resource.setCredential(new Credential(userId));
+				resource.setModifUserId(userId);
 
-				resourceTableRepository.save(rt);
+				resourceRepository.save(resource);
 			} else {
 				return 1;
 			}
-
 		}
 
 		return 0;
@@ -261,24 +252,24 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 
 	@Override
 	public int updateContextResource(UUID nodeUuid, String content, Long userId) {
-		ResourceTable rt = resourceTableRepository.getContextResourceByNodeUuid(nodeUuid);
+		Resource resource = resourceRepository.getContextResourceByNodeUuid(nodeUuid);
 
-		rt.setContent(content);
-		rt.setCredential(new Credential(userId));
-		rt.setModifUserId(userId);
+		resource.setContent(content);
+		resource.setCredential(new Credential(userId));
+		resource.setModifUserId(userId);
 
-		resourceTableRepository.save(rt);
+		resourceRepository.save(resource);
 
 		return 0;
 	}
 
 	private void updateResResource(UUID nodeUuid, String content, Long userId) {
-		ResourceTable rt = resourceTableRepository.getResourceOfResourceByNodeUuid(nodeUuid);
+		Resource resource = resourceRepository.getResourceOfResourceByNodeUuid(nodeUuid);
 
-		rt.setContent(content);
-		rt.setCredential(new Credential(userId));
-		rt.setModifUserId(userId);
+		resource.setContent(content);
+		resource.setCredential(new Credential(userId));
+		resource.setModifUserId(userId);
 
-		resourceTableRepository.save(rt);
+		resourceRepository.save(resource);
 	}
 }

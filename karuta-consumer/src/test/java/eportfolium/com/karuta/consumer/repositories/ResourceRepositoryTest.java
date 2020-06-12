@@ -4,7 +4,7 @@ import eportfolium.com.karuta.consumer.RepositoryTest;
 import eportfolium.com.karuta.consumer.TestHelpers;
 import eportfolium.com.karuta.model.bean.Node;
 import eportfolium.com.karuta.model.bean.Portfolio;
-import eportfolium.com.karuta.model.bean.ResourceTable;
+import eportfolium.com.karuta.model.bean.Resource;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,9 +16,9 @@ import static org.junit.Assert.*;
 
 @RunWith(SpringRunner.class)
 @RepositoryTest
-public class ResourceTableRepositoryTest extends TestHelpers {
+public class ResourceRepositoryTest extends TestHelpers {
     @Autowired
-    private ResourceTableRepository repository;
+    private ResourceRepository repository;
 
     @Autowired
     private NodeRepository nodeRepository;
@@ -34,7 +34,7 @@ public class ResourceTableRepositoryTest extends TestHelpers {
 
     @Test
     public void modifDateIsUpdatedOnSave() {
-        ResourceTable resource = savableResource();
+        Resource resource = savableResource();
 
         assertNull(resource.getModifDate());
 
@@ -45,13 +45,13 @@ public class ResourceTableRepositoryTest extends TestHelpers {
 
     @Test
     public void getContextResourcesByPortfolioUUID() throws InterruptedException {
-        ResourceTable resource = resourceRecord();
+        Resource resource = resourceRecord();
 
         Node node = nodeWithPortfolio();
         node.setContextResource(resource);
         nodeRepository.save(node);
 
-        List<ResourceTable> resources = repository
+        List<Resource> resources = repository
                 .getContextResourcesByPortfolioUUID(node.getPortfolio().getId());
 
         assertEquals(1, resources.size());
@@ -60,13 +60,13 @@ public class ResourceTableRepositoryTest extends TestHelpers {
 
     @Test
     public void getResourcesByPortfolioUUID() {
-        ResourceTable resource = resourceRecord();
+        Resource resource = resourceRecord();
 
         Node node = nodeWithPortfolio();
         node.setResource(resource);
         nodeRepository.save(node);
 
-        List<ResourceTable> resources = repository
+        List<Resource> resources = repository
                 .getResourcesByPortfolioUUID(node.getPortfolio().getId());
 
         assertEquals(1, resources.size());
@@ -75,13 +75,13 @@ public class ResourceTableRepositoryTest extends TestHelpers {
 
     @Test
     public void getResourcesOfResourceByPortfolioUUID() {
-        ResourceTable resource = resourceRecord();
+        Resource resource = resourceRecord();
 
         Node node = nodeWithPortfolio();
         node.setResResource(resource);
         nodeRepository.save(node);
 
-        List<ResourceTable> resources = repository
+        List<Resource> resources = repository
                 .getResourcesOfResourceByPortfolioUUID(node.getPortfolio().getId());
 
         assertEquals(1, resources.size());
@@ -90,39 +90,39 @@ public class ResourceTableRepositoryTest extends TestHelpers {
 
     @Test
     public void getResourceByParentNodeUuid() {
-        ResourceTable resource = resourceRecord();
+        Resource resource = resourceRecord();
 
         Node node = nodeWithPortfolio();
         node.setResource(resource);
         nodeRepository.save(node);
 
-        ResourceTable found = repository.getResourceByParentNodeUuid(node.getId());
+        Resource found = repository.getResourceByParentNodeUuid(node.getId());
 
         assertEquals(resource.getId(), found.getId());
     }
 
     @Test
     public void getContextResourceByNodeUuid() {
-        ResourceTable resource = resourceRecord();
+        Resource resource = resourceRecord();
 
         Node node = nodeWithPortfolio();
         node.setContextResource(resource);
         nodeRepository.save(node);
 
-        ResourceTable found = repository.getContextResourceByNodeUuid(node.getId());
+        Resource found = repository.getContextResourceByNodeUuid(node.getId());
 
         assertEquals(resource.getId(), found.getId());
     }
 
     @Test
     public void getResourceOfResourceByNodeUuid() {
-        ResourceTable resource = resourceRecord();
+        Resource resource = resourceRecord();
 
         Node node = nodeWithPortfolio();
         node.setResResource(resource);
         nodeRepository.save(node);
 
-        ResourceTable found = repository.getResourceOfResourceByNodeUuid(node.getId());
+        Resource found = repository.getResourceOfResourceByNodeUuid(node.getId());
 
         assertEquals(resource.getId(), found.getId());
     }

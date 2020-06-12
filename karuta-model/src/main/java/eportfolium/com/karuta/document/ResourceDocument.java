@@ -3,7 +3,7 @@ package eportfolium.com.karuta.document;
 import com.fasterxml.jackson.annotation.*;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import eportfolium.com.karuta.model.bean.Node;
-import eportfolium.com.karuta.model.bean.ResourceTable;
+import eportfolium.com.karuta.model.bean.Resource;
 
 import java.util.Date;
 import java.util.Map;
@@ -31,7 +31,7 @@ public class ResourceDocument {
         this.id = id;
     }
 
-    public ResourceDocument(ResourceTable resource, Node node) {
+    public ResourceDocument(Resource resource, Node node) {
         this(resource.getId());
 
         this.nodeId = node.getId();

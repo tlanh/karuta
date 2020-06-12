@@ -2,11 +2,11 @@ package eportfolium.com.karuta.consumer;
 
 import eportfolium.com.karuta.consumer.repositories.CredentialRepository;
 import eportfolium.com.karuta.consumer.repositories.PortfolioRepository;
-import eportfolium.com.karuta.consumer.repositories.ResourceTableRepository;
+import eportfolium.com.karuta.consumer.repositories.ResourceRepository;
 import eportfolium.com.karuta.model.bean.Credential;
 import eportfolium.com.karuta.model.bean.Node;
 import eportfolium.com.karuta.model.bean.Portfolio;
-import eportfolium.com.karuta.model.bean.ResourceTable;
+import eportfolium.com.karuta.model.bean.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.UUID;
@@ -19,7 +19,7 @@ public abstract class TestHelpers {
     protected PortfolioRepository portfolioRepository;
 
     @Autowired
-    protected ResourceTableRepository resourceTableRepository;
+    protected ResourceRepository resourceRepository;
 
     protected Credential savableCredential() {
         Credential credential = new Credential();
@@ -77,19 +77,19 @@ public abstract class TestHelpers {
         return node;
     }
 
-    protected ResourceTable savableResource() {
-        ResourceTable resource = new ResourceTable();
+    protected Resource savableResource() {
+        Resource resource = new Resource();
         resource.setModifUserId(42L);
 
         return resource;
     }
 
-    protected ResourceTable resourceRecord() {
+    protected Resource resourceRecord() {
         Credential credential = credentialRecord();
-        ResourceTable resource = savableResource();
+        Resource resource = savableResource();
 
         resource.setCredential(credential);
-        resourceTableRepository.save(resource);
+        resourceRepository.save(resource);
 
         return resource;
     }

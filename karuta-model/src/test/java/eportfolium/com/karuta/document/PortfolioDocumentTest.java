@@ -3,7 +3,7 @@ package eportfolium.com.karuta.document;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import eportfolium.com.karuta.model.bean.Node;
 import eportfolium.com.karuta.model.bean.Portfolio;
-import eportfolium.com.karuta.model.bean.ResourceTable;
+import eportfolium.com.karuta.model.bean.Resource;
 import org.junit.Test;
 
 import java.util.*;
@@ -84,7 +84,7 @@ public class PortfolioDocumentTest extends DocumentTest {
 
         Portfolio portfolio = new Portfolio();
         Node node = new Node();
-        ResourceTable resource = new ResourceTable();
+        Resource resource = new Resource();
 
         resource.setId(resourceId);
         resource.setXsiType("quux");

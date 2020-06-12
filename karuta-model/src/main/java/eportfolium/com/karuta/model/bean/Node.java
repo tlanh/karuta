@@ -51,10 +51,10 @@ public class Node implements Serializable {
 	private String metadataWad;
 	private String metadataEpm;
 
-	/** Link to ResourceTable */
-	private ResourceTable resource;
-	private ResourceTable resResource;
-	private ResourceTable contextResource;
+	/** Link to Resource */
+	private Resource resource;
+	private Resource resResource;
+	private Resource contextResource;
 
 	private Boolean sharedRes;
 	private Boolean sharedNode;
@@ -91,9 +91,9 @@ public class Node implements Serializable {
 		this.metadataWad = original.getMetadataWad();
 		this.metadataEpm = original.getMetadataEpm();
 
-		this.resource = original.getResource() != null ? new ResourceTable(original.getResource()) : null;
-		this.resResource = original.getResResource() != null ? new ResourceTable(original.getResResource()) : null;
-		this.contextResource = original.getContextResource() != null ? new ResourceTable(original.getContextResource())
+		this.resource = original.getResource() != null ? new Resource(original.getResource()) : null;
+		this.resResource = original.getResResource() != null ? new Resource(original.getResResource()) : null;
+		this.contextResource = original.getContextResource() != null ? new Resource(original.getContextResource())
 				: null;
 		this.sharedRes = original.isSharedRes();
 		this.sharedNode = original.getSharedNode();
@@ -128,8 +128,8 @@ public class Node implements Serializable {
 	}
 
 	public Node(UUID id, Node parentNode, String childrenStr, int nodeOrder, String metadata, String metadataWad,
-			String metadataEpm, ResourceTable resourceTable, ResourceTable resResourceTable,
-			ResourceTable resContextNodeUuid, boolean sharedRes, boolean sharedNode, boolean sharedNodeRes,
+			String metadataEpm, Resource resource, Resource resResource,
+			Resource resContextNodeUuid, boolean sharedRes, boolean sharedNode, boolean sharedNodeRes,
 			UUID sharedResUuid, UUID sharedNodeUuid, UUID sharedNodeResUuid, String asmType, String xsiType,
 			String semtag, String semantictag, String label, String code, String descr, String format, Long modifUserId,
 			Date modifDate, Portfolio portfolio) {
@@ -140,8 +140,8 @@ public class Node implements Serializable {
 		this.metadata = metadata;
 		this.metadataWad = metadataWad;
 		this.metadataEpm = metadataEpm;
-		this.resource = resourceTable;
-		this.resResource = resResourceTable;
+		this.resource = resource;
+		this.resResource = resResource;
 		this.contextResource = resContextNodeUuid;
 		this.sharedRes = sharedRes;
 		this.sharedNode = sharedNode;
@@ -237,31 +237,31 @@ public class Node implements Serializable {
 
 	@OneToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "res_node_uuid", referencedColumnName = "node_uuid")
-	public ResourceTable getResource() {
+	public Resource getResource() {
 		return this.resource;
 	}
 
-	public void setResource(ResourceTable resource) {
+	public void setResource(Resource resource) {
 		this.resource = resource;
 	}
 
 	@OneToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "res_res_node_uuid", referencedColumnName = "node_uuid")
-	public ResourceTable getResResource() {
+	public Resource getResResource() {
 		return this.resResource;
 	}
 
-	public void setResResource(ResourceTable resResource) {
+	public void setResResource(Resource resResource) {
 		this.resResource = resResource;
 	}
 
 	@OneToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "res_context_node_uuid", referencedColumnName = "node_uuid")
-	public ResourceTable getContextResource() {
+	public Resource getContextResource() {
 		return this.contextResource;
 	}
 
-	public void setContextResource(ResourceTable contextResource) {
+	public void setContextResource(Resource contextResource) {
 		this.contextResource = contextResource;
 	}
 

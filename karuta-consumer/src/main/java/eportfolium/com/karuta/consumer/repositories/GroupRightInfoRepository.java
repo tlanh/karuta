@@ -31,7 +31,7 @@ public interface GroupRightInfoRepository extends CrudRepository<GroupRightInfo,
             "AND gri.label = :label")
     Long getIdByNodeAndLabel(@Param("nodeId") UUID nodeId, @Param("label") String label);
 
-    @Query("SELECT DISTINCT gri FROM ResourceTable r, GroupRights gr " +
+    @Query("SELECT DISTINCT gri FROM Resource r, GroupRights gr " +
             "INNER JOIN gr.id.groupRightInfo gri " +
             "WHERE r.credential.id = :userId " +
             "AND gr.id.id = r.id")

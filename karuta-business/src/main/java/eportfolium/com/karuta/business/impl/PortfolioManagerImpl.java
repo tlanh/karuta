@@ -100,7 +100,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	private GroupInfoRepository groupInfoRepository;
 
 	@Autowired
-	private ResourceTableRepository resourceTableRepository;
+	private ResourceRepository resourceRepository;
 
 	@Autowired
 	private GroupUserRepository groupUserRepository;
@@ -495,14 +495,14 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 			groupRightInfoRepository.deleteAll(groupRightInfoRepository.getByPortfolioID(portfolioId));
 
 			/// Resources
-			List<ResourceTable> rtList = resourceTableRepository.getResourcesByPortfolioUUID(portfolioId);
-			resourceTableRepository.deleteAll(rtList);
+			List<Resource> rtList = resourceRepository.getResourcesByPortfolioUUID(portfolioId);
+			resourceRepository.deleteAll(rtList);
 
-			rtList = resourceTableRepository.getContextResourcesByPortfolioUUID(portfolioId);
-			resourceTableRepository.deleteAll(rtList);
+			rtList = resourceRepository.getContextResourcesByPortfolioUUID(portfolioId);
+			resourceRepository.deleteAll(rtList);
 
-			rtList = resourceTableRepository.getResourcesOfResourceByPortfolioUUID(portfolioId);
-			resourceTableRepository.deleteAll(rtList);
+			rtList = resourceRepository.getResourcesOfResourceByPortfolioUUID(portfolioId);
+			resourceRepository.deleteAll(rtList);
 
 			/// Nodes
 			nodeRepository.deleteAll(nodeRepository.getNodes(portfolioId));
@@ -1288,7 +1288,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 						copy.getResource().setModifUserId(1L);
 					}
 
-					resourceTableRepository.save(copy.getResource());
+					resourceRepository.save(copy.getResource());
 				}
 				if (copy.getResResource() != null) {
 					// Mise a jour du code dans le contenu du noeud.
@@ -1302,7 +1302,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 					} else {
 						copy.getResResource().setModifUserId(1L);
 					}
-					resourceTableRepository.save(copy.getResResource());
+					resourceRepository.save(copy.getResResource());
 				}
 				if (copy.getContextResource() != null) {
 					if (setOwner) {
@@ -1310,7 +1310,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 					} else {
 						copy.getContextResource().setModifUserId(1L);
 					}
-					resourceTableRepository.save(copy.getContextResource());
+					resourceRepository.save(copy.getContextResource());
 				}
 
 				// Mise à jour du code dans le code interne de la BD.

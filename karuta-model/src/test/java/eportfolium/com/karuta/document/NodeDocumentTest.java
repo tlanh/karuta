@@ -3,7 +3,7 @@ package eportfolium.com.karuta.document;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import eportfolium.com.karuta.model.bean.GroupRights;
 import eportfolium.com.karuta.model.bean.Node;
-import eportfolium.com.karuta.model.bean.ResourceTable;
+import eportfolium.com.karuta.model.bean.Resource;
 import org.junit.Test;
 
 import java.util.*;
@@ -145,7 +145,7 @@ public class NodeDocumentTest extends DocumentTest {
                             .build()
                             .getTime();
 
-        ResourceTable resource = new ResourceTable();
+        Resource resource = new Resource();
         Node node = new Node();
 
         resource.setXsiType("nodeRes");

@@ -2,7 +2,7 @@ package eportfolium.com.karuta.document;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import eportfolium.com.karuta.model.bean.Node;
-import eportfolium.com.karuta.model.bean.ResourceTable;
+import eportfolium.com.karuta.model.bean.Resource;
 import org.junit.Test;
 
 import java.util.Calendar;
@@ -37,7 +37,7 @@ public class ResourceDocumentTest extends DocumentTest {
 
         String rawXml = "<foo lang=\"fr\"></foo><bar></bar>";
 
-        ResourceTable resource = new ResourceTable();
+        Resource resource = new Resource();
         Node node = new Node();
 
         resource.setId(resourceId);

@@ -22,7 +22,7 @@ public class GroupRightInfoRepositoryTest extends TestHelpers {
     private NodeRepository nodeRepository;
 
     @Autowired
-    private ResourceTableRepository resourceTableRepository;
+    private ResourceRepository resourceRepository;
 
     @Autowired
     private GroupRightsRepository groupRightsRepository;
@@ -80,7 +80,7 @@ public class GroupRightInfoRepositoryTest extends TestHelpers {
 
     @Test
     public void getByUser() {
-        ResourceTable resource = resourceRecord();
+        Resource resource = resourceRecord();
 
         GroupRightInfo groupRightInfo = new GroupRightInfo();
         groupRightInfo.setLabel("");
