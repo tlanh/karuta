@@ -38,7 +38,7 @@ import eportfolium.com.karuta.model.exception.GenericBusinessException;
 
 @Service
 @Transactional
-public class ResourceManagerImpl extends BaseManager implements ResourceManager {
+public class ResourceManagerImpl extends BaseManagerImpl implements ResourceManager {
 
 	@Autowired
 	private PortfolioManager portfolioManager;

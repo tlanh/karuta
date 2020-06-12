@@ -22,7 +22,7 @@ import eportfolium.com.karuta.document.ResourceDocument;
 import eportfolium.com.karuta.document.ResourceList;
 import eportfolium.com.karuta.model.exception.BusinessException;
 
-public interface ResourceManager {
+public interface ResourceManager extends BaseManager {
 
 	ResourceDocument getResource(UUID parentNodeId, Long userId, Long groupId) throws BusinessException;
 

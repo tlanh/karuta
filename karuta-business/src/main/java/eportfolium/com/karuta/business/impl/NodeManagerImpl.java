@@ -46,7 +46,7 @@ import eportfolium.com.karuta.util.InMemoryCache;
 
 @Service
 @Transactional
-public class NodeManagerImpl extends BaseManager implements NodeManager {
+public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 
 	static private final Logger log = LoggerFactory.getLogger(NodeManagerImpl.class);
 

@@ -25,12 +25,10 @@ import eportfolium.com.karuta.model.bean.GroupRights;
 import eportfolium.com.karuta.model.bean.Node;
 import eportfolium.com.karuta.model.exception.BusinessException;
 
-public interface NodeManager {
+public interface NodeManager extends BaseManager {
 
 	NodeDocument getNode(UUID nodeId, boolean withChildren, Long userId, Long groupId, String label,
 			Integer cutoff) throws BusinessException, JsonProcessingException;
-
-	GroupRights getRights(Long userId, Long groupId, UUID nodeId);
 
 	void resetRights(List<Node> children) throws JsonProcessingException;
 

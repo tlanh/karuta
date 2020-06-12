@@ -62,7 +62,7 @@ import eportfolium.com.karuta.util.JavaTimeUtil;
 
 @Service
 @Transactional
-public class PortfolioManagerImpl extends BaseManager implements PortfolioManager {
+public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioManager {
 
 	static private final Logger logger = LoggerFactory.getLogger(PortfolioManagerImpl.class);
 

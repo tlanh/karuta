@@ -22,6 +22,7 @@ import java.util.stream.Stream;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import eportfolium.com.karuta.business.contract.BaseManager;
 import eportfolium.com.karuta.consumer.repositories.CredentialRepository;
 import eportfolium.com.karuta.consumer.repositories.GroupRightsRepository;
 import eportfolium.com.karuta.consumer.repositories.NodeRepository;
@@ -35,7 +36,7 @@ import eportfolium.com.karuta.model.bean.GroupRights;
 import eportfolium.com.karuta.model.bean.GroupRightsId;
 import eportfolium.com.karuta.model.bean.Node;
 
-public abstract class BaseManager {
+public abstract class BaseManagerImpl implements BaseManager {
 
 	@Autowired
 	protected CredentialRepository credentialRepository;
@@ -55,6 +56,7 @@ public abstract class BaseManager {
 		String childString = "";
 	}
 
+	@Override
 	public GroupRights getRights(Long userId, Long groupId, UUID nodeId) {
 		if (credentialRepository.isAdmin(userId)
 				|| credentialRepository.isDesigner(userId, nodeId)) {
@@ -91,7 +93,8 @@ public abstract class BaseManager {
 		}
 	}
 
-	protected boolean hasRight(Long userId, Long groupId, UUID nodeId, String right) {
+	@Override
+	public boolean hasRight(Long userId, Long groupId, UUID nodeId, String right) {
 		GroupRights rights = getRights(userId, groupId, nodeId);
 
 		switch (right) {

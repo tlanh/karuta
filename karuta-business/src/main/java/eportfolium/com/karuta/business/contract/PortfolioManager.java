@@ -26,7 +26,7 @@ import eportfolium.com.karuta.model.bean.GroupRights;
 import eportfolium.com.karuta.model.bean.Portfolio;
 import eportfolium.com.karuta.model.exception.BusinessException;
 
-public interface PortfolioManager {
+public interface PortfolioManager extends BaseManager {
 
 	int addPortfolioInGroup(UUID portfolioUuid, Long portfolioGroupId, String label);
 
