@@ -58,9 +58,6 @@ public class PortfolioController extends AbstractController {
     private SecurityManager securityManager;
 
     @Autowired
-    private ConfigurationManager configurationManager;
-
-    @Autowired
     private UserManager userManager;
 
     @Autowired

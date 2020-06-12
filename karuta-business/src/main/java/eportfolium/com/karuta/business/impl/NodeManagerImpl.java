@@ -35,7 +35,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import eportfolium.com.karuta.business.contract.ConfigurationManager;
 import eportfolium.com.karuta.business.contract.GroupManager;
 import eportfolium.com.karuta.business.contract.NodeManager;
 import eportfolium.com.karuta.business.contract.PortfolioManager;
@@ -59,9 +58,6 @@ public class NodeManagerImpl extends BaseManager implements NodeManager {
 
 	@Autowired
 	private ResourceManager resourceManager;
-
-	@Autowired
-	private ConfigurationManager configurationManager;
 
 	@Autowired
 	private SecurityManager securityManager;

@@ -21,45 +21,32 @@ import java.util.Map;
 public interface ConfigurationManager {
 
 	/**
-	 * Load all configuration data
+	 * Load all configuration data in memory.
 	 */
-	public void loadConfiguration();
+	void loadConfiguration();
 
 	/**
-	 * Get a single configuration value (in one language only)
-	 * @param key - Key wanted
-	 * @param id_lang - Language ID
+	 * Get a single configuration value.
 	 *
-	 * @return string Value
-	 */
-
-	String get(String key, Integer id_lang);
-
-	/**
-	 * Get a single configuration value (in one language only)
-	 *
-	 * @param key - Key wanted
-	 * @return string Value
+	 * @param key - Key wanted.
 	 */
 	String get(String key);
 
 	/**
-	 * Get several configuration values (in one language only)
-	 * @param keys - Keys wanted
-	 * @param langID - Language ID
+	 * Get several configuration values.
 	 *
-	 * @return array Values
+	 * @param keys - Keys wanted.
 	 */
-	public Map<String, String> getMultiple(List<String> keys, Integer langID);
+	Map<String, String> getMultiple(List<String> keys);
 
 
 	/**
-	 * Set TEMPORARY a single configuration value (in one language only)
-	 * @param key - Key wanted
-	 * @param values - values is an array if the configuration is multilingual,
-	 *               a single string else.
+	 * Get the full URL to the website, honoring the SSL settings.
 	 */
-	void set(String key, Map<Integer, String> values);
-
 	String getKarutaURL();
+
+	/**
+	 * Clear the inner cache.
+	 */
+	void clear();
 }

@@ -103,8 +103,7 @@ public class EmailManagerImpl implements EmailManager {
 		final Map<String, String> configuration = configurationManager.getMultiple(
 				Arrays.asList("app_email", "mail_method", "mail_server", "mail_user",
 						"mail_passwd", "app_name", "mail_smtp_encryption", "mail_smtp_port",
-						"mail_type", "mail_color", "logo", "logo_mail"),
-				Integer.valueOf(configurationManager.get("lang_default")));
+						"mail_type", "mail_color", "logo", "logo_mail"));
 
 		final int mailMethod = Integer.parseInt(configuration.get("mail_method"));
 		final int mailType = Integer.parseInt(configuration.get("mail_type"));

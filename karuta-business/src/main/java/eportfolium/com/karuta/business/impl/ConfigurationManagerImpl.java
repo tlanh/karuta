@@ -19,9 +19,6 @@ import java.util.*;
 
 import eportfolium.com.karuta.consumer.repositories.ConfigurationRepository;
 import eportfolium.com.karuta.model.bean.Configuration;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.Validate;
-import org.apache.commons.lang3.math.NumberUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,88 +32,41 @@ public class ConfigurationManagerImpl implements ConfigurationManager {
 	@Autowired
 	private ConfigurationRepository configurationRepository;
 
-	protected Map<Integer, Map<String, Map<Object, Object>>> cache = new HashMap<>();
-	protected Map<String, String> types = new HashMap<>();
+	protected Map<String, String> cache = new HashMap<>();
 
+	@Override
 	public void loadConfiguration() {
 		Iterable<Configuration> result = configurationRepository.findAll();
 
-		int lang = 0;
-
 		for (Configuration conf : result) {
-			types.put(conf.getName(), "normal");
-
-			if (!cache.containsKey(lang)) {
-				Map<String, Map<Object, Object>> map = new HashMap() {{
-					put("global", new HashMap<>());
-					put("group", new HashMap<>());
-					put("shop", new HashMap<>());
-				}};
-
-				cache.put(lang, map);
-			}
-
-			cache.get(lang).get("global").put(conf.getName(), conf.getValue());
+			cache.put(conf.getName(), conf.getValue());
 		}
 	}
 
-	public String get(String key, Integer id_lang) {
+	@Override
+	public String get(String key) {
 		if (cache.isEmpty()) {
 			loadConfiguration();
 		}
 
-		if (cache.get(id_lang) == null)
-			id_lang = 0;
-
-		if (hasKey(key, id_lang))
-			return (String) cache.get(id_lang).get("global").get(key);
-		else
-			return null;
-	}
-
-	public String get(String key) {
-		return get(key, null);
+		return cache.get(key);
 	}
 
 	/**
 	 * Get several configuration values (in one language only)
 	 *
 	 * @param keys Keys wanted
-	 * @param langID Language ID
-	 * @return array Values
 	 */
-	public Map<String, String> getMultiple(List<String> keys, Integer langID) {
-		Validate.noNullElements(keys);
-
+	@Override
+	public Map<String, String> getMultiple(List<String> keys) {
 		Map<String, String> results = new HashMap<>();
-		String feature = null;
 
 		for (String key : keys) {
-			feature = get(key, langID);
+			String feature = get(key);
 			results.put(key, feature == null ? "" : feature);
 		}
 
 		return results;
-	}
-
-	public void set(String key, Map<Integer, String> values) {
-		if (!StringUtils.isAlphanumeric(key)) {
-			throw new RuntimeException(String.format("[%s] n'est pas une clé de configuration valide", key));
-		}
-
-		values.forEach((lang, value) -> {
-			cache.get(lang).get("global").put(key, value);
-		});
-	}
-
-	private boolean hasKey(String key, Integer langID) {
-		if (!NumberUtils.isCreatable(key) && StringUtils.isBlank(key)) {
-			return false;
-		}
-
-		return cache.get(langID).get("global") != null
-				&& (cache.get(langID).get("global").get(key) != null
-					|| cache.get(langID).get("global").containsKey(key));
 	}
 
 	@Override
@@ -124,10 +74,14 @@ public class ConfigurationManagerImpl implements ConfigurationManager {
 		boolean sslEnabled = Integer.parseInt(get("ssl_enabled")) == 1;
 
 		if (sslEnabled) {
-			return "https://" + get("domain_ssl");
+			return "https://" + get("domain");
 		} else {
 			return "http://" + get("domain");
 		}
 	}
 
+	@Override
+	public void clear() {
+		this.cache = new HashMap<>();
+	}
 }

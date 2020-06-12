@@ -9,7 +9,6 @@ INSERT INTO `configuration` (`name`, `value`) VALUES
   ('ssl_enabled', '0'),
   ('mail_type', '3'),
   ('domain', 'localhost'),
-  ('domain_ssl', 'localhost'),
   ('app_name', 'KARUTA'),
   ('app_email', 'math.lengagne@laposte.net'),
   ('mail_method', '2'),
