@@ -10,6 +10,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.Assert.*;
 
@@ -61,14 +62,15 @@ public class CredentialRepositoryTest extends TestHelpers {
 
         repository.save(credential);
 
-        assertEquals(
-                credential.getId(),
-                repository.findActiveById(credential.getId()).getId());
+        Optional<Credential> found = repository.findActiveById(credential.getId());
+
+        assertTrue(found.isPresent());
+        assertEquals(credential.getId(), found.get().getId());
 
         credential.setActive(0);
         repository.save(credential);
 
-        assertNull(repository.findActiveById(credential.getId()));
+        assertFalse(repository.findActiveById(credential.getId()).isPresent());
     }
 
     @Test

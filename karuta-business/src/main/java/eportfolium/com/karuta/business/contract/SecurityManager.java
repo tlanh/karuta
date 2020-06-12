@@ -31,11 +31,6 @@ public interface SecurityManager {
 	boolean changePassword(String username, String password);
 
 	/**
-	 * This method provides a way for users to change their own userPassword.
-	 */
-	void changeUserPassword(Long userId, String currentPassword, String newPassword) throws BusinessException;
-
-	/**
 	 * This method provides a way for security officers to change info of other
 	 * users.
 	 */
@@ -56,14 +51,6 @@ public interface SecurityManager {
 
 	boolean isCreator(Long userId);
 
-	/**
-	 * Check if customer password is the right one
-	 *
-	 * @param passwd Password
-	 * @return bool result
-	 */
-	boolean checkPassword(Long userID, String passwd);
-
 	CredentialDocument login(LoginDocument credentials);
 
 	boolean userHasRole(long userId, long roleId);
@@ -82,7 +69,7 @@ public interface SecurityManager {
 
 	Long changeRole(Long rrgId, RoleDocument role);
 
-	String addUsersToRole(Long rrgId, CredentialList users);
+	void addUsersToRole(Long rrgId, CredentialList users);
 
 	void addUserToGroup(Long forUser, Long groupId);
 

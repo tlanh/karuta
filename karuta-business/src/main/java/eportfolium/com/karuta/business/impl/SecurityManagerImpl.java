@@ -87,15 +87,9 @@ public class SecurityManagerImpl implements SecurityManager {
 
 	private static final Logger log = LoggerFactory.getLogger(SecurityManagerImpl.class);
 
-	private PasswordEncoder passwordEncoder = new Pbkdf2PasswordEncoder();
+	private final PasswordEncoder passwordEncoder = new Pbkdf2PasswordEncoder();
 
-	/**
-	 * The token generated is stored at the server, and should be associated with
-	 * the user identity. For example, a user table with id, login name and/or email
-	 * address, and token. When someone logs in with login and password, lookup the
-	 * stored token with the login and pass that to the authenticate() method with
-	 * the password.
-	 */
+	@Override
 	public boolean changePassword(String username, String password) {
 		try {
 			Credential credential = credentialRepository.findByLogin(username);
@@ -109,52 +103,19 @@ public class SecurityManagerImpl implements SecurityManager {
 		}
 	}
 
-	/**
-	 * This method provides a way for users to change their own userPassword.
-	 */
-	public void changeUserPassword(Long userId, String currentPassword, String newPassword) throws BusinessException {
-		Credential user = credentialRepository
-							.findById(userId)
-							.orElse(new Credential());
-
-		if (!passwordEncoder.matches(user.getPassword(), currentPassword)) {
-			throw new GenericBusinessException("Password is not correct.");
-		}
-
-		if (user.getPassword() != null && passwordEncoder.matches(user.getPassword(), newPassword)) {
-			throw new GenericBusinessException("New Password cannot be the same as Current Password.");
-		}
-
-		setPassword(newPassword, user);
-		credentialRepository.save(user);
-	}
-
+	@Override
 	public String generatePassword() {
 		List<CharacterRule> rules = Arrays.asList(
-				// at least one upper-case character
-				new CharacterRule(EnglishCharacterData.UpperCase, 1),
-
-				// at least one lower-case character
-				new CharacterRule(EnglishCharacterData.LowerCase, 1),
-
-				// at least one digit character
-				new CharacterRule(EnglishCharacterData.Digit, 1),
-
-				// at least one symbol (special character)
+				new CharacterRule(EnglishCharacterData.UpperCase, 4),
+				new CharacterRule(EnglishCharacterData.LowerCase, 5),
+				new CharacterRule(EnglishCharacterData.Digit, 2),
 				new CharacterRule(EnglishCharacterData.Special, 1));
 
 		PasswordGenerator generator = new PasswordGenerator();
 
-		// Generated password is 12 characters long, which complies with policy
 		return generator.generatePassword(12, rules);
 	}
 
-	/**
-	 * Do all tests of userPassword size, content, history, etc. here...
-	 * 
-	 * @param newPassword
-	 * @param credential
-	 */
 	private void setPassword(String newPassword, Credential credential) throws BusinessException {
 		if (StringUtils.isEmpty(newPassword)) {
 			throw new GenericBusinessException("New password is required.");
@@ -186,7 +147,7 @@ public class SecurityManagerImpl implements SecurityManager {
 			credential.setActive(document.getActive());
 			credential.setIsDesigner(document.getDesigner());
 			credential.setCanSubstitute(document.getSubstitute());
-			credential.setPassword(passwordEncoder.encode(credential.getPassword()));
+			credential.setPassword(passwordEncoder.encode(document.getPassword()));
 
 			credential.setLogin(document.getUsername());
 			credential.setOther(document.getOther());
@@ -265,12 +226,13 @@ public class SecurityManagerImpl implements SecurityManager {
 
 	@Override
 	public Long changeUser(Long byUserId, Long forUserId, CredentialDocument user) throws BusinessException {
-		if (!checkPassword(byUserId, user.getPrevpass()) && !credentialRepository.isAdmin(byUserId)) {
+		Credential credential = credentialRepository.findActiveById(forUserId)
+									.orElseThrow(() -> new GenericBusinessException("Unexisting user"));
+
+		if (!credentialRepository.isAdmin(byUserId) &&
+				!passwordEncoder.matches(user.getPrevpass(), credential.getPassword())) {
 			throw new GenericBusinessException("Not authorized");
 		}
-
-		Credential credential = credentialRepository.findById(forUserId)
-									.orElseThrow(() -> new GenericBusinessException("Unexisting user"));
 
 		if (user.getUsername() != null)
 			credential.setLogin(user.getUsername());
@@ -332,36 +294,22 @@ public class SecurityManagerImpl implements SecurityManager {
 		return credentialRepository.isCreator(userId);
 	}
 
-	/**
-	 * Check if user password is the right one
-	 *
-	 * @param passwd Password
-	 * @return bool result
-	 */
-	public boolean checkPassword(Long userId, String passwd) {
-		if (userId == null || passwd.length() < CredentialRepository.PASSWORD_LENGTH) {
-			log.error("Fatal Error : illegal checkPassword parameters");
-			throw new RuntimeException();
-		}
-
-		Credential cr = credentialRepository.findActiveById(userId);
-		return cr != null && passwordEncoder.matches(passwd, cr.getPassword());
-	}
-
 	@Override
 	public Long changeUserInfo(Long byUserId, Long forUserId, CredentialDocument user) throws BusinessException {
-		if (byUserId != forUserId)
+		if (!byUserId.equals(forUserId))
 			throw new GenericBusinessException("Not authorized");
 
 		Credential credential = credentialRepository.findById(forUserId)
 				.orElseThrow(() -> new GenericBusinessException("Unknown user id"));
 
-		try {
-			changeUserPassword(forUserId, user.getPrevpass(), user.getPassword());
+		if (!passwordEncoder.matches(user.getPrevpass(), credential.getPassword())) {
+			throw new GenericBusinessException("Password is not correct.");
+		}
+
+		setPassword(user.getPassword(), credential);
+
+		if (!user.getPassword().equals(user.getPrevpass())) {
 			log.info(String.format("User with id  [%s] has changed his password\n", forUserId));
-		} catch (BusinessException e) {
-			// L'utilisation du même mot de passe dans cette méthode n'est pas interdite
-			// donc on continue.
 		}
 
 		if (user.getEmail() != null)
@@ -380,7 +328,6 @@ public class SecurityManagerImpl implements SecurityManager {
 
 	@Override
 	public Long addRole(UUID portfolioId, String role, Long userId) throws BusinessException {
-		Long groupId = 0L;
 		Node rootNode = portfolioRepository.getPortfolioRootNode(portfolioId);
 
 		if (!credentialRepository.isAdmin(userId)
@@ -388,24 +335,19 @@ public class SecurityManagerImpl implements SecurityManager {
 				&& !credentialRepository.isCreator(userId))
 			throw new GenericBusinessException("No admin right");
 
-		try {
-			GroupRightInfo gri = groupRightInfoRepository.getByPortfolioAndLabel(portfolioId, role);
+		GroupRightInfo gri = groupRightInfoRepository.getByPortfolioAndLabel(portfolioId, role);
 
-			if (gri != null) {
-				groupId = gri.getGroupInfo().getId();
-			} else {
-				GroupRightInfo ngri = new GroupRightInfo(new Portfolio(portfolioId), role);
-				groupRightInfoRepository.save(ngri);
+		if (gri != null) {
+			return gri.getGroupInfo().getId();
+		} else {
+			GroupRightInfo ngri = new GroupRightInfo(new Portfolio(portfolioId), role);
+			groupRightInfoRepository.save(ngri);
 
-				GroupInfo gi = new GroupInfo(ngri.getId(), 1L, role);
-				groupInfoRepository.save(gi);
+			GroupInfo gi = new GroupInfo(ngri.getId(), 1L, role);
+			groupInfoRepository.save(gi);
 
-				groupId = gi.getId();
-			}
-		} catch (Exception ex) {
-			ex.printStackTrace();
+			return gi.getId();
 		}
-		return groupId;
 	}
 
 	@Override
@@ -422,24 +364,18 @@ public class SecurityManagerImpl implements SecurityManager {
 
 	@Override
 	public boolean addUserInCredentialGroups(Long userId, List<Long> credentialGroupIds) {
-		boolean added = true;
-		CredentialGroupMembers cgm = null;
-		try {
-			for (Long credentialGroupId : credentialGroupIds) {
-				cgm = new CredentialGroupMembers(
-						new CredentialGroupMembersId(new CredentialGroup(credentialGroupId), new Credential(userId)));
-				credentialGroupMembersRepository.save(cgm);
-			}
-		} catch (Exception e) {
-			added = false;
+		for (Long credentialGroupId : credentialGroupIds) {
+			CredentialGroupMembers cgm = new CredentialGroupMembers(
+					new CredentialGroupMembersId(new CredentialGroup(credentialGroupId), new Credential(userId)));
+			credentialGroupMembersRepository.save(cgm);
 		}
-		return added;
+
+		return true;
 	}
 
 	@Override
 	@PreAuthorize("hasRole('admin')")
 	public String addUserRole(Long rrgid, Long forUser) {
-
 		// Vérifie si un group_info/grid existe
 		GroupInfo gi = groupInfoRepository.getGroupByGrid(rrgid);
 
@@ -447,7 +383,8 @@ public class SecurityManagerImpl implements SecurityManager {
 			// Copie de RRG vers group_info
 			GroupRightInfo gri = groupRightInfoRepository.findById(rrgid).get();
 
-			groupInfoRepository.save(new GroupInfo(gri, gri.getOwner(), gri.getLabel()));
+			gi = new GroupInfo(gri, gri.getOwner(), gri.getLabel());
+			groupInfoRepository.save(gi);
 		}
 
 		// Ajout de l'utilisateur
@@ -479,7 +416,7 @@ public class SecurityManagerImpl implements SecurityManager {
 
 		SecurityContext context = SecurityContextHolder.createEmptyContext();
 		Authentication authentication = new UsernamePasswordAuthenticationToken(
-			userInfo, user.getPassword(), userInfo.getAuthorities());
+			userInfo, credential.getPassword(), userInfo.getAuthorities());
 		context.setAuthentication(authentication);
 
 		SecurityContextHolder.setContext(context);
@@ -530,17 +467,15 @@ public class SecurityManagerImpl implements SecurityManager {
 
 	@Override
 	@PreAuthorize("hasRole('admin')")
-	public String addUsersToRole(Long rrgid, CredentialList users) {
+	public void addUsersToRole(Long rrgid, CredentialList users) {
 		for (CredentialDocument user : users.getUsers()) {
 			addUserRole(rrgid, user.getId());
 		}
-
-		return "";
 	}
 
 	@Override
 	public void deleteUserFromCredentialGroup(Long userId, Long credentialGroupId) {
-		credentialGroupMembersRepository.deleteUserFromGroup(userId, credentialGroupId);
+		credentialGroupMembersRepository.deleteUserFromGroup(credentialGroupId, userId);
 	}
 
 }

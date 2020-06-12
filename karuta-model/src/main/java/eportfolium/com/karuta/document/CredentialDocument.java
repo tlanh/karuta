@@ -17,11 +17,11 @@ public class CredentialDocument {
     private String firstname;
     private String lastname;
     private String email;
-    private Integer admin;
-    private Integer designer;
+    private int admin;
+    private int designer;
     private String other;
-    private Integer active;
-    private Integer substitute;
+    private int active;
+    private int substitute;
     private Long substituteId;
 
     public CredentialDocument() { }

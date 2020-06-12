@@ -7,12 +7,11 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 public interface CredentialRepository extends CrudRepository<Credential, Long> {
-    public static final int PASSWORD_LENGTH = 5;
-
     Credential findByLogin(String login);
 
     @Query("SELECT c FROM Credential c WHERE c.login = :login AND c.isAdmin = :admin")
@@ -21,7 +20,7 @@ public interface CredentialRepository extends CrudRepository<Credential, Long> {
     boolean existsByLogin(String login);
 
     @Query("SELECT c FROM Credential c WHERE c.id = :id AND c.active = 1")
-    Credential findActiveById(@Param("id") Long id);
+    Optional<Credential> findActiveById(@Param("id") Long id);
 
     @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END " +
             "FROM Credential c WHERE c.id = :id AND c.isAdmin = 1")
