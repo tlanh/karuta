@@ -50,60 +50,62 @@ public abstract class BaseManager {
 	private static final ObjectWriter attributeWriter = mapper.writer().withRootName("");
 
 	// Help reconstruct tree
-	protected class Tree {
+	protected static class Tree {
 		NodeDocument node = null;
 		String childString = "";
-	};
+	}
 
-	/**
-	 * test pour l'affichage des différentes méthodes de Node
-	 */
 	public GroupRights getRights(Long userId, Long groupId, UUID nodeId) {
-
-		GroupRights rights = null;
-
-		if (credentialRepository.isAdmin(userId)) {
-			rights = new GroupRights(new GroupRightsId(new GroupRightInfo(), null), true, true, true, true, false);
-		} else if (credentialRepository.isDesigner(userId, nodeId)) /// Droits via le partage totale (obsolete) ou si c'est
-		{
-			rights = new GroupRights(new GroupRightsId(new GroupRightInfo(), null), true, true, true, true, false);
+		if (credentialRepository.isAdmin(userId)
+				|| credentialRepository.isDesigner(userId, nodeId)) {
+			return new GroupRights(new GroupRightsId(new GroupRightInfo(), null),
+					true, true, true, true, false);
 		} else {
+			GroupRights rights;
+
 			if (groupId == null || groupId == 0L) {
 				rights = groupRightsRepository.getRightsByIdAndUser(nodeId, userId);
+			} else {
+				rights = groupRightsRepository.getRightsByUserAndGroup(nodeId, userId, groupId);
 			}
 
-			rights = groupRightsRepository.getRightsByUserAndGroup(nodeId, userId, groupId);
-			rights = groupRightsRepository.getSpecificRightsForUser(nodeId, userId);
-			rights = groupRightsRepository.getPublicRightsByGroupId(nodeId, groupId);
+			if (rights == null)
+				rights = groupRightsRepository.getSpecificRightsForUser(nodeId, userId);
 
-		}
+			if (rights == null)
+				rights = groupRightsRepository.getPublicRightsByGroupId(nodeId, groupId);
 
-		// Si null alors par défaut défaut accès à rien
-		if (rights == null) {
-			rights = new GroupRights();
-			rights.setId(new GroupRightsId(new GroupRightInfo(), null));
-		}
+			// If we couldn't find any associated group rights, we provide
+			// an instance without any permission.
+			if (rights == null) {
+				rights = new GroupRights();
+				rights.setId(new GroupRightsId(new GroupRightInfo(), null));
+			}
 
-		// Dernière chance pour les droits avec les droits publics.
-		if (nodeRepository.isPublic(nodeId)) {
-			rights.setRead(true);
+			// If the node is public, we can give read access.
+			if (nodeRepository.isPublic(nodeId)) {
+				rights.setRead(true);
+			}
+
+			return rights;
 		}
-		return rights;
 	}
 
 	protected boolean hasRight(Long userId, Long groupId, UUID nodeId, String right) {
 		GroupRights rights = getRights(userId, groupId, nodeId);
 
-		if (right.equals(GroupRights.READ))
-			return rights.isRead();
-		else if (right.equals(GroupRights.WRITE))
-			return rights.isWrite();
-		else if (right.equals(GroupRights.SUBMIT))
-			return rights.isSubmit();
-		else if (right.equals(GroupRights.DELETE))
-			return rights.isDelete();
-		else
-			return false;
+		switch (right) {
+			case GroupRights.READ:
+				return rights.isRead();
+			case GroupRights.WRITE:
+				return rights.isWrite();
+			case GroupRights.SUBMIT:
+				return rights.isSubmit();
+			case GroupRights.DELETE:
+				return rights.isDelete();
+			default:
+				return false;
+		}
 	}
 
 	protected void processQuery(List<Pair<Node, GroupRights>> nodes,
