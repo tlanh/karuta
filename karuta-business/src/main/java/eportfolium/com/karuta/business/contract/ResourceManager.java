@@ -39,12 +39,5 @@ public interface ResourceManager extends BaseManager {
 	void changeResourceByXsiType(UUID nodeId, String xsiType, ResourceDocument resource, Long userId)
 			throws BusinessException;
 
-	int addResource(UUID id, UUID parentId, String xsiType, String content, UUID portfolioModelId,
-						   boolean sharedNodeRes, boolean sharedRes, Long userId);
-
-	int updateResource(UUID nodeUuid, String content, Long userId);
-
-	int updateResource(UUID id, String xsiType, String content, Long userId);
-
-	int updateContextResource(UUID nodeUuid, String content, Long userId);
+	void updateResource(UUID id, String xsiType, String content, Long userId);
 }

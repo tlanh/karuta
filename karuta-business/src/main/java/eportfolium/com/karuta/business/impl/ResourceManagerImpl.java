@@ -26,7 +26,6 @@ import eportfolium.com.karuta.consumer.repositories.ResourceRepository;
 import eportfolium.com.karuta.document.*;
 import eportfolium.com.karuta.model.bean.*;
 import eportfolium.com.karuta.util.JavaTimeUtil;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -91,41 +90,50 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 
 		portfolioManager.updateTimeByNode(parentNodeId);
 
-		return updateResource(res.getId(), null, xmlAttributes(resource), userId);
+		updateResourceAttrs(res, xmlAttributes(resource), userId);
+
+		return 0;
 	}
 
 	@Override
 	public String addResource(UUID parentNodeId, ResourceDocument resource, Long userId, Long groupId)
 			throws BusinessException {
-		if (!credentialRepository.isAdmin(userId))
-			throw new GenericBusinessException("403 FORBIDDEN : No ADMIN right");
-
-
-		if (!hasRight(userId, groupId, parentNodeId, GroupRights.WRITE)) {
-			throw new GenericBusinessException("403 FORBIDDEN : No WRITE credential");
-		}
-
-		Portfolio portfolio = portfolioRepository.getPortfolioFromNode(parentNodeId);
+		if (!credentialRepository.isAdmin(userId)
+				&& !hasRight(userId, groupId, parentNodeId, GroupRights.WRITE))
+			throw new GenericBusinessException("403 FORBIDDEN : No right to write");
 
 		String xsiType = resource.getXsiType();
 
-		UUID portfolioId = portfolio != null ? portfolio.getId()  : null;
-		UUID modelId = portfolio != null ? portfolio.getModelId() : null;
+		Resource res = resourceRepository.findById(resource.getId())
+				.orElseGet(() -> new Resource(resource.getId()));
 
-		addResource(resource.getId(), portfolioId, xsiType, resource.getContent(),
-				modelId, false, false, userId);
+		res.setXsiType(xsiType);
+		updateResourceAttrs(res, resource.getContent(), userId);
+
+		nodeRepository.findById(parentNodeId).ifPresent(node -> {
+			if (xsiType.equals("nodeRes")) {
+				node.setResResource(res);
+				node.setSharedNodeResUuid(null);
+			} else if (xsiType.equals("context")) {
+				node.setContextResource(res);
+			} else {
+				node.setResource(res);
+				node.setSharedResUuid(null);
+			}
+
+			nodeRepository.save(node);
+		});
 
 		return "";
 	}
 
 	@Override
 	public void removeResource(UUID resourceId, Long userId, Long groupId) throws BusinessException {
-		if (!credentialRepository.isAdmin(userId))
+		if (!credentialRepository.isAdmin(userId)
+				&& !hasRight(userId, groupId, resourceId, GroupRights.DELETE))
 			throw new GenericBusinessException("403 FORBIDDEN : No admin right");
 
-		if (hasRight(userId, groupId, resourceId, GroupRights.DELETE)) {
-			resourceRepository.deleteById(resourceId);
-		}
+		resourceRepository.deleteById(resourceId);
 	}
 
 	@Override
@@ -134,8 +142,9 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 										ResourceDocument resource,
 										Long userId) throws BusinessException {
 
-		if (StringUtils.equals(xsiType, "nodeRes")) {
-			updateResResource(nodeId, resource.getContent(), userId);
+		Resource existing;
+
+		if ("nodeRes".equals(xsiType)) {
 			String code = resource.getCode();
 
 			if (nodeRepository.isCodeExist(code, nodeId)) {
@@ -143,129 +152,36 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 			} else if (nodeManager.updateNodeCode(nodeId, code) > 0) {
 				throw new GenericBusinessException("Cannot update node code");
 			}
-		} else if (StringUtils.equals(xsiType, "context")) {
-			updateContextResource(nodeId, resource.getContent(), userId);
+
+			existing = resourceRepository.getResourceOfResourceByNodeUuid(nodeId);
+		} else if ("context".equals(xsiType)) {
+			existing = resourceRepository.getContextResourceByNodeUuid(nodeId);
 		} else {
-			updateResource(nodeId, resource.getContent(), userId);
+			existing = resourceRepository.getResourceByParentNodeUuid(nodeId);
 		}
+
+		updateResourceAttrs(existing, resource.getContent(), userId);
 	}
 
 	@Override
-	public int addResource(UUID id, UUID parentId, String xsiType, String content, UUID portfolioModelId,
-						   boolean sharedNodeRes, boolean sharedRes, Long userId) {
+	public void updateResource(UUID id, String xsiType, String content, Long userId) {
+		resourceRepository.deleteById(id);
 
-		if (((xsiType.equals("nodeRes") && sharedNodeRes)
-				|| (!xsiType.equals("context") && !xsiType.equals("nodeRes") && sharedRes))
-				&& portfolioModelId != null) {
-			return 0;
-		}
+		Date now = JavaTimeUtil.toJavaDate(LocalDateTime.now(JavaTimeUtil.defaultTimezone));
 
-		Resource resource = resourceRepository.findById(id)
-								.orElse(new Resource(id));
-
-		resource.setXsiType(xsiType);
-		resource.setContent(content);
-		resource.setCredential(new Credential(userId));
-		resource.setModifUserId(userId);
+		Resource resource = new Resource(
+			id,
+			xsiType,
+			content,
+			new Credential(userId),
+			userId,
+			now
+		);
 
 		resourceRepository.save(resource);
-
-		Optional<Node> node = nodeRepository.findById(parentId);
-
-		if (!node.isPresent())
-			return 1;
-
-		Node n = node.get();
-
-		// Ensuite on met à jour les id ressource au niveau du noeud parent
-		if (xsiType.equals("nodeRes")) {
-			n.setResResource(resource);
-			if (sharedNodeRes) {
-				n.setSharedNodeResUuid(id);
-			} else {
-				n.setSharedNodeResUuid(null);
-			}
-		} else if (xsiType.equals("context")) {
-			n.setContextResource(resource);
-		} else {
-			n.setResource(resource);
-			if (sharedRes) {
-				n.setSharedResUuid(id);
-			} else {
-				n.setSharedResUuid(null);
-			}
-		}
-
-		nodeRepository.save(n);
-
-		return 0;
 	}
 
-	@Override
-	public int updateResource(UUID nodeUuid, String content, Long userId) {
-		Resource resource = resourceRepository.getResourceByParentNodeUuid(nodeUuid);
-
-		resource.setContent(content);
-		resource.setCredential(new Credential(userId));
-		resource.setModifUserId(userId);
-
-		resourceRepository.save(resource);
-
-		return 0;
-	}
-
-	@Override
-	public int updateResource(UUID id, String xsiType, String content, Long userId) {
-		if (xsiType != null) {
-			resourceRepository.deleteById(id);
-
-			Date now = JavaTimeUtil.toJavaDate(LocalDateTime.now(JavaTimeUtil.defaultTimezone));
-
-			Resource resource = new Resource(
-				id,
-				xsiType,
-				content,
-				new Credential(userId),
-				userId,
-				now
-			);
-
-			resourceRepository.save(resource);
-		} else {
-			Optional<Resource> resourceOptional = resourceRepository.findById(id);
-
-			if (resourceOptional.isPresent()) {
-				Resource resource = resourceOptional.get();
-
-				resource.setContent(content);
-				resource.setCredential(new Credential(userId));
-				resource.setModifUserId(userId);
-
-				resourceRepository.save(resource);
-			} else {
-				return 1;
-			}
-		}
-
-		return 0;
-	}
-
-	@Override
-	public int updateContextResource(UUID nodeUuid, String content, Long userId) {
-		Resource resource = resourceRepository.getContextResourceByNodeUuid(nodeUuid);
-
-		resource.setContent(content);
-		resource.setCredential(new Credential(userId));
-		resource.setModifUserId(userId);
-
-		resourceRepository.save(resource);
-
-		return 0;
-	}
-
-	private void updateResResource(UUID nodeUuid, String content, Long userId) {
-		Resource resource = resourceRepository.getResourceOfResourceByNodeUuid(nodeUuid);
-
+	private void updateResourceAttrs(Resource resource, String content, Long userId) {
 		resource.setContent(content);
 		resource.setCredential(new Credential(userId));
 		resource.setModifUserId(userId);
