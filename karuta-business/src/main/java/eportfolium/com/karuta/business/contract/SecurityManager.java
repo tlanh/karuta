@@ -69,7 +69,7 @@ public interface SecurityManager {
 
 	Long changeRole(Long rrgId, RoleDocument role);
 
-	void addUsersToRole(Long rrgId, CredentialList users);
+	String addUsersToRole(Long rrgId, CredentialList users);
 
 	void addUserToGroup(Long forUser, Long groupId);
 

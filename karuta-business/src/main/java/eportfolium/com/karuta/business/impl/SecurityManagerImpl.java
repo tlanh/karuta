@@ -467,10 +467,11 @@ public class SecurityManagerImpl implements SecurityManager {
 
 	@Override
 	@PreAuthorize("hasRole('admin')")
-	public void addUsersToRole(Long rrgid, CredentialList users) {
+	public String addUsersToRole(Long rrgid, CredentialList users) {
 		for (CredentialDocument user : users.getUsers()) {
 			addUserRole(rrgid, user.getId());
 		}
+		return null;
 	}
 
 	@Override
