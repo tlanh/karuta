@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonRootName;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import eportfolium.com.karuta.model.bean.Node;
@@ -19,6 +20,7 @@ import java.util.stream.Stream;
 public class PortfolioDocument {
     private UUID id;
     private UUID rootNodeId;
+    @JsonDeserialize(using = BooleanDeserializer.class)
     private boolean owner;
     private Long ownerId;
     private String code;
