@@ -50,6 +50,14 @@
         <property name="maxUploadSize" value="100000000" />
     </bean>
 
+
+
+<security:authentication-manager>
+ <security:authentication-provider ref="authenticationProvider"/>
+ </security:authentication-manager>
+<bean id="authenticationProvider" class="eportfolium.com.karuta.webapp.component.AuthenticationProviderInst">
+</bean>
+
 	<!-- Enables annotation-driven transaction management. -->
 	<tx:annotation-driven
 		transaction-manager="transactionManager" />

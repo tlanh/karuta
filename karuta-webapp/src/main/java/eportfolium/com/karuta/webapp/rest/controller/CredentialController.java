@@ -31,7 +31,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import edu.yale.its.tp.cas.client.ServiceTicketValidator;
 import eportfolium.com.karuta.business.contract.ConfigurationManager;
@@ -39,6 +44,8 @@ import eportfolium.com.karuta.business.contract.EmailManager;
 import eportfolium.com.karuta.business.contract.SecurityManager;
 import eportfolium.com.karuta.business.contract.UserManager;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
+import eportfolium.com.karuta.webapp.component.AuthenticationProviderInst;
+
 import org.xml.sax.SAXException;
 
 @RestController
@@ -57,6 +64,9 @@ public class CredentialController extends AbstractController {
     @Autowired
     private ConfigurationManager configurationManager;
 
+    @Autowired
+    private AuthenticationProviderInst authenticationProvider;
+    
     @InjectLogger
     private static Logger logger;
 
@@ -83,7 +93,7 @@ public class CredentialController extends AbstractController {
      */
     @RequestMapping(value = "/login", consumes = "application/xml", produces = "application/xml",
         method = { RequestMethod.POST, RequestMethod.PUT })
-    public HttpEntity<Object> postCredentialFromXml(@RequestBody LoginDocument credentials) {
+    public HttpEntity<Object> postCredentialFromXml(HttpServletRequest request, @RequestBody LoginDocument credentials) {
 
         String authlog = configurationManager.get("auth_log");
         Logger authLog = null;
@@ -108,6 +118,17 @@ public class CredentialController extends AbstractController {
 
         } else {
             boolean substitute = credential.getSubstitute() == 1;
+
+      			List<GrantedAuthority> grantedAuthorities = new ArrayList<>();
+            UsernamePasswordAuthenticationToken authReq = new UsernamePasswordAuthenticationToken(login, credential.getPassword(), grantedAuthorities);
+            authReq.setDetails(credential);
+						Authentication authentication = authenticationProvider.authenticate(authReq);
+
+				    SecurityContext securityContext = SecurityContextHolder.getContext();
+				    securityContext.setAuthentication(authentication);
+
+						HttpSession session = request.getSession(true);
+				    session.setAttribute("SPRING_SECURITY_CONTEXT", securityContext);
 
             if (authLog != null) {
 

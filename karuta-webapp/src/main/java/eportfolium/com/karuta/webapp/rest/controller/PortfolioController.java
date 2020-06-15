@@ -29,12 +29,14 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import eportfolium.com.karuta.business.contract.*;
 import eportfolium.com.karuta.business.contract.SecurityManager;
 import eportfolium.com.karuta.business.UserInfo;
+import eportfolium.com.karuta.document.CredentialDocument;
 import eportfolium.com.karuta.document.NodeDocument;
 import eportfolium.com.karuta.document.PortfolioDocument;
 import eportfolium.com.karuta.document.PortfolioList;
@@ -45,6 +47,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -554,7 +558,10 @@ public class PortfolioController extends AbstractController {
                             HttpServletRequest request)
             throws BusinessException, IOException {
 
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+    	HttpSession session = request.getSession(false);
+    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
+    	authentication = securityContext.getAuthentication();
+    	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
         javax.servlet.ServletContext servletContext = request.getSession().getServletContext();
         String path = servletContext.getRealPath("/");
 
