@@ -24,6 +24,7 @@ public class PortfolioDocument {
     private boolean owner;
     private Long ownerId;
     private String code;
+    private int version;
     private Long gid;
     private Date modifDate;
 
@@ -101,7 +102,7 @@ public class PortfolioDocument {
 
     @JsonGetter("version")
     public int getVersion() {
-        return 4; // For backward compatibility ; cut if useless
+        return version; // For backward compatibility ; cut if useless
     }
 
     @JsonGetter("id")
