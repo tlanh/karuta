@@ -46,6 +46,7 @@ import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
@@ -544,11 +545,11 @@ public class PortfolioController extends AbstractController {
      * @return portfolio uuid
      */
     @PostMapping(value = "/zip", consumes = "multipart/form-data")
-    public String importZip(@RequestParam long group,
-                            @RequestParam InputStream fileupload,
-                            @RequestParam String model,
-                            @RequestParam boolean instance,
-                            @RequestParam String project,
+    public String importZip(@RequestParam(defaultValue = "-1") long group,
+                            @RequestParam MultipartFile fileupload,
+                            @RequestParam(required = false) String model,
+                            @RequestParam(defaultValue = "false") boolean instance,
+                            @RequestParam(required = false) String project,
                             Authentication authentication,
                             HttpServletRequest request)
             throws BusinessException, IOException {
@@ -558,7 +559,7 @@ public class PortfolioController extends AbstractController {
         String path = servletContext.getRealPath("/");
 
         return portfolioManager
-                .importZippedPortfolio(path, userInfo.getUsername(), fileupload, userInfo.getId(), group, model,
+                .importZippedPortfolio(path, userInfo.getUsername(), fileupload.getInputStream(), userInfo.getId(), group, model,
                         userInfo.getSubstituteId(), instance, project);
     }
 
