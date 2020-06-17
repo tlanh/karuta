@@ -1,6 +1,7 @@
 package eportfolium.com.karuta.document;
 
 import com.fasterxml.jackson.annotation.*;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import eportfolium.com.karuta.model.bean.GroupRights;
@@ -22,17 +23,22 @@ public class NodeDocument {
     private String format;
     private String action;
 
+    @JsonDeserialize(using = BooleanDeserializer.class)
     private boolean read;
+    @JsonDeserialize(using = BooleanDeserializer.class)
     private boolean write;
+    @JsonDeserialize(using = BooleanDeserializer.class)
     private boolean delete;
+    @JsonDeserialize(using = BooleanDeserializer.class)
     private boolean submit;
 
     private String role;
+    @JsonFormat(pattern="yyyy-MM-dd HH:mm:ss.S")
     private Date modifDate;
 
-    private MetadataDocument metadataDocument;
-    private MetadataEpmDocument metadataEpmDocument;
-    private MetadataWadDocument metadataWadDocument;
+    private String metadataDocument;
+    private String metadataEpmDocument;
+    private String metadataWadDocument;
     private List<ResourceDocument> resourceDocuments;
     private List<NodeDocument> children;
 
@@ -154,22 +160,26 @@ public class NodeDocument {
 
     @JsonGetter("last_modif")
     @JacksonXmlProperty(isAttribute = true, localName = "last_modif")
-    @JsonFormat(timezone = "UTC")
+    @JsonFormat(pattern="yyyy-MM-dd HH:mm:ss.S")
     public Date getModifDate() {
         return modifDate;
     }
 
-    public MetadataDocument getMetadata() {
+    @JsonRawValue
+    @JacksonXmlProperty(localName = "metadata")
+    public String getMetadata() {
         return metadataDocument;
     }
 
+    @JsonRawValue
     @JacksonXmlProperty(localName = "metadata-epm")
-    public MetadataEpmDocument getMetadataEpm() {
+    public String getMetadataEpm() {
         return metadataEpmDocument;
     }
 
+    @JsonRawValue
     @JacksonXmlProperty(localName = "metadata-wad")
-    public MetadataWadDocument getMetadataWad() {
+    public String getMetadataWad() {
         return metadataWadDocument;
     }
 
@@ -211,15 +221,21 @@ public class NodeDocument {
         this.parent = parent;
     }
 
-    public void setMetadata(MetadataDocument document) {
+    @JsonRawValue
+    @JacksonXmlProperty(localName = "metadata")
+    public void setMetadata(String document) {
         this.metadataDocument = document;
     }
 
-    public void setMetadataEpm(MetadataEpmDocument document) {
+    @JsonRawValue
+    @JacksonXmlProperty(localName = "metadata-epm")
+    public void setMetadataEpm(String document) {
         this.metadataEpmDocument = document;
     }
 
-    public void setMetadataWad(MetadataWadDocument document) {
+    @JsonRawValue
+    @JacksonXmlProperty(localName = "metadata-wad")
+    public void setMetadataWad(String document) {
         this.metadataWadDocument = document;
     }
 

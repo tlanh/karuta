@@ -18,7 +18,7 @@
 		<class>eportfolium.com.karuta.model.bean.PortfolioGroup</class>
 		<class>eportfolium.com.karuta.model.bean.PortfolioGroupMembers</class>
 		<class>eportfolium.com.karuta.model.bean.Portfolio</class>
-		<class>eportfolium.com.karuta.model.bean.ResourceTable</class>
+		<class>eportfolium.com.karuta.model.bean.Resource</class>
 		<properties>
 			<property name="javax.persistence.jdbc.driver"
 				value="com.mysql.cj.jdbc.Driver" />

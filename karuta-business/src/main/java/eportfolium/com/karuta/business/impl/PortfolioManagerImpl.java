@@ -38,6 +38,8 @@ import javax.persistence.criteria.Join;
 import javax.persistence.criteria.ListJoin;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import eportfolium.com.karuta.business.contract.*;
 import eportfolium.com.karuta.business.contract.SecurityManager;
@@ -707,8 +709,8 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 											.readValue("<metadata>" + current.getMetadata() + "</metadata>");
 
 
-			if (metadata.getPublic())
-				setPublic = true;
+//			if (metadata.getPublic())
+//				setPublic = true;
 
 			for (String s : resolve.groups.keySet()) {
 				GroupRightInfo gri = new GroupRightInfo();
@@ -765,8 +767,8 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 			updateTime(portfolioId);
 
 			// Rendre le portfolio public si nécessaire
-			if (setPublic)
-				groupManager.setPublicState(userId, portfolioId, true);
+//			if (setPublic)
+//				groupManager.setPublicState(userId, portfolioId, true);
 		}
 
 		return portfolioId;
@@ -936,7 +938,10 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 
             portfolio = new Portfolio();
 
-            PortfolioDocument document = new XmlMapper()
+            ObjectMapper mapper = new XmlMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+            
+            PortfolioDocument document = mapper
                     .readerFor(PortfolioDocument.class)
                     .readValue(xml);
 

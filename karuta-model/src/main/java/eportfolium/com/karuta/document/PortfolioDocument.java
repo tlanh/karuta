@@ -26,6 +26,7 @@ public class PortfolioDocument {
     private String code;
     private int version;
     private Long gid;
+    @JsonFormat(pattern="yyyy-MM-dd HH:mm:ss.S")
     private Date modifDate;
 
     private List<NodeDocument> nodes;
@@ -71,17 +72,11 @@ public class PortfolioDocument {
         child.setDescription(rootNode.getDescr());
         child.setSemtag(rootNode.getSemtag());
 
-        try {
-            child.setMetadataWad(MetadataWadDocument.from(rootNode.getMetadataWad()));
-        } catch (JsonProcessingException ignored) { }
+            child.setMetadataWad(rootNode.getMetadataWad());
 
-        try {
-            child.setMetadataEpm(MetadataEpmDocument.from(rootNode.getMetadataEpm()));
-        } catch (JsonProcessingException ignored) { }
+            child.setMetadataEpm(rootNode.getMetadataEpm());
 
-        try {
-            child.setMetadata(MetadataDocument.from(rootNode.getMetadata()));
-        } catch (JsonProcessingException ignored) { }
+            child.setMetadata(rootNode.getMetadata());
 
         child.setResources(Stream.of(
                 rootNode.getResResource(),
@@ -135,15 +130,15 @@ public class PortfolioDocument {
         return ownerId;
     }
 
-    @JsonGetter("modified")
-    @JacksonXmlProperty(isAttribute = true, localName = "modified")
-    @JsonFormat(timezone = "UTC")
+    @JsonGetter("last_modif")
+    @JacksonXmlProperty(isAttribute = true, localName = "last_modif")
+    @JsonFormat(pattern="yyyy-MM-dd HH:mm:ss.S")
     public Date getModifDate() {
         return modifDate;
     }
 
     @JacksonXmlElementWrapper(useWrapping = false)
-    @JacksonXmlProperty(localName = "node")
+    @JacksonXmlProperty(localName = "asmRoot")
     public List<NodeDocument> getNodes() {
         return nodes;
     }

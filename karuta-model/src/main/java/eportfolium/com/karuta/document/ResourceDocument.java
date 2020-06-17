@@ -65,7 +65,7 @@ public class ResourceDocument {
 
     @JsonGetter("last_modif")
     @JacksonXmlProperty(isAttribute = true, localName = "last_modif")
-    @JsonFormat(timezone = "UTC")
+    @JsonFormat(pattern="yyyy-MM-dd HH:mm:ss.S")
     public Date getModifDate() {
         return modifDate;
     }
