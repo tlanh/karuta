@@ -72,11 +72,16 @@ public class PortfolioDocument {
         child.setDescription(rootNode.getDescr());
         child.setSemtag(rootNode.getSemtag());
 
-            child.setMetadataWad(rootNode.getMetadataWad());
-
-            child.setMetadataEpm(rootNode.getMetadataEpm());
-
-            child.setMetadata(rootNode.getMetadata());
+            try
+						{
+							child.setMetadataWad(MetadataWadDocument.from(rootNode.getMetadataWad()));
+	            child.setMetadataEpm(MetadataEpmDocument.from(rootNode.getMetadataEpm()));
+	            child.setMetadata(MetadataDocument.from(rootNode.getMetadata()));
+						}
+						catch( JsonProcessingException e )
+						{
+							e.printStackTrace();
+						}
 
         child.setResources(Stream.of(
                 rootNode.getResResource(),

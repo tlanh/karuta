@@ -36,9 +36,9 @@ public class NodeDocument {
     @JsonFormat(pattern="yyyy-MM-dd HH:mm:ss.S")
     private Date modifDate;
 
-    private String metadataDocument;
-    private String metadataEpmDocument;
-    private String metadataWadDocument;
+    private MetadataDocument metadataDocument;
+    private MetadataEpmDocument metadataEpmDocument;
+    private MetadataWadDocument metadataWadDocument;
     private List<ResourceDocument> resourceDocuments;
     private List<NodeDocument> children;
 
@@ -167,19 +167,19 @@ public class NodeDocument {
 
     @JsonRawValue
     @JacksonXmlProperty(localName = "metadata")
-    public String getMetadata() {
+    public MetadataDocument getMetadata() {
         return metadataDocument;
     }
 
     @JsonRawValue
     @JacksonXmlProperty(localName = "metadata-epm")
-    public String getMetadataEpm() {
+    public MetadataEpmDocument getMetadataEpm() {
         return metadataEpmDocument;
     }
 
     @JsonRawValue
     @JacksonXmlProperty(localName = "metadata-wad")
-    public String getMetadataWad() {
+    public MetadataWadDocument getMetadataWad() {
         return metadataWadDocument;
     }
 
@@ -223,19 +223,19 @@ public class NodeDocument {
 
     @JsonRawValue
     @JacksonXmlProperty(localName = "metadata")
-    public void setMetadata(String document) {
+    public void setMetadata(MetadataDocument document) {
         this.metadataDocument = document;
     }
 
     @JsonRawValue
     @JacksonXmlProperty(localName = "metadata-epm")
-    public void setMetadataEpm(String document) {
+    public void setMetadataEpm(MetadataEpmDocument document) {
         this.metadataEpmDocument = document;
     }
 
     @JsonRawValue
     @JacksonXmlProperty(localName = "metadata-wad")
-    public void setMetadataWad(String document) {
+    public void setMetadataWad(MetadataWadDocument document) {
         this.metadataWadDocument = document;
     }
 

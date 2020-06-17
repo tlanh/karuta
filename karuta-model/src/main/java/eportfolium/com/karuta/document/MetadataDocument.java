@@ -1,16 +1,17 @@
 package eportfolium.com.karuta.document;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import com.fasterxml.jackson.annotation.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
 @JsonRootName("metadata")
 public class MetadataDocument {
     protected static XmlMapper xmlMapper = new XmlMapper();
-
     
-    private String attributes;
+    private Map<String, String> attributes = new HashMap<String, String>();
     
     public MetadataDocument() { }
 
@@ -21,13 +22,20 @@ public class MetadataDocument {
                     .readValue(withTag);
     }
 
-		public String getAttributes()
+    @JsonAnyGetter
+		public Map<String, String> getAttributes()
 		{
 			return attributes;
 		}
 
-		public void setAttributes( String attributes )
+		public void setAttributes( Map<String, String> attributes )
 		{
 			this.attributes = attributes;
 		}
+		
+    @JsonAnySetter
+    public void setAttributeField(String key, String value) {
+        this.attributes.put(key, value);
+    }
+
 }
