@@ -633,48 +633,49 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 
 			GroupRight role = resolve.getUuid(uuid);
 
-			if (metadataWad.getSeenoderoles() != null) {
-				for (String nodeRole : metadataWad.getSeenoderoles().split(" ")) {
+			Map<String, String> metawad = metadataWad.getAttributes();
+			if (metawad.get("seenoderoles") != null) {
+				for (String nodeRole : metawad.get("seenoderoles").split(" ")) {
 					role.getGroup(nodeRole).rd = true;
 
 					resolve.groups.put(nodeRole, 0L);
 				}
 			}
 
-			if (metadataWad.getShowtoroles() != null) {
-				for (String nodeRole : metadataWad.getShowtoroles().split(" ")) {
+			if (metawad.get("showtoroles") != null) {
+				for (String nodeRole : metawad.get("showtoroles").split(" ")) {
 					role.getGroup(nodeRole).rd = false;
 
 					resolve.groups.put(nodeRole, 0L);
 				}
 			}
 
-			if (metadataWad.getDelnoderoles() != null) {
-				for (String nodeRole : metadataWad.getDelnoderoles().split(" ")) {
+			if (metawad.get("delroles") != null) {
+				for (String nodeRole : metawad.get("delroles").split(" ")) {
 					role.getGroup(nodeRole).dl = true;
 
 					resolve.groups.put(nodeRole, 0L);
 				}
 			}
 
-			if (metadataWad.getEditnoderoles() != null) {
-				for (String nodeRole : metadataWad.getEditnoderoles().split(" ")) {
+			if (metawad.get("editroles") != null) {
+				for (String nodeRole : metawad.get("editroles").split(" ")) {
 					role.getGroup(nodeRole).wr = true;
 
 					resolve.groups.put(nodeRole, 0L);
 				}
 			}
 
-			if (metadataWad.getEditresroles() != null) {
-				for (String nodeRole : metadataWad.getEditresroles().split(" ")) {
+			if (metawad.get("editresroles") != null) {
+				for (String nodeRole : metawad.get("editresroles").split(" ")) {
 					role.getGroup(nodeRole).wr = true;
 
 					resolve.groups.put(nodeRole, 0L);
 				}
 			}
 
-			if (metadataWad.getSubmitroles() != null) {
-				for (String nodeRole : metadataWad.getSubmitroles().split(" ")) {
+			if (metawad.get("submitroles") != null) {
+				for (String nodeRole : metawad.get("submitroles").split(" ")) {
 					role.getGroup(nodeRole).sb = true;
 
 					resolve.groups.put(nodeRole, 0L);
@@ -682,8 +683,8 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 			}
 
 
-			if (metadataWad.getMenuroles() != null) {
-				for (String line : metadataWad.getMenuroles().split(";")) {
+			if (metawad.get("menuroles") != null) {
+				for (String line : metawad.get("menuroles").split(";")) {
 					/// Format pour l'instant:
 					/// code_portfolio,tag_semantique,label@en/libelle@fr,reles[;autre menu]
 					String[] tokens = line.split(",");
@@ -697,8 +698,8 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 				}
 			}
 
-			if (metadataWad.getNotifyroles() != null) {
-				role.setNotify(metadataWad.getNotifyroles().replace(" ", ","));
+			if (metawad.get("notifyroles") != null) {
+				role.setNotify(metawad.get("notifyroles").replace(" ", ","));
 			}
 
 			if (portfolioRepository.isPublic(portfolioId))
@@ -938,8 +939,8 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 
             portfolio = new Portfolio();
 
-            ObjectMapper mapper = new XmlMapper()
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+            ObjectMapper mapper = new XmlMapper();
+//            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
             
             PortfolioDocument document = mapper
                     .readerFor(PortfolioDocument.class)
