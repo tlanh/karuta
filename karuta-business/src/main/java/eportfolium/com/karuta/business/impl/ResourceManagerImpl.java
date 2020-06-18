@@ -15,11 +15,13 @@
 
 package eportfolium.com.karuta.business.impl;
 
+import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import eportfolium.com.karuta.business.contract.FileManager;
 import eportfolium.com.karuta.business.contract.PortfolioManager;
 import eportfolium.com.karuta.consumer.repositories.PortfolioRepository;
 import eportfolium.com.karuta.consumer.repositories.ResourceRepository;
@@ -44,6 +46,9 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 
 	@Autowired
 	private NodeManager nodeManager;
+
+	@Autowired
+	private FileManager fileManager;
 
 	@Autowired
 	private ResourceRepository resourceRepository;
@@ -179,6 +184,22 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 		);
 
 		resourceRepository.save(resource);
+	}
+
+
+	@Override
+	public boolean updateContent(UUID nodeId,
+								 Long userId,
+								 InputStream content,
+								 String lang,
+								 boolean thumbnail) throws BusinessException {
+		if (!hasRight(userId,0L, nodeId, GroupRights.WRITE))
+			throw new GenericBusinessException("No rights.");
+
+		Resource resource = resourceRepository.findByNodeId(nodeId);
+		ResourceDocument document = new ResourceDocument(resource, resource.getNode());
+
+		return fileManager.updateResource(document, content, lang, thumbnail);
 	}
 
 	private void updateResourceAttrs(Resource resource, String content, Long userId) {

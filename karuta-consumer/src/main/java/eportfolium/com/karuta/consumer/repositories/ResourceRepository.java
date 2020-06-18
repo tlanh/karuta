@@ -34,4 +34,7 @@ public interface ResourceRepository extends CrudRepository<Resource, UUID> {
     @Query("SELECT r FROM Resource r " +
             "INNER JOIN r.resNode resNode WITH resNode.id = :nodeId")
     Resource getResourceOfResourceByNodeUuid(@Param("nodeId") UUID nodeId);
+
+    @Query("SELECT n.resource FROM Node n WHERE n.id = :nodeId")
+    Resource findByNodeId(@Param("nodeId") UUID nodeId);
 }

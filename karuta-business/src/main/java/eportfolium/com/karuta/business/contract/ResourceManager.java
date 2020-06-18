@@ -15,6 +15,7 @@
 
 package eportfolium.com.karuta.business.contract;
 
+import java.io.InputStream;
 import java.util.UUID;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -40,4 +41,10 @@ public interface ResourceManager extends BaseManager {
 			throws BusinessException;
 
 	void updateResource(UUID id, String xsiType, String content, Long userId);
+
+	boolean updateContent(UUID nodeId,
+						  Long userId,
+						  InputStream content,
+						  String lang,
+						  boolean thumbnail) throws BusinessException;
 }

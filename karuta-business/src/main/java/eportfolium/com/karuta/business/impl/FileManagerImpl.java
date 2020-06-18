@@ -15,26 +15,24 @@
 
 package eportfolium.com.karuta.business.impl;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import eportfolium.com.karuta.business.contract.ConfigurationManager;
+import eportfolium.com.karuta.document.ResourceDocument;
 import org.apache.http.HttpEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.ContentType;
+import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.entity.mime.content.FileBody;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,13 +41,14 @@ import eportfolium.com.karuta.business.contract.FileManager;
 @Service
 @Transactional
 public class FileManagerImpl implements FileManager {
+	@Autowired
+	private ConfigurationManager configurationManager;
 
 	@Override
 	public boolean rewriteFile(String sessionid, String backend, String user, UUID id, String lang, File file)
 			throws Exception {
-		CloseableHttpClient httpclient = HttpClients.createDefault();
 
-		try {
+		try (CloseableHttpClient httpclient = createClient()) {
 			String url = backend + "/resources/resource/file/" + id.toString() + "?lang=" + lang;
 			HttpPut put = new HttpPut(url);
 			put.setHeader("Cookie", "JSESSIONID=" + sessionid); // So that the receiving servlet allow us
@@ -66,8 +65,6 @@ public class FileManagerImpl implements FileManager {
 			put.setEntity(reqEntity);
 
 			httpclient.execute(put);
-		} finally {
-			httpclient.close();
 		}
 
 		return true;
@@ -154,5 +151,36 @@ public class FileManagerImpl implements FileManager {
 			zis.close();
 		}
 		return folder;
+	}
+
+	@Override
+	public boolean updateResource(ResourceDocument resource,
+								  InputStream content,
+								  String lang,
+								  boolean thumbnail) {
+		// TODO: Take "lang" into account.
+		String url = configurationManager.get("fileserver") + "/" + resource.getFileid();
+
+		if (thumbnail)
+			url += "/thumb";
+
+		HttpPut request = new HttpPut(url);
+		request.setEntity(new InputStreamEntity(content));
+
+		try (CloseableHttpClient client = createClient();
+			 CloseableHttpResponse response = client.execute(request)) {
+			response.getEntity();
+
+			return true;
+		} catch (IOException e) {
+			e.printStackTrace();
+
+			return false;
+		}
+	}
+
+	@Override
+	public CloseableHttpClient createClient() {
+		return HttpClients.createDefault();
 	}
 }

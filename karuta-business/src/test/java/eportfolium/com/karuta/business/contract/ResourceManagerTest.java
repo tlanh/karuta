@@ -11,12 +11,15 @@ import eportfolium.com.karuta.model.bean.GroupRights;
 import eportfolium.com.karuta.model.bean.Node;
 import eportfolium.com.karuta.model.bean.Resource;
 import eportfolium.com.karuta.model.exception.BusinessException;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.UUID;
@@ -44,6 +47,9 @@ public class ResourceManagerTest {
 
     @MockBean
     private PortfolioManager portfolioManager;
+
+    @MockBean
+    private FileManager fileManager;
 
     @Test
     public void getResource_WithoutProperRights() {
@@ -464,6 +470,82 @@ public class ResourceManagerTest {
 
         verify(resourceRepository).deleteById(id);
         verify(resourceRepository).save(any(Resource.class));
+        verifyNoMoreInteractions(resourceRepository);
+    }
+
+    @Test
+    public void updateContent_WithoutProperRights() {
+        Long userId = 42L;
+
+        UUID nodeId = UUID.randomUUID();
+
+        doReturn(false)
+                .when(manager)
+                .hasRight(userId, 0L, nodeId, GroupRights.WRITE);
+
+        try {
+            manager.updateContent(nodeId, userId, null, "fr", true);
+            fail("User must have write rights to update resource content.");
+        } catch (BusinessException ignored) { }
+    }
+
+    @Test
+    public void updateContent_WithProperRights_WithErrors() throws BusinessException {
+        Long userId = 42L;
+        InputStream input = new ByteArrayInputStream("".getBytes());
+        String lang = "fr";
+        boolean thumb = true;
+
+        UUID nodeId = UUID.randomUUID();
+
+        doReturn(true)
+                .when(manager)
+                .hasRight(userId, 0L, nodeId, GroupRights.WRITE);
+
+        Resource resource = new Resource();
+        resource.setNode(new Node());
+
+        doReturn(resource)
+                .when(resourceRepository)
+                .findByNodeId(nodeId);
+
+        doReturn(false)
+                .when(fileManager)
+                .updateResource(any(ResourceDocument.class), eq(input), eq(lang), eq(thumb));
+
+        assertFalse(manager.updateContent(nodeId, userId, input, lang, thumb));
+
+        verify(resourceRepository).findByNodeId(nodeId);
+        verifyNoMoreInteractions(resourceRepository);
+    }
+
+    @Test
+    public void updateContent_WithProperRights_WithoutErrors() throws BusinessException {
+        Long userId = 42L;
+        InputStream input = new ByteArrayInputStream("".getBytes());
+        String lang = "fr";
+        boolean thumb = true;
+
+        UUID nodeId = UUID.randomUUID();
+
+        doReturn(true)
+                .when(manager)
+                .hasRight(userId, 0L, nodeId, GroupRights.WRITE);
+
+        Resource resource = new Resource();
+        resource.setNode(new Node());
+
+        doReturn(resource)
+                .when(resourceRepository)
+                .findByNodeId(nodeId);
+
+        doReturn(true)
+                .when(fileManager)
+                .updateResource(any(ResourceDocument.class), eq(input), eq(lang), eq(thumb));
+
+        assertTrue(manager.updateContent(nodeId, userId, input, lang, thumb));
+
+        verify(resourceRepository).findByNodeId(nodeId);
         verifyNoMoreInteractions(resourceRepository);
     }
 }
