@@ -28,6 +28,16 @@ public class MetadataDocument {
 			return attributes;
 		}
 
+    public String getStringAttributes(  )
+    {
+    	StringBuilder strattrib = new StringBuilder("");
+    	for (String key : attributes.keySet())
+    		strattrib.append(key + "=" + attributes.get(key) + ", ");
+    	
+    	strattrib.delete(strattrib.length()-2, strattrib.length());
+    	return strattrib.toString();
+    }
+    
 		public void setAttributes( Map<String, String> attributes )
 		{
 			this.attributes = attributes;

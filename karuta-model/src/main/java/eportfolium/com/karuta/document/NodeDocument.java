@@ -13,7 +13,7 @@ import java.util.*;
 @JsonInclude(JsonInclude.Include.NON_ABSENT)
 public class NodeDocument {
     private UUID id;
-    private String type;
+    protected String type;
     private String xsiType;
     private String label;
     private String code;
@@ -40,7 +40,7 @@ public class NodeDocument {
     private MetadataEpmDocument metadataEpmDocument;
     private MetadataWadDocument metadataWadDocument;
     private List<ResourceDocument> resourceDocuments;
-    private List<NodeDocument> children;
+    private List<NodeDocument> children = new ArrayList<NodeDocument>();
 
     transient private NodeDocument parent;
 
@@ -187,6 +187,12 @@ public class NodeDocument {
     @JacksonXmlProperty(localName = "asmResource")
     public List<ResourceDocument> getResources() {
         return resourceDocuments;
+    }
+
+    @JacksonXmlElementWrapper(useWrapping = false)
+    @JacksonXmlProperty(localName = "asmContext")
+    public void setContext( NodeDocument context ) {
+    	children.add(context);
     }
 
     // FIXME: Uncomment that once Jackson 2.12 or 2.11.1 is released

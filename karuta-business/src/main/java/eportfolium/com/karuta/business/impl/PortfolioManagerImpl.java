@@ -828,7 +828,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 
 		UUID uuid = UUID.randomUUID();
 
-		Portfolio portfolio = add(uuid, null, userId, new Portfolio());
+		Portfolio portfolio = add(uuid, null, userId, portfolioDocument);
 
 		nodeManager.writeNode(rootNode, portfolio.getId(), portfolioModelId, userId, 0, uuid, null,
 				false, false, false, null, parseRights);
@@ -977,14 +977,18 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 
             UUID uuid = UUID.randomUUID();
 
-            add(uuid, null, userId, portfolio);
+            add(uuid, null, userId, document);
 
-            nodeManager.writeNode(asmRoot.get(), portfolio.getId(), null, userId, 0, uuid,
+            nodeManager.writeNode(asmRoot.get(), uuid, null, userId, 0, uuid,
                     null, false, false, false, resolve, parseRights);
 
             // On récupère le noeud root généré précédemment et on l'affecte au portfolio.
+        		Optional<Credential> credential = credentialRepository.findById(userId);
+
             portfolio.setRootNode(nodeRepository.getRootNodeByPortfolio(portfolio.getId()));
             portfolio.setActive(1);
+            portfolio.setCredential(credential.get());
+            portfolio.setModifUserId(credential.get().getId());
 
             portfolioRepository.save(portfolio);
 
@@ -1393,7 +1397,8 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		return new String(Base64.encodeBase64(bytes)).replaceAll("\\s+$", "").substring(0, length);
 	}
 
-	private Portfolio add(UUID rootNodeId, UUID modelId, Long userId, Portfolio portfolio) {
+	private Portfolio add(UUID rootNodeId, UUID modelId, Long userId, PortfolioDocument portfolio) {
+		/*
 		if (portfolio.getRootNode() != null) {
 			throw new IllegalArgumentException();
 		}
@@ -1405,27 +1410,67 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		if (modelId != null) {
 			portfolio.setModelId(modelId);
 		}
+		//*/
 
 		Optional<Node> rootNode = nodeRepository.findById(rootNodeId);
 		Optional<Credential> credential = credentialRepository.findById(userId);
 
-		if (!rootNode.isPresent() || !credential.isPresent()) {
+		if (rootNode.isPresent() || !credential.isPresent()) {
 			throw new IllegalArgumentException();
 		}
 
-		Node node = rootNode.get();
 		Credential cr = credential.get();
+		
+		//// From intermediate object to DB object
+		Optional<NodeDocument> onodedoc = portfolio.getNodes().stream()
+				.filter(n -> n.getType().equals("asmRoot")).findFirst();
+		NodeDocument nodedoc = onodedoc.get();
+		
+		Node node = new Node();
+		node.setAsmType("asmRoot");
+		node.setCode(nodedoc.getCode());
+		node.setDescr(nodedoc.getDescription());
+		String metastr = "";
+		if( nodedoc.getMetadata() != null )
+			metastr = nodedoc.getMetadata().getStringAttributes();
+		else
+			metastr = "";
+			node.setMetadata(metastr);
+			
+		if( nodedoc.getMetadataWad() != null )
+			metastr = nodedoc.getMetadataWad().getStringAttributes();
+		else
+			metastr = "";
+		node.setMetadataWad(metastr);
+		
+		if( nodedoc.getMetadataEpm() != null )
+			metastr = nodedoc.getMetadataEpm().getStringAttributes();
+		else
+			metastr = "";
+		node.setMetadataEpm(metastr);
+		
+		node.setSemtag(nodedoc.getSemtag());
+		
+		node.setModifUserId(cr.getId());
+		
+		node.setSharedNode(false);
+		node.setSharedNodeRes(false);
+		node.setSharedRes(false);
+		
+		Portfolio port = new Portfolio();
+		port.setRootNode(node);
+		port.setCredential(cr);
+		
+//		portfolio.setRootNode(node);
+//		portfolio.setCredential(cr);
 
-		portfolio.setRootNode(node);
-		portfolio.setCredential(cr);
-
-		portfolio.setModifUserId(cr.getId());
+		port.setModifUserId(cr.getId());
 
 		nodeRepository.save(node);
 		credentialRepository.save(cr);
-		portfolioRepository.save(portfolio);
+		portfolioRepository.save(port);
 
-		return portfolio;
+		return port;
 	}
 
 	@Override

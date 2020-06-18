@@ -29,7 +29,7 @@ public class PortfolioDocument {
     @JsonFormat(pattern="yyyy-MM-dd HH:mm:ss.S")
     private Date modifDate;
 
-    private List<NodeDocument> nodes;
+    private List<NodeDocument> nodes = new ArrayList<NodeDocument>();
 
     public PortfolioDocument() { }
 
@@ -147,6 +147,11 @@ public class PortfolioDocument {
     public List<NodeDocument> getNodes() {
         return nodes;
     }
+
+    @JacksonXmlProperty(localName = "asmRoot")
+    public void setNodes(RootDocument node) {
+      this.nodes.add( node );
+  }
 
     public void setNodes(List<NodeDocument> nodes) {
         this.nodes = nodes;
