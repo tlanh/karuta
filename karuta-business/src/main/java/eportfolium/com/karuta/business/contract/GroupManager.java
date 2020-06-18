@@ -31,10 +31,9 @@ public interface GroupManager {
 
 	RoleGroupList getGroupsByRole(UUID portfolioId, String role);
 
-	boolean changeNotifyRoles(Long userId, UUID portfolioId, UUID nodeId, String notify)
-			throws BusinessException;
+	void changeNotifyRoles(UUID portfolioId, UUID nodeId, String notify);
 
-	boolean setPublicState(Long userId, UUID portfolioId, boolean isPublic) throws BusinessException;
+	void setPublicState(Long userId, UUID portfolioId, boolean isPublic) throws BusinessException;
 
 	Long addCredentialGroup(String credentialGroupName);
 
@@ -46,13 +45,13 @@ public interface GroupManager {
 
 	GroupInfoList getUserGroups(Long userId);
 
-	Boolean removeCredentialGroup(Long credentialGroupId);
+	void removeCredentialGroup(Long credentialGroupId);
 
 	void changeUserGroup(Long grid, Long groupId);
 
 	GroupRightsList getGroupRights(Long groupId);
 
-	boolean addGroupRights(String label, UUID nodeUuid, String right, UUID portfolioId, Long userId);
+	void addGroupRights(String label, UUID nodeUuid, String right, UUID portfolioId, Long userId);
 
 	void removeRights(long groupId);
 

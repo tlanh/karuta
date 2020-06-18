@@ -84,85 +84,67 @@ public class GroupManagerImpl implements GroupManager {
 	}
 
 	@Override
-	public boolean changeNotifyRoles(Long userId, UUID portfolioId, UUID nodeId, String notify)
-			throws GenericBusinessException {
-
-		if (!credentialRepository.isAdmin(userId))
-			throw new GenericBusinessException("No admin right");
-
+	@PreAuthorize("hasRole('admin')")
+	public void changeNotifyRoles(UUID portfolioId, UUID nodeId, String notify) {
 		List<GroupRights> grList = groupRightsRepository.getRightsByPortfolio(nodeId, portfolioId);
 
 		grList.forEach(gr -> gr.setNotifyRoles(notify));
 		groupRightsRepository.saveAll(grList);
-
-		return true;
 	}
 
 	@Override
-	public boolean setPublicState(Long userId, UUID portfolioId, boolean isPublic) throws BusinessException {
-		boolean ret = false;
+	public void setPublicState(Long userId, UUID portfolioId, boolean isPublic) throws BusinessException {
 		if (!credentialRepository.isAdmin(userId)
 				&& !portfolioRepository.isOwner(portfolioId, userId)
 				&& !credentialRepository.isDesigner(userId, portfolioId)
 				&& !credentialRepository.isCreator(userId))
 			throw new GenericBusinessException("No admin right");
 
-		try {
-			// S'assure qu'il y ait au moins un groupe de base
-			List<GroupRightInfo> rs = groupRightInfoRepository.getDefaultByPortfolio(portfolioId);
-			long gid = 0;
-			if (!rs.isEmpty())
-				gid = rs.get(0).getGroupInfo().getId();
+		// S'assure qu'il y ait au moins un groupe de base
+		GroupRightInfo defaultGroup = groupRightInfoRepository.getDefaultByPortfolio(portfolioId);
+		GroupInfo groupInfo = defaultGroup != null ? defaultGroup.getGroupInfo() : null;
 
-			if (gid == 0) // If not exist, create 'all' groups
-			{
-//				c.setAutoCommit(false);
-				GroupRightInfo gri = new GroupRightInfo();
-				gri.setOwner(userId);
-				gri.setLabel("all");
-				gri.setPortfolio(new Portfolio(portfolioId));
+		// If the default group doesn't exist, create it (with 'all' label).
+		if (groupInfo == null) {
+			GroupRightInfo gri = new GroupRightInfo();
+			gri.setOwner(userId);
+			gri.setLabel("all");
+			gri.setPortfolio(new Portfolio(portfolioId));
 
-				groupRightInfoRepository.save(gri);
+			groupRightInfoRepository.save(gri);
 
-				// Insert all nodes into rights
-				// TODO: Might need updates on additional nodes too
-				List<Node> nodes = nodeRepository.getNodes(portfolioId);
-				Iterator<Node> it = nodes.iterator();
-				Node current = null;
-				GroupRights gr = null;
-				while (it.hasNext()) {
-					current = it.next();
-					gr = new GroupRights();
-					gr.setId(new GroupRightsId());
-					gr.setGroupRightInfo(gri);
-					gr.setGroupRightsId(current.getId());
+			// Insert all nodes into rights
+			// TODO: Might need updates on additional nodes too
+			List<GroupRights> groupRights = nodeRepository.getNodes(portfolioId)
+					.stream()
+					.map(node -> {
+						GroupRights gr = new GroupRights();
+						gr.setId(new GroupRightsId());
+						gr.setGroupRightInfo(gri);
+						gr.setGroupRightsId(node.getId());
 
-					groupRightsRepository.save(gr);
-				}
+						return gr;
+					}).collect(Collectors.toList());
 
-				groupInfoRepository.save(new GroupInfo(gri, userId, "all"));
-			}
+			groupRightsRepository.saveAll(groupRights);
 
-			Long publicUid = credentialRepository.getPublicId();
-			GroupUserId id = new GroupUserId();
-			id.setGroupInfo(new GroupInfo(gid));
-			id.setCredential(new Credential(publicUid));
-			if (isPublic) // Insère ou retire 'sys_public' dans le groupe 'all' du portfolio
-			{
-				if (!groupUserRepository.existsById(id)) {
-					groupUserRepository.save(new GroupUser(id));
-				}
-			} else {
-				groupUserRepository.deleteById(id);
-			}
-
-			ret = true;
-		} catch (Exception e) {
-			e.printStackTrace();
+			groupInfo = new GroupInfo(gri, userId, "all");
+			groupInfoRepository.save(groupInfo);
 		}
 
-		return ret;
+		Long publicUid = credentialRepository.getPublicId();
+		GroupUserId id = new GroupUserId();
+		id.setGroupInfo(new GroupInfo(groupInfo.getId()));
+		id.setCredential(new Credential(publicUid));
 
+		// Insert or remove the public account from the default group.
+		if (isPublic) {
+			if (!groupUserRepository.existsById(id)) {
+				groupUserRepository.save(new GroupUser(id));
+			}
+		} else {
+			groupUserRepository.deleteById(id);
+		}
 	}
 
 	@Override
@@ -187,103 +169,89 @@ public class GroupManagerImpl implements GroupManager {
 	@Override
 	@PreAuthorize("hasRole('admin')")
 	public void changeUserGroup(Long grid, Long groupId) {
-		Optional<GroupInfo> gi = groupInfoRepository.findById(groupId);
-
-		if (gi.isPresent()) {
-			GroupInfo groupInfo = gi.get();
-
-			groupInfo.setGroupRightInfo(new GroupRightInfo(grid));
-			groupInfoRepository.save(groupInfo);
-		}
+		groupInfoRepository.findById(groupId)
+				.ifPresent(gi -> {
+					gi.setGroupRightInfo(new GroupRightInfo(grid));
+					groupInfoRepository.save(gi);
+				});
 	}
 
 	/**
 	 * Ajout des droits du portfolio dans GroupRightInfo et GroupRights
-	 *
 	 */
-	public boolean addGroupRights(String label, UUID nodeId, String right, UUID portfolioId, Long userId) {
-		List<GroupUser> res = null;
-		GroupRights res2 = null;
-		GroupRightInfo gri = null;
-		GroupRights gr = null;
-		Long grid = -1L;
-		boolean reponse = true;
+	@Override
+	public void addGroupRights(String label, UUID nodeId, String right, UUID portfolioId, Long userId) {
+		Long grid;
 
-		try {
-
-			if (StringUtils.isNotBlank(label) && right != null) {
-				// Si le nom de group est 'user'. Le remplacer par le rôle de l'utilisateur
-				// (voir pour juste le nom plus tard)
-				if ("user".equals(label)) {
-					res = groupUserRepository.getByPortfolioAndUser(portfolioId, userId);
-
-				} else if (portfolioId != null) { /// Rôle et portfolio
-
-					gri = groupRightInfoRepository.getByPortfolioAndLabel(portfolioId, label);
-					if (gri == null) // Groupe non-existant
-					{
-						gri = new GroupRightInfo();
-						gri.setOwner(userId);
-						gri.setLabel(label);
-						gri.setChangeRights(false);
-						gri.setPortfolio(new Portfolio(portfolioId));
-						groupRightInfoRepository.save(gri);
-
-						/// Crée une copie dans group_info, le temps de re-organiser tout ça.
-						groupInfoRepository.save(new GroupInfo(gri, userId, label));
-					}
-
-				} else { // Role et uuid
-					gr = groupRightsRepository.getRightsByIdAndLabel(nodeId, label);
-				}
-
-				if (res != null || gri != null || gr != null) /// On a trouve notre groupe
-				{
-					if (grid == -1) {
-						if (res != null) {
-							grid = res.get(0).getGroupInfo().getGroupRightInfo().getId();
-						} else if (gri != null) {
-							grid = gri.getId();
-						} else if (gr != null) {
-							grid = gr.getGroupRightInfo().getId();
-						}
-					}
-
-					res2 = groupRightsRepository.getRightsByGrid(nodeId, grid);
-
-					//// FIXME Pas de noeud existant. Il me semble qu'il y a un UPDATE OR INSERT
-					//// dans MySQL. A verifier et arranger au besoin.
-					if (res2 == null) {
-						res2 = new GroupRights();
-						res2.setId(new GroupRightsId());
-						res2.setGroupRightInfo(groupRightInfoRepository.findById(grid).get());
-						res2.setGroupRightsId(nodeId);
-					}
-					if (GroupRights.READ.equalsIgnoreCase(right)) {
-						res2.setRead(true);
-					} else if (GroupRights.WRITE.equalsIgnoreCase(right)) {
-						res2.setWrite(true);
-					} else if (GroupRights.DELETE.equalsIgnoreCase(right)) {
-						res2.setDelete(true);
-					} else if (GroupRights.SUBMIT.equalsIgnoreCase(right)) {
-						//// FIXME: ajoute le rules_id prÃ©-cannÃ© pour certaine valeurs
-						res2.setSubmit(true);
-					} else if (GroupRights.ADD.equalsIgnoreCase(right)) {
-						res2.setAdd(true);
-					} else {
-						// Le droit d'executer des actions.
-						// FIXME Pas propre, à changer plus tard.
-						res2.setRulesId(right);
-					}
-
-					groupRightsRepository.save(res2);
-				}
-			}
-		} catch (Exception ex) {
-			reponse = false;
+		if (StringUtils.isBlank(label) || right == null) {
+			return;
 		}
 
-		return reponse;
+		// Si le nom de group est 'user'. Le remplacer par le rôle de l'utilisateur
+		// (voir pour juste le nom plus tard)
+		if ("user".equals(label)) {
+			List<GroupUser> groups = groupUserRepository.getByPortfolioAndUser(portfolioId, userId);
+
+			if (groups != null && !groups.isEmpty())
+				grid = groups.get(0).getGroupInfo().getGroupRightInfo().getId();
+			else
+				return;
+
+		} else if (portfolioId != null) { /// Rôle et portfolio
+
+			GroupRightInfo gri = groupRightInfoRepository.getByPortfolioAndLabel(portfolioId, label);
+
+			if (gri == null) // Groupe non-existant
+			{
+				gri = new GroupRightInfo();
+				gri.setOwner(userId);
+				gri.setLabel(label);
+				gri.setChangeRights(false);
+				gri.setPortfolio(new Portfolio(portfolioId));
+				groupRightInfoRepository.save(gri);
+
+				/// Crée une copie dans group_info, le temps de re-organiser tout ça.
+				groupInfoRepository.save(new GroupInfo(gri, userId, label));
+			}
+
+			grid = gri.getId();
+
+		} else { // Role et uuid
+			GroupRights gr = groupRightsRepository.getRightsByIdAndLabel(nodeId, label);
+
+			if (gr != null)
+				grid = gr.getGroupRightInfo().getId();
+			else
+				return;
+		}
+
+		GroupRights groupRights = groupRightsRepository.getRightsByGrid(nodeId, grid);
+
+		if (groupRights == null) {
+			groupRights = new GroupRights();
+			groupRights.setId(new GroupRightsId());
+			groupRights.setGroupRightInfo(groupRightInfoRepository.findById(grid).get());
+			groupRights.setGroupRightsId(nodeId);
+		}
+
+		if (GroupRights.READ.equalsIgnoreCase(right)) {
+			groupRights.setRead(true);
+		} else if (GroupRights.WRITE.equalsIgnoreCase(right)) {
+			groupRights.setWrite(true);
+		} else if (GroupRights.DELETE.equalsIgnoreCase(right)) {
+			groupRights.setDelete(true);
+		} else if (GroupRights.SUBMIT.equalsIgnoreCase(right)) {
+			//// FIXME: ajoute le rules_id prÃ©-cannÃ© pour certaine valeurs
+			groupRights.setSubmit(true);
+		} else if (GroupRights.ADD.equalsIgnoreCase(right)) {
+			groupRights.setAdd(true);
+		} else {
+			// Le droit d'executer des actions.
+			// FIXME Pas propre, à changer plus tard.
+			groupRights.setRulesId(right);
+		}
+
+		groupRightsRepository.save(groupRights);
 	}
 
 	@Override
@@ -310,6 +278,7 @@ public class GroupManagerImpl implements GroupManager {
 				.collect(Collectors.toList()));
 	}
 
+	@Override
 	public Long addCredentialGroup(String credentialGroupName) {
 		CredentialGroup cg = new CredentialGroup();
 		cg.setLabel(credentialGroupName);
@@ -319,6 +288,7 @@ public class GroupManagerImpl implements GroupManager {
 		return cg.getId();
 	}
 
+	@Override
 	public boolean renameCredentialGroup(Long credentialGroupId, String newName) {
 		Optional<CredentialGroup> credentialGroup = credentialGroupRepository.findById(credentialGroupId);
 
@@ -334,22 +304,16 @@ public class GroupManagerImpl implements GroupManager {
 		}
 	}
 
+	@Override
 	public CredentialGroup getCredentialGroupByName(String name) {
 		return credentialGroupRepository.findByLabel(name);
 	}
 
 	@Override
-	public Boolean removeCredentialGroup(Long credentialGroupId) {
-		try {
-			credentialGroupMembersRepository.deleteAll(credentialGroupMembersRepository.findByGroup(credentialGroupId));
-			credentialGroupRepository.deleteById(credentialGroupId);
-			return true;
-
-		} catch (Exception e) {
-			e.printStackTrace();
-
-			return false;
-		}
+	public void removeCredentialGroup(Long credentialGroupId) {
+		credentialGroupMembersRepository.deleteAll(
+				credentialGroupMembersRepository.findByGroup(credentialGroupId));
+		credentialGroupRepository.deleteById(credentialGroupId);
 	}
 
 	@Override

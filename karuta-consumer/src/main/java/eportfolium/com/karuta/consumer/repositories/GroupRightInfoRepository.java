@@ -41,7 +41,7 @@ public interface GroupRightInfoRepository extends CrudRepository<GroupRightInfo,
             "LEFT JOIN gri.groupInfo gi " +
             "WHERE gri.portfolio.id = :portfolioId " +
             "AND gri.label = 'all'")
-    List<GroupRightInfo> getDefaultByPortfolio(@Param("portfolioId") UUID portfolioId);
+    GroupRightInfo getDefaultByPortfolio(@Param("portfolioId") UUID portfolioId);
 
     @Query("SELECT CASE WHEN COUNT(gri) > 0 THEN true ELSE false END " +
             "FROM GroupRightInfo gri " +

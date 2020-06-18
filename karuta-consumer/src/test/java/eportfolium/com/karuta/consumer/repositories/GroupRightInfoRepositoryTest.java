@@ -107,10 +107,9 @@ public class GroupRightInfoRepositoryTest extends TestHelpers {
         groupRightInfo.setPortfolio(portfolio);
         repository.save(groupRightInfo);
 
-        List<GroupRightInfo> groups = repository.getDefaultByPortfolio(portfolio.getId());
+        GroupRightInfo group = repository.getDefaultByPortfolio(portfolio.getId());
 
-        assertEquals(1, groups.size());
-        assertEquals(groupRightInfo.getId(), groups.get(0).getId());
+        assertEquals(groupRightInfo.getId(), group.getId());
     }
 
     @Test
