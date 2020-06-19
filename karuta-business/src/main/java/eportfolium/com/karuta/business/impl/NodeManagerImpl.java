@@ -277,7 +277,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 
 		Optional<Node> nodeOptional = nodeRepository.findById(nodeId);
 
-		if (nodeOptional.isPresent())
+		if (!nodeOptional.isPresent())
 			return null;
 
 		Node node = nodeOptional.get();
