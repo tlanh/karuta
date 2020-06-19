@@ -114,8 +114,8 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	}
 
 	@Override
-	public UUID writeNode(NodeDocument node, UUID portfolioId, UUID portfolioModelId, Long userId,
-						  int ordrer, UUID forcedId, UUID forcedParentId, boolean sharedResParent,
+	public Node writeNode(NodeDocument node, UUID portfolioId, UUID portfolioModelId, Long userId,
+						  int ordrer, UUID forcedId, Node parentNode, boolean sharedResParent,
 						  boolean sharedNodeResParent, boolean rewriteId, Map<UUID, UUID> resolve, boolean parseRights)
 			throws BusinessException, JsonProcessingException {
 
@@ -243,7 +243,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 			metadataStr = xmlAttributes(metadata);
 		}
 
-		UUID newNodeId = add(nodeId, "", asmType, xsiType, sharedRes, sharedNode, sharedNodeRes,
+		Node nodeDB = add(nodeId, parentNode,"", asmType, xsiType, sharedRes, sharedNode, sharedNodeRes,
 					metadataStr, metadataWadStr, metadataEpmStr, semtag,
 					semanticTag, label, code, descr, format, ordrer, userId, portfolioId);
 
@@ -257,16 +257,16 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 				if (!rewriteId)
 					childId = UUID.randomUUID();
 
-				writeNode(child, portfolioId, portfolioModelId, userId, k, childId, newNodeId, sharedRes,
+				writeNode(child, portfolioId, portfolioModelId, userId, k, childId, nodeDB, sharedRes,
 							sharedNodeRes, rewriteId, resolve, parseRights);
 				k++;
 			}
 		}
 
-		if( forcedParentId != null )	/// Update parent children list, if asmRoot, no parent
-			updateNode(forcedParentId);
+		if( parentNode != null )	/// Update parent children list, if asmRoot, no parent
+			updateNode(parentNode.getId());
 
-		return newNodeId;
+		return nodeDB;
 	}
 
 	@Override
@@ -2019,16 +2019,15 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 		nodeRepository.save(n);
 	}
 
-	private UUID add(UUID nodeId, String nodeChildrenUuid, String asmType, String xsiType,
+	private Node add(UUID nodeId, Node nodeParent, String nodeChildrenUuid, String asmType, String xsiType,
 					 boolean sharedRes, boolean sharedNode, boolean sharedNodeRes, String metadata, String metadataWad, String metadataEpm, String semtag,
 					 String semanticTag, String label, String code, String descr, String format, int order, Long modifUserId,
 					 UUID portfolioId) {
-		Optional<Node> nodeOptional = nodeRepository.findById(nodeId);
-		Node node = nodeOptional.orElseGet(Node::new);
+		
+		Node node = new Node();
+		node.setId(nodeId);
 
-		if (nodeId != null) {
-			node.setParentNode(new Node(nodeId));
-		}
+		node.setParentNode(nodeParent);
 		if (nodeChildrenUuid != null) {
 			node.setChildrenStr(nodeChildrenUuid);
 		}
@@ -2052,11 +2051,14 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 		node.setModifUserId(modifUserId);
 
 		if (portfolioId != null)
-			node.setPortfolio(new Portfolio(portfolioId));
+		{
+			Optional<Portfolio> p = portfolioRepository.findById(portfolioId);
+			node.setPortfolio(p.get());
+		}
 
-		nodeRepository.save(node);
+		node = nodeRepository.save(node);
 
-		return node.getId();
+		return node;
 	}
 
 	private int update(UUID nodeId, String asmType, String xsiType, String semantictag, String label, String code,

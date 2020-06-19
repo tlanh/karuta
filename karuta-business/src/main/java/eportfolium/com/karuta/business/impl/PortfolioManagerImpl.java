@@ -582,7 +582,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		UUID rootNodeUuid = portfolio.getId() != null ? portfolio.getId() : UUID.randomUUID();
 
 		Portfolio portfolioRecord = portfolioRepository.findById(portfolioId)
-										.orElse(add(rootNodeUuid, null, userId, new Portfolio()));
+										.orElse(add(rootNodeUuid, null, userId, portfolio));
 
 		if (userId == null || userId == 0L) {
 			userId = portfolioRecord.getCredential().getId();
@@ -917,6 +917,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
         ///// Pour associer l'ancien uuid -> nouveau, pour les fichiers
         Map<UUID, UUID> resolve = new HashMap<>();
         Portfolio portfolio = null;
+        PortfolioDocument document = null;
         boolean hasLoaded = false;
 
         for (String xmlFilepath : xmlFiles) {
@@ -942,7 +943,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
             ObjectMapper mapper = new XmlMapper();
 //            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
             
-            PortfolioDocument document = mapper
+            document = mapper
                     .readerFor(PortfolioDocument.class)
                     .readValue(xml);
 
@@ -979,6 +980,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 
             add(uuid, null, userId, document);
 
+            /*
             nodeManager.writeNode(asmRoot.get(), uuid, null, userId, 0, uuid,
                     null, false, false, false, resolve, parseRights);
 
@@ -991,12 +993,13 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
             portfolio.setModifUserId(credential.get().getId());
 
             portfolioRepository.save(portfolio);
+            //*/
 
             /// Create base group
-            securityManager.addRole(portfolio.getId(), "all", userId);
+            securityManager.addRole(document.getId(), "all", userId);
 
             /// Finalement on crée un rôle de designer
-            Long groupid = securityManager.addRole(portfolio.getId(), "designer", userId);
+            Long groupid = securityManager.addRole(document.getId(), "designer", userId);
 
             /// Ajoute la personne dans ce groupe
             groupUserRepository.save(new GroupUser(groupid, userId));
@@ -1054,7 +1057,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		File zipdir = new File(outsideDir + portfolioUuidPreliminaire + File.separator);
 		zipdir.delete();
 
-		return portfolio.getId().toString();
+		return document.getId().toString();
 	}
 
 	@Override
@@ -1397,7 +1400,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		return new String(Base64.encodeBase64(bytes)).replaceAll("\\s+$", "").substring(0, length);
 	}
 
-	private Portfolio add(UUID rootNodeId, UUID modelId, Long userId, PortfolioDocument portfolio) {
+	private Portfolio add(UUID rootNodeId, UUID modelId, Long userId, PortfolioDocument portfolio) throws JsonProcessingException, BusinessException {
 		/*
 		if (portfolio.getRootNode() != null) {
 			throw new IllegalArgumentException();
@@ -1457,18 +1460,26 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		node.setSharedNodeRes(false);
 		node.setSharedRes(false);
 		
-		Portfolio port = new Portfolio();
-		port.setRootNode(node);
-		port.setCredential(cr);
+
+		Map<UUID, UUID> resolve = new HashMap<>();
 		
-//		portfolio.setRootNode(node);
-//		portfolio.setCredential(cr);
-
+		Portfolio port = new Portfolio();
+		port.setCredential(cr);
 		port.setModifUserId(cr.getId());
+		port = portfolioRepository.save(port);
+		
+    node = nodeManager.writeNode(nodedoc, port.getId(), null, userId, 0, null,
+        null, false, false, true, resolve, false);
+		
+    //// Fetch back DB object that was saved
+    UUID uuid = nodedoc.getId();
+    Optional<Node> rNode = nodeRepository.findById(uuid);
 
-		nodeRepository.save(node);
+		port.setRootNode(node);
+		port = portfolioRepository.save(port);
+
+//		nodeRepository.save(node);
 		credentialRepository.save(cr);
-		portfolioRepository.save(port);
 
 		return port;
 	}

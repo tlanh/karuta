@@ -64,8 +64,8 @@ public interface NodeManager extends BaseManager {
 	 * @return
 	 * @throws BusinessException
 	 */
-	UUID writeNode(NodeDocument node, UUID portfolioId, UUID portfolioModelId, Long userId, int ordrer,
-				   UUID forcedId, UUID forcedParentId, boolean sharedResParent, boolean sharedNodeResParent,
+	Node writeNode(NodeDocument node, UUID portfolioId, UUID portfolioModelId, Long userId, int ordrer,
+				   UUID forcedId, Node parentNode, boolean sharedResParent, boolean sharedNodeResParent,
 				   boolean rewriteId, Map<UUID, UUID> resolve, boolean parseRights)
 			throws BusinessException, JsonProcessingException;
 
