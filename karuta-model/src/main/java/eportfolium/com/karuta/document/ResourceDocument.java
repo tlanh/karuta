@@ -24,6 +24,7 @@ public class ResourceDocument {
     // For file resources
     private String filename;
     private String fileid;
+    private String type;
 
     public ResourceDocument() { }
 
@@ -101,6 +102,9 @@ public class ResourceDocument {
     public String getFileid() {
         return fileid;
     }
+
+    @JsonGetter("type")
+    public String getType() { return type; }
 
     @JsonRawValue
     public String getContent() {

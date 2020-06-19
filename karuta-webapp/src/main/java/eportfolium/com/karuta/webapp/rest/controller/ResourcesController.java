@@ -29,8 +29,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.UUID;
 
 @RestController
@@ -73,12 +75,36 @@ public class ResourcesController extends AbstractController {
         return new HttpEntity<>(resourceManager.getResources(id, userInfo.getId(), group));
     }
 
+    @GetMapping("/resource/file/{id}")
+    public void fetchResource(@PathVariable UUID id,
+                              @RequestParam String lang,
+                              @RequestParam String size,
+                              Authentication authentication,
+                              HttpServletResponse response) throws IOException, BusinessException {
+        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+        OutputStream output = response.getOutputStream();
+
+        ResourceDocument document = resourceManager
+                .fetchResource(id, userInfo.getId(), output, lang, "T".equals(size));
+
+        if (document == null) {
+            response.setStatus(404);
+        } else {
+            // FIXME: Take "lang" into account.
+            String name = document.getFilename();
+            String type = document.getType();
+
+            response.setHeader("Content-Type", type);
+            response.setHeader("Content-Disposition", "attachment; filename=\"" + name + "\"");
+        }
+    }
+
     @PutMapping("/resource/file/{id}")
     public String rewriteFile(@PathVariable UUID id,
-                                 @RequestParam String lang,
-                                 @RequestParam String size,
-                                 HttpServletRequest request,
-                                 Authentication authentication) throws IOException, BusinessException {
+                              @RequestParam String lang,
+                              @RequestParam String size,
+                              HttpServletRequest request,
+                              Authentication authentication) throws IOException, BusinessException {
         UserInfo userInfo = (UserInfo)authentication.getPrincipal();
         InputStream content = request.getInputStream();
 
