@@ -206,7 +206,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 			}
 
 			if (metadataWad.getNotifyroles() != null) {
-				groupManager.changeNotifyRoles(userId, portfolioId, nodeId,
+				groupManager.changeNotifyRoles(portfolioId, nodeId,
 						metadataWad.getNotifyroles().replace(" ", ","));
 			}
 
@@ -1843,7 +1843,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
                     while (tokens.hasMoreElements())
                         notifyRoles += "," + tokens.nextElement().toString();
 
-                    groupManager.changeNotifyRoles(userId, portfolioUuid, uuid, notifyRoles);
+                    groupManager.changeNotifyRoles(portfolioUuid, uuid, notifyRoles);
                 }
             }
 
