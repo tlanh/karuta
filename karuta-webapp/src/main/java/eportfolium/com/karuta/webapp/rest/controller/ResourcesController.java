@@ -28,6 +28,9 @@ import org.springframework.http.HttpEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.UUID;
 
 @RestController
@@ -68,6 +71,22 @@ public class ResourcesController extends AbstractController {
         UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
         return new HttpEntity<>(resourceManager.getResources(id, userInfo.getId(), group));
+    }
+
+    @PutMapping("/resource/file/{id}")
+    public String rewriteFile(@PathVariable UUID id,
+                                 @RequestParam String lang,
+                                 @RequestParam String size,
+                                 HttpServletRequest request,
+                                 Authentication authentication) throws IOException, BusinessException {
+        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+        InputStream content = request.getInputStream();
+
+        if (resourceManager.updateContent(id, userInfo.getId(), content, lang, "T".equals(size))) {
+            return "Updated";
+        } else {
+            return "Error while updating resource.";
+        }
     }
 
     /**
