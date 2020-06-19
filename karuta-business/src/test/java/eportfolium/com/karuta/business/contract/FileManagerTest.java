@@ -29,7 +29,7 @@ public class FileManagerTest {
     private ConfigurationManager configurationManager;
 
     @Test
-    public void updateResource_WithErros() throws IOException {
+    public void updateResource_WithErrors() throws IOException {
         InputStream input = new ByteArrayInputStream("".getBytes());
         String lang = "fr";
         boolean thumb = true;
