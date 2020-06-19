@@ -19,7 +19,9 @@ import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.UUID;
@@ -547,5 +549,96 @@ public class ResourceManagerTest {
 
         verify(resourceRepository).findByNodeId(nodeId);
         verifyNoMoreInteractions(resourceRepository);
+    }
+
+    @Test
+    public void fetchResource_WithoutReadRight_WithError() {
+        Long userId = 42L;
+
+        OutputStream output = new ByteArrayOutputStream();
+        UUID nodeId = UUID.randomUUID();
+
+        doReturn(false)
+                .when(manager)
+                .hasRight(userId, 0L, nodeId, GroupRights.READ);
+
+        try {
+            manager.fetchResource(nodeId, userId, output, "fr", true);
+            fail("User must have read rights to get a resource.");
+        } catch (BusinessException ignored) { }
+    }
+
+    @Test
+    public void fetchResource_WithReadRight_WithError() throws BusinessException {
+        Long userId = 42L;
+        String lang = "fr";
+        boolean thumb = true;
+
+        OutputStream output = new ByteArrayOutputStream();
+        UUID nodeId = UUID.randomUUID();
+
+        doReturn(true)
+                .when(manager)
+                .hasRight(userId, 0L, nodeId, GroupRights.READ);
+
+        Resource resource = new Resource();
+        resource.setNode(new Node());
+
+        doReturn(resource)
+                .when(resourceRepository)
+                .findByNodeId(nodeId);
+
+        doReturn(false)
+                .when(fileManager)
+                .fetchResource(any(ResourceDocument.class), eq(output), eq(lang), eq(thumb));
+
+        ResourceDocument document = manager
+                .fetchResource(nodeId, userId, output, lang, thumb);
+
+        assertNull(document);
+
+        verify(resourceRepository).findByNodeId(nodeId);
+        verifyNoMoreInteractions(resourceRepository);
+
+        verify(fileManager)
+                .fetchResource(any(ResourceDocument.class), eq(output), eq(lang), eq(thumb));
+        verifyNoMoreInteractions(fileManager);
+    }
+
+    @Test
+    public void fetchResource_WithReadRight_WithoutError() throws BusinessException {
+        Long userId = 42L;
+        String lang = "fr";
+        boolean thumb = true;
+
+        OutputStream output = new ByteArrayOutputStream();
+        UUID nodeId = UUID.randomUUID();
+
+        doReturn(true)
+                .when(manager)
+                .hasRight(userId, 0L, nodeId, GroupRights.READ);
+
+        Resource resource = new Resource();
+        resource.setNode(new Node());
+
+        doReturn(resource)
+                .when(resourceRepository)
+                .findByNodeId(nodeId);
+
+        doReturn(true)
+                .when(fileManager)
+                .fetchResource(any(ResourceDocument.class), eq(output), eq(lang), eq(thumb));
+
+        ResourceDocument document = manager
+                .fetchResource(nodeId, userId, output, lang, thumb);
+
+        assertNotNull(document);
+
+        verify(resourceRepository).findByNodeId(nodeId);
+        verifyNoMoreInteractions(resourceRepository);
+
+        verify(fileManager)
+                .fetchResource(any(ResourceDocument.class), eq(output), eq(lang), eq(thumb));
+        verifyNoMoreInteractions(fileManager);
     }
 }

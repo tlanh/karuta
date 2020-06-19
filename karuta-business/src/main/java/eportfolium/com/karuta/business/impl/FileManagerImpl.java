@@ -25,6 +25,7 @@ import eportfolium.com.karuta.business.contract.ConfigurationManager;
 import eportfolium.com.karuta.document.ResourceDocument;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.InputStreamEntity;
@@ -37,6 +38,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import eportfolium.com.karuta.business.contract.FileManager;
+import org.springframework.util.FileCopyUtils;
 
 @Service
 @Transactional
@@ -155,11 +157,7 @@ public class FileManagerImpl implements FileManager {
 								  InputStream content,
 								  String lang,
 								  boolean thumbnail) {
-		// TODO: Take "lang" into account.
-		String url = configurationManager.get("fileserver") + "/" + resource.getFileid();
-
-		if (thumbnail)
-			url += "/thumb";
+		String url = urlFor(resource, thumbnail);
 
 		HttpPut request = new HttpPut(url);
 		request.setEntity(new InputStreamEntity(content));
@@ -177,7 +175,37 @@ public class FileManagerImpl implements FileManager {
 	}
 
 	@Override
+	public boolean fetchResource(ResourceDocument resource,
+							  OutputStream output,
+							  String lang,
+							  boolean thumbnail) {
+		String url = urlFor(resource, thumbnail);
+
+		HttpGet request = new HttpGet(url);
+
+		try (CloseableHttpClient client = createClient();
+			 CloseableHttpResponse response = client.execute(request)) {
+			FileCopyUtils.copy(response.getEntity().getContent(), output);
+
+			return true;
+		} catch (IOException e) {
+			e.printStackTrace();
+			return false;
+		}
+	}
+
+	@Override
 	public CloseableHttpClient createClient() {
 		return HttpClients.createDefault();
+	}
+
+	private String urlFor(ResourceDocument resource, boolean thumbnail) {
+		// TODO: Take "lang" into account.
+		String url = configurationManager.get("fileserver") + "/" + resource.getFileid();
+
+		if (thumbnail)
+			url += "/thumb";
+
+		return url;
 	}
 }

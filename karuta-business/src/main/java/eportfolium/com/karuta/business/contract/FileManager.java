@@ -18,10 +18,7 @@ package eportfolium.com.karuta.business.contract;
 import eportfolium.com.karuta.document.ResourceDocument;
 import org.apache.http.client.HttpClient;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.util.UUID;
 
 public interface FileManager {
@@ -37,6 +34,11 @@ public interface FileManager {
 						   InputStream content,
 						   String lang,
 						   boolean thumbnail);
+
+	boolean fetchResource(ResourceDocument resource,
+						  OutputStream output,
+						  String lang,
+						  boolean thumbnail);
 
 	HttpClient createClient();
 }

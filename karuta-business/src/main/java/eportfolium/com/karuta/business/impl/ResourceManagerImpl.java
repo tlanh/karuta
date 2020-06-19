@@ -16,6 +16,7 @@
 package eportfolium.com.karuta.business.impl;
 
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -200,6 +201,26 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 		ResourceDocument document = new ResourceDocument(resource, resource.getNode());
 
 		return fileManager.updateResource(document, content, lang, thumbnail);
+	}
+
+	@Override
+	public ResourceDocument fetchResource(UUID nodeId,
+										  Long userId,
+										  OutputStream output,
+										  String lang,
+										  boolean thumbnail) throws BusinessException {
+		if (!hasRight(userId, 0L, nodeId, GroupRights.READ)) {
+			throw new GenericBusinessException("No rights.");
+		}
+
+		Resource resource = resourceRepository.findByNodeId(nodeId);
+		ResourceDocument document = new ResourceDocument(resource, resource.getNode());
+
+		if (fileManager.fetchResource(document, output, lang, thumbnail)) {
+			return document;
+		} else {
+			return null;
+		}
 	}
 
 	private void updateResourceAttrs(Resource resource, String content, Long userId) {
