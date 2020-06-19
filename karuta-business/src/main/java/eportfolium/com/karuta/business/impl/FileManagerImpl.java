@@ -77,11 +77,10 @@ public class FileManagerImpl implements FileManager {
 		// Current folder
 		File directory = new File(directoryPath);
 		File[] subfiles = directory.listFiles();
-		ArrayList<String> results = new ArrayList<String>();
+		ArrayList<String> results = new ArrayList<>();
 
 		// Under this, try to find necessary files
-		for (int i = 0; i < subfiles.length; i++) {
-			File fileOrDir = subfiles[i];
+		for (File fileOrDir : subfiles) {
 			String name = fileOrDir.getName();
 
 			if ("__MACOSX".equals(name)) /// Could be a better filtering
@@ -91,8 +90,7 @@ public class FileManagerImpl implements FileManager {
 			if (fileOrDir.isDirectory()) {
 				File subdir = new File(directoryPath + name);
 				File[] subsubfiles = subdir.listFiles();
-				for (int j = 0; j < subsubfiles.length; ++j) {
-					File subsubfile = subsubfiles[j];
+				for (File subsubfile : subsubfiles) {
 					String subname = subsubfile.getName();
 
 					if (subname.endsWith(id) || "".equals(id)) {
@@ -115,13 +113,13 @@ public class FileManagerImpl implements FileManager {
 		return result;
 	}
 
-	public String unzip(String zipFile, String destinationFolder) throws FileNotFoundException, IOException {
+	@Override
+	public String unzip(String zipFile, String destinationFolder) throws IOException {
 		String folder = "";
 		File zipfile = new File(zipFile);
-		ZipInputStream zis = new ZipInputStream(new BufferedInputStream(new FileInputStream(zipfile)));
 
-		ZipEntry ze = null;
-		try {
+		try (ZipInputStream zis = new ZipInputStream(new BufferedInputStream(new FileInputStream(zipfile)))) {
+			ZipEntry ze = null;
 			while ((ze = zis.getNextEntry()) != null) {
 				folder = destinationFolder;
 				File f = new File(folder, ze.getName());
@@ -147,9 +145,8 @@ public class FileManagerImpl implements FileManager {
 					throw ioe;
 				}
 			}
-		} finally {
-			zis.close();
 		}
+
 		return folder;
 	}
 
