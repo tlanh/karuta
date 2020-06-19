@@ -351,8 +351,118 @@ public class GroupManagerTest {
     }
 
     @Test
-    public void addGroupRights() {
-        fail();
+    public void addGroupRights_WithoutRightOrLabel() {
+        UUID nodeId = UUID.randomUUID();
+        UUID portfolioId = UUID.randomUUID();
+
+        Long userId = 42L;
+
+        manager.addGroupRights("   ", nodeId, "foo", portfolioId, userId);
+        manager.addGroupRights("foo", nodeId, null, portfolioId, userId);
+
+        verifyNoInteractions(groupUserRepository,
+                groupRightInfoRepository,
+                groupRightsRepository);
+    }
+
+    @Test
+    public void addGroupRights_WithUserLabel() {
+        String label = "user";
+        Long userId = 42L;
+
+        UUID nodeId = UUID.randomUUID();
+        UUID portfolioId = UUID.randomUUID();
+
+        GroupRightInfo groupRightInfo = new GroupRightInfo();
+        groupRightInfo.setId(76L);
+
+        GroupInfo groupInfo = new GroupInfo();
+        groupInfo.setGroupRightInfo(groupRightInfo);
+
+        GroupUser groupUser = new GroupUser();
+        groupUser.setId(new GroupUserId());
+        groupUser.setGroupInfo(groupInfo);
+
+        doReturn(Collections.singletonList(groupUser))
+                .when(groupUserRepository)
+                .getByPortfolioAndUser(portfolioId, userId);
+
+        GroupRights groupRights = new GroupRights();
+
+        doReturn(groupRights)
+                .when(groupRightsRepository)
+                .getRightsByGrid(nodeId, groupRightInfo.getId());
+
+        manager.addGroupRights(label, nodeId, GroupRights.READ, portfolioId, userId);
+
+        assertTrue(groupRights.isRead());
+
+        verify(groupUserRepository).getByPortfolioAndUser(portfolioId, userId);
+        verifyNoMoreInteractions(groupUserRepository);
+
+        verify(groupRightsRepository).getRightsByGrid(nodeId, groupRightInfo.getId());
+        verify(groupRightsRepository).save(groupRights);
+        verifyNoMoreInteractions(groupRightsRepository);
+    }
+
+    @Test
+    public void addGroupRights_WithPortfolioId() {
+        String label = "foo";
+        Long userId = 42L;
+
+        UUID nodeId = UUID.randomUUID();
+        UUID portfolioId = UUID.randomUUID();
+
+        GroupRightInfo groupRightInfo = new GroupRightInfo();
+        groupRightInfo.setId(76L);
+
+        doReturn(groupRightInfo)
+                .when(groupRightInfoRepository)
+                .getByPortfolioAndLabel(portfolioId, label);
+
+        GroupRights groupRights = new GroupRights();
+
+        doReturn(groupRights)
+                .when(groupRightsRepository)
+                .getRightsByGrid(nodeId, groupRightInfo.getId());
+
+        manager.addGroupRights(label, nodeId, GroupRights.READ, portfolioId, userId);
+
+        assertTrue(groupRights.isRead());
+
+        verify(groupRightInfoRepository).getByPortfolioAndLabel(portfolioId, label);
+        verifyNoMoreInteractions(groupRightInfoRepository);
+
+        verify(groupRightsRepository).getRightsByGrid(nodeId, groupRightInfo.getId());
+        verify(groupRightsRepository).save(groupRights);
+        verifyNoMoreInteractions(groupRightsRepository);
+    }
+
+    @Test
+    public void addGroupRights_WithNodeId() {
+        String label = "foo";
+        Long userId = 42L;
+
+        UUID nodeId = UUID.randomUUID();
+
+        GroupRightInfo groupRightInfo = new GroupRightInfo();
+        groupRightInfo.setId(78L);
+
+        GroupRights groupRights = new GroupRights();
+        groupRights.setId(new GroupRightsId());
+        groupRights.setGroupRightInfo(groupRightInfo);
+
+        doReturn(groupRights)
+                .when(groupRightsRepository)
+                .getRightsByIdAndLabel(nodeId, label);
+
+        manager.addGroupRights(label, nodeId, GroupRights.READ, null, userId);
+
+        assertTrue(groupRights.isRead());
+
+        verify(groupRightsRepository).getRightsByIdAndLabel(nodeId, label);
+        verify(groupRightsRepository).save(groupRights);
+        verifyNoMoreInteractions(groupRightsRepository);
     }
 
     @Test

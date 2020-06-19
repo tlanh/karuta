@@ -181,7 +181,8 @@ public class GroupManagerImpl implements GroupManager {
 	 */
 	@Override
 	public void addGroupRights(String label, UUID nodeId, String right, UUID portfolioId, Long userId) {
-		Long grid;
+		GroupRightInfo groupRightInfo;
+		GroupRights groupRights;
 
 		if (StringUtils.isBlank(label) || right == null) {
 			return;
@@ -192,45 +193,45 @@ public class GroupManagerImpl implements GroupManager {
 		if ("user".equals(label)) {
 			List<GroupUser> groups = groupUserRepository.getByPortfolioAndUser(portfolioId, userId);
 
-			if (groups != null && !groups.isEmpty())
-				grid = groups.get(0).getGroupInfo().getGroupRightInfo().getId();
-			else
+			if (groups != null && !groups.isEmpty()) {
+				groupRightInfo = groups.get(0).getGroupInfo().getGroupRightInfo();
+				groupRights = groupRightsRepository.getRightsByGrid(nodeId, groupRightInfo.getId());
+			} else {
 				return;
+			}
 
 		} else if (portfolioId != null) { /// Rôle et portfolio
 
-			GroupRightInfo gri = groupRightInfoRepository.getByPortfolioAndLabel(portfolioId, label);
+			groupRightInfo = groupRightInfoRepository.getByPortfolioAndLabel(portfolioId, label);
 
-			if (gri == null) // Groupe non-existant
+			if (groupRightInfo == null) // Groupe non-existant
 			{
-				gri = new GroupRightInfo();
-				gri.setOwner(userId);
-				gri.setLabel(label);
-				gri.setChangeRights(false);
-				gri.setPortfolio(new Portfolio(portfolioId));
-				groupRightInfoRepository.save(gri);
+				groupRightInfo = new GroupRightInfo();
+				groupRightInfo.setOwner(userId);
+				groupRightInfo.setLabel(label);
+				groupRightInfo.setChangeRights(false);
+				groupRightInfo.setPortfolio(new Portfolio(portfolioId));
+				groupRightInfoRepository.save(groupRightInfo);
 
 				/// Crée une copie dans group_info, le temps de re-organiser tout ça.
-				groupInfoRepository.save(new GroupInfo(gri, userId, label));
+				groupInfoRepository.save(new GroupInfo(groupRightInfo, userId, label));
 			}
 
-			grid = gri.getId();
+			groupRights = groupRightsRepository.getRightsByGrid(nodeId, groupRightInfo.getId());
 
 		} else { // Role et uuid
-			GroupRights gr = groupRightsRepository.getRightsByIdAndLabel(nodeId, label);
+			groupRights = groupRightsRepository.getRightsByIdAndLabel(nodeId, label);
 
-			if (gr != null)
-				grid = gr.getGroupRightInfo().getId();
+			if (groupRights != null)
+				groupRightInfo = groupRights.getGroupRightInfo();
 			else
 				return;
 		}
 
-		GroupRights groupRights = groupRightsRepository.getRightsByGrid(nodeId, grid);
-
 		if (groupRights == null) {
 			groupRights = new GroupRights();
 			groupRights.setId(new GroupRightsId());
-			groupRights.setGroupRightInfo(groupRightInfoRepository.findById(grid).get());
+			groupRights.setGroupRightInfo(groupRightInfo);
 			groupRights.setGroupRightsId(nodeId);
 		}
 
