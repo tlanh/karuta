@@ -14,10 +14,10 @@ jobs:
     services:
       mysql:
         image: mysql:8.0
-      env:
-        MYSQL_ALLOW_EMPTY_PASSWORD: yes
-        MYSQL_ROOT_PASSWORD: ""
-        MYSQL_DATABASE: karuta-test
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: yes
+          MYSQL_ROOT_PASSWORD: ""
+          MYSQL_DATABASE: karuta-test
 
     steps:
     - uses: actions/checkout@v2
