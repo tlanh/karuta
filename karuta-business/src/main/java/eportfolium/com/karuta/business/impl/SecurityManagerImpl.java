@@ -249,8 +249,14 @@ public class SecurityManagerImpl implements SecurityManager {
 		if (user.getEmail() != null)
 			credential.setEmail(user.getEmail());
 
-		if (user.getAdmin() != null)
-			credential.setIsAdmin(user.getAdmin());
+		if (user.getAdmin() != null) {
+			Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+			if (authentication != null &&
+					authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ADMIN"))) {
+				credential.setIsAdmin(user.getAdmin());
+			}
+		}
 
 		if (user.getDesigner() != null)
 			credential.setIsDesigner(user.getDesigner());

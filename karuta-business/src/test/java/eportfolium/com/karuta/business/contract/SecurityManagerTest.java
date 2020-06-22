@@ -13,6 +13,10 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.crypto.password.Pbkdf2PasswordEncoder;
@@ -249,6 +253,83 @@ public class SecurityManagerTest {
 
         assertEquals(credentialDocument.getUsername(), credential.getLogin());
 
+        verify(credentialRepository).save(credential);
+    }
+
+    @Test
+    public void changeUser_AdminAttribute_WithoutAdminRole() throws BusinessException {
+        Long byUserId = 42L;
+        Long forUserId = 45L;
+
+        String password = "s3cr3t";
+        String encodedPassword = passwordEncoder.encode(password);
+
+        Credential credential = new Credential();
+        credential.setPassword(encodedPassword);
+
+        doReturn(Optional.of(credential))
+                .when(credentialRepository)
+                .findActiveById(forUserId);
+
+        Collection<GrantedAuthority> authorities = Collections.singleton(new SimpleGrantedAuthority("DESIGNER"));
+        Authentication authentication = mock(Authentication.class);
+
+        doReturn(authorities)
+                .when(authentication)
+                .getAuthorities();
+
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(authentication);
+
+        SecurityContextHolder.setContext(context);
+
+        CredentialDocument document = mock(CredentialDocument.class);
+        when(document.getAdmin()).thenReturn(1);
+        when(document.getPrevpass()).thenReturn(password);
+
+        manager.changeUser(byUserId, forUserId, document);
+
+        assertEquals(0, credential.getIsAdmin());
+
+        verify(credentialRepository).findActiveById(forUserId);
+        verify(credentialRepository).save(credential);
+    }
+
+    @Test
+    public void changeUser_AdminAttribute_WithAdminRole() throws BusinessException {
+        Long byUserId = 42L;
+        Long forUserId = 45L;
+
+        Credential credential = new Credential();
+
+        doReturn(Optional.of(credential))
+                .when(credentialRepository)
+                .findActiveById(forUserId);
+
+        doReturn(true)
+                .when(credentialRepository)
+                .isAdmin(byUserId);
+
+        Collection<GrantedAuthority> authorities = Collections.singleton(new SimpleGrantedAuthority("ADMIN"));
+        Authentication authentication = mock(Authentication.class);
+
+        doReturn(authorities)
+                .when(authentication)
+                .getAuthorities();
+
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(authentication);
+
+        SecurityContextHolder.setContext(context);
+
+        CredentialDocument document = mock(CredentialDocument.class);
+        when(document.getAdmin()).thenReturn(1);
+
+        manager.changeUser(byUserId, forUserId, document);
+
+        assertEquals(1, credential.getIsAdmin());
+
+        verify(credentialRepository).findActiveById(forUserId);
         verify(credentialRepository).save(credential);
     }
 
