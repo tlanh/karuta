@@ -16,7 +16,7 @@ jobs:
     - name: Start MySQL
       run: sudo systemctl start mysql.service
     - name: Create MySQL database
-      run: mysql -u root -proot -e "CREATE DATABASE `karuta-test`;"
+      run: mysql -u root -proot -e "CREATE DATABASE 'karuta-test'"
     - name: Set up JDK 1.8
       uses: actions/setup-java@v1
       with:
