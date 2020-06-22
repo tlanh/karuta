@@ -8,6 +8,8 @@ import eportfolium.com.karuta.model.bean.Resource;
 import java.util.Date;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @JsonRootName("asmResource")
 @JsonInclude(JsonInclude.Include.NON_ABSENT)
@@ -16,14 +18,14 @@ public class ResourceDocument {
     private UUID nodeId;
     private String xsiType;
     private Date modifDate;
-    private String content;
+    private String content = "";
 
-    private String lang;
-    private String code;
+//    private String lang;
+//    private String code;
 
     // For file resources
-    private String filename;
-    private String fileid;
+//    private String filename;
+//    private String fileid;
 
     public ResourceDocument() { }
 
@@ -74,6 +76,17 @@ public class ResourceDocument {
         this.content = content;
     }
 
+    public String getCode() {
+    	String code = null;
+			String codeReg = "<code>([^<]*)</code>";
+			Pattern codePat = Pattern.compile(codeReg);
+			Matcher startMatcher = codePat.matcher(content);
+			if (startMatcher.find()) code = startMatcher.group(1);
+
+      return code;
+    }
+
+    /*
     @JsonGetter("lang")
     public String getLang() {
         return lang;
@@ -101,6 +114,7 @@ public class ResourceDocument {
     public String getFileid() {
         return fileid;
     }
+    //*/
 
     @JsonRawValue
     public String getContent() {
@@ -110,9 +124,6 @@ public class ResourceDocument {
     // FIXME: Remove that once we no longer rely on raw XML storage.
     @JsonAnySetter
     public void ignored(String name, Object value) {
-        if (this.content == null)
-            this.content = "";
-
         StringBuilder builder = new StringBuilder("<");
         builder.append(name);
 
@@ -124,10 +135,13 @@ public class ResourceDocument {
                     builder.append(" ").append(n).append("=\"").append(v).append("\"");
             });
 
-            builder.append(">")
-                    .append(attributes.get(""));
+            builder.append(">");
+            if( attributes.get("") != null )
+                builder.append(attributes.get(""));
         } else {
-            builder.append(">").append(value);
+        	builder.append(">");
+        	if( value != null )
+            builder.append(value);
         }
 
         builder.append("</")

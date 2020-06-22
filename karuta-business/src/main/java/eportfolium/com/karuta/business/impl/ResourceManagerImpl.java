@@ -98,9 +98,13 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 	@Override
 	public String addResource(UUID parentNodeId, ResourceDocument resource, Long userId, Long groupId)
 			throws BusinessException {
+		/*
 		if (!credentialRepository.isAdmin(userId)
 				&& !hasRight(userId, groupId, parentNodeId, GroupRights.WRITE))
 			throw new GenericBusinessException("403 FORBIDDEN : No right to write");
+		//*/
+		if( resource.getId() == null )
+			return "";
 
 		String xsiType = resource.getXsiType();
 
@@ -108,16 +112,16 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 				.orElseGet(() -> new Resource(resource.getId()));
 
 		res.setXsiType(xsiType);
-		updateResourceAttrs(res, resource.getContent(), userId);
+		Resource resUp = updateResourceAttrs(res, resource.getContent(), userId);
 
 		nodeRepository.findById(parentNodeId).ifPresent(node -> {
 			if (xsiType.equals("nodeRes")) {
-				node.setResResource(res);
+				node.setResource(resUp);
 				node.setSharedNodeResUuid(null);
 			} else if (xsiType.equals("context")) {
-				node.setContextResource(res);
+				node.setContextResource(resUp);
 			} else {
-				node.setResource(res);
+				node.setResResource(resUp);
 				node.setSharedResUuid(null);
 			}
 
@@ -181,11 +185,11 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 		resourceRepository.save(resource);
 	}
 
-	private void updateResourceAttrs(Resource resource, String content, Long userId) {
+	private Resource updateResourceAttrs(Resource resource, String content, Long userId) {
 		resource.setContent(content);
 		resource.setCredential(new Credential(userId));
 		resource.setModifUserId(userId);
 
-		resourceRepository.save(resource);
+		return resourceRepository.save(resource);
 	}
 }

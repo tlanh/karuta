@@ -823,7 +823,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 				throw new GenericBusinessException("CONFLICT : Existing code.");
 			}
 
-			resourceDocument.get().setCode(code);
+//			resourceDocument.get().setCode(code);
 		}
 
 		UUID uuid = UUID.randomUUID();
@@ -979,21 +979,6 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
             UUID uuid = UUID.randomUUID();
 
             add(uuid, null, userId, document);
-
-            /*
-            nodeManager.writeNode(asmRoot.get(), uuid, null, userId, 0, uuid,
-                    null, false, false, false, resolve, parseRights);
-
-            // On récupère le noeud root généré précédemment et on l'affecte au portfolio.
-        		Optional<Credential> credential = credentialRepository.findById(userId);
-
-            portfolio.setRootNode(nodeRepository.getRootNodeByPortfolio(portfolio.getId()));
-            portfolio.setActive(1);
-            portfolio.setCredential(credential.get());
-            portfolio.setModifUserId(credential.get().getId());
-
-            portfolioRepository.save(portfolio);
-            //*/
 
             /// Create base group
             securityManager.addRole(document.getId(), "all", userId);
@@ -1429,38 +1414,6 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 				.filter(n -> n.getType().equals("asmRoot")).findFirst();
 		NodeDocument nodedoc = onodedoc.get();
 		
-		Node node = new Node();
-		node.setAsmType("asmRoot");
-		node.setCode(nodedoc.getCode());
-		node.setDescr(nodedoc.getDescription());
-		String metastr = "";
-		if( nodedoc.getMetadata() != null )
-			metastr = nodedoc.getMetadata().getStringAttributes();
-		else
-			metastr = "";
-			node.setMetadata(metastr);
-			
-		if( nodedoc.getMetadataWad() != null )
-			metastr = nodedoc.getMetadataWad().getStringAttributes();
-		else
-			metastr = "";
-		node.setMetadataWad(metastr);
-		
-		if( nodedoc.getMetadataEpm() != null )
-			metastr = nodedoc.getMetadataEpm().getStringAttributes();
-		else
-			metastr = "";
-		node.setMetadataEpm(metastr);
-		
-		node.setSemtag(nodedoc.getSemtag());
-		
-		node.setModifUserId(cr.getId());
-		
-		node.setSharedNode(false);
-		node.setSharedNodeRes(false);
-		node.setSharedRes(false);
-		
-
 		Map<UUID, UUID> resolve = new HashMap<>();
 		
 		Portfolio port = new Portfolio();
@@ -1468,7 +1421,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		port.setModifUserId(cr.getId());
 		port = portfolioRepository.save(port);
 		
-    node = nodeManager.writeNode(nodedoc, port.getId(), null, userId, 0, null,
+		Node node = nodeManager.writeNode(nodedoc, port.getId(), null, userId, 0, null,
         null, false, false, true, resolve, false);
 		
     //// Fetch back DB object that was saved

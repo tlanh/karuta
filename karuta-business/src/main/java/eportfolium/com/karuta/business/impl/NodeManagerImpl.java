@@ -247,6 +247,12 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 					metadataStr, metadataWadStr, metadataEpmStr, semtag,
 					semanticTag, label, code, descr, format, ordrer, userId, portfolioId);
 
+		//// Insert resource associated with this node
+		for( ResourceDocument d : node.getResources() )
+		{
+			resourceManager.addResource(nodeDB.getId(), d, userId, 0l);
+		}
+		
 		// Loop through children to go down in the tree.
 		if (!node.getChildren().isEmpty()) {
 			int k = 0;
