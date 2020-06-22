@@ -1468,9 +1468,13 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		// WHERE p.active = :active
 		Specification<Portfolio> active = Specification.where((root, query, cb) -> {
 			Join<Portfolio, Node> nodeJoin = root.join("rootNode");
-			nodeJoin.join("resResource");
+			nodeJoin.join("resource");
+			
+			int pactive = 0;
+			if( portfolioActive )
+				pactive =1;
 
-			return cb.equal(root.get("active"), portfolioActive);
+			return cb.equal(root.get("active"), pactive);
 		});
 
 		// AND p.modifUserId = :modifUserId

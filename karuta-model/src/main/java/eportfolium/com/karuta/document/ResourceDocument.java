@@ -77,13 +77,40 @@ public class ResourceDocument {
     }
 
     public String getCode() {
-    	String code = null;
-			String codeReg = "<code>([^<]*)</code>";
-			Pattern codePat = Pattern.compile(codeReg);
-			Matcher startMatcher = codePat.matcher(content);
-			if (startMatcher.find()) code = startMatcher.group(1);
+      return getNodeContent("code", "");
+    }
 
-      return code;
+    public String getFileid() {			
+      return getNodeContent("fileid", "");
+    }
+    
+    private String getNodeContent( String tag, String lang )
+    {
+    	String data = null;
+    	String l = "";
+    	if( !"".equals(lang) )
+    		l = String.format(".*lang=\"%s\".*", lang);
+			String tagReg = String.format("<%s%s>([^<]*)</%s>", tag, l, tag);
+			Pattern tagPat = Pattern.compile(tagReg);
+			Matcher startMatcher = tagPat.matcher(content);
+			if (startMatcher.find()) data = startMatcher.group(1);
+			
+			return data;
+    }
+
+    /// FIXME: First lang tag found. Doesn't make sense since resource can have multiple language (for now?)
+    public String getLang() {
+    	String lang = null;
+			String tagReg = "lang=\"([^\"]*)";
+			Pattern tagPat = Pattern.compile(tagReg);
+			Matcher startMatcher = tagPat.matcher(content);
+			if (startMatcher.find()) lang = startMatcher.group(1);
+			
+      return lang;
+    }
+
+    public String getFilename() {
+      return getNodeContent("filename", "");
     }
 
     /*

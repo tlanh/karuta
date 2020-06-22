@@ -239,19 +239,25 @@ public class PortfolioController extends AbstractController {
      * @param active             false (also show inactive portoflios)
      * @param userid             for this user (only with root)
      */
-    @GetMapping(consumes = "application/xml", produces = {"application/json", "application/xml"})
-    public HttpEntity<Object> getPortfolios(@RequestParam long group,
-                                            @RequestParam boolean active,
-                                            @RequestParam Integer userid,
-                                            @RequestParam String code,
-                                            @RequestParam UUID portfolio,
-                                            @RequestParam Integer level,
-                                            @RequestParam("public") String public_var,
-                                            @RequestParam boolean project,
-                                            Authentication authentication)
+    @GetMapping(produces = {"application/json", "application/xml"})
+    public HttpEntity<Object> getPortfolios(@RequestParam (defaultValue = "-1")long group,
+                                            @RequestParam (defaultValue = "true")boolean active,
+                                            @RequestParam (required = false)Integer userid,
+                                            @RequestParam (required = false)String code,
+                                            @RequestParam (required = false)UUID portfolio,
+                                            @RequestParam (required = false)Integer level,
+                                            @RequestParam(name="public", required = false)String public_var,
+                                            @RequestParam (defaultValue = "false")boolean project,
+                                            Authentication authentication,
+                                            HttpServletRequest request)
             throws BusinessException, JsonProcessingException {
 
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+    	HttpSession session = request.getSession(false);
+    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
+    	authentication = securityContext.getAuthentication();
+    	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
+
+//        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
         if (portfolio != null) {
             return new HttpEntity<>(portfolioManager.getPortfolio(portfolio, userInfo.getId(),
