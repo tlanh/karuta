@@ -1419,6 +1419,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		Portfolio port = new Portfolio();
 		port.setCredential(cr);
 		port.setModifUserId(cr.getId());
+		port.setActive(1);
 		port = portfolioRepository.save(port);
 		
 		Node node = nodeManager.writeNode(nodedoc, port.getId(), null, userId, 0, null,

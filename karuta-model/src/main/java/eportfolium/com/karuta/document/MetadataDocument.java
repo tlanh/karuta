@@ -32,10 +32,10 @@ public class MetadataDocument {
     {
     	StringBuilder strattrib = new StringBuilder("");
     	for (String key : attributes.keySet())
-    		strattrib.append(key + "=" + attributes.get(key) + ", ");
+    		strattrib.append(key + "=\"" + attributes.get(key) + "\" ");
     	
-    	strattrib.delete(strattrib.length()-2, strattrib.length());
-    	return strattrib.toString();
+//    	strattrib.delete(strattrib.length()-1, strattrib.length());
+    	return strattrib.toString().trim();
     }
     
 		public void setAttributes( Map<String, String> attributes )

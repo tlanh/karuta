@@ -196,7 +196,7 @@ public class NodeDocument {
     }
 
     // FIXME: Uncomment that once Jackson 2.12 or 2.11.1 is released
-    // @JacksonXmlElementWrapper(useWrapping = false)
+     @JacksonXmlElementWrapper(useWrapping = false)
     // @JacksonXmlProperty(localName = "node")
     public List<NodeDocument> getChildren() {
         return children;

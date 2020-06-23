@@ -162,7 +162,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 		if (parseRights && node.getMetadataWad() != null) {
 			MetadataWadDocument metadataWad = node.getMetadataWad();
 			Map<String, String> wadattributes = metadataWad.getAttributes();
-			metadataWadStr = xmlAttributes(metadataWad);
+			metadataWadStr = metadataWad.getStringAttributes();
 
 			if (wadattributes.get("seenoderoles") != null) {
 				for (String role : wadattributes.get("seenoderoles").split(" ")) {
@@ -222,7 +222,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 		}
 
 		if (node.getMetadataEpm() != null) {
-			metadataEpmStr = xmlAttributes(node.getMetadataEpm());
+			metadataEpmStr = node.getMetadataEpm().getStringAttributes();
 		}
 
 		if (node.getMetadata() != null) {
@@ -240,7 +240,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 
 			semanticTag = metaatrib.get("semtag");
 
-			metadataStr = xmlAttributes(metadata);
+			metadataStr = metadata.getStringAttributes();
 		}
 
 		Node nodeDB = add(nodeId, parentNode,"", asmType, xsiType, sharedRes, sharedNode, sharedNodeRes,
