@@ -1,6 +1,7 @@
 package eportfolium.com.karuta.business.contract;
 
 import eportfolium.com.karuta.business.ServiceTest;
+import eportfolium.com.karuta.business.security.test.AsAdmin;
 import eportfolium.com.karuta.consumer.repositories.*;
 import eportfolium.com.karuta.document.CredentialGroupList;
 import eportfolium.com.karuta.document.GroupInfoList;
@@ -76,6 +77,7 @@ public class GroupManagerTest {
     }
 
     @Test
+    @AsAdmin
     public void changeNotifyRoles() {
         UUID nodeId = UUID.randomUUID();
         UUID portfolioId = UUID.randomUUID();
@@ -316,6 +318,7 @@ public class GroupManagerTest {
     }
 
     @Test
+    @AsAdmin
     public void changeUserGroup_WithMissingRecord() {
         Long groupId = 78L;
         Long grid = 86L;
@@ -331,6 +334,7 @@ public class GroupManagerTest {
     }
 
     @Test
+    @AsAdmin
     public void changeUserGroup_WithExistingRecord() {
         Long groupId = 78L;
         Long grid = 86L;
@@ -466,6 +470,7 @@ public class GroupManagerTest {
     }
 
     @Test
+    @AsAdmin
     public void getGroupRights() {
         Long groupId = 74L;
 
@@ -486,6 +491,7 @@ public class GroupManagerTest {
     }
 
     @Test
+    @AsAdmin
     public void removeRights() {
         long groupId = 78L;
 

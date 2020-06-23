@@ -1,6 +1,7 @@
 package eportfolium.com.karuta.business.contract;
 
 import eportfolium.com.karuta.business.ServiceTest;
+import eportfolium.com.karuta.business.security.test.AsAdmin;
 import eportfolium.com.karuta.consumer.repositories.*;
 import eportfolium.com.karuta.document.*;
 import eportfolium.com.karuta.model.bean.*;
@@ -563,6 +564,7 @@ public class PortfolioManagerTest {
     }
 
     @Test
+    @AsAdmin
     public void getGroupRightsInfos() {
         UUID portfolioId = UUID.randomUUID();
 

@@ -1,6 +1,7 @@
 package eportfolium.com.karuta.business.contract;
 
 import eportfolium.com.karuta.business.ServiceTest;
+import eportfolium.com.karuta.business.security.test.AsAdmin;
 import eportfolium.com.karuta.consumer.repositories.*;
 import eportfolium.com.karuta.document.CredentialDocument;
 import eportfolium.com.karuta.document.CredentialList;
@@ -8,7 +9,7 @@ import eportfolium.com.karuta.document.LoginDocument;
 import eportfolium.com.karuta.document.RoleDocument;
 import eportfolium.com.karuta.model.bean.*;
 import eportfolium.com.karuta.model.exception.BusinessException;
-import org.junit.Before;
+import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -61,7 +62,9 @@ public class SecurityManagerTest {
 
     private final PasswordEncoder passwordEncoder = new Pbkdf2PasswordEncoder();
 
-    @Before
+    // It is important to clean-up the context *after* the test executes, otherwise
+    // the `@WithMockUser`-like annotations (e.g. `@AsAdmin`) are no-op.
+    @After
     public void setup() {
         SecurityContextHolder.clearContext();
     }
@@ -94,6 +97,7 @@ public class SecurityManagerTest {
     }
 
     @Test
+    @AsAdmin
     public void removeUsers() {
         Long userId = 42L;
 
@@ -109,6 +113,7 @@ public class SecurityManagerTest {
     }
 
     @Test
+    @AsAdmin
     public void addUsers() {
         Credential credential = new Credential();
         credential.setLogin("jdoe");
@@ -480,6 +485,7 @@ public class SecurityManagerTest {
     }
 
     @Test
+    @AsAdmin
     public void addUserToGroup() {
         Long userId = 42L;
         Long groupId = 74L;
@@ -526,6 +532,7 @@ public class SecurityManagerTest {
     }
 
     @Test
+    @AsAdmin
     public void addUserRole_WithUnexistingGroupInfo() {
         Long groupId = 89L;
         Long userId = 42L;
@@ -713,6 +720,7 @@ public class SecurityManagerTest {
     }
 
     @Test
+    @AsAdmin
     public void removeRole() {
         Long roleId = 79L;
 
@@ -722,6 +730,7 @@ public class SecurityManagerTest {
     }
 
     @Test
+    @AsAdmin
     public void removeUserRole() {
         Long userId = 42L;
         Long roleId = 37L;
@@ -739,6 +748,7 @@ public class SecurityManagerTest {
     }
 
     @Test
+    @AsAdmin
     public void removeUsersFromRole() {
         UUID portfolioId = UUID.randomUUID();
 
@@ -748,6 +758,7 @@ public class SecurityManagerTest {
     }
 
     @Test
+    @AsAdmin
     public void changeRole() {
         UUID portfolioId = UUID.randomUUID();
         String label = "foo";
@@ -782,6 +793,7 @@ public class SecurityManagerTest {
     }
 
     @Test
+    @AsAdmin
     public void addUsersToRole() {
         Long groupId = 74L;
         Long user1Id = 42L;
