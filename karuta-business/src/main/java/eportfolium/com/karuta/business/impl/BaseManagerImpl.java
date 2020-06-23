@@ -60,8 +60,7 @@ public abstract class BaseManagerImpl implements BaseManager {
 	public GroupRights getRights(Long userId, Long groupId, UUID nodeId) {
 		if (credentialRepository.isAdmin(userId)
 				|| credentialRepository.isDesigner(userId, nodeId)) {
-			return new GroupRights(new GroupRightsId(new GroupRightInfo(), null),
-					true, true, true, true, false);
+			return new GroupRights(new GroupRightsId(new GroupRightInfo(), null), true);
 		} else {
 			GroupRights rights;
 

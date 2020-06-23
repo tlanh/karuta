@@ -65,13 +65,13 @@ public class GroupRights implements Serializable {
 		this.submit = submit;
 	}
 
-	public GroupRights(GroupRightsId id, boolean read, boolean write, boolean delete, boolean submit, boolean add) {
+	public GroupRights(GroupRightsId id, boolean all) {
 		this.id = id;
-		this.read = read;
-		this.write = write;
-		this.delete = delete;
-		this.submit = submit;
-		this.add = add;
+		this.read = all;
+		this.write = all;
+		this.delete = all;
+		this.submit = all;
+		this.add = all;
 	}
 
 	public GroupRights(GroupRightsId id, boolean read, boolean write, boolean delete, boolean submit, boolean ad,

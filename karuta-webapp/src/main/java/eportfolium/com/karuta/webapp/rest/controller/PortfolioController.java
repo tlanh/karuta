@@ -412,7 +412,7 @@ public class PortfolioController extends AbstractController {
                                                 @RequestParam String sourcecode,
                                                 @RequestParam String targetcode,
                                                 @RequestParam boolean owner,
-                                                Authentication authentication) {
+                                                Authentication authentication) throws BusinessException {
 
         UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
@@ -570,7 +570,7 @@ public class PortfolioController extends AbstractController {
     @DeleteMapping(value = "/portfolio/{id}", produces = "application/xml")
     public String delete(@RequestParam long group,
                          @PathVariable UUID id,
-                         Authentication authentication) throws Exception {
+                         Authentication authentication) {
 
         UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 

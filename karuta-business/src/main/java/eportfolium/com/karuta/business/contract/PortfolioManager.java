@@ -32,7 +32,7 @@ public interface PortfolioManager extends BaseManager {
 
 	Long addPortfolioGroup(String groupname, String type, Long parentId);
 
-	void removePortfolio(UUID portfolioId, Long userId, Long groupId) throws Exception;
+	void removePortfolio(UUID portfolioId, Long userId, Long groupId);
 
 	boolean removePortfolioFromPortfolioGroups(UUID portfolioId, Long portfolioGroupId);
 
@@ -75,7 +75,7 @@ public interface PortfolioManager extends BaseManager {
 
 	boolean changePortfolioOwner(UUID portfolioId, long newOwner);
 
-	Portfolio changePortfolioConfiguration(UUID portfolioId, Boolean portfolioActive);
+	void changePortfolioConfiguration(UUID portfolioId, Boolean portfolioActive);
 
 	boolean rewritePortfolioContent(PortfolioDocument portfolio, UUID portfolioId, Long userId, Boolean portfolioActive)
 			throws BusinessException, JsonProcessingException;
@@ -97,11 +97,12 @@ public interface PortfolioManager extends BaseManager {
 
 	GroupInfoList getRolesByPortfolio(UUID portfolioId, Long userId);
 
-	UUID copyPortfolio(UUID portfolioId, String srccode, String tgtcode, Long userId, boolean setOwner);
+	UUID copyPortfolio(UUID portfolioId, String srccode, String tgtcode, Long userId, boolean setOwner)
+			throws BusinessException;
 
 	void updateTime(UUID portfolioId);
 
-	boolean updateTimeByNode(UUID portfolioId);
+	void updateTimeByNode(UUID portfolioId);
 
 	List<Portfolio> getPortfolios(Long userId,
 								  Long substid,
