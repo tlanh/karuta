@@ -19,11 +19,11 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import eportfolium.com.karuta.business.security.IsAdmin;
 import eportfolium.com.karuta.consumer.repositories.*;
 import eportfolium.com.karuta.document.*;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,7 +37,6 @@ import eportfolium.com.karuta.model.bean.GroupRights;
 import eportfolium.com.karuta.model.bean.GroupRightsId;
 import eportfolium.com.karuta.model.bean.GroupUser;
 import eportfolium.com.karuta.model.bean.GroupUserId;
-import eportfolium.com.karuta.model.bean.Node;
 import eportfolium.com.karuta.model.bean.Portfolio;
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.model.exception.GenericBusinessException;
@@ -84,7 +83,7 @@ public class GroupManagerImpl implements GroupManager {
 	}
 
 	@Override
-	@PreAuthorize("hasRole('admin')")
+	@IsAdmin
 	public void changeNotifyRoles(UUID portfolioId, UUID nodeId, String notify) {
 		List<GroupRights> grList = groupRightsRepository.getRightsByPortfolio(nodeId, portfolioId);
 
@@ -167,7 +166,7 @@ public class GroupManagerImpl implements GroupManager {
 	}
 
 	@Override
-	@PreAuthorize("hasRole('admin')")
+	@IsAdmin
 	public void changeUserGroup(Long grid, Long groupId) {
 		groupInfoRepository.findById(groupId)
 				.ifPresent(gi -> {
@@ -256,7 +255,7 @@ public class GroupManagerImpl implements GroupManager {
 	}
 
 	@Override
-	@PreAuthorize("hasRole('admin')")
+	@IsAdmin
 	public GroupRightsList getGroupRights(Long groupId) {
 		List<GroupRights> groupRightsList = groupRightsRepository.getRightsByGroupId(groupId);
 
@@ -265,7 +264,7 @@ public class GroupManagerImpl implements GroupManager {
 				.collect(Collectors.toList()));
 	}
 
-	@PreAuthorize("hasRole('admin')")
+	@IsAdmin
 	public void removeRights(long groupId) {
 		groupInfoRepository.deleteById(groupId);
 	}

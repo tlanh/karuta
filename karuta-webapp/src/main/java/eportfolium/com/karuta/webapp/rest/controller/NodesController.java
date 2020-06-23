@@ -18,6 +18,7 @@ package eportfolium.com.karuta.webapp.rest.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import eportfolium.com.karuta.business.contract.NodeManager;
 import eportfolium.com.karuta.business.UserInfo;
+import eportfolium.com.karuta.business.security.IsAdmin;
 import eportfolium.com.karuta.document.*;
 import eportfolium.com.karuta.model.bean.GroupRights;
 import eportfolium.com.karuta.model.exception.BusinessException;
@@ -26,7 +27,6 @@ import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -156,7 +156,7 @@ public class NodesController extends AbstractController {
      */
     @PostMapping(value = "/node/{id}/rights", consumes = "application/xml",
             produces = {"application/json", "application/xml"})
-    @PreAuthorize("hasRole('admin')")
+    @IsAdmin
     public String postNodeRights(@RequestBody RoleList roleList,
                                  @PathVariable UUID id,
                                  Authentication authentication)

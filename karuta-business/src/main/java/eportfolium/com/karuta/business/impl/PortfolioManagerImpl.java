@@ -41,6 +41,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import eportfolium.com.karuta.business.contract.*;
 import eportfolium.com.karuta.business.contract.SecurityManager;
+import eportfolium.com.karuta.business.security.IsAdmin;
 import eportfolium.com.karuta.consumer.repositories.*;
 import eportfolium.com.karuta.document.*;
 import eportfolium.com.karuta.model.bean.*;
@@ -52,7 +53,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -1176,7 +1176,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	}
 
 	@Override
-	@PreAuthorize("hasRole('admin')")
+	@IsAdmin
 	public GroupRightInfoList getGroupRightsInfos(UUID portfolioId) {
 		List<GroupRightInfo> groups = groupRightInfoRepository.getByPortfolioID(portfolioId);
 

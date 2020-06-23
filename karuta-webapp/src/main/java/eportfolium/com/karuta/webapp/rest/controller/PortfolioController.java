@@ -35,6 +35,8 @@ import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import eportfolium.com.karuta.business.contract.*;
 import eportfolium.com.karuta.business.contract.SecurityManager;
 import eportfolium.com.karuta.business.UserInfo;
+import eportfolium.com.karuta.business.security.IsAdmin;
+import eportfolium.com.karuta.business.security.IsAdminOrDesigner;
 import eportfolium.com.karuta.document.NodeDocument;
 import eportfolium.com.karuta.document.PortfolioDocument;
 import eportfolium.com.karuta.document.PortfolioList;
@@ -43,7 +45,6 @@ import eportfolium.com.karuta.model.exception.GenericBusinessException;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -299,7 +300,7 @@ public class PortfolioController extends AbstractController {
      * POST /rest/api/portfolios/portfolios/{id}/parserights
      */
     @PostMapping("/portfolio/{id}/parserights")
-    @PreAuthorize("hasRole('admin') or hasRole('designer')")
+    @IsAdminOrDesigner
     public ResponseEntity<String> postPortfolio(@PathVariable UUID id,
                                                 Authentication authentication)
             throws BusinessException, JsonProcessingException {
@@ -364,7 +365,7 @@ public class PortfolioController extends AbstractController {
      * @return instanciated portfolio uuid
      */
     @PostMapping("/instanciate/{id}")
-    @PreAuthorize("hasRole('admin') or hasRole('designer')")
+    @IsAdminOrDesigner
     public ResponseEntity<String> instanciate(@RequestParam int group,
                                               @PathVariable String id,
                                               @RequestParam String sourcecode,
@@ -407,7 +408,7 @@ public class PortfolioController extends AbstractController {
      *      String, String, boolean, String, boolean, Authentication)
      */
     @PostMapping("/copy/{id}")
-    @PreAuthorize("hasRole('admin') or hasRole('designer')")
+    @IsAdminOrDesigner
     public ResponseEntity<String> copyPortfolio(@PathVariable UUID id,
                                                 @RequestParam String sourcecode,
                                                 @RequestParam String targetcode,
@@ -435,7 +436,7 @@ public class PortfolioController extends AbstractController {
      * GET /portfolios/shared/{userid}
      */
     @PostMapping(value = "/shared/{userid}", produces = "application/xml")
-    @PreAuthorize("hasRole('admin')")
+    @IsAdmin
     public HttpEntity<PortfolioList> getShared(@PathVariable long userid) {
         return new HttpEntity<>(portfolioManager.getPortfolioShared(userid));
     }

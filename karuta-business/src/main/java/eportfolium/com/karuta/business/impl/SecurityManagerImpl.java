@@ -18,6 +18,8 @@ package eportfolium.com.karuta.business.impl;
 import java.util.*;
 
 import eportfolium.com.karuta.business.UserInfo;
+import eportfolium.com.karuta.business.security.IsAdmin;
+import eportfolium.com.karuta.business.security.IsAdminOrDesigner;
 import eportfolium.com.karuta.consumer.repositories.*;
 import eportfolium.com.karuta.document.CredentialDocument;
 import eportfolium.com.karuta.document.CredentialList;
@@ -132,7 +134,7 @@ public class SecurityManagerImpl implements SecurityManager {
 	}
 
 	@Override
-	@PreAuthorize("hasRole('admin') or hasRole('designer')")
+	@IsAdminOrDesigner
 	public CredentialList addUsers(CredentialList users) {
 		List<CredentialDocument> processed = new ArrayList<>();
 
@@ -357,7 +359,7 @@ public class SecurityManagerImpl implements SecurityManager {
 	}
 
 	@Override
-	@PreAuthorize("hasRole('admin')")
+	@IsAdmin
 	public void addUserToGroup(Long forUser, Long groupId) {
 		GroupUserId gid = new GroupUserId();
 		gid.setCredential(new Credential(forUser));
@@ -380,7 +382,7 @@ public class SecurityManagerImpl implements SecurityManager {
 	}
 
 	@Override
-	@PreAuthorize("hasRole('admin')")
+	@IsAdmin
 	public String addUserRole(Long rrgid, Long forUser) {
 		// Vérifie si un group_info/grid existe
 		GroupInfo gi = groupInfoRepository.getGroupByGrid(rrgid);
@@ -436,25 +438,25 @@ public class SecurityManagerImpl implements SecurityManager {
 	}
 
 	@Override
-	@PreAuthorize("hasRole('admin')")
+	@IsAdmin
 	public void removeRole(Long groupRightInfoId) {
 		groupRightInfoRepository.deleteById(groupRightInfoId);
 	}
 
 	@Override
-	@PreAuthorize("hasRole('admin')")
+	@IsAdmin
 	public void removeUserRole(Long userId, Long groupRightInfoId) {
 		groupUserRepository.delete(groupUserRepository.getByUserAndRole(userId, groupRightInfoId));
 	}
 
 	@Override
-	@PreAuthorize("hasRole('admin')")
+	@IsAdmin
 	public void removeUsersFromRole(UUID portfolioId) {
 		groupUserRepository.deleteByPortfolio(portfolioId);
 	}
 
 	@Override
-	@PreAuthorize("hasRole('admin')")
+	@IsAdmin
 	public Long changeRole(Long rrgId, RoleDocument role) {
 		GroupRightInfo gri = groupRightInfoRepository.findById(rrgId).get();
 
@@ -472,7 +474,7 @@ public class SecurityManagerImpl implements SecurityManager {
 	}
 
 	@Override
-	@PreAuthorize("hasRole('admin')")
+	@IsAdmin
 	public void addUsersToRole(Long rrgid, CredentialList users) {
 		for (CredentialDocument user : users.getUsers()) {
 			addUserRole(rrgid, user.getId());
