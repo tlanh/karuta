@@ -50,8 +50,8 @@ public class NodeDocument {
     public NodeDocument(UUID id) {
         this.id = id;
 
-        this.resourceDocuments = Collections.emptyList();
-        this.children = Collections.emptyList();
+        this.resourceDocuments = new ArrayList<ResourceDocument>();
+        this.children = new ArrayList<NodeDocument>();
 
         this.parent = null;
     }
@@ -244,6 +244,11 @@ public class NodeDocument {
         this.resourceDocuments = documents;
     }
 
+    public void addChildren(NodeDocument children) {
+      children.setParent(this);
+      this.children.add(children);
+  }
+    
     public void setChildren(List<NodeDocument> children) {
         children.forEach(c -> c.setParent(this));
         this.children = children;

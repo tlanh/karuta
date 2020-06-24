@@ -165,6 +165,7 @@ public abstract class BaseManagerImpl implements BaseManager {
 				.filter(id -> !id.equals(""))
 				.forEach(id -> {
 					Tree c = entries.remove(UUID.fromString(id));
+					node.node.addChildren(c.node);
 
 					if (c != null) {
 						reconstructTree(c, entries);
