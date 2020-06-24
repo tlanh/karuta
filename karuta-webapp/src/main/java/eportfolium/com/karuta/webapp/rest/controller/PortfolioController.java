@@ -85,18 +85,24 @@ public class PortfolioController extends AbstractController {
      * @param files              if set with resource, return a zip file
      * @param export             if set, return XML as a file download
      * @return zip as file download content.
+     * @throws IOException 
      */
     @GetMapping(value = "/portfolio/{id}", produces = {"application/xml", "application/json",
             "application/zip", "application/octet-stream"})
-    public HttpEntity<Object> getPortfolio(@PathVariable UUID id,
-                                           @RequestParam boolean resources,
-                                           @RequestParam boolean files,
-                                           @RequestParam String export,
-                                           @RequestParam String lang,
-                                           @RequestParam Integer level,
-                                           Authentication authentication) throws BusinessException, IOException {
+    public HttpEntity<Object> getPortfolio(@PathVariable (value = "id")UUID id,
+                                           @RequestParam (defaultValue = "true")boolean resources,
+                                           @RequestParam (defaultValue = "true")boolean files,
+                                           @RequestParam (required = false)String export,
+                                           @RequestParam (required = false)String lang,
+                                           @RequestParam (required = false)Integer level,
+                                           Authentication authentication,
+                                           HttpServletRequest request)
+            throws BusinessException, IOException {
 
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+    	HttpSession session = request.getSession(false);
+    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
+    	authentication = securityContext.getAuthentication();
+    	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
 
         PortfolioDocument portfolio = portfolioManager.getPortfolio(id, userInfo.getId(), 0L, level);
 
@@ -105,10 +111,10 @@ public class PortfolioController extends AbstractController {
 
         String code = portfolio.getCode().replace("_", "");
 
-        if (export != null) {
+        if (export == null) {
             return ResponseEntity
                     .ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename = \"" + code + "-" + timeFormat + ".xml\"")
+//                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename = \"" + code + "-" + timeFormat + ".xml\"")
                     .body(portfolio);
         } else if (resources && files) {
             // TODO: Rely on PortfolioManager#getZippedPortfolio
