@@ -1,7 +1,10 @@
 package eportfolium.com.karuta.document;
 
 import com.fasterxml.jackson.annotation.*;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
+
 import eportfolium.com.karuta.model.bean.Node;
 import eportfolium.com.karuta.model.bean.Resource;
 
@@ -13,12 +16,13 @@ import java.util.regex.Pattern;
 
 @JsonRootName("asmResource")
 @JsonInclude(JsonInclude.Include.NON_ABSENT)
+@JsonSerialize(using = ResourceSerializer.class)
 public class ResourceDocument {
     private UUID id;
     private UUID nodeId;
     private String xsiType;
     private Date modifDate;
-    private String content = "";
+    private String content;
 
 //    private String lang;
 //    private String code;
@@ -76,6 +80,7 @@ public class ResourceDocument {
         this.content = content;
     }
 
+    @JsonIgnore
     public String getCode() {
       return getNodeContent("code", "");
     }
@@ -99,6 +104,7 @@ public class ResourceDocument {
     }
 
     /// FIXME: First lang tag found. Doesn't make sense since resource can have multiple language (for now?)
+    @JsonIgnore
     public String getLang() {
     	String lang = null;
 			String tagReg = "lang=\"([^\"]*)";
@@ -143,7 +149,6 @@ public class ResourceDocument {
     }
     //*/
 
-    @JsonRawValue
     public String getContent() {
         return content;
     }

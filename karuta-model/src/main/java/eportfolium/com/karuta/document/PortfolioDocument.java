@@ -149,7 +149,7 @@ public class PortfolioDocument {
     }
 
     @JacksonXmlProperty(localName = "asmRoot")
-    public void setNodes(RootDocument node) {
+    public void setNodes(NodeDocument node) {
       this.nodes.add( node );
   }
 
