@@ -11,6 +11,7 @@ import java.util.*;
 
 @JsonRootName("node")
 @JsonInclude(JsonInclude.Include.NON_ABSENT)
+@JsonPropertyOrder({ "metadata-wad", "metadata-wpm", "metadata", "asmResource", "asmContext" })
 public class NodeDocument {
     private UUID id;
     protected String type;
@@ -165,20 +166,17 @@ public class NodeDocument {
         return modifDate;
     }
 
-    @JsonRawValue
-    @JacksonXmlProperty(localName = "metadata")
+    @JsonUnwrapped
     public MetadataDocument getMetadata() {
         return metadataDocument;
     }
 
-    @JsonRawValue
-    @JacksonXmlProperty(localName = "metadata-epm")
+    @JsonUnwrapped
     public MetadataEpmDocument getMetadataEpm() {
         return metadataEpmDocument;
     }
 
-    @JsonRawValue
-    @JacksonXmlProperty(localName = "metadata-wad")
+    @JsonUnwrapped
     public MetadataWadDocument getMetadataWad() {
         return metadataWadDocument;
     }
@@ -227,19 +225,16 @@ public class NodeDocument {
         this.parent = parent;
     }
 
-    @JsonRawValue
     @JacksonXmlProperty(localName = "metadata")
     public void setMetadata(MetadataDocument document) {
         this.metadataDocument = document;
     }
 
-    @JsonRawValue
     @JacksonXmlProperty(localName = "metadata-epm")
     public void setMetadataEpm(MetadataEpmDocument document) {
         this.metadataEpmDocument = document;
     }
 
-    @JsonRawValue
     @JacksonXmlProperty(localName = "metadata-wad")
     public void setMetadataWad(MetadataWadDocument document) {
         this.metadataWadDocument = document;

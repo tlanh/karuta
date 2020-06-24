@@ -6,11 +6,15 @@ import java.util.Map;
 import com.fasterxml.jackson.annotation.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
 @JsonRootName("metadata")
 public class MetadataDocument {
     protected static XmlMapper xmlMapper = new XmlMapper();
     
+    @JacksonXmlElementWrapper(useWrapping = false)
+    @JacksonXmlProperty(localName = "metadata", isAttribute = true)
     private Map<String, String> attributes = new HashMap<String, String>();
     
     public MetadataDocument() { }
@@ -22,13 +26,12 @@ public class MetadataDocument {
                     .readValue(withTag);
     }
 
-    @JsonAnyGetter
 		public Map<String, String> getAttributes()
 		{
 			return attributes;
 		}
 
-    public String getStringAttributes(  )
+    public String convertStringAttributes(  )
     {
     	StringBuilder strattrib = new StringBuilder("");
     	for (String key : attributes.keySet())
@@ -47,5 +50,4 @@ public class MetadataDocument {
     public void setAttributeField(String key, String value) {
         this.attributes.put(key, value);
     }
-
 }
