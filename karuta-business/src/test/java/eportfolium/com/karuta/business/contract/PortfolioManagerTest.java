@@ -600,8 +600,6 @@ public class PortfolioManagerTest {
 
         manager.updateTime(portfolioId);
 
-        assertNotNull(portfolio.getModifDate());
-
         verify(portfolioRepository).findById(portfolioId);
         verify(portfolioRepository).save(portfolio);
         verifyNoMoreInteractions(portfolioRepository);
@@ -621,8 +619,6 @@ public class PortfolioManagerTest {
                 .findById(nodeId);
 
         manager.updateTimeByNode(nodeId);
-
-        assertNotNull(portfolio.getModifDate());
 
         verify(nodeRepository).findById(nodeId);
         verifyNoMoreInteractions(nodeRepository);

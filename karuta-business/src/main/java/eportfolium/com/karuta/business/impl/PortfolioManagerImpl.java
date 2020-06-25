@@ -25,7 +25,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
@@ -58,7 +57,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.model.exception.GenericBusinessException;
-import eportfolium.com.karuta.util.JavaTimeUtil;
 
 @Service
 @Transactional
@@ -1359,22 +1357,13 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	@Override
 	public void updateTime(UUID portfolioId) {
 		portfolioRepository.findById(portfolioId)
-				.ifPresent(portfolio -> {
-					portfolio.setModifDate(JavaTimeUtil.toJavaDate(LocalDateTime.now()));
-					portfolioRepository.save(portfolio);
-				});
+				.ifPresent(portfolio -> portfolioRepository.save(portfolio));
 	}
 
 	@Override
 	public void updateTimeByNode(UUID nodeId) {
 		nodeRepository.findById(nodeId)
-				.ifPresent(node -> {
-					Portfolio portfolio = node.getPortfolio();
-
-					portfolio.setModifDate(JavaTimeUtil.toJavaDate(LocalDateTime.now()));
-
-					portfolioRepository.save(portfolio);
-				});
+				.ifPresent(node -> portfolioRepository.save(node.getPortfolio()));
 	}
 
 	@Override
