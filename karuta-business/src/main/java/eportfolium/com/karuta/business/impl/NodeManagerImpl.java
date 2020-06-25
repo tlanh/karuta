@@ -1964,20 +1964,6 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 		return !nodes.isEmpty();
 	}
 
-	@Override
-	public int updateNodeCode(UUID nodeId, String code) {
-		Optional<Node> node = nodeRepository.findById(nodeId);
-
-		if (node.isPresent()) {
-			node.get().setCode(code);
-			nodeRepository.save(node.get());
-
-			return 0;
-		} else {
-			return 1;
-		}
-	}
-
 	private void updateNode(UUID nodeId) {
 		List<Node> nodes = nodeRepository.getFirstLevelChildren(nodeId);
 

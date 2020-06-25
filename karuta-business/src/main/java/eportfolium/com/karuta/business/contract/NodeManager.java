@@ -48,21 +48,6 @@ public interface NodeManager extends BaseManager {
 	/**
 	 * forcedParentUuid permet de forcer l'uuid parent, independamment de l'attribut
 	 * du noeud fourni
-	 *
-	 * @param node
-	 * @param portfolioId
-	 * @param portfolioModelId
-	 * @param userId
-	 * @param ordrer
-	 * @param forcedId
-	 * @param forcedParentId
-	 * @param sharedResParent
-	 * @param sharedNodeResParent
-	 * @param rewriteId
-	 * @param resolve
-	 * @param parseRights
-	 * @return
-	 * @throws BusinessException
 	 */
 	UUID writeNode(NodeDocument node, UUID portfolioId, UUID portfolioModelId, Long userId, int ordrer,
 				   UUID forcedId, UUID forcedParentId, boolean sharedResParent, boolean sharedNodeResParent,
@@ -120,8 +105,6 @@ public interface NodeManager extends BaseManager {
 
 	UUID importNode(UUID parentId, String semtag, String code, UUID sourceId, Long id, long groupId)
 			throws BusinessException, JsonProcessingException;
-
-	int updateNodeCode(UUID nodeId, String code);
 
 	List<Node> getChildren(UUID nodeId);
 }

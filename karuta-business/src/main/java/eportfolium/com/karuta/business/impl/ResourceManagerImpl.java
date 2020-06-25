@@ -23,7 +23,6 @@ import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import eportfolium.com.karuta.business.contract.FileManager;
-import eportfolium.com.karuta.business.contract.PortfolioManager;
 import eportfolium.com.karuta.consumer.repositories.PortfolioRepository;
 import eportfolium.com.karuta.consumer.repositories.ResourceRepository;
 import eportfolium.com.karuta.document.*;
@@ -33,7 +32,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import eportfolium.com.karuta.business.contract.NodeManager;
 import eportfolium.com.karuta.business.contract.ResourceManager;
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.model.exception.GenericBusinessException;
@@ -43,12 +41,6 @@ import eportfolium.com.karuta.model.exception.GenericBusinessException;
 public class ResourceManagerImpl extends BaseManagerImpl implements ResourceManager {
 
 	@Autowired
-	private PortfolioManager portfolioManager;
-
-	@Autowired
-	private NodeManager nodeManager;
-
-	@Autowired
 	private FileManager fileManager;
 
 	@Autowired
@@ -56,6 +48,7 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 
 	@Autowired
 	private PortfolioRepository portfolioRepository;
+
 
 	@Override
 	public ResourceDocument getResource(UUID parentNodeId, Long userId, Long groupId)
@@ -94,7 +87,9 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 
 		Resource res = resourceRepository.getResourceByParentNodeUuid(parentNodeId);
 
-		portfolioManager.updateTimeByNode(parentNodeId);
+		// To update `modifDate`.
+		portfolioRepository.findById(parentNodeId)
+				.ifPresent(portfolio -> portfolioRepository.save(portfolio));
 
 		updateResourceAttrs(res, xmlAttributes(resource), userId);
 
@@ -153,11 +148,14 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 		if ("nodeRes".equals(xsiType)) {
 			String code = resource.getCode();
 
-			if (nodeRepository.isCodeExist(code, nodeId)) {
+			Node node = nodeRepository.findById(nodeId)
+					.orElseThrow(() -> new GenericBusinessException("Cannot update node code"));
+
+			if (nodeRepository.isCodeExist(code, nodeId))
 				throw new GenericBusinessException("CONFLICT : code already exists.");
-			} else if (nodeManager.updateNodeCode(nodeId, code) > 0) {
-				throw new GenericBusinessException("Cannot update node code");
-			}
+
+			node.setCode(code);
+			nodeRepository.save(node);
 
 			existing = resourceRepository.getResourceOfResourceByNodeUuid(nodeId);
 		} else if ("context".equals(xsiType)) {

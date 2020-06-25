@@ -167,7 +167,6 @@ public class ResourceManagerTest {
         assertEquals(userId, resource.getCredential().getId());
         assertEquals("<code>foo</code>", resource.getContent());
 
-        verify(portfolioManager).updateTimeByNode(nodeId);
         verify(resourceRepository).save(resource);
     }
 
@@ -364,9 +363,9 @@ public class ResourceManagerTest {
                 .when(nodeRepository)
                 .isCodeExist(code, nodeId);
 
-        doReturn(1)
-                .when(nodeManager)
-                .updateNodeCode(nodeId, code);
+        doReturn(Optional.empty())
+                .when(nodeRepository)
+                .findById(nodeId);
 
         ResourceDocument resourceDocument = mock(ResourceDocument.class);
         when(resourceDocument.getCode()).thenReturn(code);
@@ -387,6 +386,7 @@ public class ResourceManagerTest {
         String xsiType = "nodeRes";
 
         UUID nodeId = UUID.randomUUID();
+        Node node = new Node();
 
         Resource resource = new Resource();
 
@@ -398,10 +398,16 @@ public class ResourceManagerTest {
                 .when(resourceRepository)
                 .getResourceOfResourceByNodeUuid(nodeId);
 
+        doReturn(Optional.of(node))
+                .when(nodeRepository)
+                .findById(nodeId);
+
         manager.changeResourceByXsiType(nodeId, xsiType, resourceDocument, userId);
 
         assertEquals(userId, resource.getModifUserId());
         assertEquals(resourceDocument.getContent(), resource.getContent());
+
+        assertEquals(code, node.getCode());
 
         verify(resourceRepository).getResourceOfResourceByNodeUuid(nodeId);
         verify(resourceRepository).save(resource);
