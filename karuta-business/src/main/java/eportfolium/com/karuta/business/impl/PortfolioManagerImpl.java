@@ -195,7 +195,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	}
 
 	@Override
-	public PortfolioDocument getPortfolio(UUID portfolioId, Long userId, Long groupId, Integer cutoff)
+	public String getPortfolio(UUID portfolioId, Long userId, Long groupId, Integer cutoff)
 			throws BusinessException, JsonProcessingException {
 
 		Node rootNode = portfolioRepository.getPortfolioRootNode(portfolioId);
@@ -252,7 +252,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
         }
     }
 
-	private PortfolioDocument getPortfolio(UUID portfolioId,
+	private String getPortfolio(UUID portfolioId,
 										   UUID rootuuid,
 										   Long userId,
 										   Long groupId,
@@ -272,14 +272,13 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		}
 
 		/// Reconstruct functional tree
+		StringBuilder data = new StringBuilder();
 		Tree root = entries.get(rootuuid);
 
 		if (root != null)
-			reconstructTree(root, entries);
+			reconstructTree(data, root, entries);
 
-		return new PortfolioDocument(portfolioId, owner, "", entries.values().stream()
-				.map(t -> t.node)
-				.collect(Collectors.toList()));
+		return data.toString();
 	}
 
 	private List<Pair<Node, GroupRights>> getPortfolioStructure(UUID portfolioId, Long userId, Long groupId) {
@@ -421,7 +420,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	}
 
 	@Override
-	public PortfolioDocument getPortfolioByCode(String portfolioCode, Long userId, Long groupId,
+	public String getPortfolioByCode(String portfolioCode, Long userId, Long groupId,
 			boolean resources) throws BusinessException, JsonProcessingException {
 		Portfolio portfolio = portfolioRepository.getPortfolioFromNodeCode(portfolioCode);
 
@@ -435,7 +434,8 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 			PortfolioDocument document = new PortfolioDocument(portfolio.getId());
 			document.setNodes(Collections.singletonList(nodeManager.getNode(portfolio.getRootNode().getId(), false, "nodeRes", userId,
 					groupId, null, false)));
-			return document;
+			/// For now
+			return getPortfolio(portfolio.getId(), userId, groupId, null);
 		}
 	}
 
@@ -785,8 +785,9 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		// Si le modèle est renseigné, on ignore le XML poste et on récupère le contenu
 		// du modèle a la place
 		// FIXME Inutilisé, nous instancions / copions un portfolio
+		String data = null;
 		if (portfolioModelId != null)
-			portfolioDocument = getPortfolio(portfolioModelId, userId, groupId, null);
+			data = getPortfolio(portfolioModelId, userId, groupId, null);
 
 		Optional<NodeDocument> nodeDocument = portfolioDocument.getNodes()
 					.stream()

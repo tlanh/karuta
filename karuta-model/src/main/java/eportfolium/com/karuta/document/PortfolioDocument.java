@@ -150,6 +150,7 @@ public class PortfolioDocument {
 
     @JacksonXmlProperty(localName = "asmRoot")
     public void setNodes(NodeDocument node) {
+    	node.type = "asmRoot";
       this.nodes.add( node );
   }
 

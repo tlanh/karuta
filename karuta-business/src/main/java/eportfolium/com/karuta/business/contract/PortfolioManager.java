@@ -38,14 +38,14 @@ public interface PortfolioManager extends BaseManager {
 
 	boolean removePortfolioGroups(Long portfolioGroupId);
 
-	PortfolioDocument getPortfolio(UUID portfolioId,
+	String getPortfolio(UUID portfolioId,
 								   Long userId,
 								   Long groupId,
 								   Integer cutoff) throws BusinessException, JsonProcessingException;
 
 	String getZippedPortfolio(PortfolioDocument portfolio) throws IOException;
 
-	PortfolioDocument getPortfolioByCode(String portfolioCode,
+	String getPortfolioByCode(String portfolioCode,
 										 Long userId,
 										 Long groupId,
 										 boolean resources) throws BusinessException, JsonProcessingException;

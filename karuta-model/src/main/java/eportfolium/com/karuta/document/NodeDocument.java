@@ -190,8 +190,31 @@ public class NodeDocument {
     @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "asmContext")
     public void setContext( NodeDocument context ) {
+    	context.type = "asmContext";
     	children.add(context);
     }
+
+    @JacksonXmlElementWrapper(useWrapping = false)
+    @JacksonXmlProperty(localName = "asmStructure")
+    public void setStructure( NodeDocument context ) {
+    	context.type = "asmStructure";
+    	children.add(context);
+    }
+
+    @JacksonXmlElementWrapper(useWrapping = false)
+    @JacksonXmlProperty(localName = "asmUnit")
+    public void setUnit( NodeDocument context ) {
+    	context.type = "asmUnit";
+    	children.add(context);
+    }
+
+    @JacksonXmlElementWrapper(useWrapping = false)
+    @JacksonXmlProperty(localName = "asmUnitStructure")
+    public void setUnitStructure( NodeDocument context ) {
+    	context.type = "asmUnitStructure";
+    	children.add(context);
+    }
+
 
     // FIXME: Uncomment that once Jackson 2.12 or 2.11.1 is released
      @JacksonXmlElementWrapper(useWrapping = false)

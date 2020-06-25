@@ -32,6 +32,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import eportfolium.com.karuta.business.contract.*;
 import eportfolium.com.karuta.business.contract.SecurityManager;
@@ -104,12 +105,10 @@ public class PortfolioController extends AbstractController {
     	authentication = securityContext.getAuthentication();
     	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
 
-        PortfolioDocument portfolio = portfolioManager.getPortfolio(id, userInfo.getId(), 0L, level);
+        String portfolio = portfolioManager.getPortfolio(id, userInfo.getId(), 0L, level);
 
         SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
         String timeFormat = dt.format(new Date());
-
-        String code = portfolio.getCode().replace("_", "");
 
         if (export == null) {
             return ResponseEntity
@@ -118,9 +117,16 @@ public class PortfolioController extends AbstractController {
                     .body(portfolio);
         } else if (resources && files) {
             // TODO: Rely on PortfolioManager#getZippedPortfolio
+//          String code = portfolio.getCode().replace("_", "");
+          String code = "FIXME";
 
+          ObjectMapper mapper = new XmlMapper();
+          PortfolioDocument document = mapper
+              .readerFor(PortfolioDocument.class)
+              .readValue(portfolio);
+          
             //// Cas du renvoi d'un ZIP
-            File tempZip = getZipFile(portfolio, lang);
+            File tempZip = getZipFile(document, lang);
 
             /// Return zip file
             RandomAccessFile f = new RandomAccessFile(tempZip.getAbsoluteFile(), "r");
@@ -225,7 +231,7 @@ public class PortfolioController extends AbstractController {
      * @see #putPortfolio(PortfolioDocument, UUID, boolean, Authentication)
      */
     @GetMapping(value = "/portfolio/code/{code}", produces = {"application/json", "application/xml"})
-    public HttpEntity<PortfolioDocument> getByCode(@RequestParam long group,
+    public HttpEntity<String> getByCode(@RequestParam long group,
                                                    @PathVariable String code,
                                                    @RequestParam boolean resources,
                                                    Authentication authentication)
@@ -481,7 +487,12 @@ public class PortfolioController extends AbstractController {
 
         /// Create all the zip files
         for (UUID portfolioId : uuids) {
-            PortfolioDocument portfolio = portfolioManager.getPortfolio(portfolioId, userInfo.getId(), 0L, null);
+            String data = portfolioManager.getPortfolio(portfolioId, userInfo.getId(), 0L, null);
+
+            ObjectMapper mapper = new XmlMapper();
+            PortfolioDocument portfolio = mapper
+                .readerFor(PortfolioDocument.class)
+                .readValue(data);
 
             // No name yet
             if ("".equals(name)) {
