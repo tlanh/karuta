@@ -101,7 +101,7 @@ public interface PortfolioManager extends BaseManager {
 
 	void updateTime(UUID portfolioId);
 
-	void updateTimeByNode(UUID portfolioId);
+	void updateTimeByNode(UUID nodeId);
 
 	List<Portfolio> getPortfolios(Long userId,
 								  Long substid,
