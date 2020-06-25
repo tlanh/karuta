@@ -23,9 +23,6 @@ import java.util.UUID;
 
 public interface FileManager {
 
-	boolean rewriteFile(String sessionid, String backend, String user, UUID id, String lang, File file)
-			throws Exception;
-
 	String[] findFiles(String directoryPath, String id);
 
 	String unzip(String zipFile, String destinationFolder) throws IOException;

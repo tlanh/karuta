@@ -545,9 +545,7 @@ public class PortfolioController extends AbstractController {
      * @return portfolio uuid
      */
     @PostMapping(value = "/zip", consumes = "multipart/form-data")
-    public String importZip(@RequestParam long group,
-                            @RequestParam InputStream fileupload,
-                            @RequestParam String model,
+    public String importZip(@RequestParam InputStream fileupload,
                             @RequestParam boolean instance,
                             @RequestParam String project,
                             Authentication authentication,
@@ -559,8 +557,7 @@ public class PortfolioController extends AbstractController {
         String path = servletContext.getRealPath("/");
 
         return portfolioManager
-                .importZippedPortfolio(path, userInfo.getUsername(), fileupload, userInfo.getId(), group, model,
-                        userInfo.getSubstituteId(), instance, project);
+                .importZippedPortfolio(path, fileupload, userInfo.getId(), instance, project);
     }
 
     /**

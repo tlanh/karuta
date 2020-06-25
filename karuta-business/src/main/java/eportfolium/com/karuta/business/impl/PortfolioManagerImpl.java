@@ -106,10 +106,10 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	private GroupUserRepository groupUserRepository;
 
 	@Autowired
-	private ConfigurationManager configurationManager;
+	private FileManager fileManager;
 
 	@Autowired
-	private FileManager fileManager;
+	private ResourceManager resourceManager;
 
 	/// temp class
 
@@ -812,9 +812,8 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	}
 
 	@Override
-	public String importZippedPortfolio(String path, String userName, InputStream inputStream, Long userId, Long groupId,
-										String modelId, Long credentialSubstitutionId,
-										boolean parseRights, String projectName) throws BusinessException, IOException {
+	public String importZippedPortfolio(String path, InputStream inputStream, Long userId, boolean parseRights,
+										String projectName) throws BusinessException, IOException {
         if (!credentialRepository.isAdmin(userId) && !credentialRepository.isCreator(userId))
             throw new GenericBusinessException("403 FORBIDDEN : No admin right");
 
@@ -979,16 +978,11 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
                 // Il sera mis e jour avec l'UUID asmContext final dans writeNode
                 try {
                     UUID resolved = resolve.get(UUID.fromString(uuid)); /// New uuid
-                    String sessionval = passwdGen();
-                    // session.getId()
-                    // FIX ... there is no session id in RESTFUL webServices so generate a mocked
-                    // one in place
-                    File file = new File(fullPath);
-                    String backend = configurationManager.get("backendserver");
+                    FileInputStream input = new FileInputStream(new File(fullPath));
 
                     if (resolved != null) {
                         /// Have to send it in FORM, compatibility with regular file posting
-                        fileManager.rewriteFile(sessionval, backend, userName, resolved, lang, file);
+						resourceManager.updateContent(resolved, userId, input, lang, false);
                     }
                 } catch (Exception ex) {
                     // Le nom du fichier ne commence pas par un UUID,

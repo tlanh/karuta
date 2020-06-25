@@ -17,20 +17,15 @@ package eportfolium.com.karuta.business.impl;
 
 import java.io.*;
 import java.util.ArrayList;
-import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import eportfolium.com.karuta.business.contract.ConfigurationManager;
 import eportfolium.com.karuta.document.ResourceDocument;
-import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPut;
-import org.apache.http.entity.ContentType;
 import org.apache.http.entity.InputStreamEntity;
-import org.apache.http.entity.mime.MultipartEntityBuilder;
-import org.apache.http.entity.mime.content.FileBody;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,32 +40,6 @@ import org.springframework.util.FileCopyUtils;
 public class FileManagerImpl implements FileManager {
 	@Autowired
 	private ConfigurationManager configurationManager;
-
-	@Override
-	public boolean rewriteFile(String sessionid, String backend, String user, UUID id, String lang, File file)
-			throws Exception {
-
-		try (CloseableHttpClient httpclient = createClient()) {
-			String url = backend + "/resources/resource/file/" + id.toString() + "?lang=" + lang;
-			HttpPut put = new HttpPut(url);
-			put.setHeader("Cookie", "JSESSIONID=" + sessionid); // So that the receiving servlet allow us
-
-			/// Remove import language tag
-			String filename = file.getName(); /// NOTE: Since it's used with zip import, specific code.
-			int langindex = filename.lastIndexOf("_");
-			filename = filename.substring(0, langindex) + filename.substring(langindex + 3);
-
-			FileBody bin = new FileBody(file, ContentType.DEFAULT_BINARY, filename); // File from import
-
-			/// Form info
-			HttpEntity reqEntity = MultipartEntityBuilder.create().addPart("uploadfile", bin).build();
-			put.setEntity(reqEntity);
-
-			httpclient.execute(put);
-		}
-
-		return true;
-	}
 
 	public String[] findFiles(String directoryPath, String id) {
 		// ========================================================================
