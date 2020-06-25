@@ -390,14 +390,18 @@ public class PortfolioController extends AbstractController {
     @PreAuthorize("hasRole('admin') or hasRole('designer')")
     public ResponseEntity<String> instanciate(@RequestParam int group,
                                               @PathVariable String id,
-                                              @RequestParam String sourcecode,
+                                              @RequestParam (required = false)String sourcecode,
                                               @RequestParam String targetcode,
-                                              @RequestParam boolean copyshared,
-                                              @RequestParam String groupname,
-                                              @RequestParam boolean owner,
-                                              Authentication authentication) throws BusinessException {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+                                              @RequestParam (defaultValue = "false")boolean copyshared,
+                                              @RequestParam (required = false)String groupname,
+                                              @RequestParam (defaultValue = "false")boolean owner,
+                                              Authentication authentication,
+                                              HttpServletRequest request)
+          throws BusinessException {
+    	HttpSession session = request.getSession(false);
+    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
+    	authentication = securityContext.getAuthentication();
+    	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
 
         /// Vérifiez si le code existe, trouvez-en un qui convient, sinon. Eh.
         String newcode = targetcode;

@@ -48,6 +48,7 @@ import eportfolium.com.karuta.document.*;
 import eportfolium.com.karuta.model.bean.*;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1049,8 +1050,206 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	@Override
 	public String instanciatePortfolio(String portfolioId, String srccode, String tgtcode, Long id,
 			int groupId, boolean copyshared, String groupname, boolean setOwner) {
-		// TODO Auto-generated method stub
-		return null;
+
+		//// Fetch nodes to be instanciated
+		Portfolio portfolio = null;
+		List<Node> nodelist = null;
+		if( srccode != null ) /// Find by source code
+		{
+			portfolio = portfolioRepository.getPortfolioFromNodeCode(srccode);
+			nodelist = new ArrayList<Node>();
+			nodelist.addAll(portfolio.getNodes());
+		}
+		else
+			nodelist = nodeRepository.getNodes(UUID.fromString(portfolioId));
+
+		class Helper
+		{
+			/// uuid -> available roles
+			GroupRights getRights( UUID uuid, String role )
+			{
+				/// Fetch (role, uuid) rights
+				Pair<UUID, String> k = new ImmutablePair<UUID, String>(uuid, role);
+				GroupRights gr = rights.get(k);
+				
+				// if doesn't exist, new line in DB
+				if( gr == null )
+				{
+					/// Check if role exist
+					GroupRightInfo gri = resolve.get(role);
+					if( gri == null )	// New group appeared
+					{
+						GroupInfo gi = new GroupInfo();
+						gi.setLabel(role);
+						gri = new GroupRightInfo();
+						gri.setLabel(role);
+						
+						// Association with GroupInfo
+						gri.setGroupInfo(gi);
+						gi.setGroupRightInfo(gri);
+						
+						/// Send to DB
+						gi = groupInfoRepository.save(gi);
+						gri = groupRightInfoRepository.save(gri);
+						
+						/// Keep for future use
+						resolve.put(role, gri);
+					}
+					
+					gr = new GroupRights();
+					gr.setGroupRightInfo(gri);
+					gr.setGroupRightsId(uuid);
+					
+					rights.put(k, gr);
+				}
+				return gr;
+			};
+			
+			void setNotify( UUID uuid, String notify )
+			{
+				/// Set notification for all groups associated with this uuid
+				Set<String> keys = resolve.keySet();
+				for( String k : keys )
+				{
+					Pair<UUID, String> p = new ImmutablePair<UUID, String>(uuid, k);
+					GroupRights gr = rights.get(p);
+					if( gr != null )
+						gr.setNotifyRoles(notify);
+				}
+			}
+			
+			void save()
+			{
+				/// Send all GroupRights
+				for( GroupRights gr : rights.values() )
+					groupRightsRepository.save(gr);
+			}
+
+			HashMap<String, GroupRightInfo> resolve = new HashMap<String, GroupRightInfo>();
+			HashMap<Pair<UUID, String>, GroupRights> rights = new HashMap<Pair<UUID, String>, GroupRights>();
+		};
+		
+		Helper helper = new Helper();
+		
+		/// Make new portfolio
+		Portfolio copyPortfolio = new Portfolio();
+		// Sent for update
+		copyPortfolio = portfolioRepository.save(copyPortfolio);
+		
+		/// For rights resolution, group name -> DB object
+		for( Node n : nodelist )
+		{
+			/// Duplicate node (this also duplicate resources)
+			Node cn = new Node(n);
+			
+			/// Set new portfolio ownership
+			cn.setPortfolio(copyPortfolio);
+			
+			/// Need to send so some values get updated
+			cn = nodeRepository.save(cn);
+			
+			/// Parse metadata for rights
+			String metadatawad = cn.getMetadataWad();
+			MetadataWadDocument mwd = null;
+			try { mwd = MetadataWadDocument.from(metadatawad); }
+			catch( JsonProcessingException e ){ e.printStackTrace(); }
+			
+			/// Read rights
+			String snr = mwd.getSeenoderoles();
+			StringTokenizer tokens = new StringTokenizer(snr, " ");
+			while (tokens.hasMoreElements())
+			{
+				String nodeRole = tokens.nextElement().toString();
+				GroupRights right = helper.getRights(cn.getId(), nodeRole);
+				right.setRead(true);
+			}
+			/// Read rights
+			String str = mwd.getShowtoroles();
+			tokens = new StringTokenizer(str, " ");
+			while (tokens.hasMoreElements())
+			{
+				String nodeRole = tokens.nextElement().toString();
+				GroupRights right = helper.getRights(cn.getId(), nodeRole);
+				/// User shown to can't see by default
+				right.setRead(false);
+			}
+			/// Delete
+			String dnr = mwd.getDelnoderoles();
+			tokens = new StringTokenizer(dnr, " ");
+			while (tokens.hasMoreElements())
+			{
+				String nodeRole = tokens.nextElement().toString();
+				GroupRights right = helper.getRights(cn.getId(), nodeRole);
+				right.setDelete(true);
+			}
+			/// Write
+			String enr = mwd.getEditnoderoles();
+			tokens = new StringTokenizer(enr, " ");
+			while (tokens.hasMoreElements())
+			{
+				String nodeRole = tokens.nextElement().toString();
+				GroupRights right = helper.getRights(cn.getId(), nodeRole);
+				right.setWrite(true);
+			}
+			/// Submit
+			String sr = mwd.getSubmitroles();
+			tokens = new StringTokenizer(sr, " ");
+			while (tokens.hasMoreElements())
+			{
+				String nodeRole = tokens.nextElement().toString();
+				GroupRights right = helper.getRights(cn.getId(), nodeRole);
+				right.setSubmit(true);
+			}
+			/// Actions
+			String ar = mwd.getAttributes().get("actionroles");
+			/// Format pour l'instant: actionroles="sender:1,2;responsable:4"
+			tokens = new StringTokenizer(ar, ";");
+			while (tokens.hasMoreElements())
+			{
+				String nodeRole = tokens.nextElement().toString();
+				StringTokenizer data = new StringTokenizer(nodeRole, ":");
+				String nrole = data.nextElement().toString();
+				String actions = data.nextElement().toString().trim();
+				
+				GroupRights right = helper.getRights(cn.getId(), nrole);
+				right.setRulesId(actions);
+			}
+			/// Menus
+			String mr = mwd.getAttributes().get("menuroles");
+			/// Format pour l'instant: code_portfolio,tag_semantique,label@en/libelle@fr,roles[;autre menu]
+			tokens = new StringTokenizer(mr, ";");
+			while (tokens.hasMoreElements())
+			{
+				String menuline = tokens.nextElement().toString();
+				String[] data = menuline.split(",");
+				String menurolename = data[3];
+
+				if( menurolename != null )
+				{
+					// Break down list of roles
+					String[] roles = menurolename.split(" ");
+					// Only ensure that group exists, for logical use
+					for( int i=0; i<roles.length; ++i )
+						helper.getRights(cn.getId(), roles[i]);
+				}
+			}
+			/// Notification
+			String nr = mwd.getAttributes().get("notifyroles");
+			///// FIXME: Should be done in UI
+			/// Format pour l'instant: notifyroles="sender responsable[ responsable]"
+			tokens = new StringTokenizer(nr, " ");
+			String merge = "";
+			if( tokens.hasMoreElements() )
+				merge = tokens.nextElement().toString().trim();
+			while (tokens.hasMoreElements())
+				merge += ","+tokens.nextElement().toString().trim();
+			helper.setNotify( cn.getId(), merge);	/// Add person to alert in all roles in this uuid
+		}
+		
+		/// Save all rights
+		helper.save();
+		
+		return "";
 	}
 
 	@Override
