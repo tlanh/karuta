@@ -939,8 +939,6 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
             br.close();
             String xml = sb.toString();
 
-            portfolio = new Portfolio();
-
             ObjectMapper mapper = new XmlMapper();
 //            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
             
@@ -979,7 +977,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 
             UUID uuid = UUID.randomUUID();
 
-            add(uuid, null, userId, document);
+            portfolio = add(uuid, null, userId, document);
 
             /// Create base group
             securityManager.addRole(document.getId(), "all", userId);
@@ -1043,7 +1041,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		File zipdir = new File(outsideDir + portfolioUuidPreliminaire + File.separator);
 		zipdir.delete();
 
-		return document.getId().toString();
+		return portfolio.getId().toString();
 	}
 
 	@Override
