@@ -956,7 +956,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
             Optional<ResourceDocument> resource = asmRoot.get()
                     .getResources()
                     .stream()
-                    .findFirst();
+                    .filter(n -> "nodeRes".equals(n.getXsiType())).findFirst();
 
             if (resource.isPresent()) {
                 String code = resource.get().getCode();

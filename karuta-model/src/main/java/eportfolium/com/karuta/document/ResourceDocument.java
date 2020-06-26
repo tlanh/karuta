@@ -22,7 +22,7 @@ public class ResourceDocument {
     private UUID nodeId;
     private String xsiType;
     private Date modifDate;
-    private String content;
+    private String content = "";
 
 //    private String lang;
 //    private String code;
