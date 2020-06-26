@@ -166,19 +166,25 @@ public class NodeDocument {
         return modifDate;
     }
 
-    @JsonUnwrapped
-    public MetadataDocument getMetadata() {
-        return metadataDocument;
+//    @JsonUnwrapped
+//    @JsonRawValue
+    @JacksonXmlProperty(localName = "metadata-wad")
+    public MetadataWadDocument getMetadataWad() {
+        return metadataWadDocument;
     }
 
-    @JsonUnwrapped
+//    @JsonUnwrapped
+//    @JsonRawValue
+    @JacksonXmlProperty(localName = "metadata-epm")
     public MetadataEpmDocument getMetadataEpm() {
         return metadataEpmDocument;
     }
 
-    @JsonUnwrapped
-    public MetadataWadDocument getMetadataWad() {
-        return metadataWadDocument;
+//    @JsonUnwrapped
+//    @JsonRawValue
+    @JacksonXmlProperty(localName = "metadata")
+    public MetadataDocument getMetadata() {
+        return metadataDocument;
     }
 
     @JacksonXmlElementWrapper(useWrapping = false)
@@ -248,16 +254,19 @@ public class NodeDocument {
         this.parent = parent;
     }
 
+    @JsonRawValue
     @JacksonXmlProperty(localName = "metadata")
     public void setMetadata(MetadataDocument document) {
         this.metadataDocument = document;
     }
 
+    @JsonRawValue
     @JacksonXmlProperty(localName = "metadata-epm")
     public void setMetadataEpm(MetadataEpmDocument document) {
         this.metadataEpmDocument = document;
     }
 
+    @JsonRawValue
     @JacksonXmlProperty(localName = "metadata-wad")
     public void setMetadataWad(MetadataWadDocument document) {
         this.metadataWadDocument = document;

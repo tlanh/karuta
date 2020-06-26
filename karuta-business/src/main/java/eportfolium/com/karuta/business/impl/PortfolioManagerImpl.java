@@ -634,49 +634,48 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 
 			GroupRight role = resolve.getUuid(uuid);
 
-			Map<String, String> metawad = metadataWad.getAttributes();
-			if (metawad.get("seenoderoles") != null) {
-				for (String nodeRole : metawad.get("seenoderoles").split(" ")) {
+			if (metadataWad.getSeenoderoles() != null) {
+				for (String nodeRole : metadataWad.getSeenoderoles().split(" ")) {
 					role.getGroup(nodeRole).rd = true;
 
 					resolve.groups.put(nodeRole, 0L);
 				}
 			}
 
-			if (metawad.get("showtoroles") != null) {
-				for (String nodeRole : metawad.get("showtoroles").split(" ")) {
+			if (metadataWad.getShowtoroles() != null) {
+				for (String nodeRole : metadataWad.getShowtoroles().split(" ")) {
 					role.getGroup(nodeRole).rd = false;
 
 					resolve.groups.put(nodeRole, 0L);
 				}
 			}
 
-			if (metawad.get("delroles") != null) {
-				for (String nodeRole : metawad.get("delroles").split(" ")) {
+			if (metadataWad.getDelnoderoles() != null) {
+				for (String nodeRole : metadataWad.getDelnoderoles().split(" ")) {
 					role.getGroup(nodeRole).dl = true;
 
 					resolve.groups.put(nodeRole, 0L);
 				}
 			}
 
-			if (metawad.get("editroles") != null) {
-				for (String nodeRole : metawad.get("editroles").split(" ")) {
+			if (metadataWad.getEditnoderoles() != null) {
+				for (String nodeRole : metadataWad.getEditnoderoles().split(" ")) {
 					role.getGroup(nodeRole).wr = true;
 
 					resolve.groups.put(nodeRole, 0L);
 				}
 			}
 
-			if (metawad.get("editresroles") != null) {
-				for (String nodeRole : metawad.get("editresroles").split(" ")) {
+			if (metadataWad.getEditresroles() != null) {
+				for (String nodeRole : metadataWad.getEditresroles().split(" ")) {
 					role.getGroup(nodeRole).wr = true;
 
 					resolve.groups.put(nodeRole, 0L);
 				}
 			}
 
-			if (metawad.get("submitroles") != null) {
-				for (String nodeRole : metawad.get("submitroles").split(" ")) {
+			if (metadataWad.getSubmitroles() != null) {
+				for (String nodeRole : metadataWad.getSubmitroles().split(" ")) {
 					role.getGroup(nodeRole).sb = true;
 
 					resolve.groups.put(nodeRole, 0L);
@@ -684,8 +683,8 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 			}
 
 
-			if (metawad.get("menuroles") != null) {
-				for (String line : metawad.get("menuroles").split(";")) {
+			if (metadataWad.getMenuroles() != null) {
+				for (String line : metadataWad.getMenuroles().split(";")) {
 					/// Format pour l'instant:
 					/// code_portfolio,tag_semantique,label@en/libelle@fr,reles[;autre menu]
 					String[] tokens = line.split(",");
@@ -699,8 +698,8 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 				}
 			}
 
-			if (metawad.get("notifyroles") != null) {
-				role.setNotify(metawad.get("notifyroles").replace(" ", ","));
+			if (metadataWad.getNotifyroles() != null) {
+				role.setNotify(metadataWad.getNotifyroles().replace(" ", ","));
 			}
 
 			if (portfolioRepository.isPublic(portfolioId))

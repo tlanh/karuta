@@ -158,76 +158,76 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 			}
 		}
 
-
+		if( node.getMetadataWad() != null )
+		{
+			metadataWadStr = node.getMetadataWad().toString();
+		}
 		if (parseRights && node.getMetadataWad() != null) {
 			MetadataWadDocument metadataWad = node.getMetadataWad();
-			Map<String, String> wadattributes = metadataWad.getAttributes();
-			metadataWadStr = metadataWad.convertStringAttributes();
 
-			if (wadattributes.get("seenoderoles") != null) {
-				for (String role : wadattributes.get("seenoderoles").split(" ")) {
+			if (metadataWad.getSeenoderoles() != null) {
+				for (String role : metadataWad.getSeenoderoles().split(" ")) {
 					groupManager.addGroupRights(role, nodeId, GroupRights.READ, portfolioId,
 							userId);
 				}
 			}
 
-			if (wadattributes.get("delnoderoles") != null) {
-				for (String role : wadattributes.get("delnoderoles").split(" ")) {
+			if (metadataWad.getDelnoderoles() != null) {
+				for (String role : metadataWad.getDelnoderoles().split(" ")) {
 					groupManager.addGroupRights(role, nodeId, GroupRights.DELETE, portfolioId,
 							userId);
 				}
 			}
 
-			if (wadattributes.get("editnoderoles") != null) {
-				for (String role : wadattributes.get("editnoderoles").split("")) {
+			if (metadataWad.getEditnoderoles() != null) {
+				for (String role : metadataWad.getEditnoderoles().split("")) {
 					groupManager.addGroupRights(role, nodeId, GroupRights.WRITE, portfolioId,
 							userId);
 				}
 			}
 
-			if (wadattributes.get("editresroles") != null) {
-				for (String role : wadattributes.get("editresroles").split(" ")) {
+			if (metadataWad.getEditnoderoles() != null) {
+				for (String role : metadataWad.getEditnoderoles().split(" ")) {
 					groupManager.addGroupRights(role, nodeId, GroupRights.WRITE, portfolioId,
 							userId);
 				}
 			}
 
-			if (wadattributes.get("submitroles") != null) {
-				for (String role : wadattributes.get("submitroles").split(" ")) {
+			if (metadataWad.getSubmitroles() != null) {
+				for (String role : metadataWad.getSubmitroles().split(" ")) {
 					groupManager.addGroupRights(role, nodeId, GroupRights.SUBMIT, portfolioId,
 							userId);
 				}
 			}
 
-			if (wadattributes.get("showtoroles") != null) {
-				for (String role : wadattributes.get("showtoroles").split(" ")) {
+			if (metadataWad.getShowtoroles() != null) {
+				for (String role : metadataWad.getShowtoroles().split(" ")) {
 					groupManager.addGroupRights(role, nodeId, GroupRights.NONE, portfolioId,
 							userId);
 				}
 			}
 
-			if (wadattributes.get("notifyroles") != null) {
+			if (metadataWad.getNotifyroles() != null) {
 				groupManager.changeNotifyRoles(userId, portfolioId, nodeId,
-						wadattributes.get("notifyroles").replace(" ", ","));
+						metadataWad.getNotifyroles().replace(" ", ","));
 			}
 
 			/// Need at least parsed rights to make it public
 			boolean ispublic = false;
 			MetadataDocument metadata = node.getMetadata();
-			Map<String, String> metaatrib = metadata.getAttributes();
-			if( "Y".equals(metaatrib.get("public")) )
+			if( metadata.getPrivate() )
 				ispublic = true;
 			groupManager.setPublicState(userId, portfolioId, ispublic);
 
 		}
 
 		if (node.getMetadataEpm() != null) {
-			metadataEpmStr = node.getMetadataEpm().convertStringAttributes();
+			metadataEpmStr = node.getMetadataEpm().toString();
 		}
 
 		if (node.getMetadata() != null) {
 			MetadataDocument metadata = node.getMetadata();
-			Map<String, String> metaatrib = metadata.getAttributes();
+			metadataStr = metadata.toString();
 			
 			/*
 			if (metadata.getSharedResource())
@@ -238,9 +238,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 				sharedNodeRes = true;
 			//*/
 
-			semanticTag = metaatrib.get("semtag");
-
-			metadataStr = metadata.convertStringAttributes();
+			semanticTag = metadata.getSemantictag();
 		}
 
 		Node nodeDB = add(nodeId, parentNode,"", asmType, xsiType, sharedRes, sharedNode, sharedNodeRes,
