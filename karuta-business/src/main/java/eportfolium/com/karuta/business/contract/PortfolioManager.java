@@ -58,7 +58,7 @@ public interface PortfolioManager extends BaseManager {
 
 	PortfolioGroupList getPortfolioGroupListFromPortfolio(UUID portfolioId);
 
-	PortfolioList getPortfolios(long userId, Boolean active, long substid, Boolean project);
+	String getPortfolios(long userId, Boolean active, long substid, Boolean project);
 
 	PortfolioList getPortfolioShared(Long userId);
 

@@ -262,6 +262,8 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 										   Integer cutoff) throws JsonProcessingException {
 		/// Node -> parent
 		Map<UUID, Tree> entries = new HashMap<>();
+		Node rootnode = portfolioRepository.getPortfolioRootNode(portfolioId);
+		Portfolio p = rootnode.getPortfolio();
 		List<Pair<Node, GroupRights>> structure = getPortfolioStructure(portfolioId, userId, groupId);
 
 		processQuery(structure, entries, role);
@@ -279,7 +281,10 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		if (root != null)
 			reconstructTree(data, root, entries);
 
-		return data.toString();
+		String psformat = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><portfolio id=\"%s\" root_node_id=\"%s\" owner=\"%s\" ownerid=\"%s\" modified=\"%s\">%s</portfolio>";
+		boolean isowner = p.getModifUserId() == userId ? true : false;
+
+		return String.format(psformat, p.getId(), rootnode.getId(), isowner, p.getModifUserId(), p.getModifDate(), data.toString());
 	}
 
 	private List<Pair<Node, GroupRights>> getPortfolioStructure(UUID portfolioId, Long userId, Long groupId) {
@@ -563,12 +568,38 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	}
 
 	@Override
-	public PortfolioList getPortfolios(long userId, Boolean active, long substid, Boolean project) {
+	public String getPortfolios(long userId, Boolean active, long substid, Boolean project) {
 		List<Portfolio> portfolios = getPortfolios(userId, substid, active, project);
 
+		String psformat = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><portfolios count=\"%d\">%s</portfolios>";
+		String pformat = "<portfolio id=\"%s\" root_node_id=\"%s\" owner=\"%s\" ownerid=\"%s\" modified=\"%s\">%s</portfolio>";
+		String arformat = "<asmRoot id=\"%s\"><metadata-wad %s/><metadata-epm %s/><metadata %s/><code>%s</code><label>%s</label><description>%s</description>%s</asmRoot>";
+		String rformat = "<asmResource id=\"%s\" contextid=\"%s\" xsi_type=\"%s\">%s</asmResource>";
+		
+		StringBuilder sb = new StringBuilder();
+		for( Portfolio p : portfolios )
+		{
+			Node rn = p.getRootNode();
+			Resource nr = rn.getResource();
+			Resource cr = rn.getContextResource();
+			
+			StringBuilder res = new StringBuilder();
+			res.append(String.format(rformat, nr.getId(), rn.getId(), nr.getXsiType(), nr.getContent()));
+			res.append(String.format(rformat, cr.getId(), rn.getId(), cr.getXsiType(), cr.getContent()));
+			
+			String rootdata = String.format(arformat, rn.getId(), rn.getMetadataWad(), rn.getMetadataEpm(), rn.getMetadata(), rn.getCode(), rn.getLabel(), rn.getDescr(), res.toString());
+			
+			boolean isowner = userId == p.getModifUserId() ? true : false;
+			sb.append(String.format(pformat, p.getId(), rn.getId(), isowner, rn.getModifUserId(), p.getModifDate(), rootdata));
+		}
+
+		return String.format(psformat, portfolios.size(), sb.toString());
+
+		/*
 		return new PortfolioList(portfolios.stream()
                 .map(p -> new PortfolioDocument(p, p.getModifUserId().equals(userId)))
                 .collect(Collectors.toList()));
+		//*/
 	}
 
 	@Override
