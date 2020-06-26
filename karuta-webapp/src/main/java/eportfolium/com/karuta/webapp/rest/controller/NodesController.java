@@ -28,9 +28,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
+
 import java.io.File;
 import java.util.UUID;
 
@@ -113,13 +116,16 @@ public class NodesController extends AbstractController {
      * @return <node uuid=""> <role name=""> <right RD="" WR="" DL="" /> </role>
      *         </node>
      */
-    @GetMapping(value = "/node/{id}/rights", consumes = "application/xml",
-            produces = { "application/json", "application/xml"})
+    @GetMapping(value = "/node/{id}/rights", produces = { "application/json", "application/xml"})
     public String getNodeRights(@RequestParam long group,
                                 @PathVariable UUID id,
-                                Authentication authentication) throws BusinessException {
+                                Authentication authentication,
+                                HttpServletRequest request) throws BusinessException {
 
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+    	HttpSession session = request.getSession(false);
+    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
+    	authentication = securityContext.getAuthentication();
+    	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
 
         // TODO: Check with original code ; implementation is wrong for sure
         GroupRights gr = nodeManager.getRights(userInfo.getId(), group, id);
