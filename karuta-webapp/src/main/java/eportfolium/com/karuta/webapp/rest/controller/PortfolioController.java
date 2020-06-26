@@ -388,7 +388,7 @@ public class PortfolioController extends AbstractController {
      */
     @PostMapping("/instanciate/{id}")
     @PreAuthorize("hasRole('admin') or hasRole('designer')")
-    public ResponseEntity<String> instanciate(@RequestParam int group,
+    public ResponseEntity<String> instanciate(@RequestParam (defaultValue = "-1")int group,
                                               @PathVariable String id,
                                               @RequestParam (required = false)String sourcecode,
                                               @RequestParam String targetcode,
