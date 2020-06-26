@@ -80,8 +80,18 @@ public class CredentialController extends AbstractController {
      *         <substitute>1/0</substitute> </user>
      */
     @GetMapping(produces = "application/xml")
-    public HttpEntity<CredentialDocument> getCredential(Authentication authentication) {
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+    public HttpEntity<CredentialDocument> getCredential(Authentication authentication, HttpServletRequest request) {
+    	HttpSession session = request.getSession(false);
+    	CredentialDocument userInfo = null;
+    	if( session != null )
+    	{
+	    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
+	    	authentication = securityContext.getAuthentication();
+	    	userInfo = (CredentialDocument)authentication.getDetails();
+    	}
+    	
+    	if( userInfo == null )
+    		return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
 
         return new HttpEntity<>(userManager.getUserInfos(userInfo.getId()));
     }
