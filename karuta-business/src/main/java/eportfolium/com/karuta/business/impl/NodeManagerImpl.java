@@ -137,7 +137,11 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 		String metadataWadStr = "";
 		String metadataEpmStr = "";
 
-		String code = node.getCode();
+		String code = "";
+    Optional<ResourceDocument> resource = node.getResources()
+        .stream()
+        .filter(n -> "nodeRes".equals(n.getXsiType())).findFirst();
+		if( resource.get() != null ) code = resource.get().getCode();
 		String semanticTag = null;
 
 		final UUID nodeId = rewriteId ? node.getId() : (forcedId != null ? forcedId : UUID.randomUUID());
