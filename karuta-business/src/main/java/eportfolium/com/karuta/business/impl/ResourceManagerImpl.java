@@ -86,11 +86,14 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 		if (!hasRight(userId, groupId, parentNodeId, GroupRights.WRITE))
 			throw new GenericBusinessException("403 FORBIDDEN : No WRITE credential");
 
-		Resource res = resourceRepository.getResourceByParentNodeUuid(parentNodeId);
+		Resource res = resourceRepository.getResourceOfResourceByNodeUuid(parentNodeId);
 
 		portfolioManager.updateTimeByNode(parentNodeId);
 
-		updateResourceAttrs(res, xmlAttributes(resource), userId);
+		res.setContent(resource.getContent());
+		res.setModifUserId(userId);
+		res.setModifDate(JavaTimeUtil.toJavaDate(LocalDateTime.now()));
+		resourceRepository.save(res);
 
 		return 0;
 	}
