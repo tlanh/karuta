@@ -1204,16 +1204,26 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 			if( cn.getContextResource() != null )
 				resourceRepository.save(cn.getContextResource());
 			cn = nodeRepository.save(cn);
-			
+
 			// Need to set parent and children list after the fact since list is unordered
 			oldfaggot.put(n.getId(), n.getChildrenStr());
 			if( asmroot == null )
 			{
-				Node p = n.getParentNode();
-				if( p == null )
-				asmroot = cn;
+				Node p = cn.getParentNode();
+				if( p == null )	// root node
+				{
+					/// Update code
+					cn.setCode(tgtcode);
+					Resource res = cn.getResource();
+					String rescontent = res.getContent();
+					rescontent = rescontent.replaceAll("<code>.*</code>", String.format("<code>%s</code>", tgtcode));
+					res.setContent(rescontent);
+					/// Update/keep track of new objects
+					resourceRepository.save(res);
+					cn = asmroot = nodeRepository.save(cn);
+				}
 			}
-			
+
 			/// Keep copy for child list update and resolution
 			copyList.put(cn.getId(), cn);
 			/// New UUID resolution
