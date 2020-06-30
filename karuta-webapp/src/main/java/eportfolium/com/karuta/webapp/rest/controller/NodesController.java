@@ -491,11 +491,15 @@ public class NodesController extends AbstractController {
      * DELETE /rest/api/nodes/node/{id}
      */
     @DeleteMapping(value = "/node/{id}", produces = "application/xml")
-    public String deleteNode(@RequestParam long group,
+    public String deleteNode(@RequestParam(defaultValue = "-1") long group,
                              @PathVariable UUID id,
-                             Authentication authentication) throws BusinessException {
+                             Authentication authentication,
+                             HttpServletRequest request) throws BusinessException {
 
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+    	HttpSession session = request.getSession(false);
+    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
+    	authentication = securityContext.getAuthentication();
+    	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
 
         nodeManager.removeNode(id, userInfo.getId(), group);
 
