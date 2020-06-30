@@ -611,11 +611,15 @@ public class PortfolioController extends AbstractController {
      * DELETE /rest/api/portfolios/portfolio/{id}
      */
     @DeleteMapping(value = "/portfolio/{id}", produces = "application/xml")
-    public String delete(@RequestParam long group,
+    public String delete(@RequestParam (defaultValue = "-1")long group,
                          @PathVariable UUID id,
-                         Authentication authentication) throws Exception {
+                         Authentication authentication,
+                         HttpServletRequest request) throws Exception {
 
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+    	HttpSession session = request.getSession(false);
+    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
+    	authentication = securityContext.getAuthentication();
+    	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
 
         portfolioManager.removePortfolio(id, userInfo.getId(), group);
 
