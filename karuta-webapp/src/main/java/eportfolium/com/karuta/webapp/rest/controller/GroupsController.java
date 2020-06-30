@@ -49,7 +49,7 @@ public class GroupsController extends AbstractController {
      * @return <groups> <group id="gid" owner="uid" templateId="rrgid">GROUP
      *         LABEL</group> ... </groups>
      */
-    @GetMapping(produces = "application/xml")
+    @GetMapping
     public HttpEntity<GroupInfoList> getUserGroups(Authentication authentication) {
         UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
@@ -61,7 +61,7 @@ public class GroupsController extends AbstractController {
      *
      * GET /rest/api/groups/{id}
      */
-    @GetMapping(value = "/{id}", produces = "application/xml")
+    @GetMapping(value = "/{id}")
     public HttpEntity<GroupInfoList> getRoles(@PathVariable UUID id,
                                               Authentication authentication) {
         UserInfo userInfo = (UserInfo)authentication.getPrincipal();

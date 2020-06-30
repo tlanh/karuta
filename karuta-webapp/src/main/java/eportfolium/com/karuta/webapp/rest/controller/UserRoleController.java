@@ -37,7 +37,7 @@ public class UserRoleController extends AbstractController {
      *
      * POST /rest/api/roleUser
      */
-    @PostMapping(value = "/roleUser", produces = "application/xml")
+    @PostMapping(value = "/roleUser")
     public String postRoleUser(@RequestParam  long grid,
                                @RequestParam("user-id") Long userid) {
         return securityManager.addUserRole(grid, userid);

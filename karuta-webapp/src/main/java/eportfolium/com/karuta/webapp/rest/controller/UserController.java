@@ -63,7 +63,7 @@ public class UserController extends AbstractController {
      *                           <substitute>1/0</substitute> </user> ... </users>
      * @return
      */
-    @PostMapping(consumes = "application/xml", produces = "application/xml")
+    @PostMapping
     public HttpEntity<CredentialList> postUser(@RequestBody CredentialList xmluser) {
         return new HttpEntity<>(securityManager.addUsers(xmluser));
     }
@@ -78,7 +78,7 @@ public class UserController extends AbstractController {
      *         <designer>1/0</designer> <email></email> <active>1/0</active>
      *         <substitute>1/0</substitute> </user> ... </users>
      */
-    @GetMapping(produces = "application/xml")
+    @GetMapping
     public HttpEntity<Object> getUsers(@RequestParam("username") String username,
                            @RequestParam("firstname") String firstname,
                            @RequestParam("lastname") String lastname,
@@ -103,7 +103,7 @@ public class UserController extends AbstractController {
      *         <email></email> <active>1/0</active> <substitute>1/0</substitute>
      *         </user>
      */
-    @GetMapping(value = "/user/{user-id}", produces = "application/xml")
+    @GetMapping(value = "/user/{user-id}")
     public HttpEntity<CredentialDocument> getUser(@PathVariable("user-id") int userid) {
         return new HttpEntity<>(userManager.getUserInfos(Long.valueOf(userid)));
     }
@@ -115,7 +115,7 @@ public class UserController extends AbstractController {
      *
      * @return userid (long)
      */
-    @GetMapping(value = "/user/username/{username}", produces = "application/xml")
+    @GetMapping(value = "/user/username/{username}")
     public String getUserId(@PathVariable("username") String username) throws BusinessException {
         Long userid = userManager.getUserId(username);
 
@@ -135,7 +135,7 @@ public class UserController extends AbstractController {
      * @return <profiles> <profile> <group id="gid"> <label></label> <role></role>
      *         </group> </profile> </profiles>
      */
-    @GetMapping(value = "/user/{user-id}/groups", produces = "application/xml")
+    @GetMapping(value = "/user/{user-id}/groups")
     public HttpEntity<ProfileList> getGroupsUser(@PathVariable("user-id") long userIdCible) {
         return new HttpEntity<>(userManager.getUserRolesByUserId(userIdCible));
     }
@@ -145,7 +145,7 @@ public class UserController extends AbstractController {
      *
      * GET /rest/api/users/Portfolio/{portfolioId}/Role/{role}/users
      */
-    @GetMapping(value = "/Portfolio/{portfolioId}/Role/{role}/users", produces = "application/xml")
+    @GetMapping(value = "/Portfolio/{portfolioId}/Role/{role}/users")
     public HttpEntity<CredentialList> getUsersByRole(@PathVariable UUID portfolioId,
                                                      @PathVariable String role) {
         return new HttpEntity<>(userManager.getUsersByRole(portfolioId, role));
@@ -158,7 +158,7 @@ public class UserController extends AbstractController {
      *
      * @see #deleteUser(Long)
      */
-    @DeleteMapping(produces = "application/xml")
+    @DeleteMapping
     public String deleteUsers(@RequestParam("userId") Long userId) {
         securityManager.removeUsers(userId);
 
@@ -170,7 +170,7 @@ public class UserController extends AbstractController {
      *
      * DELETE /rest/api/users/user/{user-id}
      */
-    @DeleteMapping(value = "/user/{user-id}", produces = "application/xml")
+    @DeleteMapping(value = "/user/{user-id}")
     public String deleteUser(@PathVariable("user-id") Long userid) {
         securityManager.removeUsers(userid);
 
@@ -190,7 +190,7 @@ public class UserController extends AbstractController {
      *         <email></email> <active>1/0</active> <substitute>1/0</substitute>
      *         </user>
      */
-    @PutMapping(value = "/user/{user-id}", produces = "application/xml")
+    @PutMapping(value = "/user/{user-id}")
     public HttpEntity<Long> putUser(@RequestBody CredentialDocument user,
                                     @PathVariable("user-id") long userid,
                                     Authentication authentication) throws BusinessException {

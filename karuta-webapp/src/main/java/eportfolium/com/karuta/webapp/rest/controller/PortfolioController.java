@@ -82,8 +82,7 @@ public class PortfolioController extends AbstractController {
      * @param export             if set, return XML as a file download
      * @return zip as file download content.
      */
-    @GetMapping(value = "/portfolio/{id}", produces = {"application/xml", "application/json",
-            "application/zip", "application/octet-stream"})
+    @GetMapping(value = "/portfolio/{id}")
     public HttpEntity<Object> getPortfolio(@PathVariable UUID id,
                                            @RequestParam boolean resources,
                                            @RequestParam boolean files,
@@ -214,7 +213,7 @@ public class PortfolioController extends AbstractController {
      *
      * @see #putPortfolio(PortfolioDocument, UUID, boolean, Authentication)
      */
-    @GetMapping(value = "/portfolio/code/{code}", produces = {"application/json", "application/xml"})
+    @GetMapping(value = "/portfolio/code/{code}")
     public HttpEntity<PortfolioDocument> getByCode(@RequestParam long group,
                                                    @PathVariable String code,
                                                    @RequestParam boolean resources,
@@ -235,7 +234,7 @@ public class PortfolioController extends AbstractController {
      * @param active             false (also show inactive portoflios)
      * @param userid             for this user (only with root)
      */
-    @GetMapping(consumes = "application/xml", produces = {"application/json", "application/xml"})
+    @GetMapping
     public HttpEntity<Object> getPortfolios(@RequestParam long group,
                                             @RequestParam boolean active,
                                             @RequestParam Integer userid,
@@ -281,7 +280,7 @@ public class PortfolioController extends AbstractController {
      * @param portfolio       GET /rest/api/portfolios/portfolio/{id}
      *                           and/or the asm format
      */
-    @PutMapping(value = "/portfolio/{id}", consumes = "application/xml", produces = "application/xml")
+    @PutMapping(value = "/portfolio/{id}")
     public String putPortfolio(@RequestBody PortfolioDocument portfolio,
                                @PathVariable UUID id,
                                @RequestParam boolean active,
@@ -317,8 +316,7 @@ public class PortfolioController extends AbstractController {
      *
      * PUT /rest/api/portfolios/portfolios/{id}/setOwner/{ownerId}
      */
-    @PutMapping(value = "/portfolio/{id}/setOwner/{ownerId}", consumes = "application/xml",
-            produces = "application/xml")
+    @PutMapping(value = "/portfolio/{id}/setOwner/{ownerId}")
     public Boolean changeOwner(@PathVariable UUID id,
                                @PathVariable long ownerId,
                                Authentication authentication) {
@@ -339,7 +337,7 @@ public class PortfolioController extends AbstractController {
      *
      * PUT /rest/api/portfolios/portfolios/{portfolio-id}
      */
-    @PutMapping(consumes = "application/xml", produces = "application/xml")
+    @PutMapping
     public String changeConfiguration(@RequestParam UUID portfolio,
                                       @RequestParam Boolean active) {
 
@@ -435,7 +433,7 @@ public class PortfolioController extends AbstractController {
      *
      * GET /portfolios/shared/{userid}
      */
-    @PostMapping(value = "/shared/{userid}", produces = "application/xml")
+    @PostMapping(value = "/shared/{userid}")
     @IsAdmin
     public HttpEntity<PortfolioList> getShared(@PathVariable long userid) {
         return new HttpEntity<>(portfolioManager.getPortfolioShared(userid));
@@ -565,7 +563,7 @@ public class PortfolioController extends AbstractController {
      *
      * DELETE /rest/api/portfolios/portfolio/{id}
      */
-    @DeleteMapping(value = "/portfolio/{id}", produces = "application/xml")
+    @DeleteMapping(value = "/portfolio/{id}")
     public String delete(@RequestParam long group,
                          @PathVariable UUID id,
                          Authentication authentication) {
@@ -587,7 +585,7 @@ public class PortfolioController extends AbstractController {
      *                           Otherwise just write nodes xml: ASM format
      * @return <portfolios> <portfolio id="uuid"/> </portfolios>
      */
-    @PostMapping(consumes = {"multipart/form-data", "application/xml"}, produces = "application/xml")
+    @PostMapping
     public HttpEntity<PortfolioList> postPortfolio(@RequestBody PortfolioDocument portfolio,
                                                    @RequestParam int group,
                                                    @RequestParam UUID model,

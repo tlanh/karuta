@@ -69,7 +69,7 @@ public class CredentialController extends AbstractController {
      *         <designer>1/0</designer> <active>1/0</active>
      *         <substitute>1/0</substitute> </user>
      */
-    @GetMapping(produces = "application/xml")
+    @GetMapping
     public HttpEntity<CredentialDocument> getCredential(Authentication authentication) {
         UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
@@ -81,8 +81,7 @@ public class CredentialController extends AbstractController {
      *
      * POST /rest/api/credential/login
      */
-    @RequestMapping(value = "/login", consumes = "application/xml", produces = "application/xml",
-        method = { RequestMethod.POST, RequestMethod.PUT })
+    @RequestMapping(value = "/login", method = { RequestMethod.POST, RequestMethod.PUT })
     public HttpEntity<Object> postCredentialFromXml(@RequestBody LoginDocument credentials) {
 
         String authlog = configurationManager.get("auth_log");
@@ -129,7 +128,7 @@ public class CredentialController extends AbstractController {
      *
      * POST /rest/api/credential/forgot
      */
-    @PostMapping(value = "/forgot", consumes = "application/xml")
+    @PostMapping(value = "/forgot")
     public ResponseEntity<String> postForgotCredential(@RequestBody LoginDocument document,
                                                        HttpServletRequest request) throws Exception {
 

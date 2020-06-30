@@ -50,8 +50,7 @@ public class ResourcesController extends AbstractController {
      *
      * GET /rest/api/resources/resource/{parentNodeId}
      */
-    @GetMapping(value = "/resource/{parentNodeId}", consumes = "application/xml",
-            produces = {"application/json", "application/xml"})
+    @GetMapping(value = "/resource/{parentNodeId}")
     public HttpEntity<ResourceDocument> getResource(@RequestParam long group,
                                                     @PathVariable UUID parentNodeId,
                                                     Authentication authentication) throws BusinessException {
@@ -65,7 +64,7 @@ public class ResourcesController extends AbstractController {
      *
      * GET /rest/api/resources/portfolios/{id}
      */
-    @GetMapping(value = "/portfolios/{id}", produces = {"application/xml"})
+    @GetMapping(value = "/portfolios/{id}")
     public HttpEntity<ResourceList> getResources(@RequestParam long group,
                                                  @PathVariable UUID id,
                                                  Authentication authentication) {
@@ -120,7 +119,7 @@ public class ResourcesController extends AbstractController {
      *
      * PUT /rest/api/resources/resource/{parentNodeId}
      */
-    @PutMapping(value = "/resource/{parentNodeId}", produces = "application/xml")
+    @PutMapping(value = "/resource/{parentNodeId}")
     public String putResource(@RequestBody ResourceDocument resource,
                               @RequestParam long group,
                               @PathVariable UUID parentNodeId,
@@ -137,7 +136,7 @@ public class ResourcesController extends AbstractController {
      *
      * POST /rest/api/resources/{parentNodeId}
      */
-    @PostMapping(value = "/{parentNodeId}", produces = "application/xml")
+    @PostMapping(value = "/{parentNodeId}")
     public String postResource(@RequestBody ResourceDocument resource,
                                @RequestParam long group,
                                @PathVariable UUID parentNodeId,
@@ -151,7 +150,7 @@ public class ResourcesController extends AbstractController {
     /**
      * (?) POST /rest/api/resources
      */
-    @PostMapping(produces = "application/xml")
+    @PostMapping
     public String postResources(@RequestBody ResourceDocument document,
                                 @RequestParam long group,
                                 @RequestParam UUID resource,
@@ -166,7 +165,7 @@ public class ResourcesController extends AbstractController {
      *
      * DELETE /rest/api/resources/{id}
      */
-    @DeleteMapping(value = "/{id}", produces = "application/xml")
+    @DeleteMapping(value = "/{id}")
     public String deleteResource(@RequestParam long group,
                                  @PathVariable UUID id,
                                  Authentication authentication) throws BusinessException {

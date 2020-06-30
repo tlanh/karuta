@@ -21,7 +21,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -39,8 +38,7 @@ public class RegisterController {
 	@InjectLogger
 	private static Logger logger;
 
-	@PostMapping(value = "/register", consumes = {
-			MediaType.APPLICATION_XML_VALUE }, produces = MediaType.TEXT_PLAIN_VALUE)
+	@PostMapping(value = "/register")
 	public ResponseEntity<String> register(@RequestBody CredentialList list) {
 		CredentialDocument user = list.getUsers().get(0);
 		String username = user.getUsername();

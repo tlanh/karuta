@@ -43,7 +43,7 @@ public class GroupRightsController extends AbstractController {
      *         owner=uid"; RD="True/False" SB="True"/"False" typeId=" ";
      *         WR="True/False"/>"; </groupRight> </groupRights>
      */
-    @GetMapping(produces = "application/xml")
+    @GetMapping
     public HttpEntity<GroupRightsList> getAll(@RequestParam long group) {
         return new HttpEntity<>(groupManager.getGroupRights(group));
     }
@@ -53,7 +53,7 @@ public class GroupRightsController extends AbstractController {
      *
      * DELETE /rest/api/groupRights
      */
-    @DeleteMapping(produces = "application/xml")
+    @DeleteMapping
     public String delete(@RequestParam long group) {
         groupManager.removeRights(group);
 

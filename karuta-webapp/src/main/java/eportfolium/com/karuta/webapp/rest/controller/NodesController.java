@@ -51,8 +51,7 @@ public class NodesController extends AbstractController {
      *
      * @return nodes in the ASM format
      */
-    @GetMapping(value = "/node/{id}", produces = {"application/json", "application/xml"},
-        consumes = "application/xml")
+    @GetMapping(value = "/node/{id}")
     public HttpEntity<NodeDocument> getNode(@RequestParam long group,
                                             @PathVariable UUID id,
                                             @RequestParam Integer level,
@@ -72,8 +71,7 @@ public class NodesController extends AbstractController {
      *
      * @return nodes in the ASM format
      */
-    @GetMapping(value = "/node/{id}/children", consumes = "application/xml",
-            produces = {"application/json", "application/xml"})
+    @GetMapping(value = "/node/{id}/children")
     public HttpEntity<NodeDocument> getNodeWithChildren(@RequestParam long group,
                                                         @PathVariable UUID id,
                                                         @RequestParam Integer level,
@@ -93,8 +91,7 @@ public class NodesController extends AbstractController {
      *
      * @return <metadata-wad/>
      */
-    @GetMapping(value = "/node/{id}/metadatawad",
-            produces = {"application/json", "application/xml"})
+    @GetMapping(value = "/node/{id}/metadatawad")
     public HttpEntity<MetadataWadDocument> getNodeMetadataWad(@RequestParam long group,
                                                               @PathVariable UUID id,
                                                               Authentication authentication)
@@ -113,8 +110,7 @@ public class NodesController extends AbstractController {
      * @return <node uuid=""> <role name=""> <right RD="" WR="" DL="" /> </role>
      *         </node>
      */
-    @GetMapping(value = "/node/{id}/rights", consumes = "application/xml",
-            produces = { "application/json", "application/xml"})
+    @GetMapping(value = "/node/{id}/rights")
     public String getNodeRights(@RequestParam long group,
                                 @PathVariable UUID id,
                                 Authentication authentication) throws BusinessException {
@@ -154,8 +150,7 @@ public class NodesController extends AbstractController {
      * @param roleList           <node uuid=""> <role name="">
      *                           <right RD="" WR="" DL="" /> </role> </node>
      */
-    @PostMapping(value = "/node/{id}/rights", consumes = "application/xml",
-            produces = {"application/json", "application/xml"})
+    @PostMapping(value = "/node/{id}/rights")
     @IsAdmin
     public String postNodeRights(@RequestBody RoleList roleList,
                                  @PathVariable UUID id,
@@ -190,8 +185,7 @@ public class NodesController extends AbstractController {
      *
      * @return node in ASM format
      */
-    @GetMapping(value = "/firstbysemantictag/{portfolioId}/{semantictag}", consumes = "application/xml",
-        produces = "application/xml")
+    @GetMapping(value = "/firstbysemantictag/{portfolioId}/{semantictag}")
     public HttpEntity<NodeDocument> getNodeBySemanticTag(@RequestParam long group,
                                                          @PathVariable UUID portfolioId,
                                                          @PathVariable String semantictag,
@@ -211,8 +205,7 @@ public class NodesController extends AbstractController {
      *
      * @return nodes in ASM format
      */
-    @GetMapping(value = "/bysemantictag/{portfolioId}/{semantictag}", consumes = "application/xml",
-        produces = "application/xml")
+    @GetMapping(value = "/bysemantictag/{portfolioId}/{semantictag}")
     public HttpEntity<NodeList> getNodesBySemanticTag(@RequestParam long group,
                                                       @PathVariable UUID portfolioId,
                                                       @PathVariable String semantictag,
@@ -230,7 +223,7 @@ public class NodesController extends AbstractController {
      *
      * PUT /rest/api/nodes/node/{id}
      */
-    @PutMapping(value = "/node/{id}", produces = "application/xml")
+    @PutMapping(value = "/node/{id}")
     public String putNode(@RequestBody NodeDocument node,
                           @RequestParam long group,
                           @PathVariable UUID id,
@@ -247,7 +240,7 @@ public class NodesController extends AbstractController {
      *
      * PUT /rest/api/nodes/node/{id}/metadata
      */
-    @PutMapping(value = "/node/{id}/metadata", produces = "application/xml")
+    @PutMapping(value = "/node/{id}/metadata")
     public String putMetadata(@RequestBody MetadataDocument metadata,
                               @RequestParam int group,
                               @PathVariable UUID id,
@@ -265,7 +258,7 @@ public class NodesController extends AbstractController {
      *
      * PUT /rest/api/nodes/node/{id}/metadatawas
      */
-    @PutMapping(value = "/node/{id}/metadatawad", produces = "application/xml")
+    @PutMapping(value = "/node/{id}/metadatawad")
     public String putMetadataWad(@RequestBody MetadataWadDocument metadata,
                                  @RequestParam Long group,
                                  @PathVariable UUID id,
@@ -283,7 +276,7 @@ public class NodesController extends AbstractController {
      *
      * PUT /rest/api/nodes/node/{id}/metadataepm
      */
-    @PutMapping(value = "/node/{id}/metadataepm", produces = "application/xml")
+    @PutMapping(value = "/node/{id}/metadataepm")
     public String putMetadataEpm(@RequestBody MetadataEpmDocument metadata,
                                  @PathVariable UUID id,
                                  @RequestParam long group,
@@ -300,7 +293,7 @@ public class NodesController extends AbstractController {
      *
      * PUT /rest/api/nodes/node/{id}/nodecontext
      */
-    @PutMapping(value = "/node/{id}/nodecontext", produces = "application/xml")
+    @PutMapping(value = "/node/{id}/nodecontext")
     public String putNodeContext(@RequestBody ResourceDocument resource,
                                  @RequestParam long group,
                                  @PathVariable UUID id,
@@ -316,7 +309,7 @@ public class NodesController extends AbstractController {
      *
      * PUT /rest/api/nodes/node/{id}/noderesource
      */
-    @PutMapping(value = "/node/{id}/noderesource", produces = "application/xml")
+    @PutMapping(value = "/node/{id}/noderesource")
     public String putNodeNodeResource(@RequestBody ResourceDocument resource,
                                       @RequestParam long group,
                                       @PathVariable UUID id,
@@ -374,7 +367,7 @@ public class NodesController extends AbstractController {
      * @param code_parent        From a code_parent, find the children that have
      *                           semtag_parent
      */
-    @GetMapping(consumes = "application/xml", produces = "application/xml")
+    @GetMapping
     public HttpEntity<NodeList> getNodes(@RequestParam long group,
                                          @RequestParam String portfoliocode,
                                          @RequestParam String semtag,
@@ -395,7 +388,7 @@ public class NodesController extends AbstractController {
      *
      * POST /rest/api/nodes/node/{parentId}
      */
-    @PostMapping(value = "/node/{parentId}", consumes = "application/xml", produces = "application/xml")
+    @PostMapping(value = "/node/{parentId}")
     public HttpEntity<NodeList> postNode(@RequestBody NodeDocument node,
                                          @PathVariable UUID parentId,
                                          @RequestParam long group,
@@ -411,7 +404,7 @@ public class NodesController extends AbstractController {
      *
      * POST /rest/api/nodes/node/{id}/moveup
      */
-    @PostMapping(value = "/node/{id}/moveup", consumes = "application/xml", produces = "application/xml")
+    @PostMapping(value = "/node/{id}/moveup")
     public ResponseEntity<String> moveNodeUp(@PathVariable UUID id) {
 
         Long returnValue = nodeManager.moveNodeUp(id);
@@ -430,8 +423,7 @@ public class NodesController extends AbstractController {
      *
      * POST /rest/api/nodes/node/{id}/parentof/{parentId}
      */
-    @PostMapping(value = "/node/{id}/parentof/{parentId}", consumes = "application/xml",
-            produces = "application/xml")
+    @PostMapping(value = "/node/{id}/parentof/{parentId}")
     public ResponseEntity<String> changeNodeParent(@PathVariable UUID nodeId,
                                                    @PathVariable UUID parentId,
                                                    Authentication authentication) throws BusinessException {
@@ -452,8 +444,7 @@ public class NodesController extends AbstractController {
      *
      * POST /rest/api/nodes/node/{id}/action/{action}
      */
-    @PostMapping(value = "/node/{id}/action/{action}", consumes = "application/xml",
-        produces = "application/xml")
+    @PostMapping(value = "/node/{id}/action/{action}")
     public String postActionNode(@PathVariable UUID id,
                                  @PathVariable String action,
                                  Authentication authentication)
@@ -476,7 +467,7 @@ public class NodesController extends AbstractController {
      *
      * DELETE /rest/api/nodes/node/{id}
      */
-    @DeleteMapping(value = "/node/{id}", produces = "application/xml")
+    @DeleteMapping(value = "/node/{id}")
     public String deleteNode(@RequestParam long group,
                              @PathVariable UUID id,
                              Authentication authentication) throws BusinessException {
@@ -493,7 +484,7 @@ public class NodesController extends AbstractController {
      *
      * GET /rest/api/nodes/{id}
      */
-    @GetMapping(value = "/{id}", consumes = "application/xml")
+    @GetMapping(value = "/{id}")
     public HttpEntity<NodeDocument> getNodeWithXSL(@RequestParam long group,
                                                    @PathVariable UUID id,
                                                    @RequestParam String lang,
@@ -522,8 +513,7 @@ public class NodesController extends AbstractController {
     /**
      * POST /rest/api/nodes/{id}/frommodelbysemantictag/{tag}
      */
-    @PostMapping(value = "/{id}/frommodelbysemantictag/{tag}", consumes = "application/xml",
-        produces = "application/xml")
+    @PostMapping(value = "/{id}/frommodelbysemantictag/{tag}")
     public HttpEntity<NodeList> addNodeFromModelByTag(@RequestParam long group,
                                                       @PathVariable UUID id,
                                                       @PathVariable String tag,

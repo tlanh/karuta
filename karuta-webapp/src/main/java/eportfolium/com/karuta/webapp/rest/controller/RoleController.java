@@ -49,7 +49,7 @@ public class RoleController extends AbstractController {
      *
      * GET /rest/api/roles/role/{roleId}
      */
-    @GetMapping(value = "/role/{roleId}", produces = {"application/xml"})
+    @GetMapping(value = "/role/{roleId}")
     public HttpEntity<RoleDocument> getRole(@PathVariable Long roleId) {
         return new HttpEntity<>(userManager.getRole(roleId));
     }
@@ -59,7 +59,7 @@ public class RoleController extends AbstractController {
      *
      * GET /rest/api/roles/portfolio/{portfolioId}
      */
-    @GetMapping(value = "/portfolio/{portfolioId}", produces = {"application/xml"})
+    @GetMapping(value = "/portfolio/{portfolioId}")
     public String getRolePortfolio(@RequestParam String role,
                                    @PathVariable UUID portfolioId) {
         return portfolioManager.getRoleByPortfolio(role, portfolioId);
@@ -70,7 +70,7 @@ public class RoleController extends AbstractController {
      *
      * PUT /rest/api/roles/role/{roleId}
      */
-    @PutMapping(value = "/role/{roleId}", produces = "application/xml")
+    @PutMapping(value = "/role/{roleId}")
     public String putRole(@RequestBody RoleDocument role,
                           @PathVariable long roleId) {
         return securityManager.changeRole(roleId, role).toString();
