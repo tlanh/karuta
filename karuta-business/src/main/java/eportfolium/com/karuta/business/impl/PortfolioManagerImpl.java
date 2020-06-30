@@ -810,7 +810,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	}
 
 	@Override
-	public String importZippedPortfolio(String path, InputStream inputStream, Long userId, boolean parseRights,
+	public String importPortfolio(String path, InputStream inputStream, Long userId, boolean parseRights,
 										String projectName) throws BusinessException, IOException {
         if (!credentialRepository.isAdmin(userId) && !credentialRepository.isCreator(userId))
             throw new GenericBusinessException("403 FORBIDDEN : No admin right");

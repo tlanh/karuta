@@ -555,7 +555,7 @@ public class PortfolioController extends AbstractController {
         String path = servletContext.getRealPath("/");
 
         return portfolioManager
-                .importZippedPortfolio(path, fileupload, userInfo.getId(), instance, project);
+                .importPortfolio(path, fileupload, userInfo.getId(), instance, project);
     }
 
     /**

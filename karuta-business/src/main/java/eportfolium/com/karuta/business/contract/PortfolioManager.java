@@ -83,7 +83,7 @@ public interface PortfolioManager extends BaseManager {
 	String instanciatePortfolio(String portfolioId, String srccode, String tgtcode, Long id,
 			int groupId, boolean copyshared, String groupname, boolean setOwner);
 
-	String importZippedPortfolio(String path, InputStream fileInputStream, Long id, boolean instantiate, String projectName)
+	String importPortfolio(String path, InputStream fileInputStream, Long id, boolean instantiate, String projectName)
 			throws BusinessException, IOException;
 
 	PortfolioList addPortfolio(PortfolioDocument portfolio, long userId, long groupId,
