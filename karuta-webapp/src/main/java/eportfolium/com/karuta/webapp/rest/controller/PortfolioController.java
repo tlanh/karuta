@@ -303,6 +303,7 @@ public class PortfolioController extends AbstractController {
      * @param portfolio       GET /rest/api/portfolios/portfolio/{id}
      *                           and/or the asm format
      */
+    /*
     @PutMapping(value = "/portfolio/{id}", consumes = "application/xml", produces = "application/xml")
     public String putPortfolio(@RequestBody PortfolioDocument portfolio,
                                @PathVariable UUID id,
@@ -315,6 +316,7 @@ public class PortfolioController extends AbstractController {
 
         return "";
     }
+    //*/
 
     /**
      * Reparse portfolio rights.
@@ -361,11 +363,17 @@ public class PortfolioController extends AbstractController {
      *
      * PUT /rest/api/portfolios/portfolios/{portfolio-id}
      */
-    @PutMapping(consumes = "application/xml", produces = "application/xml")
-    public String changeConfiguration(@RequestParam UUID portfolio,
-                                      @RequestParam Boolean active) {
+    @PutMapping("/portfolio/{portfolio}")
+    public String putConfiguration(@PathVariable UUID portfolio,
+                                      @RequestParam Boolean active,
+                                      Authentication authentication,
+                                      HttpServletRequest request) {
+    	HttpSession session = request.getSession(false);
+    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
+    	authentication = securityContext.getAuthentication();
+    	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
 
-        portfolioManager.changePortfolioConfiguration(portfolio, active);
+        portfolioManager.changePortfolioConfiguration(userInfo.getId(), portfolio, active);
 
         return "";
     }

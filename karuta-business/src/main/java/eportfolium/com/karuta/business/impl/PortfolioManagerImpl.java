@@ -551,7 +551,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	}
 
 	@Override
-	public Portfolio changePortfolioConfiguration(UUID portfolioId, Boolean portfolioActive) {
+	public Portfolio changePortfolioConfiguration(long userId, UUID portfolioId, Boolean portfolioActive) {
 
 		Optional<Portfolio> portfolio = portfolioRepository.findById(portfolioId);
 

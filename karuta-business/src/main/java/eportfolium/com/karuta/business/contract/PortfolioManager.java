@@ -75,7 +75,7 @@ public interface PortfolioManager extends BaseManager {
 
 	boolean changePortfolioOwner(UUID portfolioId, long newOwner);
 
-	Portfolio changePortfolioConfiguration(UUID portfolioId, Boolean portfolioActive);
+	Portfolio changePortfolioConfiguration(long userId, UUID portfolioId, Boolean portfolioActive);
 
 	boolean rewritePortfolioContent(PortfolioDocument portfolio, UUID portfolioId, Long userId, Boolean portfolioActive)
 			throws BusinessException, JsonProcessingException;
