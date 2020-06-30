@@ -357,14 +357,19 @@ public class NodesController extends AbstractController {
      * POST /rest/api/nodes/node/copy/{parentId}
      */
     @PostMapping("/node/copy/{parentId}")
-    public UUID copyNode(@RequestParam long group,
-                         @PathVariable UUID parentId,
-                         @RequestParam String srcetag,
-                         @RequestParam String srcecode,
-                         @RequestParam UUID uuid,
-                         Authentication authentication) throws JsonProcessingException, BusinessException {
+    public UUID copyNode(@RequestParam (defaultValue = "-1")long group,
+                         @PathVariable UUID parentId,	/// Destination
+                         /// Either (srcetag and srcecode) or uuid
+                         @RequestParam (required = false)String srcetag,
+                         @RequestParam (required = false)String srcecode,
+                         @RequestParam (required = false)UUID uuid,
+                         Authentication authentication,
+                         HttpServletRequest request) throws JsonProcessingException, BusinessException {
 
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+    	HttpSession session = request.getSession(false);
+    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
+    	authentication = securityContext.getAuthentication();
+    	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
 
         return nodeManager.copyNode(parentId, srcetag, srcecode, uuid, userInfo.getId(), group);
     }

@@ -29,6 +29,7 @@ import eportfolium.com.karuta.model.bean.*;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.hibernate.Hibernate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -83,7 +84,8 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	@Autowired
 	private GroupUserRepository groupUserRepository;
 
-	private InMemoryCache<UUID, List<Node>> cachedNodes = new InMemoryCache<>(600, 1500, 6);
+	//// Portfolio -> parent id -> list of node (0: parent, 1+: child)
+	private InMemoryCache<UUID, Map<UUID, List<Node>>> cachedNodes = new InMemoryCache<>(600, 1500, 6);
 
 	@Override
 	public NodeDocument getNode(UUID nodeId, boolean withChildren, Long userId, Long groupId,
@@ -1329,23 +1331,26 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
         return importNode(destId, tag, code, sourceId, userId, groupId, false);
     }
 
-	private UUID checkCache(String code) {
+	private UUID checkCache(UUID portfolioId) {
 
-		UUID portfolioId = null;
 		boolean setCache = false;
-		Portfolio portfolio = portfolioRepository.getPortfolioFromNodeCode(code);
+		Node root = portfolioRepository.getPortfolioRootNode(portfolioId);
+		Portfolio portfolio = root.getPortfolio();
+		String code = null;
 
 		// Le portfolio n'a pas été trouvé, pas besoin d'aller plus loin
 		if (portfolio != null) {
 			portfolioId = portfolio.getId();
+			code = root.getCode();
 			// Vérifier si nous n'avons pas déjà le portfolio en cache
 			if (cachedNodes.get(portfolioId) != null) {
-				final List<Node> nodes = cachedNodes.get(portfolioId);
+				final Map<UUID, List<Node>> nodes = cachedNodes.get(portfolioId);
 				log.info("Portfolio présent dans le cache pour le code : " + code + " -> " + portfolioId);
 
+				Iterator<List<Node>> iter = nodes.values().iterator();
 				// Vérifier si le cache est toujours à jour.
 				if (nodes.isEmpty() || portfolio.getModifDate() == null
-						|| !portfolio.getModifDate().equals(nodes.get(0).getModifDate())) {
+						|| !portfolio.getModifDate().equals(iter.next().get(1).getModifDate())) {
 					// le cache est obsolète
 					log.info("Cache obsolète pour : " + code);
 					cachedNodes.remove(portfolioId);
@@ -1363,11 +1368,32 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 				// Assignez la date du portfolio pour les noeuds en cache .. Utile pour
 				// vérifier la validité du cache.
 				final List<Node> nodes = nodeRepository.getNodes(portfolioId);
+				/// Since we'll have to loop for a bit with substree,
+				/// convert list as hashmap
+        HashMap<UUID, List<Node>> resolve = new HashMap<>();
+        
 				for (Node node : nodes) {
 					node.setModifDate(portfolio.getModifDate());
+					Node ppNode = node.getParentNode();	// Sometime get proxy object
+					Node pNode = (Node) Hibernate.unproxy(ppNode);
+					UUID parentId = null;
+					/// FIXME: Some other node than root have parent as null (import?)
+					if( pNode != null )
+						parentId = pNode.getId();
+//					else
+//						continue;		/// current node is root
+					
+					List<Node> branch = resolve.get(parentId);
+					if( branch == null )
+					{
+						branch = new ArrayList<Node>();
+						branch.add(pNode);	/// Parent node as first eleemnt
+						resolve.put(parentId, branch);
+					}
+					branch.add(node);
 				}
 				// Mettre tous les noeuds dans le cache.
-				cachedNodes.put(portfolioId, nodes);
+				cachedNodes.put(portfolioId, resolve);
 			}
 		}
 
@@ -1389,16 +1415,14 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 
         if (sourceId != null && !hasRight(userId, groupId, sourceId, GroupRights.READ)) {
             throw new GenericBusinessException("403 FORBIDDEN : No READ credential");
-        } else if (checkCache(code) == null) {
-            throw new GenericBusinessException("Aucun noeud trouvé pour le code : " + code);
         }
-
-        UUID portfolioId = null;
-
+        
         // Pour la copie de la structure
+        UUID portfolioId = null;
         UUID baseUuid = null;
 
-        List<Node> nodes = null;
+        Node baseNode = null;
+        Map<UUID, List<Node>> nodes = null;
 
         // On évite la recherche de balises puisque nous connaissons l'uuid du noeud à
         // copier.
@@ -1406,43 +1430,76 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
             // Puisque nous ne savons pas si ces noeuds doivent être mis en cache, on
             // recherche les informations dans la base.
             UUID portfolioUuid = portfolioRepository.getPortfolioUuidFromNode(sourceId);
+            if( portfolioUuid == null )
+          		throw new GenericBusinessException("Aucun noeud trouvé pour le UUID : " + sourceId);
 
-            // Récupération des noeuds du portfolio à copier depuis la base.
-            nodes = nodeRepository.getNodes(portfolioUuid);
-
+            /// Check cache validity
+            checkCache( portfolioUuid );
+            
+            // Keep copy for later
+            nodes = cachedNodes.get(portfolioId);
             baseUuid = sourceId;
+
+            /// Fetch base node from child list;
+            List<Node> clist = nodes.get(baseUuid);
+            baseNode = clist.get(0);	// First element is parent
         } else {
+        	/// Code/Tag
+        	Portfolio portfolio = portfolioRepository.getPortfolioFromNodeCode(code);
+        	if ( portfolio == null) {
+        		throw new GenericBusinessException("Aucun noeud trouvé pour le code : " + code);
+        	}
+        	portfolioId = checkCache(portfolio.getId());
             // Get nodes from portfolio we need to copy from cache
             nodes = cachedNodes.get(portfolioId);
 
             // Check whether we can find a node with the given tag
-            Node nodeByTag = null;
-            Node nodeBySemanticTag = null;
+            Node nodeSearch = null;
 
-            for (Node node : nodes) {
-                if (StringUtils.equalsIgnoreCase(node.getCode(), tag)) {
-                    nodeByTag = node;
-                    break;
-                }
-
-                if (StringUtils.equalsIgnoreCase(node.getSemantictag(), tag) && nodeBySemanticTag == null) {
-                    nodeBySemanticTag = node;
-                }
+            /// For all branches
+            for (List<Node> lnode : nodes.values()) {
+            	Iterator<Node> inode = lnode.iterator();
+            	/// Skip first in list, it's the parent
+            	inode.next();
+            	// Directly check if it's either in code or semantictag
+            	while( inode.hasNext() )
+            	{
+            		Node n = inode.next();
+            		if (StringUtils.equalsIgnoreCase(n.getCode(), tag) || StringUtils.equalsIgnoreCase(n.getSemantictag(), tag)) {
+            			nodeSearch = n;
+            			break;
+            		}
+            		
+            	}
             }
 
-            if (nodeByTag != null) {
-                baseUuid = nodeByTag.getId();
-
-            } else if (nodeBySemanticTag != null) {
-                baseUuid = nodeBySemanticTag.getId();
-
+            if (nodeSearch != null) {
+            		baseNode = nodeSearch;
+                baseUuid = nodeSearch.getId();
             } else {
                 throw new GenericBusinessException(
                         "Aucun noeud trouvé pour le code : " + code + " et le tag : " + tag);
             }
         }
-
+        
         final Node destNode = nodeRepository.findById(destId).get();
+        int nodeOrder = nodeRepository.getFirstLevelChildren(destId).size();
+        Portfolio destPortfolio = destNode.getPortfolio();
+        
+        /// baseuuid is the starting node to copy from
+
+        Node baseCopyNode = new Node(baseNode);
+        baseCopyNode.setParentNode(destNode);
+        baseCopyNode.setModifUserId(userId);
+        baseCopyNode.setPortfolio(destPortfolio);
+        baseCopyNode.setNodeOrder(nodeOrder+1);
+        baseCopyNode = nodeRepository.save(baseCopyNode);
+        
+        /// Ajout de l'enfant dans le noeud de destination
+        String destClist = destNode.getChildrenStr();
+        destClist += ","+baseCopyNode.getId().toString();
+        destNode.setChildrenStr(destClist);
+        nodeRepository.save(destNode);
 
         /// Contient les noeuds à copier.
         final Set<Node> nodesToCopy = new LinkedHashSet<>();
@@ -1450,41 +1507,44 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
         final Set<UUID> nodesUuidToCopy = new LinkedHashSet<>();
 
         final Map<Integer, Set<UUID>> parentIdMap = new HashMap<>();
+        Queue<Node> resolveParent = new LinkedList<>();
 
-        for (Node node : nodes) {
-            if (node.getId().equals(baseUuid)) {
-                node.setParentNode(destNode);
-                nodesUuidToCopy.add(node.getId());
-                nodesToCopy.add(node);
-                break;
-            }
-        }
+        nodesToCopy.add(baseCopyNode);
+        resolveParent.add(baseCopyNode);
 
         parentIdMap.put(0, nodesUuidToCopy);
 
-        int level = 0;
-        boolean added = true;
+        Node qnode = baseCopyNode;
 
-        while (added) {
-            Set<UUID> parentIds = new LinkedHashSet<>();
-            Set<Node> parentNodes = new LinkedHashSet<>();
-
-            for (Node node : nodes) {
-                for (UUID t_parent_id : parentIdMap.get(level)) {
-                    if (node.getParentNode() != null
-                            && node.getParentNode().getId().equals(t_parent_id)) {
-                        parentIds.add(node.getId());
-                        parentNodes.add(node);
-                        break;
-                    }
-                }
-            }
-
-            parentIdMap.put(level + 1, parentIds);
-            nodesUuidToCopy.addAll(parentIds);
-            nodesToCopy.addAll(parentNodes);
-            added = !parentIds.isEmpty();
-            level = level + 1;
+        while (qnode != null ) {
+            //// Retrieve current branch
+          	List<Node> childs = nodes.get(qnode.getId());
+          	if( childs == null )	// Leaf
+        		{
+              qnode = resolveParent.poll();
+          		continue;
+        		}
+          	List<String> cList = new ArrayList<>();
+          	/// For listed childs
+              for (Node cNode : childs ) {
+              	/// Copy and adjust values
+              	Node ccopy = new Node(cNode);
+              	ccopy.setParentNode(qnode);
+              	ccopy.setModifUserId(userId);
+              	ccopy.setPortfolio(destPortfolio);
+              	
+              	ccopy = nodeRepository.save(ccopy);
+              	cList.add(ccopy.getId().toString());
+              	
+              	/// Copy list to submit (Or need to submit before)
+              	nodesToCopy.add(ccopy);
+              	/// Add to queue for traversing
+              	resolveParent.add(cNode);
+              }
+              qnode.setChildrenStr(String.join(",", cList));
+              nodeRepository.save(qnode);
+              
+            qnode = resolveParent.poll();
         }
 
         //////////////////////////////////////////
@@ -1496,11 +1556,9 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
         final Map<Resource, Resource> resources = new HashMap<>();
 
         for (Node node : nodesToCopy) {
-            Node nodeCopy = new Node(node);
-            nodeCopy.setModifUserId(userId);
 
             if (node.getResource() != null) {
-                Resource resourceCopy = nodeCopy.getResource();
+                Resource resourceCopy = node.getResource();
                 resourceCopy.setModifUserId(userId);
 
                 if (!node.isSharedRes() || !node.getSharedNode() || !node.isSharedNodeRes()) {
@@ -1510,7 +1568,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
             }
 
             if (node.getResResource() != null) {
-                Resource resourceCopy = nodeCopy.getResResource();
+                Resource resourceCopy = node.getResResource();
                 resourceCopy.setModifUserId(userId);
 
                 if (!node.isSharedRes() || !node.getSharedNode() || !node.isSharedNodeRes()) {
@@ -1520,7 +1578,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
             }
 
             if (node.getContextResource() != null) {
-                Resource resourceCopy = nodeCopy.getContextResource();
+                Resource resourceCopy = node.getContextResource();
                 resourceCopy.setModifUserId(userId);
 
                 if (!node.isSharedRes() || !node.getSharedNode() || !node.isSharedNodeRes()) {
@@ -1529,53 +1587,10 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
                 }
             }
 
-            nodeRepository.save(nodeCopy);
-            allNodes.put(node, nodeCopy);
+//            nodeRepository.save(node);
+            allNodes.put(node, node);	///// !
         }
 
-        final Node searchedNode = new Node();
-        final Portfolio destPortfolio = new Portfolio(destNode.getPortfolio().getId());
-
-        for (Entry<Node, Node> entry : allNodes.entrySet()) {
-            Node originalNode = entry.getKey();
-            Node copiedNode = entry.getValue();
-
-            if (originalNode.getParentNode() != null) {
-                originalNode.setParentNode(allNodes.get(originalNode.getParentNode()));
-            }
-
-            // Update children list ; the order will define the XML output
-            if (originalNode.getChildrenStr() != null) {
-                String[] children = StringUtils.split(originalNode.getChildrenStr(), ",");
-                List<String> childrenCopies = new ArrayList<>();
-
-                for (String child : children) {
-                    searchedNode.setId(UUID.fromString(child));
-                    Node nodeCopy = allNodes.get(searchedNode);
-                    childrenCopies.add(nodeCopy.getId().toString());
-                }
-
-                copiedNode.setChildrenStr(StringUtils.join(childrenCopies, ","));
-            }
-
-            copiedNode.setPortfolio(destPortfolio);
-            nodeRepository.save(copiedNode);
-        }
-
-        // Mise à jour de l'ordre et du noeud parent de la copie
-        searchedNode.setId(baseUuid);
-
-        Node nodeCopy = allNodes.get(searchedNode);
-        int nodeOrder = nodeRepository.getFirstLevelChildren(destId).size();
-
-        nodeCopy.setParentNode(destNode);
-        nodeCopy.setNodeOrder(nodeOrder);
-        nodeRepository.save(nodeCopy);
-
-        /// Ajout de l'enfant dans le noeud de destination
-        destNode.setChildrenStr((destNode.getChildrenStr() != null ? destNode.getChildrenStr() + "," : "")
-                + nodeCopy.getId().toString());
-        nodeRepository.save(destNode);
 
         //////////////////////////////////
         /// Copie des droits des noeuds ///
@@ -1872,10 +1887,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
             }
         }
 
-        // On récupère le UUID crée
-        searchedNode.setId(baseUuid);
-
-		return allNodes.get(searchedNode).getId();
+		return baseCopyNode.getId();
 
 	}
 
