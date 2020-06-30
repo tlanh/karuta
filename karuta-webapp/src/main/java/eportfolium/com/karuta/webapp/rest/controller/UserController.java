@@ -31,9 +31,13 @@ import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import org.springframework.http.HttpEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 
 @RestController
 @RequestMapping("/users")
@@ -79,11 +83,15 @@ public class UserController extends AbstractController {
      *         <substitute>1/0</substitute> </user> ... </users>
      */
     @GetMapping(produces = "application/xml")
-    public HttpEntity<Object> getUsers(@RequestParam("username") String username,
-                           @RequestParam("firstname") String firstname,
-                           @RequestParam("lastname") String lastname,
-                           Authentication authentication) {
+    public HttpEntity<Object> getUsers(@RequestParam(value="username", required = false)String username,
+                           @RequestParam(value="firstname", required = false)String firstname,
+                           @RequestParam(value="lastname", required = false)String lastname,
+                           Authentication authentication,
+                           HttpServletRequest request) {
 
+    	HttpSession session = request.getSession(false);
+    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
+    	authentication = securityContext.getAuthentication();
         UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
         if (userInfo.isAdmin() || userInfo.isDesigner())
