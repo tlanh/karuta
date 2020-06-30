@@ -27,7 +27,7 @@ import eportfolium.com.karuta.model.exception.BusinessException;
 
 public interface NodeManager extends BaseManager {
 
-	NodeDocument getNode(UUID nodeId, boolean withChildren, Long userId, Long groupId, String label,
+	String getNode(UUID nodeId, boolean withChildren, Long userId, Long groupId, String label,
 			Integer cutoff) throws BusinessException, JsonProcessingException;
 
 	void resetRights(List<Node> children) throws JsonProcessingException;

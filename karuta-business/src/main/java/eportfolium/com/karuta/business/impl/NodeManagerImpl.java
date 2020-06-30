@@ -88,7 +88,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	private InMemoryCache<UUID, Map<UUID, List<Node>>> cachedNodes = new InMemoryCache<>(600, 1500, 6);
 
 	@Override
-	public NodeDocument getNode(UUID nodeId, boolean withChildren, Long userId, Long groupId,
+	public String getNode(UUID nodeId, boolean withChildren, Long userId, Long groupId,
 			String label, Integer cutoff) throws BusinessException, JsonProcessingException {
 		final GroupRights rights = getRights(userId, groupId, nodeId);
 
@@ -108,11 +108,12 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 		processQuery(nodes, entries, rights.getGroupRightInfo().getLabel());
 
 		/// Reconstruct functional tree
+		StringBuilder data = new StringBuilder();
 		Tree root = entries.get(nodeId);
-		reconstructTree(root, entries);
+		reconstructTree(data, root, entries);
 
 		// TODO: Check result ; not sure the output is expected
-		return entries.get(nodeId).node;
+		return data.toString();
 	}
 
 	@Override

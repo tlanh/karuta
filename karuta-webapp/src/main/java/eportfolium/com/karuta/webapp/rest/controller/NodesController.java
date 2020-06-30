@@ -54,18 +54,21 @@ public class NodesController extends AbstractController {
      *
      * @return nodes in the ASM format
      */
-    @GetMapping(value = "/node/{id}", produces = {"application/json", "application/xml"},
-        consumes = "application/xml")
-    public HttpEntity<NodeDocument> getNode(@RequestParam long group,
+    @GetMapping(value = "/node/{id}", produces = {"application/json", "application/xml"})
+    public HttpEntity<String> getNode(@RequestParam(defaultValue = "-1") long group,
                                             @PathVariable UUID id,
-                                            @RequestParam Integer level,
-                                            Authentication authentication)
+                                            @RequestParam(required = false) Integer level,
+                                            Authentication authentication,
+                                            HttpServletRequest request)
             throws BusinessException, JsonProcessingException {
 
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+    	HttpSession session = request.getSession(false);
+    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
+    	authentication = securityContext.getAuthentication();
+    	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
 
-        return new HttpEntity<>(nodeManager.getNode(id, false,
-                userInfo.getId(), group, null, level));
+        String data = nodeManager.getNode(id, false, userInfo.getId(), group, null, level);
+        return new HttpEntity<>(data);
     }
 
     /**
