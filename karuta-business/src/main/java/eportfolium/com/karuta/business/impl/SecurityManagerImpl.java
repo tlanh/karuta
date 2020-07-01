@@ -183,50 +183,6 @@ public class SecurityManagerImpl implements SecurityManager {
 	}
 
 	@Override
-	public boolean addUser(String username, String email) {
-		if (!credentialRepository.existsByLogin(username)) {
-
-			try {
-				Credential newUser = new Credential();
-				String passwd = generatePassword();
-				/// Credential checking use hashing, we'll never reach this.
-				setPassword(passwd, newUser);
-				newUser.setLogin(username);
-				newUser.setEmail(email);
-				newUser.setActive(1);
-				newUser.setDisplayFirstname("");
-				newUser.setOther("");
-				newUser.setDisplayLastname("");
-				newUser.setIsDesigner(1);
-
-				credentialRepository.save(newUser);
-
-				final Map<String, String> locals = new HashMap<>();
-
-				locals.put("firstname", username);
-				locals.put("lastname", "");
-				locals.put("email", email);
-				locals.put("passwd", passwd);
-
-				try {
-					// Envoie d'un e-mail à l'utilisateur
-					emailManager.send("account", "Welcome!", locals, email, username);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-
-				return true;
-			} catch (BusinessException e) {
-				e.printStackTrace();
-
-				return false;
-			}
-		}
-
-		return false;
-	}
-
-	@Override
 	public Long changeUser(Long byUserId, Long forUserId, CredentialDocument user) throws BusinessException {
 		Credential credential = credentialRepository.findActiveById(forUserId)
 									.orElseThrow(() -> new GenericBusinessException("Unexisting user"));

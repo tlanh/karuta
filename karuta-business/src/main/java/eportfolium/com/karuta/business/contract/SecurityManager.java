@@ -41,8 +41,6 @@ public interface SecurityManager {
 	 */
 	Long changeUserInfo(Long byUserId, Long forUserId, CredentialDocument user) throws BusinessException;
 
-	boolean addUser(String username, String email);
-
 	String generatePassword();
 
 	void removeUsers(Long forUser);

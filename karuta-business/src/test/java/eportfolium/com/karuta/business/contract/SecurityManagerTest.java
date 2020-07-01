@@ -134,41 +134,6 @@ public class SecurityManagerTest {
     }
 
     @Test
-    public void addUser_WithExistingLogin() {
-        String login = "jdoe";
-
-        doReturn(true)
-                .when(credentialRepository)
-                .existsByLogin(login);
-
-        assertFalse(manager.addUser(login, "foo@bar.com"));
-
-        verify(credentialRepository, times(0))
-                .save(any(Credential.class));
-        verifyNoInteractions(emailManager);
-    }
-
-    @Test
-    public void addUser_WithoutExistingLogin()
-            throws UnsupportedEncodingException, MessagingException {
-        String login = "jdoe";
-        String email = "foo@bar.com";
-
-        doReturn(false)
-                .when(credentialRepository)
-                .existsByLogin(login);
-
-        assertTrue(manager.addUser(login, email));
-
-        verify(credentialRepository).save(any(Credential.class));
-
-        String template = "account";
-        String subject = "Welcome!";
-
-        verify(emailManager).send(eq(template), eq(subject), anyMap(), eq(email), eq(login));
-    }
-
-    @Test
     public void changeUser_WithNotActiveUser() {
         Long byUserId = 0L;
         Long forUserId = 42L;
