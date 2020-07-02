@@ -1081,7 +1081,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 			currNode.setLength(0);
 			String pgStr = String.valueOf(pg.getId());
 			String type = pg.getType();
-			currNode.append("<group type='").append(type.toLowerCase()).append("' id=\"");
+			currNode.append("<group type=\"").append(type.toLowerCase()).append("\" id=\"");
 			currNode.append(pgStr);
 			currNode.append("\"><label>").append(pg.getLabel()).append("</label>");
 
@@ -1093,7 +1093,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 			PortfolioGroup parent = null;
 
 			if (pg.getParent() != null) {
-				parent = pg.getParent().getParent();
+				parent = pg.getParent();
 			}
 
 			resolve.put((long) currTreeNode.nodeId, currTreeNode);
