@@ -31,9 +31,8 @@
 	<artifactId>karuta-webapp</artifactId>
 	<packaging>war</packaging>
 
-	<name>karuta-webapp Maven Webapp</name>
-	<!-- FIXME change it to the project's website -->
-	<url>http://www.example.com</url>
+	<name>karuta-webapp</name>
+	<url>https://www.eportfolium.com/site/index_en.htm</url>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
