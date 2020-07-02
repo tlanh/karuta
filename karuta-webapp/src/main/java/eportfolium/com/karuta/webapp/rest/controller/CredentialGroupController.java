@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Collections;
 
 @RestController
-@RequestMapping("/usergroups")
+@RequestMapping("/usersgroups")
 public class CredentialGroupController {
 
     @Autowired

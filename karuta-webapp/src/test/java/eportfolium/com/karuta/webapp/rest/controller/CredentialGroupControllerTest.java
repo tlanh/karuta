@@ -29,7 +29,7 @@ public class CredentialGroupControllerTest extends ControllerTest {
             .when(groupManager)
             .addCredentialGroup(label);
 
-        mvc.perform(postBuilder("/usergroups")
+        mvc.perform(postBuilder("/usersgroups")
                     .param("label", label))
                 .andExpect(status().isOk())
                 .andExpect(content().string("74"))
@@ -45,7 +45,7 @@ public class CredentialGroupControllerTest extends ControllerTest {
                 .when(securityManager)
                 .addUserInCredentialGroups(userId, Collections.singletonList(groupId));
 
-        mvc.perform(putBuilder("/usergroups")
+        mvc.perform(putBuilder("/usersgroups")
                     .param("group", groupId.toString())
                     .param("user", userId.toString()))
                 .andExpect(status().isOk())
@@ -62,7 +62,7 @@ public class CredentialGroupControllerTest extends ControllerTest {
             .when(securityManager)
             .addUserInCredentialGroups(userId, Collections.singletonList(groupId));
 
-        mvc.perform(putBuilder("/usergroups")
+        mvc.perform(putBuilder("/usersgroups")
                     .param("group", groupId.toString())
                     .param("user", userId.toString()))
                 .andExpect(status().isOk())
@@ -80,7 +80,7 @@ public class CredentialGroupControllerTest extends ControllerTest {
                 .when(groupManager)
                 .renameCredentialGroup(groupId, label);
 
-        mvc.perform(putBuilder("/usergroups")
+        mvc.perform(putBuilder("/usersgroups")
                     .param("group", groupId.toString())
                     .param("label", label))
                 .andExpect(status().isOk())
@@ -98,7 +98,7 @@ public class CredentialGroupControllerTest extends ControllerTest {
                 .when(groupManager)
                 .renameCredentialGroup(groupId, label);
 
-        mvc.perform(putBuilder("/usergroups")
+        mvc.perform(putBuilder("/usersgroups")
                     .param("group", groupId.toString())
                     .param("label", label))
                 .andExpect(status().isOk())
@@ -118,7 +118,7 @@ public class CredentialGroupControllerTest extends ControllerTest {
                 .when(groupManager)
                 .getCredentialGroupByName(label);
 
-        get("/usergroups?label=" + label)
+        get("/usersgroups?label=" + label)
                 .andExpect(status().isOk())
                 .andExpect(content().string(credentialGroup.getId().toString()))
                 .andDo(document("credential-group-by-label"));
@@ -140,7 +140,7 @@ public class CredentialGroupControllerTest extends ControllerTest {
                 .when(credentialGroupMembersRepository)
                 .findByUser(userId);
 
-        get("/usergroups?user=" + userId)
+        get("/usersgroups?user=" + userId)
                 .andExpect(status().isOk())
                 .andDo(document("credential-group-by-user"));
     }
@@ -160,7 +160,7 @@ public class CredentialGroupControllerTest extends ControllerTest {
                 .when(credentialGroupMembersRepository)
                 .findByGroup(groupId);
 
-        get("/usergroups?group=" + groupId)
+        get("/usersgroups?group=" + groupId)
                 .andExpect(status().isOk())
                 .andDo(document("credential-group-by-group"));
     }
@@ -177,7 +177,7 @@ public class CredentialGroupControllerTest extends ControllerTest {
                 .when(credentialGroupRepository)
                 .findAll();
 
-        get("/usergroups")
+        get("/usersgroups")
                 .andExpect(status().isOk())
                 .andDo(document("credential-groups"));
     }
@@ -191,7 +191,7 @@ public class CredentialGroupControllerTest extends ControllerTest {
                 .when(groupManager)
                 .removeCredentialGroup(groupId);
 
-        mvc.perform(deleteBuilder("/usergroups")
+        mvc.perform(deleteBuilder("/usersgroups")
                     .param("group", groupId.toString()))
                 .andExpect(status().isOk())
                 .andExpect(content().string("Deleted"))
@@ -210,7 +210,7 @@ public class CredentialGroupControllerTest extends ControllerTest {
                 .when(securityManager)
                 .deleteUserFromCredentialGroup(userId, groupId);
 
-        mvc.perform(deleteBuilder("/usergroups")
+        mvc.perform(deleteBuilder("/usersgroups")
                     .param("group", groupId.toString())
                     .param("user", userId.toString()))
                 .andExpect(status().isOk())
@@ -220,5 +220,4 @@ public class CredentialGroupControllerTest extends ControllerTest {
         verify(securityManager).deleteUserFromCredentialGroup(userId, groupId);
         verifyNoInteractions(groupManager);
     }
-
 }
