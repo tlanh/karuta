@@ -1,0 +1,39 @@
+= Karuta API
+:toc: left
+:toc-title: Available endpoints
+:source-highlighter: highlightjs
+
+This document describes all the available endpoints that the Karuta backend
+provides. Apart from the sign-in and sign-up endpoints, every single endpoint
+requires the user to be authenticated to authorize a request.
+
+This means that you need to provide the cookie containing the attached session
+in every single request you make.
+
+If you are using `curl`, this means that you need to use the `-b` option first
+when you reach the login endpoint and then use the `-c` option passing the
+path to the file previously generated with `-b`.
+
+Apart from **few ones**, most endpoints can consume or produce either XML or
+JSON. By default, XML is implied but you can specify the `Accept` or
+`Content-Type` headers to deal with JSON requests and responses.
+
+include::hello.adoc[]
+
+include::credentials.adoc[]
+
+include::credential-groups.adoc[]
+
+include::group-rights.adoc[]
+
+include::group-rights-infos.adoc[]
+
+include::groups.adoc[]
+
+include::portfolio-groups.adoc[]
+
+include::users.adoc[]
+
+include::user-groups.adoc[]
+
+include::user-roles.adoc[]

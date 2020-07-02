@@ -1,0 +1,260 @@
+== Users
+
+=== POST /
+
+This endpoint register one or several users. Either way, the `<user>`
+documents must be wrapped inside a `<users>` tag.
+
+The returned document contains the list of all properly processed users;
+failed ones are ommitted.
+
+[NOTE]
+The user accessing this endpoint must be either an admin or a designer for
+the operation to succeed.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/user-register/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/user-register/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/user-register/http-response.adoc[]
+
+=== GET /
+
+Depending on the current user's role, this endpoint can either provide
+a list of users that match certain given parameters or return the current
+user's information.
+
+==== As an admin or designer
+
+[source,role="primary"]
+.Curl
+include::{snippets}/get-users-admin/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/get-users-admin/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/get-users-admin/http-response.adoc[]
+
+==== As a regular user
+
+[source,role="primary"]
+.Curl
+include::{snippets}/get-users-regular/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/get-users-regular/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/get-users-regular/http-response.adoc[]
+
+=== GET /user/{id}
+
+This endpoint returns the information of a user based on their ID.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/get-user/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/get-user/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/get-user/http-response.adoc[]
+
+=== GET /user/username/{name}
+
+This endpoint returns a user's ID based on its username.
+
+==== When the user exists
+
+[source,role="primary"]
+.Curl
+include::{snippets}/get-user-id/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/get-user-id/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/get-user-id/http-response.adoc[]
+
+==== When the user is missing
+
+[source,role="primary"]
+.Curl
+include::{snippets}/get-user-id-missing/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/get-user-id-missing/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/get-user-id-missing/http-response.adoc[]
+
+=== GET /user/{id}/groups
+
+This endpoint returns the list of groups/roles for a given user based
+on their ID.
+
+include::{snippets}/get-user-groups/response-fields.adoc[]
+
+[source,role="primary"]
+.Curl
+include::{snippets}/get-user-groups/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/get-user-groups/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/get-user-groups/http-response.adoc[]
+
+=== DELETE /
+
+This endpoint deletes a user based on a given ID. This one is only
+reachable by admin users or if the current's user ID matches the ID
+that is requested for deletion.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/delete-user/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/delete-user/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/delete-user/http-response.adoc[]
+
+=== DELETE /user/{id}
+
+This one is exactly the same endpoint as the previous one except the
+user's ID is provided in the URL rather than through a query parameter.
+
+=== PUT /user/{id}
+
+This endpoint allows the updating of a user's attributes. Depending on
+the current user's role, the set of allowed fields is different. You can
+check out the "Edge cases" section just below to see how some cases are
+handled.
+
+Here  are the allowed fields in each case:
+
+[source,role="primary"]
+.As an admin or designer
+include::{snippets}/update-user-as-admin/request-body.adoc[]
+
+[source,role="secondary"]
+.As a regular user
+include::{snippets}/update-user-as-owner/request-body.adoc[]
+
+=== As an admin or designer
+
+[source,role="primary"]
+.Curl
+include::{snippets}/update-user-as-admin/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/update-user-as-admin/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/update-user-as-admin/http-response.adoc[]
+
+=== As a regular user
+
+[NOTE]
+In this case, the edited user's ID must be the current user's ID,
+otherwise a 403 (Forbidden) response is sent.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/update-user-as-owner/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/update-user-as-owner/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/update-user-as-owner/http-response.adoc[]
+
+==== Edge cases
+
+.As an admin or designer
+|===
+|Case |HTTP status code |Response
+
+|Missing or **inactive** user
+|500
+|Unexisting user
+
+|Wrong previous password (as designer only)
+|500
+|Not authorized
+|===
+
+.As a regular user
+|===
+|Case |HTTP status code |Response
+
+|Missing user
+|500
+|Unknown user id
+
+|Wrong previous password
+|500
+|Password is not correct.
+|===
+
+=== GET /Portfolio/{portfolioId}/role/{role}/users
+
+This endpoint returns all the users that have a given role in
+a given portfolio based on its ID.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/get-users-in-role/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/get-users-in-role/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/get-users-in-role/http-response.adoc[]
+
+=== GET /Portfolio/{portfolioId}/Role/{role}/groups
+
+This endpoint returns all the group IDs that have a certain role
+in a given portfolio based on its ID.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/get-groups-in-role/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/get-groups-in-role/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/get-groups-in-role/http-response.adoc[]
