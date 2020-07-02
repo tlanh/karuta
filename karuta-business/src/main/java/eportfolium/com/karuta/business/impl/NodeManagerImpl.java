@@ -1243,9 +1243,8 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 			// Aggregation des droits avec 'all', l'appartenance du groupe de l'utilisateur,
 			// et les droits propres a l'utilisateur
 			GroupRightInfo gri1 = groupRightInfoRepository.getByPortfolioAndLabel(portfolioId, "all");
-			GroupUser gu = null;
+			GroupUser gu = groupUserRepository.getUniqueByUser(userId);
 			Long grid3 = 0L;
-			gu = groupUserRepository.getUniqueByUser(userId);
 
 			for (Node t_node : t_nodes) {
 				if (t_node.getId().equals(nodeId)
