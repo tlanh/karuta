@@ -6,6 +6,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 @Retention(RetentionPolicy.RUNTIME)
-@WithMockUser(roles = {"designer"})
+@WithMockUser(roles = {"DESIGNER"})
 public @interface AsDesigner {
 }
