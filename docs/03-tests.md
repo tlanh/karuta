@@ -91,8 +91,8 @@ logic as well as all repositories and services already wired can be found.
 You also need to annotation them with the `@WebMvcTest` annotation.
 
 As almost all requests require the user to be authenticated, you can rely
-on the `@AsUser` or `@AsAdmin` method on tests to execute the test under
-a certain role.
+on the `@AsUser`, `@AsDesigner` or `@AsAdmin` method on tests to execute
+the test on behalf of a certain role.
 
 ~~~java
 @WebMvcTest
@@ -104,3 +104,7 @@ public class SomeControllerTest extends ControllerTest {
     }
 }
 ~~~
+
+Inside controller tests, you can always rely on the `userId` property
+to get the current user ID. This is useful when mocking methods; down
+the line, the mocked user has this ID.

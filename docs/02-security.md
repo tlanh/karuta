@@ -8,11 +8,11 @@ restrict the ability for a user to execute a whole method. These
 annotations are:
 
 * `@PreAuthorize`
-* `@IsDesigner`
 * `@IsAdmin`
+* `@IsAdminOrDesigner`
 
-While `@PreAuthorize` is provided by Spring Security, `@IsDesigner`
-and `@IsAdmin` are named explicitly.
+While `@PreAuthorize` is provided by Spring Security, `@IsAdmin`
+and `@IsAdminOrDesigner` are named explicitly.
 
 The `UserInfo` class (present in `karuta-business`) holds the information
 about the currently logged in user.
