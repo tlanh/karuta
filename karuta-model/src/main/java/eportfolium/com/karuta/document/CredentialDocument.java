@@ -32,6 +32,8 @@ public class CredentialDocument {
         this.firstname = credential.getDisplayFirstname();
         this.lastname = credential.getDisplayLastname();
         this.email = credential.getEmail();
+        this.admin = credential.getIsAdmin();
+        this.designer = credential.getIsDesigner();
     }
 
     public CredentialDocument(Credential credential, boolean extra) {
@@ -39,8 +41,6 @@ public class CredentialDocument {
 
         CredentialSubstitution cs = credential.getCredentialSubstitution();
 
-        this.admin = credential.getIsAdmin();
-        this.designer = credential.getIsDesigner();
         this.other = credential.getOther();
         this.active = credential.getActive();
 
