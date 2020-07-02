@@ -58,10 +58,4 @@ public class GroupInfoDocument {
     public String getRole() {
         return role;
     }
-
-    // FIXME: Ensure the front-end doesn't need it and remove
-    @JsonGetter("groupid")
-    public Long getGroupId() {
-        return id;
-    }
 }
