@@ -165,7 +165,7 @@ include::{snippets}/update-user-as-admin/request-body.adoc[]
 .As a regular user
 include::{snippets}/update-user-as-owner/request-body.adoc[]
 
-=== As an admin or designer
+==== As an admin or designer
 
 [source,role="primary"]
 .Curl
@@ -179,7 +179,7 @@ include::{snippets}/update-user-as-admin/response-body.adoc[]
 .Full response
 include::{snippets}/update-user-as-admin/http-response.adoc[]
 
-=== As a regular user
+==== As a regular user
 
 [NOTE]
 In this case, the edited user's ID must be the current user's ID,
