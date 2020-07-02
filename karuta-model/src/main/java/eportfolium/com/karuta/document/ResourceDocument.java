@@ -111,7 +111,6 @@ public class ResourceDocument {
         return content;
     }
 
-    // FIXME: Remove that once we no longer rely on raw XML storage.
     @JsonAnySetter
     public void ignored(String name, Object value) {
         if (this.content == null)

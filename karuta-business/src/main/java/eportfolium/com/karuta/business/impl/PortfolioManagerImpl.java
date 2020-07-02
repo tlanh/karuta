@@ -340,7 +340,6 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	 * provenant pas d'un même portfolio, on ne peut pas les sélectionner rapidement
 	 * Autre possibilité serait de garder ce même type de fonctionnement pour une
 	 * selection par niveau d'un portfolio.
-	 * TODO: A faire un 'benchmark' dessus
 	 */
 	private List<Pair<Node, GroupRights>> getSharedStructure(UUID portfolioId, Long userId,
 			Integer cutoff) {

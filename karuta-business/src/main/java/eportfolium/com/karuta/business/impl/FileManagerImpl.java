@@ -169,7 +169,6 @@ public class FileManagerImpl implements FileManager {
 	}
 
 	private String urlFor(ResourceDocument resource, boolean thumbnail) {
-		// TODO: Take "lang" into account.
 		String url = configurationManager.get("fileserver") + "/" + resource.getFileid();
 
 		if (thumbnail)

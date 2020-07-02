@@ -112,7 +112,6 @@ public class CredentialGroupController {
                 return ResponseEntity.notFound().build();
             }
 
-            // TODO: Check whether we return just a number in original implementation
             return new HttpEntity<>(crGroup.getId().toString());
 
         } else if (user != null) {
