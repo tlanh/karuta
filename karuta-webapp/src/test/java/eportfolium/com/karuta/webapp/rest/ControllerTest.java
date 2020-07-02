@@ -13,6 +13,8 @@ import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.MediaType;
 import org.springframework.restdocs.JUnitRestDocumentation;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.crypto.password.Pbkdf2PasswordEncoder;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
@@ -78,7 +80,7 @@ public abstract class ControllerTest {
     @SpyBean
     protected ConfigurationManager configurationManager;
 
-    @SpyBean
+    @MockBean
     protected EmailManager emailManager;
 
     @SpyBean
@@ -101,6 +103,8 @@ public abstract class ControllerTest {
     protected UserManager userManager;
 
 
+    protected PasswordEncoder passwordEncoder = new Pbkdf2PasswordEncoder();
+
 
     protected MockMvc mvc;
 
@@ -121,6 +125,7 @@ public abstract class ControllerTest {
                 .apply(documentationConfiguration(this.restDocumentation)
                             .operationPreprocessors()
                             .withResponseDefaults(prettyPrint())
+                            .withRequestDefaults(prettyPrint())
                         .and()
                             .uris()
                             .withHost("localhost:8080/rest/api")
@@ -144,7 +149,7 @@ public abstract class ControllerTest {
     }
 
     public MockHttpServletRequestBuilder putBuilder(String endpoint) {
-        return MockMvcRequestBuilders.put(endpoint);
+        return MockMvcRequestBuilders.put(endpoint).contentType(MediaType.APPLICATION_XML);
     }
 
     public MockHttpServletRequestBuilder deleteBuilder(String endpoint) {
