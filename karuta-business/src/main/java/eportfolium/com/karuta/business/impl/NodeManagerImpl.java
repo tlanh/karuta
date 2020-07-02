@@ -853,8 +853,6 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 
 		if (parentid != null)
 			updateNode(parentid);
-
-		System.out.println("deleteNode :" + nodeId);
 	}
 
 	@Override
