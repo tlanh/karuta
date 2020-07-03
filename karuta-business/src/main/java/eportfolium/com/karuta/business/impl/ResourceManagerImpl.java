@@ -69,16 +69,6 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 	}
 
 	@Override
-	public ResourceList getResources(UUID portfolioId, Long userId, Long groupId) {
-		List<Resource> resources = resourceRepository
-				.getResourcesByPortfolioUUID(portfolioId);
-
-		return new ResourceList(resources.stream()
-				.map(r -> new ResourceDocument(r.getNode().getId()))
-				.collect(Collectors.toList()));
-	}
-
-	@Override
 	public Integer changeResource(UUID parentNodeId, ResourceDocument resource, Long userId)
 			throws BusinessException, JsonProcessingException {
 

@@ -96,30 +96,6 @@ public class ResourceManagerTest {
     }
 
     @Test
-    public void getResources() {
-        Long userId = 42L;
-        Long groupId = 74L;
-
-        UUID portfolioId = UUID.randomUUID();
-        UUID nodeId = UUID.randomUUID();
-
-        Node node = new Node();
-        node.setId(nodeId);
-
-        Resource resource = new Resource();
-        resource.setNode(node);
-
-        doReturn(Collections.singletonList(resource))
-                .when(resourceRepository)
-                .getResourcesByPortfolioUUID(portfolioId);
-
-        ResourceList resourceList = manager.getResources(portfolioId, userId, groupId);
-
-        assertEquals(1, resourceList.getResources().size());
-        assertEquals(nodeId, resourceList.getResources().get(0).getId());
-    }
-
-    @Test
     public void changeResource_WithoutWriteRight() throws JsonProcessingException {
         Long userId = 42L;
 

@@ -28,8 +28,6 @@ public interface ResourceManager extends BaseManager {
 
 	ResourceDocument getResource(UUID parentNodeId, Long userId) throws BusinessException;
 
-	ResourceList getResources(UUID portfolioId, Long userId, Long groupId);
-
 	Integer changeResource(UUID parentNodeId, ResourceDocument resource, Long userId)
 			throws BusinessException, JsonProcessingException;
 

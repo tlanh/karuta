@@ -58,21 +58,6 @@ public class ResourcesController extends AbstractController {
         return new HttpEntity<>(resourceManager.getResource(nodeId, userInfo.getId()));
     }
 
-    /**
-     * Fetch all resource in a portfolio.
-     *
-     * GET /rest/api/resources/portfolios/{id}
-     */
-    @GetMapping(value = "/portfolios/{id}")
-    public HttpEntity<ResourceList> getResources(@RequestParam long group,
-                                                 @PathVariable UUID id,
-                                                 Authentication authentication) {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
-
-        return new HttpEntity<>(resourceManager.getResources(id, userInfo.getId(), group));
-    }
-
     @GetMapping("/resource/file/{id}")
     public void fetchResource(@PathVariable UUID id,
                               @RequestParam String lang,
