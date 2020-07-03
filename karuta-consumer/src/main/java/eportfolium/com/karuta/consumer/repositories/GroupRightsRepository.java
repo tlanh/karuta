@@ -22,16 +22,6 @@ public interface GroupRightsRepository extends CrudRepository<GroupRights, Group
                                      @Param("userId") Long userId);
 
     @Query("SELECT gr FROM GroupRights gr " +
-            "INNER JOIN FETCH gr.id.groupRightInfo gri " +
-            "INNER JOIN FETCH gri.groupInfo gi " +
-            "INNER JOIN gi.groupUser gu WITH gu.id.credential.id = :userId " +
-            "AND gu.id.groupInfo.id = :groupId " +
-            "WHERE gr.id.id = :id")
-    GroupRights getRightsByUserAndGroup(@Param("id") UUID id,
-                                        @Param("userId") Long userId,
-                                        @Param("groupId") Long groupId);
-
-    @Query("SELECT gr FROM GroupRights gr " +
             "WHERE gr.id.id = :id " +
             "AND id.groupRightInfo.id = (" +
             "SELECT gri.id FROM Credential c, GroupRightInfo gri, Node n " +
@@ -41,17 +31,6 @@ public interface GroupRightsRepository extends CrudRepository<GroupRights, Group
             "AND n.id = :id)")
     GroupRights getSpecificRightsForUser(@Param("id") UUID id,
                                          @Param("userId") Long userId);
-
-    @Query("SELECT gr FROM GroupRights gr " +
-            "WHERE gr.id.id = :id " +
-            "AND id.groupRightInfo.id = (" +
-            "SELECT gri2.id FROM GroupInfo gi, GroupRightInfo gri2 " +
-            "INNER JOIN gi.groupRightInfo gri1 " +
-            "WHERE gri1.portfolio.id = gri2.portfolio.id " +
-            "AND gi.id = :groupId " +
-            "AND gri2.label = 'all')")
-    GroupRights getPublicRightsByGroupId(@Param("id") UUID id,
-                                         @Param("groupId") Long groupId);
 
     @Query("SELECT gr FROM GroupRights gr " +
             "INNER JOIN gr.id.groupRightInfo gri WITH gri.label='all' " +

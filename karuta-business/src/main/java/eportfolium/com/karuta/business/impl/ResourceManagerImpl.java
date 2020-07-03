@@ -51,10 +51,10 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 
 
 	@Override
-	public ResourceDocument getResource(UUID parentNodeId, Long userId, Long groupId)
+	public ResourceDocument getResource(UUID parentNodeId, Long userId)
 			throws BusinessException {
 
-		if (!hasRight(userId, groupId, parentNodeId, GroupRights.READ)) {
+		if (!hasRight(userId, parentNodeId, GroupRights.READ)) {
 			throw new GenericBusinessException("403 FORBIDDEN : No READ credential");
 		}
 
@@ -79,10 +79,10 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 	}
 
 	@Override
-	public Integer changeResource(UUID parentNodeId, ResourceDocument resource, Long userId,
-			Long groupId) throws BusinessException, JsonProcessingException {
+	public Integer changeResource(UUID parentNodeId, ResourceDocument resource, Long userId)
+			throws BusinessException, JsonProcessingException {
 
-		if (!hasRight(userId, groupId, parentNodeId, GroupRights.WRITE))
+		if (!hasRight(userId, parentNodeId, GroupRights.WRITE))
 			throw new GenericBusinessException("403 FORBIDDEN : No WRITE credential");
 
 		Resource res = resourceRepository.getResourceByParentNodeUuid(parentNodeId);
@@ -97,10 +97,10 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 	}
 
 	@Override
-	public String addResource(UUID parentNodeId, ResourceDocument resource, Long userId, Long groupId)
+	public String addResource(UUID parentNodeId, ResourceDocument resource, Long userId)
 			throws BusinessException {
 		if (!credentialRepository.isAdmin(userId)
-				&& !hasRight(userId, groupId, parentNodeId, GroupRights.WRITE))
+				&& !hasRight(userId, parentNodeId, GroupRights.WRITE))
 			throw new GenericBusinessException("403 FORBIDDEN : No right to write");
 
 		String xsiType = resource.getXsiType();
@@ -129,9 +129,9 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 	}
 
 	@Override
-	public void removeResource(UUID resourceId, Long userId, Long groupId) throws BusinessException {
+	public void removeResource(UUID resourceId, Long userId) throws BusinessException {
 		if (!credentialRepository.isAdmin(userId)
-				&& !hasRight(userId, groupId, resourceId, GroupRights.DELETE))
+				&& !hasRight(userId, resourceId, GroupRights.DELETE))
 			throw new GenericBusinessException("403 FORBIDDEN : No admin right");
 
 		resourceRepository.deleteById(resourceId);
@@ -192,7 +192,7 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 								 InputStream content,
 								 String lang,
 								 boolean thumbnail) throws BusinessException {
-		if (!hasRight(userId,0L, nodeId, GroupRights.WRITE))
+		if (!hasRight(userId, nodeId, GroupRights.WRITE))
 			throw new GenericBusinessException("No rights.");
 
 		Resource resource = resourceRepository.findByNodeId(nodeId);
@@ -207,7 +207,7 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 										  OutputStream output,
 										  String lang,
 										  boolean thumbnail) throws BusinessException {
-		if (!hasRight(userId, 0L, nodeId, GroupRights.READ)) {
+		if (!hasRight(userId, nodeId, GroupRights.READ)) {
 			throw new GenericBusinessException("No rights.");
 		}
 

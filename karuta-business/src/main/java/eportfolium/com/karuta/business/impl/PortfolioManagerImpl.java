@@ -184,12 +184,12 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	}
 
 	@Override
-	public PortfolioDocument getPortfolio(UUID portfolioId, Long userId, Long groupId, Integer cutoff)
+	public PortfolioDocument getPortfolio(UUID portfolioId, Long userId, Integer cutoff)
 			throws BusinessException, JsonProcessingException {
 
 		Node rootNode = portfolioRepository.getPortfolioRootNode(portfolioId);
 
-		GroupRights rights = getRightsOnPortfolio(userId, groupId, portfolioId);
+		GroupRights rights = getRightsOnPortfolio(userId, portfolioId);
 
 		if (!rights.isRead()) {
 			userId = credentialRepository.getPublicId();
@@ -404,7 +404,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	}
 
 	@Override
-	public PortfolioDocument getPortfolioByCode(String portfolioCode, Long userId, Long groupId,
+	public PortfolioDocument getPortfolioByCode(String portfolioCode, Long userId,
 			boolean resources) throws BusinessException, JsonProcessingException {
 		Portfolio portfolio = portfolioRepository.getPortfolioFromNodeCode(portfolioCode);
 
@@ -413,23 +413,23 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		}
 
 		if (resources) {
-			return getPortfolio(portfolio.getId(), userId, groupId, null);
+			return getPortfolio(portfolio.getId(), userId, null);
 		} else {
 			PortfolioDocument document = new PortfolioDocument(portfolio.getId());
 			document.setNodes(Collections.singletonList(nodeManager.getNode(portfolio.getRootNode().getId(), false, "nodeRes", userId,
-					groupId, null, false)));
+					null, false)));
 			return document;
 		}
 	}
 
 	@Override
-	public GroupRights getRightsOnPortfolio(Long userId, Long groupId, UUID portfolioId) {
+	public GroupRights getRightsOnPortfolio(Long userId, UUID portfolioId) {
 		return portfolioRepository.findById(portfolioId)
 				.map(portfolio -> {
 					if (portfolio.getModifUserId().equals(userId)) // Is the owner
 						return new GroupRights(new GroupRightsId(new GroupRightInfo(), null), true);
 					else
-						return nodeManager.getRights(userId, groupId, portfolio.getRootNode().getId());
+						return nodeManager.getRights(userId, portfolio.getRootNode().getId());
 				}).orElse(new GroupRights());
 	}
 
@@ -452,8 +452,8 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	}
 
 	@Override
-	public void removePortfolio(UUID portfolioId, Long userId, Long groupId) {
-		GroupRights rights = getRightsOnPortfolio(userId, groupId, portfolioId);
+	public void removePortfolio(UUID portfolioId, Long userId) {
+		GroupRights rights = getRightsOnPortfolio(userId, portfolioId);
 
 		if (!rights.isDelete() && !credentialRepository.isAdmin(userId)) {
 			return;
@@ -731,7 +731,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	}
 
 	@Override
-	public PortfolioList addPortfolio(PortfolioDocument portfolioDocument, long userId, long groupId, UUID portfolioModelId,
+	public PortfolioList addPortfolio(PortfolioDocument portfolioDocument, long userId, UUID portfolioModelId,
 							   boolean parseRights, String projectName)
 			throws BusinessException, JsonProcessingException {
 		if (!credentialRepository.isAdmin(userId) && !credentialRepository.isCreator(userId))
@@ -741,7 +741,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		// du modèle a la place
 		// FIXME Inutilisé, nous instancions / copions un portfolio
 		if (portfolioModelId != null)
-			portfolioDocument = getPortfolio(portfolioModelId, userId, groupId, null);
+			portfolioDocument = getPortfolio(portfolioModelId, userId, null);
 
 		Optional<NodeDocument> nodeDocument = portfolioDocument.getNodes()
 					.stream()
@@ -1001,7 +1001,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 
 	@Override
 	public String instanciatePortfolio(String portfolioId, String srccode, String tgtcode, Long id,
-			int groupId, boolean copyshared, String groupname, boolean setOwner) {
+									   boolean copyshared, String groupname, boolean setOwner) {
 		// TODO Auto-generated method stub
 		return null;
 	}
@@ -1157,7 +1157,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 
 	@Override
 	public GroupInfoList getRolesByPortfolio(UUID portfolioId, Long userId) {
-		GroupRights rights = getRightsOnPortfolio(userId, 0L, portfolioId);
+		GroupRights rights = getRightsOnPortfolio(userId, portfolioId);
 		if (!rights.isRead())
 			return null;
 

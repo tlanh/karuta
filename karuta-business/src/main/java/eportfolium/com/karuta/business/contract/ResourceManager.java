@@ -26,17 +26,17 @@ import eportfolium.com.karuta.model.exception.BusinessException;
 
 public interface ResourceManager extends BaseManager {
 
-	ResourceDocument getResource(UUID parentNodeId, Long userId, Long groupId) throws BusinessException;
+	ResourceDocument getResource(UUID parentNodeId, Long userId) throws BusinessException;
 
 	ResourceList getResources(UUID portfolioId, Long userId, Long groupId);
 
-	Integer changeResource(UUID parentNodeId, ResourceDocument resource, Long userId, Long groupId)
+	Integer changeResource(UUID parentNodeId, ResourceDocument resource, Long userId)
 			throws BusinessException, JsonProcessingException;
 
-	String addResource(UUID parentNodeId, ResourceDocument resource, Long userId, Long groupId)
+	String addResource(UUID parentNodeId, ResourceDocument resource, Long userId)
 			throws BusinessException;
 
-	void removeResource(UUID resourceId, Long userId, Long groupId) throws BusinessException;
+	void removeResource(UUID resourceId, Long userId) throws BusinessException;
 
 	void changeResourceByXsiType(UUID nodeId, String xsiType, ResourceDocument resource, Long userId)
 			throws BusinessException;

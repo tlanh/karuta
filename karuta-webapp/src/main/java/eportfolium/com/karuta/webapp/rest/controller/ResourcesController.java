@@ -48,15 +48,14 @@ public class ResourcesController extends AbstractController {
     /**
      * Fetch resource from node uuid.
      *
-     * GET /rest/api/resources/resource/{parentNodeId}
+     * GET /rest/api/resources/resource/{nodeId}
      */
-    @GetMapping(value = "/resource/{parentNodeId}")
-    public HttpEntity<ResourceDocument> getResource(@RequestParam long group,
-                                                    @PathVariable UUID parentNodeId,
+    @GetMapping(value = "/resource/{nodeId}")
+    public HttpEntity<ResourceDocument> getResource(@PathVariable UUID nodeId,
                                                     Authentication authentication) throws BusinessException {
         UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
-        return new HttpEntity<>(resourceManager.getResource(parentNodeId, userInfo.getId(), group));
+        return new HttpEntity<>(resourceManager.getResource(nodeId, userInfo.getId()));
     }
 
     /**
@@ -121,13 +120,12 @@ public class ResourcesController extends AbstractController {
      */
     @PutMapping(value = "/resource/{parentNodeId}")
     public String putResource(@RequestBody ResourceDocument resource,
-                              @RequestParam long group,
                               @PathVariable UUID parentNodeId,
                               Authentication authentication) throws BusinessException, JsonProcessingException {
 
         UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
-        return resourceManager.changeResource(parentNodeId, resource, userInfo.getId(), group)
+        return resourceManager.changeResource(parentNodeId, resource, userInfo.getId())
                     .toString();
     }
 
@@ -138,13 +136,12 @@ public class ResourcesController extends AbstractController {
      */
     @PostMapping(value = "/{parentNodeId}")
     public String postResource(@RequestBody ResourceDocument resource,
-                               @RequestParam long group,
                                @PathVariable UUID parentNodeId,
                                Authentication authentication) throws BusinessException {
 
         UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
-        return resourceManager.addResource(parentNodeId, resource, userInfo.getId(), group);
+        return resourceManager.addResource(parentNodeId, resource, userInfo.getId());
     }
 
     /**
@@ -152,12 +149,11 @@ public class ResourcesController extends AbstractController {
      */
     @PostMapping
     public String postResources(@RequestBody ResourceDocument document,
-                                @RequestParam long group,
                                 @RequestParam UUID resource,
                                 Authentication authentication) throws BusinessException {
         UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
-        return resourceManager.addResource(resource, document, userInfo.getId(), group);
+        return resourceManager.addResource(resource, document, userInfo.getId());
     }
 
     /**
@@ -166,13 +162,12 @@ public class ResourcesController extends AbstractController {
      * DELETE /rest/api/resources/{id}
      */
     @DeleteMapping(value = "/{id}")
-    public String deleteResource(@RequestParam long group,
-                                 @PathVariable UUID id,
+    public String deleteResource(@PathVariable UUID id,
                                  Authentication authentication) throws BusinessException {
 
         UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
-        resourceManager.removeResource(id, userInfo.getId(), group);
+        resourceManager.removeResource(id, userInfo.getId());
 
         return "";
     }

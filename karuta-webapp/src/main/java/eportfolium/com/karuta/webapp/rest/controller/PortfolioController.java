@@ -93,7 +93,7 @@ public class PortfolioController extends AbstractController {
 
         UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
-        PortfolioDocument portfolio = portfolioManager.getPortfolio(id, userInfo.getId(), 0L, level);
+        PortfolioDocument portfolio = portfolioManager.getPortfolio(id, userInfo.getId(), level);
 
         SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
         String timeFormat = dt.format(new Date());
@@ -214,15 +214,14 @@ public class PortfolioController extends AbstractController {
      * @see #putPortfolio(PortfolioDocument, UUID, boolean, Authentication)
      */
     @GetMapping(value = "/portfolio/code/{code}")
-    public HttpEntity<PortfolioDocument> getByCode(@RequestParam long group,
-                                                   @PathVariable String code,
+    public HttpEntity<PortfolioDocument> getByCode(@PathVariable String code,
                                                    @RequestParam boolean resources,
                                                    Authentication authentication)
             throws BusinessException, JsonProcessingException {
         UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
         return new HttpEntity<>(portfolioManager
-                .getPortfolioByCode(code, userInfo.getId(), group, resources));
+                .getPortfolioByCode(code, userInfo.getId(), resources));
     }
 
     /**
@@ -235,8 +234,7 @@ public class PortfolioController extends AbstractController {
      * @param userid             for this user (only with root)
      */
     @GetMapping
-    public HttpEntity<Object> getPortfolios(@RequestParam long group,
-                                            @RequestParam boolean active,
+    public HttpEntity<Object> getPortfolios(@RequestParam boolean active,
                                             @RequestParam Integer userid,
                                             @RequestParam String code,
                                             @RequestParam UUID portfolio,
@@ -249,12 +247,10 @@ public class PortfolioController extends AbstractController {
         UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
         if (portfolio != null) {
-            return new HttpEntity<>(portfolioManager.getPortfolio(portfolio, userInfo.getId(),
-                    group, level));
+            return new HttpEntity<>(portfolioManager.getPortfolio(portfolio, userInfo.getId(), level));
 
         } else if (code != null) {
-            return new HttpEntity<>(portfolioManager.getPortfolioByCode(code, userInfo.getId(),
-                        group, false));
+            return new HttpEntity<>(portfolioManager.getPortfolioByCode(code, userInfo.getId(), false));
 
         } else if (public_var != null) {
             long publicid = userManager.getUserId("public");
@@ -364,8 +360,7 @@ public class PortfolioController extends AbstractController {
      */
     @PostMapping("/instanciate/{id}")
     @IsAdminOrDesigner
-    public ResponseEntity<String> instanciate(@RequestParam int group,
-                                              @PathVariable String id,
+    public ResponseEntity<String> instanciate(@PathVariable String id,
                                               @RequestParam String sourcecode,
                                               @RequestParam String targetcode,
                                               @RequestParam boolean copyshared,
@@ -383,7 +378,7 @@ public class PortfolioController extends AbstractController {
         targetcode = newcode;
 
         String returnValue = portfolioManager.instanciatePortfolio(id, sourcecode,
-                targetcode, userInfo.getId(), group, copyshared, groupname, owner);
+                targetcode, userInfo.getId(), copyshared, groupname, owner);
 
         if (returnValue.startsWith("no rights"))
             throw new GenericBusinessException(returnValue);
@@ -402,7 +397,7 @@ public class PortfolioController extends AbstractController {
      *
      * POST /rest/api/portfolios/copy/{portfolio-id}
      *
-     * @see #instanciate(int, String,
+     * @see #instanciate(String,
      *      String, String, boolean, String, boolean, Authentication)
      */
     @PostMapping("/copy/{id}")
@@ -463,7 +458,7 @@ public class PortfolioController extends AbstractController {
 
         /// Create all the zip files
         for (UUID portfolioId : uuids) {
-            PortfolioDocument portfolio = portfolioManager.getPortfolio(portfolioId, userInfo.getId(), 0L, null);
+            PortfolioDocument portfolio = portfolioManager.getPortfolio(portfolioId, userInfo.getId(), null);
 
             // No name yet
             if ("".equals(name)) {
@@ -564,13 +559,12 @@ public class PortfolioController extends AbstractController {
      * DELETE /rest/api/portfolios/portfolio/{id}
      */
     @DeleteMapping(value = "/portfolio/{id}")
-    public String delete(@RequestParam long group,
-                         @PathVariable UUID id,
+    public String delete(@PathVariable UUID id,
                          Authentication authentication) {
 
         UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
-        portfolioManager.removePortfolio(id, userInfo.getId(), group);
+        portfolioManager.removePortfolio(id, userInfo.getId());
 
         return "";
     }
@@ -587,7 +581,6 @@ public class PortfolioController extends AbstractController {
      */
     @PostMapping
     public HttpEntity<PortfolioList> postPortfolio(@RequestBody PortfolioDocument portfolio,
-                                                   @RequestParam int group,
                                                    @RequestParam UUID model,
                                                    @RequestParam boolean instance,
                                                    @RequestParam String project,
@@ -595,7 +588,7 @@ public class PortfolioController extends AbstractController {
 
         UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
-        return new HttpEntity<>(portfolioManager.addPortfolio(portfolio, userInfo.getId(), group, model,
+        return new HttpEntity<>(portfolioManager.addPortfolio(portfolio, userInfo.getId(), model,
                 instance, project));
     }
 }

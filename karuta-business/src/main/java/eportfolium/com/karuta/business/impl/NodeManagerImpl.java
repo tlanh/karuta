@@ -86,9 +86,9 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	private InMemoryCache<UUID, List<Node>> cachedNodes = new InMemoryCache<>(600, 1500, 6);
 
 	@Override
-	public NodeDocument getNode(UUID nodeId, boolean withChildren, Long userId, Long groupId,
+	public NodeDocument getNode(UUID nodeId, boolean withChildren, Long userId,
 			String label, Integer cutoff) throws BusinessException, JsonProcessingException {
-		final GroupRights rights = getRights(userId, groupId, nodeId);
+		final GroupRights rights = getRights(userId, nodeId);
 
 		if (!rights.isRead()) {
 			userId = credentialRepository.getPublicId();
@@ -260,9 +260,9 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 
 	@Override
 	public NodeDocument getNode(UUID nodeId, boolean withChildren, String withChildrenOfXsiType, Long userId,
-			Long groupId, String label, boolean checkSecurity) throws JsonProcessingException {
+			String label, boolean checkSecurity) throws JsonProcessingException {
 		if (checkSecurity) {
-			GroupRights rights = getRights(userId, groupId, nodeId);
+			GroupRights rights = getRights(userId, nodeId);
 
 			// If the user doesn't have the right to see this node, we
 			// check whether the public account has such right.
@@ -284,7 +284,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 		NodeDocument nodeDocument;
 
 		if (node.getSharedNodeUuid() != null) {
-			nodeDocument = getNode(node.getSharedNodeUuid(), true, null, userId, groupId,
+			nodeDocument = getNode(node.getSharedNodeUuid(), true, null, userId,
 					null, true);
 		} else {
 			nodeDocument = new NodeDocument(node);
@@ -331,7 +331,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 
 					if (withChildrenOfXsiType == null
 							|| withChildrenOfXsiType.equals(child.getXsiType())) {
-						children.add(getNode(uuid, true, null, userId, groupId, null, true));
+						children.add(getNode(uuid, true, null, userId, null, true));
 					}
 				}
 
@@ -343,8 +343,8 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	}
 
 	@Override
-	public NodeDocument getNodeBySemanticTag(UUID portfolioId, String semantictag, Long userId,
-			Long groupId) throws BusinessException, JsonProcessingException {
+	public NodeDocument getNodeBySemanticTag(UUID portfolioId, String semantictag, Long userId)
+			throws BusinessException, JsonProcessingException {
 
 		final List<Node> nodes = nodeRepository.getNodesBySemanticTag(portfolioId, semantictag);
 
@@ -356,20 +356,19 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 		// semantictag
 		UUID nodeId = nodes.get(0).getId();
 
-		if (!hasRight(userId, groupId, nodeId, GroupRights.READ)) {
+		if (!hasRight(userId, nodeId, GroupRights.READ)) {
 			throw new GenericBusinessException("Vous n'avez pas les droits nécessaires.");
 		}
 
-		return getNode(nodeId, true, null, userId, groupId, null, true);
+		return getNode(nodeId, true, null, userId, null, true);
 	}
 
 	@Override
-	public NodeList getNodesBySemanticTag(Long userId, Long groupId, UUID portfolioId,
-																		  String semanticTag) throws BusinessException {
+	public NodeList getNodesBySemanticTag(Long userId, UUID portfolioId, String semanticTag) throws BusinessException {
 		List<Node> nodes = nodeRepository.getNodesBySemanticTag(portfolioId, semanticTag);
 
 		if (nodes.stream()
-				.anyMatch(n -> !hasRight(userId, groupId, n.getId(), GroupRights.READ))) {
+				.anyMatch(n -> !hasRight(userId, n.getId(), GroupRights.READ))) {
 			throw new GenericBusinessException("403 FORBIDDEN : No READ credential");
 		}
 
@@ -386,7 +385,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	@Override
 	public UUID getPortfolioIdFromNode(Long userId, UUID nodeId) throws BusinessException {
 		// Admin, or if user has a right to read can fetch this information
-		if (!credentialRepository.isAdmin(userId) && !hasRight(userId, 0L, nodeId, GroupRights.READ)) {
+		if (!credentialRepository.isAdmin(userId) && !hasRight(userId, nodeId, GroupRights.READ)) {
 			throw new GenericBusinessException("403 FORBIDDEN : No READ credential");
 		}
 
@@ -670,12 +669,8 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	}
 
 	@Override
-	public MetadataWadDocument getNodeMetadataWad(UUID nodeId, Long userId, Long groupId)
-			throws BusinessException, JsonProcessingException {
-
-		GroupRights rightsOnNode = getRights(userId, groupId, nodeId);
-
-		if (!rightsOnNode.isRead()) {
+	public MetadataWadDocument getNodeMetadataWad(UUID nodeId, Long userId) throws BusinessException, JsonProcessingException {
+		if (!hasRight(userId, nodeId, GroupRights.READ)) {
 			throw new GenericBusinessException("Vous n'avez pas les droits nécessaires.");
 		}
 
@@ -688,8 +683,8 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	}
 
 	@Override
-	public Integer changeNode(UUID nodeId, NodeDocument node, Long userId, Long groupId) throws BusinessException, JsonProcessingException {
-		if (!hasRight(userId, groupId, nodeId, GroupRights.WRITE))
+	public Integer changeNode(UUID nodeId, NodeDocument node, Long userId) throws BusinessException, JsonProcessingException {
+		if (!hasRight(userId, nodeId, GroupRights.WRITE))
 			throw new GenericBusinessException("403 Forbidden : no write credential ");
 
 		if (node == null)
@@ -753,10 +748,10 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	}
 
 	@Override
-	public String changeNodeMetadataWad(UUID nodeId, MetadataWadDocument metadata, Long userId,
-										Long groupId) throws BusinessException, JsonProcessingException {
+	public String changeNodeMetadataWad(UUID nodeId, MetadataWadDocument metadata, Long userId)
+			throws BusinessException, JsonProcessingException {
 
-		if (!hasRight(userId, groupId, nodeId, GroupRights.WRITE))
+		if (!hasRight(userId, nodeId, GroupRights.WRITE))
 			throw new GenericBusinessException("403 FORBIDDEN : No WRITE credential");
 
 		Node node = nodeRepository.findById(nodeId).get();
@@ -768,10 +763,8 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	}
 
 	@Override
-	public void removeNode(UUID nodeId, Long userId, long groupId) throws BusinessException {
-		final GroupRights rights = getRights(userId, groupId, nodeId);
-
-		if (!rights.isDelete())
+	public void removeNode(UUID nodeId, Long userId) throws BusinessException {
+		if (!hasRight(userId, nodeId, GroupRights.DELETE))
 			if (!credentialRepository.isAdmin(userId)
 					&& !credentialRepository.isDesigner(userId, nodeId))
 				throw new GenericBusinessException("403 FORBIDDEN, No admin right");
@@ -932,9 +925,9 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	}
 
 	@Override
-	public String changeNodeMetadataEpm(UUID nodeId, MetadataEpmDocument metadata, Long userId, long groupId)
+	public String changeNodeMetadataEpm(UUID nodeId, MetadataEpmDocument metadata, Long userId)
 			throws BusinessException, JsonProcessingException {
-		if (!hasRight(userId, groupId, nodeId, GroupRights.WRITE))
+		if (!hasRight(userId, nodeId, GroupRights.WRITE))
 			throw new GenericBusinessException("FORBIDDEN 403 : No WRITE credential ");
 
 		Node node = nodeRepository.findById(nodeId).get();
@@ -947,10 +940,10 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	}
 
 	@Override
-	public String changeNodeMetadata(UUID nodeId, MetadataDocument metadata, Long userId, long groupId)
+	public String changeNodeMetadata(UUID nodeId, MetadataDocument metadata, Long userId)
 			throws BusinessException, JsonProcessingException {
 
-		if (!hasRight(userId, groupId, nodeId, GroupRights.WRITE))
+		if (!hasRight(userId, nodeId, GroupRights.WRITE))
 			throw new GenericBusinessException("403 FORBIDDEN, no WRITE credential");
 
 		UUID portfolioUuid = portfolioRepository.getPortfolioUuidFromNode(nodeId);
@@ -973,9 +966,9 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	}
 
 	@Override
-	public String changeNodeContext(UUID nodeId, ResourceDocument resource, Long userId, Long groupId)
+	public String changeNodeContext(UUID nodeId, ResourceDocument resource, Long userId)
 			throws BusinessException {
-		if (!hasRight(userId, groupId, nodeId, GroupRights.WRITE))
+		if (!hasRight(userId, nodeId, GroupRights.WRITE))
 			throw new GenericBusinessException("403 FORBIDDEN : No WRITE credential");
 
 		resourceManager.changeResourceByXsiType(nodeId, "context", resource, userId);
@@ -984,9 +977,9 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	}
 
 	@Override
-	public String changeNodeResource(UUID nodeId, ResourceDocument resource, Long userId, Long groupId)
+	public String changeNodeResource(UUID nodeId, ResourceDocument resource, Long userId)
 			throws BusinessException {
-		if (!hasRight(userId, groupId, nodeId, GroupRights.WRITE))
+		if (!hasRight(userId, nodeId, GroupRights.WRITE))
 			throw new GenericBusinessException("403 FORBIDDEN : No WRITE credential");
 
 		resourceManager.changeResourceByXsiType(nodeId, "nodeRes", resource, userId);
@@ -995,8 +988,8 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	}
 
 	@Override
-	public NodeList addNode(UUID parentNodeId, NodeDocument node, Long userId, Long groupId,
-			boolean forcedUuid) throws JsonProcessingException, BusinessException {
+	public NodeList addNode(UUID parentNodeId, NodeDocument node, Long userId, boolean forcedUuid)
+			throws JsonProcessingException, BusinessException {
 
 		Integer nodeOrder = nodeRepository.getNodeNextOrderChildren(parentNodeId);
 		Portfolio portfolio = portfolioRepository.getPortfolioFromNode(parentNodeId);
@@ -1019,9 +1012,8 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	}
 
 	@Override
-	public NodeDocument getNodeWithXSL(UUID nodeId, String xslFile, String parameters, Long userId,
-			Long groupId) throws BusinessException, JsonProcessingException {
-		String result = null;
+	public NodeDocument getNodeWithXSL(UUID nodeId, String xslFile, String parameters, Long userId)
+			throws BusinessException, JsonProcessingException {
 		/// Préparation des paramètres pour les besoins futurs, format:
 		/// "par1:par1val;par2:par2val;..."
 		String[] table = parameters.split(";");
@@ -1035,12 +1027,12 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 			paramVal[i] = line.substring(var + 1);
 		}
 
-		return getNode(nodeId, true, userId, groupId, null, null);
+		return getNode(nodeId, true, userId, null, null);
 	}
 
 	@Override
-	public NodeList addNodeFromModelBySemanticTag(UUID nodeId, String semanticTag, Long userId,
-			Long groupId) throws BusinessException, JsonProcessingException {
+	public NodeList addNodeFromModelBySemanticTag(UUID nodeId, String semanticTag, Long userId)
+			throws BusinessException, JsonProcessingException {
 		Portfolio portfolio = portfolioRepository.getPortfolioFromNode(nodeId);
 
 		UUID portfolioModelId = null;
@@ -1049,12 +1041,12 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 			portfolioModelId = portfolio.getModelId();
 		}
 
-		NodeDocument node = getNodeBySemanticTag(portfolioModelId, semanticTag, userId, groupId);
+		NodeDocument node = getNodeBySemanticTag(portfolioModelId, semanticTag, userId);
 
 		// C'est le noeud obtenu dans le modèle indiqué par la table de correspondance.
 		UUID otherParentNodeUuid = nodeRepository.getNodeUuidByPortfolioModelAndSemanticTag(portfolioModelId, semanticTag);
 
-		return addNode(otherParentNodeUuid, node, userId, groupId, true);
+		return addNode(otherParentNodeUuid, node, userId, true);
 	}
 
 	@Override
@@ -1072,7 +1064,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	}
 
 	@Override
-	public NodeList getNodes(String rootNodeCode, String childSemtag, Long userId, Long groupId,
+	public NodeList getNodes(String rootNodeCode, String childSemtag, Long userId,
 			String parentSemtag, String parentNodeCode, Integer cutoff) throws BusinessException {
 
 		UUID pid = portfolioRepository.getPortfolioUuidFromNodeCode(rootNodeCode);
@@ -1081,7 +1073,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 		if (pid == null)
 			return emptyList;
 
-		GroupRights rights = portfolioManager.getRightsOnPortfolio(userId, groupId, pid);
+		GroupRights rights = portfolioManager.getRightsOnPortfolio(userId, pid);
 
 		if (!rights.isRead()
 				&& !credentialRepository.isAdmin(userId)
@@ -1293,18 +1285,10 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
     /**
      * Même chose que postImportNode, mais on ne prend pas en compte le parsage des
      * droits
-     *
-     * @param destId
-     * @param tag
-     * @param code
-     * @param sourceId
-     * @param userId
-     * @param groupId
-     * @return
      */
-    public UUID copyNode(UUID destId, String tag, String code, UUID sourceId, Long userId, Long groupId)
+    public UUID copyNode(UUID destId, String tag, String code, UUID sourceId, Long userId)
             throws BusinessException, JsonProcessingException {
-        return importNode(destId, tag, code, sourceId, userId, groupId, false);
+        return importNode(destId, tag, code, sourceId, userId, false);
     }
 
 	private UUID checkCache(String code) {
@@ -1353,19 +1337,19 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	}
 
 	@Override
-	public UUID importNode(UUID destId, String tag, String code, UUID sourceId, Long userId, long groupId)
+	public UUID importNode(UUID destId, String tag, String code, UUID sourceId, Long userId)
             throws BusinessException, JsonProcessingException {
-	    return importNode(destId, tag, code, sourceId, userId, groupId, true);
+	    return importNode(destId, tag, code, sourceId, userId, true);
     }
 
-    private UUID importNode(UUID destId, String tag, String code, UUID sourceId, Long userId, Long groupId, boolean parseRights)
+    private UUID importNode(UUID destId, String tag, String code, UUID sourceId, Long userId, boolean parseRights)
             throws BusinessException, JsonProcessingException {
 		if ((StringUtils.isEmpty(tag) || StringUtils.isEmpty(code)) && sourceId == null) {
             throw new IllegalArgumentException(
                     "importNode() a reçu des paramètres non valides (complétez le paramètre 'srcuuid' ou les paramètres 'tag' et 'code').");
 		}
 
-        if (sourceId != null && !hasRight(userId, groupId, sourceId, GroupRights.READ)) {
+        if (sourceId != null && !hasRight(userId, sourceId, GroupRights.READ)) {
             throw new GenericBusinessException("403 FORBIDDEN : No READ credential");
         } else if (checkCache(code) == null) {
             throw new GenericBusinessException("Aucun noeud trouvé pour le code : " + code);

@@ -150,7 +150,6 @@ public class PortfolioManagerTest {
     @Test
     public void getRightsOnPortfolio_WithMatchingOwnerId() {
         Long userId = 42L;
-        Long groupId = 74L;
         UUID portfolioId = UUID.randomUUID();
 
         Portfolio portfolio = new Portfolio();
@@ -160,7 +159,7 @@ public class PortfolioManagerTest {
                 .when(portfolioRepository)
                 .findById(portfolioId);
 
-        GroupRights groupRights = manager.getRightsOnPortfolio(userId, groupId, portfolioId);
+        GroupRights groupRights = manager.getRightsOnPortfolio(userId, portfolioId);
 
         assertTrue(groupRights.isRead());
         assertTrue(groupRights.isWrite());
@@ -196,7 +195,7 @@ public class PortfolioManagerTest {
                 .when(nodeManager)
                 .getRights(userId, groupId, nodeId);
 
-        GroupRights found = manager.getRightsOnPortfolio(userId, groupId, portfolioId);
+        GroupRights found = manager.getRightsOnPortfolio(userId, portfolioId);
 
         assertEquals(groupRights.getId(), found.getId());
     }
@@ -204,14 +203,13 @@ public class PortfolioManagerTest {
     @Test
     public void getRightsOnPortfolio_WithMissingRecord() {
         Long userId = 42L;
-        Long groupId = 74L;
         UUID portfolioId = UUID.randomUUID();
 
         doReturn(Optional.empty())
                 .when(portfolioRepository)
                 .findById(portfolioId);
 
-        assertEquals(new GroupRights(), manager.getRightsOnPortfolio(userId, groupId, portfolioId));
+        assertEquals(new GroupRights(), manager.getRightsOnPortfolio(userId, portfolioId));
     }
 
     @Test
@@ -247,13 +245,11 @@ public class PortfolioManagerTest {
     @Test
     public void removePortfolio_WithoutDeleteRight() {
         Long userId = 42L;
-        Long groupId = 74L;
-
         UUID portfolioId = UUID.randomUUID();
 
         doReturn(new GroupRights())
                 .when(manager)
-                .getRightsOnPortfolio(userId, groupId, portfolioId);
+                .getRightsOnPortfolio(userId, portfolioId);
 
         verify(portfolioRepository, times(0)).deleteById(portfolioId);
 
@@ -266,7 +262,6 @@ public class PortfolioManagerTest {
     @Test
     public void removePortfolio_WithDeleteRight() {
         Long userId = 42L;
-        Long groupId = 74L;
         UUID portfolioId = UUID.randomUUID();
 
         GroupRights groupRights = new GroupRights();
@@ -274,9 +269,9 @@ public class PortfolioManagerTest {
 
         doReturn(groupRights)
                 .when(manager)
-                .getRightsOnPortfolio(userId, groupId, portfolioId);
+                .getRightsOnPortfolio(userId, portfolioId);
 
-        manager.removePortfolio(portfolioId, userId, groupId);
+        manager.removePortfolio(portfolioId, userId);
 
         verify(resourceRepository).getResourcesByPortfolioUUID(portfolioId);
         verify(resourceRepository).getContextResourcesByPortfolioUUID(portfolioId);

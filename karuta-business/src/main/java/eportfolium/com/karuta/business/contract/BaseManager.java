@@ -5,7 +5,7 @@ import eportfolium.com.karuta.model.bean.GroupRights;
 import java.util.UUID;
 
 public interface BaseManager {
-    GroupRights getRights(Long userId, Long groupId, UUID nodeId);
+    GroupRights getRights(Long userId, UUID nodeId);
 
-    boolean hasRight(Long userId, Long groupId, UUID nodeId, String right);
+    boolean hasRight(Long userId, UUID nodeId, String right);
 }

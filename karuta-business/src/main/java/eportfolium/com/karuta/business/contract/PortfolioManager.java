@@ -32,7 +32,7 @@ public interface PortfolioManager extends BaseManager {
 
 	Long addPortfolioGroup(String groupname, String type, Long parentId);
 
-	void removePortfolio(UUID portfolioId, Long userId, Long groupId);
+	void removePortfolio(UUID portfolioId, Long userId);
 
 	boolean removePortfolioFromPortfolioGroups(UUID portfolioId, Long portfolioGroupId);
 
@@ -40,14 +40,12 @@ public interface PortfolioManager extends BaseManager {
 
 	PortfolioDocument getPortfolio(UUID portfolioId,
 								   Long userId,
-								   Long groupId,
 								   Integer cutoff) throws BusinessException, JsonProcessingException;
 
 	String getZippedPortfolio(PortfolioDocument portfolio) throws IOException;
 
 	PortfolioDocument getPortfolioByCode(String portfolioCode,
 										 Long userId,
-										 Long groupId,
 										 boolean resources) throws BusinessException, JsonProcessingException;
 
 	PortfolioGroupDocument getPortfoliosByPortfolioGroup(Long portfolioGroupId);
@@ -62,7 +60,7 @@ public interface PortfolioManager extends BaseManager {
 
 	PortfolioList getPortfolioShared(Long userId);
 
-	GroupRights getRightsOnPortfolio(Long userId, Long groupId, UUID portfolioId);
+	GroupRights getRightsOnPortfolio(Long userId, UUID portfolioId);
 
 	UUID postPortfolioParserights(UUID portfolioId, Long userId) throws JsonProcessingException, BusinessException;
 
@@ -81,13 +79,12 @@ public interface PortfolioManager extends BaseManager {
 			throws BusinessException, JsonProcessingException;
 
 	String instanciatePortfolio(String portfolioId, String srccode, String tgtcode, Long id,
-			int groupId, boolean copyshared, String groupname, boolean setOwner);
+			boolean copyshared, String groupname, boolean setOwner);
 
 	String importPortfolio(String path, InputStream fileInputStream, Long id, boolean instantiate, String projectName)
 			throws BusinessException, IOException;
 
-	PortfolioList addPortfolio(PortfolioDocument portfolio, long userId, long groupId,
-			UUID portfolioModelId, boolean parseRights, String projectName)
+	PortfolioList addPortfolio(PortfolioDocument portfolio, long userId, UUID portfolioModelId, boolean parseRights, String projectName)
 			throws BusinessException, JsonProcessingException;
 
 	GroupRightInfoList getGroupRightsInfos(UUID portfolioId);
