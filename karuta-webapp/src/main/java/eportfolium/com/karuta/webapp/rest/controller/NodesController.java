@@ -59,8 +59,7 @@ public class NodesController extends AbstractController {
 
         UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
-        return new HttpEntity<>(nodeManager.getNode(id, false,
-                userInfo.getId(), null, level));
+        return new HttpEntity<>(nodeManager.getNode(id, false, userInfo.getId(), level));
     }
 
     /**
@@ -78,8 +77,7 @@ public class NodesController extends AbstractController {
 
         UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
-        return new HttpEntity<>(nodeManager.getNode(id, true,
-                userInfo.getId(), null, level));
+        return new HttpEntity<>(nodeManager.getNode(id, true, userInfo.getId(), level));
     }
 
     /**

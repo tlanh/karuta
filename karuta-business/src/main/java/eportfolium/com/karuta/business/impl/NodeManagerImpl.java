@@ -86,8 +86,8 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	private InMemoryCache<UUID, List<Node>> cachedNodes = new InMemoryCache<>(600, 1500, 6);
 
 	@Override
-	public NodeDocument getNode(UUID nodeId, boolean withChildren, Long userId,
-			String label, Integer cutoff) throws BusinessException, JsonProcessingException {
+	public NodeDocument getNode(UUID nodeId, boolean withChildren, Long userId, Integer cutoff)
+			throws BusinessException, JsonProcessingException {
 		final GroupRights rights = getRights(userId, nodeId);
 
 		if (!rights.isRead()) {
@@ -1027,7 +1027,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 			paramVal[i] = line.substring(var + 1);
 		}
 
-		return getNode(nodeId, true, userId, null, null);
+		return getNode(nodeId, true, userId, null);
 	}
 
 	@Override
