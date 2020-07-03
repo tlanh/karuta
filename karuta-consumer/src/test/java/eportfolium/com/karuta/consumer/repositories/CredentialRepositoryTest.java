@@ -190,21 +190,6 @@ public class CredentialRepositoryTest extends TestHelpers {
     }
 
     @Test
-    public void getIdByLoginAndEmail() {
-        Credential credential = savableCredential();
-
-        credential.setLogin("johnyy");
-        credential.setEmail("foo@bar.com");
-
-        repository.save(credential);
-
-        Long foundId = repository.getIdByLoginAndEmail(credential.getLogin(),
-                credential.getEmail());
-
-        assertEquals(credential.getId(), foundId);
-    }
-
-    @Test
     public void getUsers() {
         Credential matching = savableCredential();
         Credential other = savableCredential();

@@ -95,8 +95,8 @@ public class UserManagerImpl implements UserManager {
 	}
 
 	@Override
-	public Long getUserId(String userLogin, String email) {
-		return credentialRepository.getIdByLoginAndEmail(userLogin, email);
+	public Credential getUser(String login, String email) {
+		return credentialRepository.findByLoginAndEmail(login, email);
 	}
 
 	@Override

@@ -171,16 +171,19 @@ public class UserManagerTest {
     }
 
     @Test
-    public void getUserId_WithLoginAndEmail() {
-        Long id = 42L;
-        String login = "michel";
-        String email = "michel@mail.com";
+    public void getUser() {
+        Credential credential = new Credential();
 
-        doReturn(id)
+        String login = "jdoe";
+        String email = "foo@bar.com";
+
+        doReturn(credential)
                 .when(credentialRepository)
-                .getIdByLoginAndEmail(login, email);
+                .findByLoginAndEmail(login, email);
 
-        assertEquals(id, manager.getUserId(login, email));
+        Credential found = manager.getUser(login, email);
+
+        assertEquals(credential, found);
     }
 
     @Test

@@ -377,16 +377,21 @@ public class SecurityManagerImpl implements SecurityManager {
 		}
 
 		// Apply the login as per se
+		login(credential);
+
+		return new CredentialDocument(credential, true);
+	}
+
+	@Override
+	public void login(Credential credential) {
 		UserInfo userInfo = new UserInfo(credential);
 
 		SecurityContext context = SecurityContextHolder.createEmptyContext();
 		Authentication authentication = new UsernamePasswordAuthenticationToken(
-			userInfo, credential.getPassword(), userInfo.getAuthorities());
+				userInfo, credential.getPassword(), userInfo.getAuthorities());
 		context.setAuthentication(authentication);
 
 		SecurityContextHolder.setContext(context);
-
-		return new CredentialDocument(credential, true);
 	}
 
 	@Override

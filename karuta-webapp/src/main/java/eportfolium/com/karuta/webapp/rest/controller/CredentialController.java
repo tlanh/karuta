@@ -19,12 +19,12 @@ import java.io.IOException;
 import java.util.*;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
 import javax.xml.parsers.ParserConfigurationException;
 
 import eportfolium.com.karuta.business.UserInfo;
 import eportfolium.com.karuta.document.CredentialDocument;
 import eportfolium.com.karuta.document.LoginDocument;
+import eportfolium.com.karuta.model.bean.Credential;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -194,71 +194,49 @@ public class CredentialController extends AbstractController {
                                                        HttpServletRequest httpServletRequest)
             throws ParserConfigurationException, SAXException, IOException {
 
-        HttpSession session = httpServletRequest.getSession(true); // FIXME
-        String userId = null;
-        String completeURL;
-        StringBuffer requestURL;
         String casUrlValidation = configurationManager.get("casUrlValidation");
 
-        ServiceTicketValidator sv = new ServiceTicketValidator();
-
         if (casUrlValidation == null) {
-            ResponseEntity<String> response = null;
-            try {
-                // formulate the response
-                response = ResponseEntity
+            return ResponseEntity
                         .status(HttpStatus.PRECONDITION_FAILED)
                         .body("CAS URL not defined");
-            } catch (Exception e) {
-                response = ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-            }
-
-            return response;
         }
 
+        ServiceTicketValidator sv = new ServiceTicketValidator();
         sv.setCasValidateUrl(casUrlValidation);
 
         /// X-Forwarded-Proto is for certain setup, check config file
         /// for some more details
+        String completeURL;
         String proto = httpServletRequest.getHeader("X-Forwarded-Proto");
-        requestURL = httpServletRequest.getRequestURL();
+        StringBuffer requestURL = httpServletRequest.getRequestURL();
+
+        if (redir != null) {
+            requestURL.append("?redir=").append(redir);
+        }
+
         if (proto == null) {
-            System.out.println("cas usuel");
-            if (redir != null) {
-                requestURL.append("?redir=").append(redir);
-            }
             completeURL = requestURL.toString();
         } else {
-            /// Keep only redir parameter
-            if (redir != null) {
-                requestURL.append("?redir=").append(redir);
-            }
             completeURL = requestURL.replace(0, requestURL.indexOf(":"), proto).toString();
         }
-        /// completeURL should be the same provided in the "service" parameter
-        // System.out.println(String.format("Service: %s\n", completeURL));
 
         sv.setService(completeURL);
         sv.setServiceTicket(ticket);
-        // sv.setProxyCallbackUrl(urlOfProxyCallbackServlet);
         sv.validate();
 
         String xmlResponse = sv.getResponse();
 
         if (xmlResponse.contains("cas:authenticationFailure")) {
-            System.out.println(String.format("CAS response: %s\n", xmlResponse));
             return ResponseEntity
                     .status(HttpStatus.FORBIDDEN)
                     .body("CAS error");
         }
 
-        // <cas:user>vassoilm</cas:user>
-        // session.setAttribute("user", sv.getUser());
-        // session.setAttribute("uid", dataProvider.getUserId(sv.getUser()));
-        userId = String.valueOf(userManager.getUserId(sv.getUser(), null));
-        if (userId != null) {
-            session.setAttribute("user", sv.getUser()); // FIXME
-            session.setAttribute("uid", Integer.parseInt(userId)); // FIXME
+        Credential credential = userManager.getUser(sv.getUser(), null);
+
+        if (credential != null) {
+            securityManager.login(credential);
         } else {
             return ResponseEntity
                     .status(HttpStatus.FORBIDDEN)
@@ -266,7 +244,6 @@ public class CredentialController extends AbstractController {
                             + completeURL + ") : " + sv.getErrorMessage());
         }
 
-            // formulate the response
         return ResponseEntity
                     .status(HttpStatus.CREATED)
                     .header("Location", redir)
