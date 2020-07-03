@@ -272,21 +272,5 @@ public class CredentialController extends AbstractController {
                     .header("Location", redir)
                     .body("<script>document.location.replace('" + redir + "')</script>");
     }
-
-    /**
-     * Ask to logout, clear session.
-     *
-     * POST /rest/api/credential/logout
-     */
-    @PostMapping("/logout")
-    public ResponseEntity<String> logout(HttpServletRequest request) {
-        HttpSession session = request.getSession(false);
-
-        if (session != null)
-            session.invalidate();
-
-        return ResponseEntity.ok("logout");
-    }
-
 }
 
