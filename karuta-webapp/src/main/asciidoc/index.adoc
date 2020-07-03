@@ -4,7 +4,7 @@
 :source-highlighter: highlightjs
 
 This document describes all the available endpoints that the Karuta backend
-provides. Apart from the sign-in and sign-up endpoints, every single endpoint
+provides. Apart from the sign-in endpoint, every single other endpoint
 requires the user to be authenticated to authorize a request.
 
 This means that you need to provide the cookie containing the attached session
