@@ -107,4 +107,6 @@ public interface NodeManager extends BaseManager {
 			throws BusinessException, JsonProcessingException;
 
 	List<Node> getChildren(UUID nodeId);
+
+	NodeRightsDocument getRights(UUID nodeId, Long userId);
 }

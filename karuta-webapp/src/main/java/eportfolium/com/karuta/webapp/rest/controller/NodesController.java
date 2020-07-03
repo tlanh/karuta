@@ -95,22 +95,12 @@ public class NodesController extends AbstractController {
      * Fetch rights per role for a node.
      *
      * GET /rest/api/nodes/node/{id}/rights
-     *
-     * @return <node uuid=""> <role name=""> <right RD="" WR="" DL="" /> </role>
-     *         </node>
      */
     @GetMapping(value = "/node/{id}/rights")
-    public HttpEntity<GroupRightsDocument> getNodeRights(@PathVariable UUID id,
-                                                         @AuthenticationPrincipal UserInfo userInfo) {
+    public HttpEntity<NodeRightsDocument> getNodeRights(@PathVariable UUID id,
+                                                        @AuthenticationPrincipal UserInfo userInfo) {
 
-        // TODO: Check with original code ; implementation is wrong for sure
-        GroupRights gr = nodeManager.getRights(userInfo.getId(), group, id);
-
-        if (gr == null) {
-            throw new GenericBusinessException("Vous n'avez pas les droits necessaires");
-        }
-
-        return gr.toString();
+        return new HttpEntity<>(nodeManager.getRights(id, userInfo.getId()));
     }
 
     /**

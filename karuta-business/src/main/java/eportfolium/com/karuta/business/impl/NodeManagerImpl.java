@@ -2084,4 +2084,11 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 
 		return nodeDocument;
 	}
+
+	@Override
+	public NodeRightsDocument getRights(UUID nodeId, Long userId) {
+		GroupRights groupRights = getRights(userId, nodeId);
+
+		return new NodeRightsDocument(nodeId, groupRights);
+	}
 }
