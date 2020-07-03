@@ -193,7 +193,7 @@ public class PortfolioManagerTest {
 
         doReturn(groupRights)
                 .when(nodeManager)
-                .getRights(userId, groupId, nodeId);
+                .getRights(userId, nodeId);
 
         GroupRights found = manager.getRightsOnPortfolio(userId, portfolioId);
 

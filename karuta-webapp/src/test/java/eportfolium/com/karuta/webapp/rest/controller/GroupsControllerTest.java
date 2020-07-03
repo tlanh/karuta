@@ -75,7 +75,7 @@ public class GroupsControllerTest extends ControllerTest {
 
         doReturn(groupRights)
                 .when(portfolioManager)
-                .getRightsOnPortfolio(userId, 0L, portfolioId);
+                .getRightsOnPortfolio(userId, portfolioId);
 
         doReturn(Collections.singletonList(groupInfo))
                .when(groupInfoRepository)
