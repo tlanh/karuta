@@ -29,7 +29,7 @@ import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -76,9 +76,7 @@ public class RoleRightsGroupsController extends AbstractController {
      */
     @GetMapping(value = "/all/users")
     public HttpEntity<GroupUserList> getPortfolioUsers(@RequestParam UUID portfolio,
-                                                       Authentication authentication) {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+                                                       @AuthenticationPrincipal UserInfo userInfo) {
 
         return new HttpEntity<>(userManager.getUserRolesByPortfolio(portfolio, userInfo.getId()));
     }

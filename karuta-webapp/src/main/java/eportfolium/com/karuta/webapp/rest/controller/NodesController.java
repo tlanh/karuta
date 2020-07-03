@@ -27,7 +27,7 @@ import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
-import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
@@ -54,10 +54,8 @@ public class NodesController extends AbstractController {
     @GetMapping(value = "/node/{id}")
     public HttpEntity<NodeDocument> getNode(@PathVariable UUID id,
                                             @RequestParam Integer level,
-                                            Authentication authentication)
+                                            @AuthenticationPrincipal UserInfo userInfo)
             throws BusinessException, JsonProcessingException {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
         return new HttpEntity<>(nodeManager.getNode(id, false, userInfo.getId(), level));
     }
@@ -72,10 +70,8 @@ public class NodesController extends AbstractController {
     @GetMapping(value = "/node/{id}/children")
     public HttpEntity<NodeDocument> getNodeWithChildren(@PathVariable UUID id,
                                                         @RequestParam Integer level,
-                                                        Authentication authentication)
+                                                        @AuthenticationPrincipal UserInfo userInfo)
             throws BusinessException, JsonProcessingException {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
         return new HttpEntity<>(nodeManager.getNode(id, true, userInfo.getId(), level));
     }
@@ -89,10 +85,8 @@ public class NodesController extends AbstractController {
      */
     @GetMapping(value = "/node/{id}/metadatawad")
     public HttpEntity<MetadataWadDocument> getNodeMetadataWad(@PathVariable UUID id,
-                                                              Authentication authentication)
+                                                              @AuthenticationPrincipal UserInfo userInfo)
             throws BusinessException, JsonProcessingException {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
         return new HttpEntity<>(nodeManager.getNodeMetadataWad(id, userInfo.getId()));
     }
@@ -107,9 +101,7 @@ public class NodesController extends AbstractController {
      */
     @GetMapping(value = "/node/{id}/rights")
     public HttpEntity<GroupRightsDocument> getNodeRights(@PathVariable UUID id,
-                                                         Authentication authentication) {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+                                                         @AuthenticationPrincipal UserInfo userInfo) {
 
         // TODO: Check with original code ; implementation is wrong for sure
         GroupRights gr = nodeManager.getRights(userInfo.getId(), group, id);
@@ -130,8 +122,7 @@ public class NodesController extends AbstractController {
      */
     @GetMapping(value = "/node/{id}/portfolioid", produces = "text/plain")
     public String getPortfolioId(@PathVariable UUID id,
-                                 Authentication authentication) throws BusinessException {
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+                                 @AuthenticationPrincipal UserInfo userInfo) throws BusinessException {
 
         return nodeManager.getPortfolioIdFromNode(userInfo.getId(), id).toString();
     }
@@ -148,10 +139,8 @@ public class NodesController extends AbstractController {
     @IsAdmin
     public String postNodeRights(@RequestBody RoleList roleList,
                                  @PathVariable UUID id,
-                                 Authentication authentication)
+                                 @AuthenticationPrincipal UserInfo userInfo)
             throws BusinessException, JsonProcessingException {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
         if (roleList.getAction() != null)
             nodeManager.executeMacroOnNode(userInfo.getId(), id, "reset");
@@ -182,10 +171,8 @@ public class NodesController extends AbstractController {
     @GetMapping(value = "/firstbysemantictag/{portfolioId}/{semantictag}")
     public HttpEntity<NodeDocument> getNodeBySemanticTag(@PathVariable UUID portfolioId,
                                                          @PathVariable String semantictag,
-                                                         Authentication authentication)
+                                                         @AuthenticationPrincipal UserInfo userInfo)
             throws BusinessException, JsonProcessingException {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
         return new HttpEntity<>(nodeManager
                 .getNodeBySemanticTag(portfolioId, semantictag, userInfo.getId()));
@@ -201,9 +188,7 @@ public class NodesController extends AbstractController {
     @GetMapping(value = "/bysemantictag/{portfolioId}/{semantictag}")
     public HttpEntity<NodeList> getNodesBySemanticTag(@PathVariable UUID portfolioId,
                                                       @PathVariable String semantictag,
-                                                      Authentication authentication) throws BusinessException {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+                                                      @AuthenticationPrincipal UserInfo userInfo) throws BusinessException {
 
         return new HttpEntity<>(nodeManager
                         .getNodesBySemanticTag(userInfo.getId(), portfolioId, semantictag));
@@ -218,9 +203,7 @@ public class NodesController extends AbstractController {
     @PutMapping(value = "/node/{id}")
     public String putNode(@RequestBody NodeDocument node,
                           @PathVariable UUID id,
-                          Authentication authentication) throws Exception {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+                          @AuthenticationPrincipal UserInfo userInfo) throws Exception {
 
         return nodeManager.changeNode(id, node, userInfo.getId())
                     .toString();
@@ -234,10 +217,8 @@ public class NodesController extends AbstractController {
     @PutMapping(value = "/node/{id}/metadata")
     public String putMetadata(@RequestBody MetadataDocument metadata,
                               @PathVariable UUID id,
-                              Authentication authentication)
+                              @AuthenticationPrincipal UserInfo userInfo)
             throws BusinessException, JsonProcessingException {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
         return nodeManager
                 .changeNodeMetadata(id, metadata, userInfo.getId());
@@ -251,10 +232,8 @@ public class NodesController extends AbstractController {
     @PutMapping(value = "/node/{id}/metadatawad")
     public String putMetadataWad(@RequestBody MetadataWadDocument metadata,
                                  @PathVariable UUID id,
-                                 Authentication authentication)
+                                 @AuthenticationPrincipal UserInfo userInfo)
             throws BusinessException, JsonProcessingException {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
         return nodeManager
                 .changeNodeMetadataWad(id, metadata, userInfo.getId());
@@ -268,10 +247,8 @@ public class NodesController extends AbstractController {
     @PutMapping(value = "/node/{id}/metadataepm")
     public String putMetadataEpm(@RequestBody MetadataEpmDocument metadata,
                                  @PathVariable UUID id,
-                                 Authentication authentication)
+                                 @AuthenticationPrincipal UserInfo userInfo)
             throws BusinessException, JsonProcessingException {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
         return nodeManager.changeNodeMetadataEpm(id, metadata, userInfo.getId());
     }
@@ -284,9 +261,7 @@ public class NodesController extends AbstractController {
     @PutMapping(value = "/node/{id}/nodecontext")
     public String putNodeContext(@RequestBody ResourceDocument resource,
                                  @PathVariable UUID id,
-                                 Authentication authentication) throws BusinessException {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+                                 @AuthenticationPrincipal UserInfo userInfo) throws BusinessException {
 
         return nodeManager.changeNodeContext(id, resource, userInfo.getId());
     }
@@ -299,9 +274,7 @@ public class NodesController extends AbstractController {
     @PutMapping(value = "/node/{id}/noderesource")
     public String putNodeNodeResource(@RequestBody ResourceDocument resource,
                                       @PathVariable UUID id,
-                                      Authentication authentication) throws Exception {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+                                      @AuthenticationPrincipal UserInfo userInfo) throws BusinessException {
 
         return nodeManager.changeNodeResource(id, resource, userInfo.getId());
     }
@@ -316,9 +289,7 @@ public class NodesController extends AbstractController {
                            @RequestParam String srcetag,
                            @RequestParam String srcecode,
                            @RequestParam UUID uuid,
-                           Authentication authentication) throws JsonProcessingException, BusinessException {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+                           @AuthenticationPrincipal UserInfo userInfo) throws JsonProcessingException, BusinessException {
 
         return nodeManager.importNode(parentId, srcetag, srcecode, uuid, userInfo.getId());
     }
@@ -333,9 +304,7 @@ public class NodesController extends AbstractController {
                          @RequestParam String srcetag,
                          @RequestParam String srcecode,
                          @RequestParam UUID uuid,
-                         Authentication authentication) throws JsonProcessingException, BusinessException {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+                         @AuthenticationPrincipal UserInfo userInfo) throws JsonProcessingException, BusinessException {
 
         return nodeManager.copyNode(parentId, srcetag, srcecode, uuid, userInfo.getId());
     }
@@ -357,8 +326,7 @@ public class NodesController extends AbstractController {
                                          @RequestParam String semtag_parent,
                                          @RequestParam String code_parent,
                                          @RequestParam Integer level,
-                                         Authentication authentication) throws BusinessException {
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+                                         @AuthenticationPrincipal UserInfo userInfo) throws BusinessException {
 
         return new HttpEntity<>(nodeManager.getNodes(portfoliocode, semtag, userInfo.getId(),
                     semtag_parent, code_parent, level));
@@ -374,8 +342,7 @@ public class NodesController extends AbstractController {
     @PostMapping(value = "/node/{parentId}")
     public HttpEntity<NodeList> postNode(@RequestBody NodeDocument node,
                                          @PathVariable UUID parentId,
-                                         Authentication authentication) throws BusinessException, JsonProcessingException {
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+                                         @AuthenticationPrincipal UserInfo userInfo) throws BusinessException, JsonProcessingException {
 
         return new HttpEntity<>(nodeManager
                 .addNode(parentId, node, userInfo.getId(), false));
@@ -408,9 +375,7 @@ public class NodesController extends AbstractController {
     @PostMapping(value = "/node/{id}/parentof/{parentId}")
     public ResponseEntity<String> changeNodeParent(@PathVariable UUID nodeId,
                                                    @PathVariable UUID parentId,
-                                                   Authentication authentication) throws BusinessException {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+                                                   @AuthenticationPrincipal UserInfo userInfo) throws BusinessException {
 
         boolean returnValue = nodeManager.changeParentNode(userInfo.getId(), nodeId, parentId);
 
@@ -429,10 +394,8 @@ public class NodesController extends AbstractController {
     @PostMapping(value = "/node/{id}/action/{action}")
     public String postActionNode(@PathVariable UUID id,
                                  @PathVariable String action,
-                                 Authentication authentication)
+                                 @AuthenticationPrincipal UserInfo userInfo)
             throws BusinessException, JsonProcessingException {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
         String returnValue = nodeManager.executeMacroOnNode(userInfo.getId(), id, action);
 
@@ -451,9 +414,7 @@ public class NodesController extends AbstractController {
      */
     @DeleteMapping(value = "/node/{id}")
     public String deleteNode(@PathVariable UUID id,
-                             Authentication authentication) throws BusinessException {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+                             @AuthenticationPrincipal UserInfo userInfo) throws BusinessException {
 
         nodeManager.removeNode(id, userInfo.getId());
 
@@ -469,11 +430,9 @@ public class NodesController extends AbstractController {
     public HttpEntity<NodeDocument> getNodeWithXSL(@PathVariable UUID id,
                                                    @RequestParam String lang,
                                                    @RequestParam("xsl-file") String xslFile,
-                                                   HttpServletRequest request,
-                                                   Authentication authentication)
+                                                   @AuthenticationPrincipal UserInfo userInfo,
+                                                   HttpServletRequest request)
             throws BusinessException, JsonProcessingException {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
         // When we need more parameters, arrange this with format
         // "par1:par1val;par2:par2val;..."
@@ -496,10 +455,8 @@ public class NodesController extends AbstractController {
     @PostMapping(value = "/{id}/frommodelbysemantictag/{tag}")
     public HttpEntity<NodeList> addNodeFromModelByTag(@PathVariable UUID id,
                                                       @PathVariable String tag,
-                                                      Authentication authentication)
+                                                      @AuthenticationPrincipal UserInfo userInfo)
             throws BusinessException, JsonProcessingException {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
         return new HttpEntity<>(nodeManager
                         .addNodeFromModelBySemanticTag(id, tag, userInfo.getId()));

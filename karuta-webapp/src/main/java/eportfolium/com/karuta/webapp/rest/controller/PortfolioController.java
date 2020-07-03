@@ -45,7 +45,7 @@ import eportfolium.com.karuta.model.exception.GenericBusinessException;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
-import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import eportfolium.com.karuta.model.exception.BusinessException;
@@ -89,9 +89,7 @@ public class PortfolioController extends AbstractController {
                                            @RequestParam String export,
                                            @RequestParam String lang,
                                            @RequestParam Integer level,
-                                           Authentication authentication) throws BusinessException, IOException {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+                                           @AuthenticationPrincipal UserInfo userInfo) throws BusinessException, IOException {
 
         PortfolioDocument portfolio = portfolioManager.getPortfolio(id, userInfo.getId(), level);
 
@@ -210,15 +208,12 @@ public class PortfolioController extends AbstractController {
      * Return the portfolio from its code.
      *
      * GET /rest/api/portfolios/code/{code}
-     *
-     * @see #putPortfolio(PortfolioDocument, UUID, boolean, Authentication)
      */
     @GetMapping(value = "/portfolio/code/{code}")
     public HttpEntity<PortfolioDocument> getByCode(@PathVariable String code,
                                                    @RequestParam boolean resources,
-                                                   Authentication authentication)
+                                                   @AuthenticationPrincipal UserInfo userInfo)
             throws BusinessException, JsonProcessingException {
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
         return new HttpEntity<>(portfolioManager
                 .getPortfolioByCode(code, userInfo.getId(), resources));
@@ -241,10 +236,8 @@ public class PortfolioController extends AbstractController {
                                             @RequestParam Integer level,
                                             @RequestParam("public") String public_var,
                                             @RequestParam boolean project,
-                                            Authentication authentication)
+                                            @AuthenticationPrincipal UserInfo userInfo)
             throws BusinessException, JsonProcessingException {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
         if (portfolio != null) {
             return new HttpEntity<>(portfolioManager.getPortfolio(portfolio, userInfo.getId(), level));
@@ -280,9 +273,7 @@ public class PortfolioController extends AbstractController {
     public String putPortfolio(@RequestBody PortfolioDocument portfolio,
                                @PathVariable UUID id,
                                @RequestParam boolean active,
-                               Authentication authentication) throws BusinessException, JsonProcessingException {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+                               @AuthenticationPrincipal UserInfo userInfo) throws BusinessException, JsonProcessingException {
 
         portfolioManager.rewritePortfolioContent(portfolio, id, userInfo.getId(), active);
 
@@ -297,10 +288,8 @@ public class PortfolioController extends AbstractController {
     @PostMapping("/portfolio/{id}/parserights")
     @IsAdminOrDesigner
     public ResponseEntity<String> postPortfolio(@PathVariable UUID id,
-                                                Authentication authentication)
+                                                @AuthenticationPrincipal UserInfo userInfo)
             throws BusinessException, JsonProcessingException {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
         portfolioManager.postPortfolioParserights(id, userInfo.getId());
 
@@ -315,9 +304,7 @@ public class PortfolioController extends AbstractController {
     @PutMapping(value = "/portfolio/{id}/setOwner/{ownerId}")
     public Boolean changeOwner(@PathVariable UUID id,
                                @PathVariable long ownerId,
-                               Authentication authentication) {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+                               @AuthenticationPrincipal UserInfo userInfo) {
 
         // Vérifie si l'utilisateur connecté est administrateur ou propriétaire du
         // portfolio actuel.
@@ -366,9 +353,7 @@ public class PortfolioController extends AbstractController {
                                               @RequestParam boolean copyshared,
                                               @RequestParam String groupname,
                                               @RequestParam boolean owner,
-                                              Authentication authentication) throws BusinessException {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+                                              @AuthenticationPrincipal UserInfo userInfo) throws BusinessException {
 
         /// Vérifiez si le code existe, trouvez-en un qui convient, sinon. Eh.
         String newcode = targetcode;
@@ -396,9 +381,6 @@ public class PortfolioController extends AbstractController {
      * From a base portfolio, just make a direct copy without rights parsing.
      *
      * POST /rest/api/portfolios/copy/{portfolio-id}
-     *
-     * @see #instanciate(String,
-     *      String, String, boolean, String, boolean, Authentication)
      */
     @PostMapping("/copy/{id}")
     @IsAdminOrDesigner
@@ -406,9 +388,7 @@ public class PortfolioController extends AbstractController {
                                                 @RequestParam String sourcecode,
                                                 @RequestParam String targetcode,
                                                 @RequestParam boolean owner,
-                                                Authentication authentication) throws BusinessException {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+                                                @AuthenticationPrincipal UserInfo userInfo) throws BusinessException {
 
         /// Check if code exist, find a suitable one otherwise. Eh.
         // FIXME : Check original Karuta version ; no new code found.
@@ -443,9 +423,8 @@ public class PortfolioController extends AbstractController {
      */
     @GetMapping(value = "/zip", consumes = "application/zip")
     public Object getZip(@RequestParam String portfolios,
-                                  @RequestParam String lang,
-                                  Authentication authentication) throws Exception {
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+                         @RequestParam String lang,
+                         @AuthenticationPrincipal UserInfo userInfo) throws Exception {
 
         List<UUID> uuids = Arrays.stream(portfolios.split(","))
                 .map(UUID::fromString)
@@ -541,11 +520,10 @@ public class PortfolioController extends AbstractController {
     public String importZip(@RequestParam InputStream fileupload,
                             @RequestParam boolean instance,
                             @RequestParam String project,
-                            Authentication authentication,
+                            @AuthenticationPrincipal UserInfo userInfo,
                             HttpServletRequest request)
             throws BusinessException, IOException {
 
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
         javax.servlet.ServletContext servletContext = request.getSession().getServletContext();
         String path = servletContext.getRealPath("/");
 
@@ -560,9 +538,7 @@ public class PortfolioController extends AbstractController {
      */
     @DeleteMapping(value = "/portfolio/{id}")
     public String delete(@PathVariable UUID id,
-                         Authentication authentication) {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+                         @AuthenticationPrincipal UserInfo userInfo) {
 
         portfolioManager.removePortfolio(id, userInfo.getId());
 
@@ -584,9 +560,8 @@ public class PortfolioController extends AbstractController {
                                                    @RequestParam UUID model,
                                                    @RequestParam boolean instance,
                                                    @RequestParam String project,
-                                                   Authentication authentication) throws BusinessException, JsonProcessingException {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+                                                   @AuthenticationPrincipal UserInfo userInfo)
+            throws BusinessException, JsonProcessingException {
 
         return new HttpEntity<>(portfolioManager.addPortfolio(portfolio, userInfo.getId(), model,
                 instance, project));

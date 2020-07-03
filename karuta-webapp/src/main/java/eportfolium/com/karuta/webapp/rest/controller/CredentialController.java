@@ -30,8 +30,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.security.core.Authentication;
 
 import edu.yale.its.tp.cas.client.ServiceTicketValidator;
 import eportfolium.com.karuta.business.contract.ConfigurationManager;
@@ -70,9 +70,7 @@ public class CredentialController extends AbstractController {
      *         <substitute>1/0</substitute> </user>
      */
     @GetMapping
-    public HttpEntity<CredentialDocument> getCredential(Authentication authentication) {
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
-
+    public HttpEntity<CredentialDocument> getCredential(@AuthenticationPrincipal UserInfo userInfo) {
         return new HttpEntity<>(userManager.getUserInfos(userInfo.getId()));
     }
 
