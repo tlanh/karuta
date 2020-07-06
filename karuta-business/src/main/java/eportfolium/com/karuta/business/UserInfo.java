@@ -11,10 +11,10 @@ import java.util.Collections;
 import java.util.List;
 
 public class UserInfo implements UserDetails {
-    private Long id;
-    private Long substituteId;
-    private String username;
-    private List<GrantedAuthority> authorities;
+    private final Long id;
+    private final Long substituteId;
+    private final String username;
+    private final List<GrantedAuthority> authorities;
 
     public UserInfo(Credential credential) {
         this.id = credential.getId();
