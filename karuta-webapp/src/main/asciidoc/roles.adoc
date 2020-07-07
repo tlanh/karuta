@@ -52,19 +52,3 @@ include::{snippets}/get-portfolio-role-missing/response-body.adoc[]
 [source,role="secondary"]
 .Full response
 include::{snippets}/get-portfolio-role-missing/http-response.adoc[]
-
-=== PUT /role/{id}
-
-This endpoint updates a role. It is only reachable as an admin user.
-
-[source,role="primary"]
-.Curl
-include::{snippets}/update-role/curl-request.adoc[]
-
-[source,role="secondary"]
-.Response
-include::{snippets}/update-role/response-body.adoc[]
-
-[source,role="secondary"]
-.Full response
-include::{snippets}/update-role/http-response.adoc[]
