@@ -229,51 +229,22 @@ public class UserManagerTest {
 
     @Test
     public void getRoleList() {
-        Function<String, GroupRightInfo> newGroup = (label) -> {
-            GroupRightInfo groupRightInfo = new GroupRightInfo();
+        GroupRightInfo groupRightInfo = new GroupRightInfo();
 
-            groupRightInfo.setLabel(label);
-            groupRightInfo.setPortfolio(new Portfolio());
-
-            return  groupRightInfo;
-        };
-
-        GroupRightInfo first = newGroup.apply("first");
-        GroupRightInfo second = newGroup.apply("second");
-        GroupRightInfo third = newGroup.apply("third");
+        groupRightInfo.setLabel("label");
+        groupRightInfo.setPortfolio(new Portfolio());
 
         UUID portfolioId = UUID.randomUUID();
-        Long userId = 42L;
 
-        doReturn(Collections.singletonList(first))
+        doReturn(Collections.singletonList(groupRightInfo))
                 .when(groupRightInfoRepository)
                 .getByPortfolioID(portfolioId);
 
-        doReturn(Collections.singletonList(second))
-                .when(groupRightInfoRepository)
-                .getByUser(userId);
-
-        doReturn(Collections.singletonList(third))
-                .when(groupRightInfoRepository)
-                .findAll();
-
         // Triggers getByPortfolioID
-        RoleRightsGroupList list = manager.getRoleList(portfolioId, null);
+        RoleRightsGroupList list = manager.getRoleList(portfolioId);
 
         assertEquals(1, list.getGroups().size());
-        assertEquals("first", list.getGroups().get(0).getLabel());
-
-        // Triggers getByUser
-        list = manager.getRoleList(null, userId);
-
-        assertEquals(1, list.getGroups().size());
-        assertEquals("second", list.getGroups().get(0).getLabel());
-
-        // Triggers findAll
-        list = manager.getRoleList(null, null);
-
-        assertEquals(1, list.getGroups().size());
-        assertEquals("third", list.getGroups().get(0).getLabel());
+        assertEquals("label", list.getGroups().get(0).getLabel());
     }
 
     @Test
@@ -295,11 +266,11 @@ public class UserManagerTest {
 
         doReturn(Collections.singletonList(groupUser))
                 .when(groupUserRepository)
-                .getByPortfolioAndUser(portfolioId, userId);
+                .getByPortfolio(portfolioId);
 
-        GroupUserList groupUserList = manager.getUserRolesByPortfolio(portfolioId, userId);
+        GroupUserList groupUserList = manager.getUserRolesByPortfolio(portfolioId);
 
-        assertEquals(portfolioId, groupUserList.getPortfolioId());
+        assertEquals(portfolioId, groupUserList.getId());
         assertEquals(1, groupUserList.getGroups().size());
 
         GroupUserDocument groupUserDocument = groupUserList.getGroups().get(0);

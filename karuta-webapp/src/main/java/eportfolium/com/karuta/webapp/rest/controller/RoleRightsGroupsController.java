@@ -57,15 +57,14 @@ public class RoleRightsGroupsController extends AbstractController {
      */
     @GetMapping
     public HttpEntity<Object> getGroups(@RequestParam UUID portfolio,
-                                        @RequestParam Long user,
-                                        @RequestParam String role) {
+                                        @RequestParam(required = false) String role) {
 
-        if (portfolio != null && role != null && user == null) {
+        if (role == null) {
+            return new HttpEntity<>(userManager.getRoleList(portfolio));
+        } else {
             GroupRightInfo gri = groupManager.getByPortfolioAndLabel(portfolio, role);
 
-            return new HttpEntity<>(gri.getId());
-        } else {
-            return new HttpEntity<>(userManager.getRoleList(portfolio, user));
+            return new HttpEntity<>(gri.getId().toString());
         }
     }
 
@@ -75,10 +74,8 @@ public class RoleRightsGroupsController extends AbstractController {
      * GET /rest/api/rolerightsgroups/all/users
      */
     @GetMapping(value = "/all/users")
-    public HttpEntity<GroupUserList> getPortfolioUsers(@RequestParam UUID portfolio,
-                                                       @AuthenticationPrincipal UserInfo userInfo) {
-
-        return new HttpEntity<>(userManager.getUserRolesByPortfolio(portfolio, userInfo.getId()));
+    public HttpEntity<GroupUserList> getPortfolioUsers(@RequestParam UUID portfolio) {
+        return new HttpEntity<>(userManager.getUserRolesByPortfolio(portfolio));
     }
 
     /**

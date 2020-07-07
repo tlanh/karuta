@@ -115,26 +115,18 @@ public class UserManagerImpl implements UserManager {
 	}
 
 	@Override
-	public RoleRightsGroupList getRoleList(UUID portfolioId, Long userId) {
-		Iterable<GroupRightInfo> griList;
+	public RoleRightsGroupList getRoleList(UUID portfolioId) {
+		List<GroupRightInfo> griList = groupRightInfoRepository.getByPortfolioID(portfolioId);
 
-		if (portfolioId != null) {
-			griList = groupRightInfoRepository.getByPortfolioID(portfolioId);
-		} else if (userId != null) {
-			griList = groupRightInfoRepository.getByUser(userId);
-		} else {
-			griList = groupRightInfoRepository.findAll();
-		}
-
-		return new RoleRightsGroupList(StreamSupport.stream(griList.spliterator(), false)
+		return new RoleRightsGroupList(griList.stream()
 				.map(RoleRightsGroupDocument::new)
 				.collect(Collectors.toList()));
 	}
 
 	@Override
-	public GroupUserList getUserRolesByPortfolio(UUID portfolioId, Long userId) {
+	public GroupUserList getUserRolesByPortfolio(UUID portfolioId) {
 		// group_right_info pid:grid -> group_info grid:gid -> group_user gid:userid
-		List<GroupUser> groupUsers = groupUserRepository.getByPortfolioAndUser(portfolioId, userId);
+		List<GroupUser> groupUsers = groupUserRepository.getByPortfolio(portfolioId);
 
 		return new GroupUserList(portfolioId, groupUsers.stream()
 				.map(GroupUserDocument::new)

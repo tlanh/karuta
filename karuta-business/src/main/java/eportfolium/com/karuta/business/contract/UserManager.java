@@ -40,9 +40,9 @@ public interface UserManager {
 
 	String getEmailByLogin(String userLogin);
 
-	RoleRightsGroupList getRoleList(UUID portfolioId, Long userId);
+	RoleRightsGroupList getRoleList(UUID portfolioId);
 
-	GroupUserList getUserRolesByPortfolio(UUID portfolioId, Long id);
+	GroupUserList getUserRolesByPortfolio(UUID portfolioId);
 
 	RoleRightsGroupDocument getUserRole(Long rrgid);
 
