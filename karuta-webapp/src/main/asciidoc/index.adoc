@@ -34,6 +34,8 @@ include::portfolio-groups.adoc[]
 
 include::right-groups.adoc[]
 
+include::roles.adoc[]
+
 include::users.adoc[]
 
 include::user-groups.adoc[]

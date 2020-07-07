@@ -1,0 +1,70 @@
+== Roles
+
+=== GET /role/{id}
+
+This endpoint returns the roles in a group found by its ID.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/get-role/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/get-role/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/get-role/http-response.adoc[]
+
+=== GET /portfolio/{id}
+
+This endpoint returns the roles present in a portfolio.
+
+[NOTE]
+For legacy reasons, this endpoint returns a 200 (Ok) response
+anyway; the presence of the role can be inffered with the response
+body.
+
+==== When the role is present
+
+[source,role="primary"]
+.Curl
+include::{snippets}/get-portfolio-role-present/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/get-portfolio-role-present/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/get-portfolio-role-present/http-response.adoc[]
+
+==== When the role is missing
+
+[source,role="primary"]
+.Curl
+include::{snippets}/get-portfolio-role-missing/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/get-portfolio-role-missing/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/get-portfolio-role-missing/http-response.adoc[]
+
+=== PUT /role/{id}
+
+This endpoint updates a role. It is only reachable as an admin user.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/update-role/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/update-role/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/update-role/http-response.adoc[]
