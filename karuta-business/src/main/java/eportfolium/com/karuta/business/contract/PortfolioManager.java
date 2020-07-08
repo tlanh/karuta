@@ -32,7 +32,7 @@ public interface PortfolioManager extends BaseManager {
 
 	Long addPortfolioGroup(String groupname, String type, Long parentId);
 
-	void removePortfolio(UUID portfolioId, Long userId, Long groupId) throws Exception;
+	void removePortfolio(UUID portfolioId, Long userId);
 
 	boolean removePortfolioFromPortfolioGroups(UUID portfolioId, Long portfolioGroupId);
 
@@ -40,14 +40,12 @@ public interface PortfolioManager extends BaseManager {
 
 	String getPortfolio(UUID portfolioId,
 								   Long userId,
-								   Long groupId,
 								   Integer cutoff) throws BusinessException, JsonProcessingException;
 
 	String getZippedPortfolio(PortfolioDocument portfolio) throws IOException;
 
-	String getPortfolioByCode(String portfolioCode,
+	PortfolioDocument getPortfolioByCode(String portfolioCode,
 										 Long userId,
-										 Long groupId,
 										 boolean resources) throws BusinessException, JsonProcessingException;
 
 	PortfolioGroupDocument getPortfoliosByPortfolioGroup(Long portfolioGroupId);
@@ -62,7 +60,7 @@ public interface PortfolioManager extends BaseManager {
 
 	PortfolioList getPortfolioShared(Long userId);
 
-	GroupRights getRightsOnPortfolio(Long userId, Long groupId, UUID portfolioId);
+	GroupRights getRightsOnPortfolio(Long userId, UUID portfolioId);
 
 	UUID postPortfolioParserights(UUID portfolioId, Long userId) throws JsonProcessingException, BusinessException;
 
@@ -75,20 +73,18 @@ public interface PortfolioManager extends BaseManager {
 
 	boolean changePortfolioOwner(UUID portfolioId, long newOwner);
 
-	Portfolio changePortfolioConfiguration(long userId, UUID portfolioId, Boolean portfolioActive);
+	void changePortfolioConfiguration(UUID portfolioId, Boolean portfolioActive);
 
 	boolean rewritePortfolioContent(PortfolioDocument portfolio, UUID portfolioId, Long userId, Boolean portfolioActive)
 			throws BusinessException, JsonProcessingException;
 
 	String instanciatePortfolio(String portfolioId, String srccode, String tgtcode, Long id,
-			int groupId, boolean copyshared, String groupname, boolean setOwner);
+			boolean copyshared, String groupname, boolean setOwner);
 
-	String importZippedPortfolio(String path, String userName, InputStream fileInputStream, Long id, Long groupId,
-								 String modelId, Long credentialSubstitutionId, boolean instantiate, String projectName)
+	String importPortfolio(String path, InputStream fileInputStream, Long id, boolean instantiate, String projectName)
 			throws BusinessException, IOException;
 
-	PortfolioList addPortfolio(PortfolioDocument portfolio, long userId, long groupId,
-			UUID portfolioModelId, boolean parseRights, String projectName)
+	PortfolioList addPortfolio(PortfolioDocument portfolio, long userId, UUID portfolioModelId, boolean parseRights, String projectName)
 			throws BusinessException, JsonProcessingException;
 
 	GroupRightInfoList getGroupRightsInfos(UUID portfolioId);
@@ -97,11 +93,12 @@ public interface PortfolioManager extends BaseManager {
 
 	GroupInfoList getRolesByPortfolio(UUID portfolioId, Long userId);
 
-	UUID copyPortfolio(UUID portfolioId, String srccode, String tgtcode, Long userId, boolean setOwner);
+	UUID copyPortfolio(UUID portfolioId, String srccode, String tgtcode, Long userId, boolean setOwner)
+			throws BusinessException;
 
 	void updateTime(UUID portfolioId);
 
-	boolean updateTimeByNode(UUID portfolioId);
+	void updateTimeByNode(UUID nodeId);
 
 	List<Portfolio> getPortfolios(Long userId,
 								  Long substid,

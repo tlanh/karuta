@@ -1,0 +1,186 @@
+== Role right groups
+
+=== GET /
+
+This endpoint either returns the ID of a role in a portfolio based on
+its name or a list of roles for a portfolio.
+
+==== List of roles
+
+[source,role="primary"]
+.Curl
+include::{snippets}/get-roles-in-portfolio/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/get-roles-in-portfolio/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/get-roles-in-portfolio/http-response.adoc[]
+
+==== Role ID
+
+[source,role="primary"]
+.Curl
+include::{snippets}/get-role-id-in-portfolio/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/get-role-id-in-portfolio/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/get-role-id-in-portfolio/http-response.adoc[]
+
+=== GET /all/users
+
+This endpoint returns all users with their role in a portfolio. Here
+are some fields returned by this URL:
+
+include::{snippets}/get-users-in-portfolio/response-fields.adoc[]
+
+[source,role="primary"]
+.Curl
+include::{snippets}/get-users-in-portfolio/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/get-users-in-portfolio/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/get-users-in-portfolio/http-response.adoc[]
+
+=== GET /rolerightsgroup/{id}
+
+This endpoint returns the rights for a given role based on its ID.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/get-role/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/get-role/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/get-role/http-response.adoc[]
+
+=== POST /rolerightsgroup/{id}/users/user/{userId}
+
+This endpoint adds a user in a role.
+
+[NOTE]
+It is only reachable for an admin user.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/add-user-in-role/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/add-user-in-role/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/add-user-in-role/http-response.adoc[]
+
+=== POST /rolerightsgroup/{id}/users
+
+This endpoint adds several users to a role. Unlike the previous endpoint,
+the users that must be added to the role must be provided through the
+request body as XML.
+
+[NOTE]
+Like the previous endpoint, this one is only reachable for admin users
+as well.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/add-users-in-role/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/add-users-in-role/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/add-users-in-role/http-response.adoc[]
+
+=== DELETE /rolerightsgroup/{id}
+
+This endpoint deletes a role from the database.
+
+[NOTE]
+It is only reachable for admin users.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/remove-role/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/remove-role/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/remove-role/http-response.adoc[]
+
+=== DELETE /rolerightsgroup/{id}/users/user/{userId}
+
+This endpoint removes a user from a role.
+
+[NOTE]
+It is only reachable for admin users.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/remove-user-from-role/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/remove-user-from-role/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/remove-user-from-role/http-response.adoc[]
+
+=== DELETE /all/users
+
+This endpoint removes all users from roles in a portfolio.
+
+[NOTE]
+It is only reachable for admin users.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/remove-all-users-from-role/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/remove-all-users-from-role/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/remove-all-users-from-role/http-response.adoc[]
+
+=== PUT /rolerightsgroup/{id}
+
+This endpoint updates the rights for a given role.
+
+[NOTE]
+It is only reachable for admin users.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/update-role/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/update-role/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/update-role/http-response.adoc[]

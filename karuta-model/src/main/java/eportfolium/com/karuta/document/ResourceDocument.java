@@ -28,8 +28,9 @@ public class ResourceDocument {
 //    private String code;
 
     // For file resources
-//    private String filename;
-//    private String fileid;
+    private String filename;
+    private String fileid;
+    private String type;
 
     public ResourceDocument() { }
 
@@ -149,11 +150,14 @@ public class ResourceDocument {
     }
     //*/
 
+    @JsonGetter("type")
+    public String getType() { return type; }
+
+    @JsonRawValue
     public String getContent() {
         return content;
     }
 
-    // FIXME: Remove that once we no longer rely on raw XML storage.
     @JsonAnySetter
     public void ignored(String name, Object value) {
         StringBuilder builder = new StringBuilder("<");

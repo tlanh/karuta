@@ -26,7 +26,6 @@ public class GroupInfoDocumentTest extends DocumentTest {
         assertContains("<label>designer</label>", output);
         assertContains("<roleId>72</roleId>", output);
         assertContains("<role>all</role>", output);
-        assertContains("<groupid>56</groupid>", output);
     }
 
 }

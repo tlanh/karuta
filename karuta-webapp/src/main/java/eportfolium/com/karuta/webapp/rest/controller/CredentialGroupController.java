@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Collections;
 
 @RestController
-@RequestMapping("/usergroups")
+@RequestMapping("/usersgroups")
 public class CredentialGroupController {
 
     @Autowired
@@ -55,7 +55,7 @@ public class CredentialGroupController {
      */
     @PostMapping()
     public String post(@RequestParam String label) {
-        return Long.toString(groupManager.addCredentialGroup(label));
+        return groupManager.addCredentialGroup(label).toString();
     }
 
     /**
@@ -69,8 +69,8 @@ public class CredentialGroupController {
      */
     @PutMapping
     public ResponseEntity<String> addUser(@RequestParam Long group,
-                                          @RequestParam Long user,
-                                          @RequestParam String label) {
+                                          @RequestParam(required = false) Long user,
+                                          @RequestParam(required = false) String label) {
         boolean isOK;
 
         if (label != null) {
@@ -101,9 +101,9 @@ public class CredentialGroupController {
      *         </group>
      */
     @GetMapping
-    public HttpEntity<Object> getUsers(@RequestParam Long group,
-                                       @RequestParam Long user,
-                                       @RequestParam String label) {
+    public HttpEntity<Object> getUsers(@RequestParam(required = false) Long group,
+                                       @RequestParam(required = false) Long user,
+                                       @RequestParam(required = false) String label) {
 
         if (label != null) {
             CredentialGroup crGroup = groupManager.getCredentialGroupByName(label);
@@ -112,8 +112,7 @@ public class CredentialGroupController {
                 return ResponseEntity.notFound().build();
             }
 
-            // TODO: Check whether we return just a number in original implementation
-            return new HttpEntity<>(crGroup.getId());
+            return new HttpEntity<>(crGroup.getId().toString());
 
         } else if (user != null) {
             return new HttpEntity<>(groupManager.getCredentialGroupByUser(user));
@@ -133,7 +132,7 @@ public class CredentialGroupController {
      */
     @DeleteMapping
     public String deleteUser(@RequestParam Long group,
-                             @RequestParam Long user) {
+                             @RequestParam(required = false) Long user) {
         if (user == null)
             groupManager.removeCredentialGroup(group);
         else

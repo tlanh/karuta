@@ -119,6 +119,21 @@ public class GroupUserRepositoryTest extends TestHelpers {
     }
 
     @Test
+    public void getByPortfolio() {
+        GroupUser groupUser = groupUserRecord();
+        Portfolio portfolio = portfolioRecord();
+
+        GroupRightInfo groupRightInfo = groupUser.getGroupInfo().getGroupRightInfo();
+        groupRightInfo.setPortfolio(portfolio);
+        groupRightInfoRepository.save(groupRightInfo);
+
+        List<GroupUser> groupUsers = repository.getByPortfolio(portfolio.getId());
+
+        assertEquals(1, groupUsers.size());
+        assertEquals(groupUser.getId(), groupUsers.get(0).getId());
+    }
+
+    @Test
     public void deleteByPortfolio() {
         GroupUser first = groupUserRecord();
         GroupUser second = groupUserRecord();

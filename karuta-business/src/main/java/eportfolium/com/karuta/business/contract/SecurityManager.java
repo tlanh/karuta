@@ -22,6 +22,7 @@ import eportfolium.com.karuta.document.CredentialDocument;
 import eportfolium.com.karuta.document.CredentialList;
 import eportfolium.com.karuta.document.LoginDocument;
 import eportfolium.com.karuta.document.RoleDocument;
+import eportfolium.com.karuta.model.bean.Credential;
 import eportfolium.com.karuta.model.exception.BusinessException;
 
 public interface SecurityManager {
@@ -41,8 +42,6 @@ public interface SecurityManager {
 	 */
 	Long changeUserInfo(Long byUserId, Long forUserId, CredentialDocument user) throws BusinessException;
 
-	boolean addUser(String username, String email);
-
 	String generatePassword();
 
 	void removeUsers(Long forUser);
@@ -52,6 +51,8 @@ public interface SecurityManager {
 	boolean isCreator(Long userId);
 
 	CredentialDocument login(LoginDocument credentials);
+
+	void login(Credential credential);
 
 	boolean userHasRole(long userId, long roleId);
 

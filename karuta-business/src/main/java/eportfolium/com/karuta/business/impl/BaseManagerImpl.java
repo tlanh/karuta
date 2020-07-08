@@ -60,25 +60,15 @@ public abstract class BaseManagerImpl implements BaseManager {
 	}
 
 	@Override
-	public GroupRights getRights(Long userId, Long groupId, UUID nodeId) {
+	public GroupRights getRights(Long userId, UUID nodeId) {
 		if (credentialRepository.isAdmin(userId)
 				|| credentialRepository.isDesigner(userId, nodeId)) {
-			return new GroupRights(new GroupRightsId(new GroupRightInfo(), null),
-					true, true, true, true, false);
+			return new GroupRights(new GroupRightsId(new GroupRightInfo(), null), true);
 		} else {
-			GroupRights rights;
-
-			if (groupId == null || groupId == 0L) {
-				rights = groupRightsRepository.getRightsByIdAndUser(nodeId, userId);
-			} else {
-				rights = groupRightsRepository.getRightsByUserAndGroup(nodeId, userId, groupId);
-			}
+			GroupRights rights = groupRightsRepository.getRightsByIdAndUser(nodeId, userId);
 
 			if (rights == null)
 				rights = groupRightsRepository.getSpecificRightsForUser(nodeId, userId);
-
-			if (rights == null)
-				rights = groupRightsRepository.getPublicRightsByGroupId(nodeId, groupId);
 
 			// If we couldn't find any associated group rights, we provide
 			// an instance without any permission.
@@ -97,8 +87,8 @@ public abstract class BaseManagerImpl implements BaseManager {
 	}
 
 	@Override
-	public boolean hasRight(Long userId, Long groupId, UUID nodeId, String right) {
-		GroupRights rights = getRights(userId, groupId, nodeId);
+	public boolean hasRight(Long userId, UUID nodeId, String right) {
+		GroupRights rights = getRights(userId, nodeId);
 
 		switch (right) {
 			case GroupRights.READ:

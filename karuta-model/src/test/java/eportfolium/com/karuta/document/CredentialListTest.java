@@ -6,6 +6,8 @@ import org.junit.Test;
 
 import java.util.Collections;
 
+import static org.junit.Assert.*;
+
 public class CredentialListTest extends DocumentTest {
     @Test
     public void basicSerialization() throws JsonProcessingException {
@@ -23,5 +25,16 @@ public class CredentialListTest extends DocumentTest {
 
         assertContains("<user id=\"42\">", output);
         assertContains("<username>johndoe</username>", output);
+    }
+
+    @Test
+    public void basicDeserialization() throws JsonProcessingException {
+        String xml = "<users><user><firstname>John</firstname></user></users>";
+
+        CredentialList list = mapper.readerFor(CredentialList.class)
+                .readValue(xml);
+
+        assertEquals(1, list.getUsers().size());
+        assertEquals("John", list.getUsers().get(0).getFirstname());
     }
 }

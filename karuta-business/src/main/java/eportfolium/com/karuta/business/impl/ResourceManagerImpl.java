@@ -15,12 +15,14 @@
 
 package eportfolium.com.karuta.business.impl;
 
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import eportfolium.com.karuta.business.contract.PortfolioManager;
+import eportfolium.com.karuta.business.contract.FileManager;
 import eportfolium.com.karuta.consumer.repositories.PortfolioRepository;
 import eportfolium.com.karuta.consumer.repositories.ResourceRepository;
 import eportfolium.com.karuta.document.*;
@@ -30,7 +32,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import eportfolium.com.karuta.business.contract.NodeManager;
 import eportfolium.com.karuta.business.contract.ResourceManager;
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.model.exception.GenericBusinessException;
@@ -40,10 +41,7 @@ import eportfolium.com.karuta.model.exception.GenericBusinessException;
 public class ResourceManagerImpl extends BaseManagerImpl implements ResourceManager {
 
 	@Autowired
-	private PortfolioManager portfolioManager;
-
-	@Autowired
-	private NodeManager nodeManager;
+	private FileManager fileManager;
 
 	@Autowired
 	private ResourceRepository resourceRepository;
@@ -51,11 +49,12 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 	@Autowired
 	private PortfolioRepository portfolioRepository;
 
+
 	@Override
-	public ResourceDocument getResource(UUID parentNodeId, Long userId, Long groupId)
+	public ResourceDocument getResource(UUID parentNodeId, Long userId)
 			throws BusinessException {
 
-		if (!hasRight(userId, groupId, parentNodeId, GroupRights.READ)) {
+		if (!hasRight(userId, parentNodeId, GroupRights.READ)) {
 			throw new GenericBusinessException("403 FORBIDDEN : No READ credential");
 		}
 
@@ -70,25 +69,17 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 	}
 
 	@Override
-	public ResourceList getResources(UUID portfolioId, Long userId, Long groupId) {
-		List<Resource> resources = resourceRepository
-				.getResourcesByPortfolioUUID(portfolioId);
+	public Integer changeResource(UUID parentNodeId, ResourceDocument resource, Long userId)
+			throws BusinessException, JsonProcessingException {
 
-		return new ResourceList(resources.stream()
-				.map(r -> new ResourceDocument(r.getNode().getId()))
-				.collect(Collectors.toList()));
-	}
-
-	@Override
-	public Integer changeResource(UUID parentNodeId, ResourceDocument resource, Long userId,
-			Long groupId) throws BusinessException, JsonProcessingException {
-
-		if (!hasRight(userId, groupId, parentNodeId, GroupRights.WRITE))
+		if (!hasRight(userId, parentNodeId, GroupRights.WRITE))
 			throw new GenericBusinessException("403 FORBIDDEN : No WRITE credential");
 
 		Resource res = resourceRepository.getResourceOfResourceByNodeUuid(parentNodeId);
 
-		portfolioManager.updateTimeByNode(parentNodeId);
+		// To update `modifDate`.
+		portfolioRepository.findById(parentNodeId)
+				.ifPresent(portfolio -> portfolioRepository.save(portfolio));
 
 		res.setContent(resource.getContent());
 		res.setModifUserId(userId);
@@ -99,11 +90,11 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 	}
 
 	@Override
-	public String addResource(UUID parentNodeId, ResourceDocument resource, Long userId, Long groupId)
+	public String addResource(UUID parentNodeId, ResourceDocument resource, Long userId)
 			throws BusinessException {
 		/*
 		if (!credentialRepository.isAdmin(userId)
-				&& !hasRight(userId, groupId, parentNodeId, GroupRights.WRITE))
+				&& !hasRight(userId, parentNodeId, GroupRights.WRITE))
 			throw new GenericBusinessException("403 FORBIDDEN : No right to write");
 		//*/
 		if( resource.getId() == null )
@@ -135,9 +126,9 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 	}
 
 	@Override
-	public void removeResource(UUID resourceId, Long userId, Long groupId) throws BusinessException {
+	public void removeResource(UUID resourceId, Long userId) throws BusinessException {
 		if (!credentialRepository.isAdmin(userId)
-				&& !hasRight(userId, groupId, resourceId, GroupRights.DELETE))
+				&& !hasRight(userId, resourceId, GroupRights.DELETE))
 			throw new GenericBusinessException("403 FORBIDDEN : No admin right");
 
 		resourceRepository.deleteById(resourceId);
@@ -154,11 +145,14 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 		if ("nodeRes".equals(xsiType)) {
 			String code = resource.getCode();
 
-			if (nodeRepository.isCodeExist(code, nodeId)) {
+			Node node = nodeRepository.findById(nodeId)
+					.orElseThrow(() -> new GenericBusinessException("Cannot update node code"));
+
+			if (nodeRepository.isCodeExist(code, nodeId))
 				throw new GenericBusinessException("CONFLICT : code already exists.");
-			} else if (nodeManager.updateNodeCode(nodeId, code) > 0) {
-				throw new GenericBusinessException("Cannot update node code");
-			}
+
+			node.setCode(code);
+			nodeRepository.save(node);
 
 			existing = resourceRepository.getResourceOfResourceByNodeUuid(nodeId);
 		} else if ("context".equals(xsiType)) {
@@ -186,6 +180,41 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 		);
 
 		resourceRepository.save(resource);
+	}
+
+	@Override
+	public boolean updateContent(UUID nodeId,
+								 Long userId,
+								 InputStream content,
+								 String lang,
+								 boolean thumbnail) throws BusinessException {
+		if (!hasRight(userId, nodeId, GroupRights.WRITE))
+			throw new GenericBusinessException("No rights.");
+
+		Resource resource = resourceRepository.findByNodeId(nodeId);
+		ResourceDocument document = new ResourceDocument(resource, resource.getNode());
+
+		return fileManager.updateResource(document, content, lang, thumbnail);
+	}
+
+	@Override
+	public ResourceDocument fetchResource(UUID nodeId,
+										  Long userId,
+										  OutputStream output,
+										  String lang,
+										  boolean thumbnail) throws BusinessException {
+		if (!hasRight(userId, nodeId, GroupRights.READ)) {
+			throw new GenericBusinessException("No rights.");
+		}
+
+		Resource resource = resourceRepository.findByNodeId(nodeId);
+		ResourceDocument document = new ResourceDocument(resource, resource.getNode());
+
+		if (fileManager.fetchResource(document, output, lang, thumbnail)) {
+			return document;
+		} else {
+			return null;
+		}
 	}
 
 	private Resource updateResourceAttrs(Resource resource, String content, Long userId) {

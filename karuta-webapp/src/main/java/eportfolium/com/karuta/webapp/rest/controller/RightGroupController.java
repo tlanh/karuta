@@ -38,7 +38,7 @@ public class RightGroupController extends AbstractController {
      *
      * POST /rest/api/RightGroup
      */
-    @PostMapping(produces = "application/xml")
+    @PostMapping
     public ResponseEntity<String> post(@RequestParam Long group,
                                        @RequestParam Long groupRightId) {
 

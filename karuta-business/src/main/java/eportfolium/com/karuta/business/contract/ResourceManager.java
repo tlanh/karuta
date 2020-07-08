@@ -15,6 +15,8 @@
 
 package eportfolium.com.karuta.business.contract;
 
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.UUID;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -24,20 +26,30 @@ import eportfolium.com.karuta.model.exception.BusinessException;
 
 public interface ResourceManager extends BaseManager {
 
-	ResourceDocument getResource(UUID parentNodeId, Long userId, Long groupId) throws BusinessException;
+	ResourceDocument getResource(UUID parentNodeId, Long userId) throws BusinessException;
 
-	ResourceList getResources(UUID portfolioId, Long userId, Long groupId);
-
-	Integer changeResource(UUID parentNodeId, ResourceDocument resource, Long userId, Long groupId)
+	Integer changeResource(UUID parentNodeId, ResourceDocument resource, Long userId)
 			throws BusinessException, JsonProcessingException;
 
-	String addResource(UUID parentNodeId, ResourceDocument resource, Long userId, Long groupId)
+	String addResource(UUID parentNodeId, ResourceDocument resource, Long userId)
 			throws BusinessException;
 
-	void removeResource(UUID resourceId, Long userId, Long groupId) throws BusinessException;
+	void removeResource(UUID resourceId, Long userId) throws BusinessException;
 
 	void changeResourceByXsiType(UUID nodeId, String xsiType, ResourceDocument resource, Long userId)
 			throws BusinessException;
 
 	void updateResource(UUID id, String xsiType, String content, Long userId);
+
+	boolean updateContent(UUID nodeId,
+						  Long userId,
+						  InputStream content,
+						  String lang,
+						  boolean thumbnail) throws BusinessException;
+
+	ResourceDocument fetchResource(UUID nodeId,
+								   Long userId,
+								   OutputStream output,
+								   String lang,
+								   boolean thumbnail) throws BusinessException;
 }

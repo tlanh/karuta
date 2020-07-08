@@ -93,18 +93,6 @@ public class GroupRightsRepositoryTest extends TestHelpers {
     }
 
     @Test
-    public void getRightsByUserAndGroup() {
-        Tuple tuple = groupRightsRecord();
-
-        GroupRights found = repository.getRightsByUserAndGroup(
-                tuple.groupRights.getId().getId(),
-                tuple.credential.getId(),
-                tuple.groupRights.getGroupRightInfo().getGroupInfo().getId());
-
-        assertEquals(tuple.groupRights.getId(), found.getId());
-    }
-
-    @Test
     public void getSpecificRightsForUser() {
         Portfolio portfolio = portfolioRecord();
         Node node = savableNode();
@@ -128,28 +116,6 @@ public class GroupRightsRepositoryTest extends TestHelpers {
 
         GroupRights found = repository
                 .getSpecificRightsForUser(node.getId(), credential.getId());
-
-        assertEquals(groupRights.getId(), found.getId());
-    }
-
-    @Test
-    public void getPublicRightsByGroupId() {
-        Tuple tuple = groupRightsRecord();
-
-        GroupRights groupRights = tuple.groupRights;
-        GroupRightInfo groupRightInfo = groupRights.getGroupRightInfo();
-        GroupInfo groupInfo = groupRightInfo.getGroupInfo();
-        UUID id = UUID.randomUUID();
-
-        groupRights.setGroupRightsId(id);
-        repository.save(groupRights);
-
-        Portfolio portfolio = portfolioRecord();
-        groupRightInfo.setPortfolio(portfolio);
-        groupRightInfo.setLabel("all");
-        groupRightInfoRepository.save(groupRightInfo);
-
-        GroupRights found = repository.getPublicRightsByGroupId(id, groupInfo.getId());
 
         assertEquals(groupRights.getId(), found.getId());
     }

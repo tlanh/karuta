@@ -10,6 +10,10 @@ import java.util.List;
 public class CredentialList {
     private List<CredentialDocument> users;
 
+    public CredentialList() {
+
+    }
+
     public CredentialList(List<CredentialDocument> users) {
         this.users = users;
     }

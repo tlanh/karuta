@@ -52,6 +52,13 @@ public interface GroupUserRepository extends CrudRepository<GroupUser, GroupUser
     List<GroupUser> getByPortfolioAndUser(@Param("portfolioId") UUID portfolioId,
                                           @Param("userId") Long userId);
 
+    @Query("SELECT gu FROM GroupUser gu " +
+            "INNER JOIN FETCH gu.id.credential cr " +
+            "INNER JOIN FETCH gu.id.groupInfo gi " +
+            "INNER JOIN FETCH gi.groupRightInfo gri " +
+            "WHERE gri.portfolio.id = :portfolioId")
+    List<GroupUser> getByPortfolio(@Param("portfolioId") UUID portfolioId);
+
     @Modifying
     @Query("DELETE FROM GroupUser gu " +
             "WHERE gu.id.groupInfo.id IN (" +

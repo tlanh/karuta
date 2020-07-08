@@ -23,7 +23,7 @@ import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
-import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -49,10 +49,8 @@ public class GroupsController extends AbstractController {
      * @return <groups> <group id="gid" owner="uid" templateId="rrgid">GROUP
      *         LABEL</group> ... </groups>
      */
-    @GetMapping(produces = "application/xml")
-    public HttpEntity<GroupInfoList> getUserGroups(Authentication authentication) {
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
-
+    @GetMapping
+    public HttpEntity<GroupInfoList> getUserGroups(@AuthenticationPrincipal UserInfo userInfo) {
         return new HttpEntity<>(groupManager.getUserGroups(userInfo.getId()));
     }
 
@@ -61,10 +59,9 @@ public class GroupsController extends AbstractController {
      *
      * GET /rest/api/groups/{id}
      */
-    @GetMapping(value = "/{id}", produces = "application/xml")
+    @GetMapping(value = "/{id}")
     public HttpEntity<GroupInfoList> getRoles(@PathVariable UUID id,
-                                              Authentication authentication) {
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+                                              @AuthenticationPrincipal UserInfo userInfo) {
 
         return new HttpEntity<>(portfolioManager.getRolesByPortfolio(id, userInfo.getId()));
     }

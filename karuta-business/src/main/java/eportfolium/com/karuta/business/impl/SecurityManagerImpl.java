@@ -18,6 +18,8 @@ package eportfolium.com.karuta.business.impl;
 import java.util.*;
 
 import eportfolium.com.karuta.business.UserInfo;
+import eportfolium.com.karuta.business.security.IsAdmin;
+import eportfolium.com.karuta.business.security.IsAdminOrDesigner;
 import eportfolium.com.karuta.consumer.repositories.*;
 import eportfolium.com.karuta.document.CredentialDocument;
 import eportfolium.com.karuta.document.CredentialList;
@@ -35,6 +37,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.parameters.P;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.crypto.password.Pbkdf2PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -125,14 +128,14 @@ public class SecurityManagerImpl implements SecurityManager {
 	}
 
 	@Override
-	@PreAuthorize("hasRole('admin') or principal.id == #forUser")
-	public void removeUsers(Long forUser) {
+	@PreAuthorize("hasRole('ADMIN') or principal.id == #forUser")
+	public void removeUsers(@P("forUser") Long forUser) {
 		groupUserRepository.deleteAll(groupUserRepository.getByUser(forUser));
 		credentialRepository.deleteById(forUser);
 	}
 
 	@Override
-	@PreAuthorize("hasRole('admin') or hasRole('designer')")
+	@IsAdminOrDesigner
 	public CredentialList addUsers(CredentialList users) {
 		List<CredentialDocument> processed = new ArrayList<>();
 
@@ -182,50 +185,6 @@ public class SecurityManagerImpl implements SecurityManager {
 	}
 
 	@Override
-	public boolean addUser(String username, String email) {
-		if (!credentialRepository.existsByLogin(username)) {
-
-			try {
-				Credential newUser = new Credential();
-				String passwd = generatePassword();
-				/// Credential checking use hashing, we'll never reach this.
-				setPassword(passwd, newUser);
-				newUser.setLogin(username);
-				newUser.setEmail(email);
-				newUser.setActive(1);
-				newUser.setDisplayFirstname("");
-				newUser.setOther("");
-				newUser.setDisplayLastname("");
-				newUser.setIsDesigner(1);
-
-				credentialRepository.save(newUser);
-
-				final Map<String, String> locals = new HashMap<>();
-
-				locals.put("firstname", username);
-				locals.put("lastname", "");
-				locals.put("email", email);
-				locals.put("passwd", passwd);
-
-				try {
-					// Envoie d'un e-mail à l'utilisateur
-					emailManager.send("account", "Welcome!", locals, email, username);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-
-				return true;
-			} catch (BusinessException e) {
-				e.printStackTrace();
-
-				return false;
-			}
-		}
-
-		return false;
-	}
-
-	@Override
 	public Long changeUser(Long byUserId, Long forUserId, CredentialDocument user) throws BusinessException {
 		Credential credential = credentialRepository.findActiveById(forUserId)
 									.orElseThrow(() -> new GenericBusinessException("Unexisting user"));
@@ -250,8 +209,14 @@ public class SecurityManagerImpl implements SecurityManager {
 		if (user.getEmail() != null)
 			credential.setEmail(user.getEmail());
 
-		if (user.getAdmin() != null)
-			credential.setIsAdmin(user.getAdmin());
+		if (user.getAdmin() != null) {
+			Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+			if (authentication != null &&
+					authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ADMIN"))) {
+				credential.setIsAdmin(user.getAdmin());
+			}
+		}
 
 		if (user.getDesigner() != null)
 			credential.setIsDesigner(user.getDesigner());
@@ -352,7 +317,7 @@ public class SecurityManagerImpl implements SecurityManager {
 	}
 
 	@Override
-	@PreAuthorize("hasRole('admin')")
+	@IsAdmin
 	public void addUserToGroup(Long forUser, Long groupId) {
 		GroupUserId gid = new GroupUserId();
 		gid.setCredential(new Credential(forUser));
@@ -375,7 +340,7 @@ public class SecurityManagerImpl implements SecurityManager {
 	}
 
 	@Override
-	@PreAuthorize("hasRole('admin')")
+	@IsAdmin
 	public String addUserRole(Long rrgid, Long forUser) {
 		// Vérifie si un group_info/grid existe
 		GroupInfo gi = groupInfoRepository.getGroupByGrid(rrgid);
@@ -413,16 +378,21 @@ public class SecurityManagerImpl implements SecurityManager {
 		}
 
 		// Apply the login as per se
+		login(credential);
+
+		return new CredentialDocument(credential, true);
+	}
+
+	@Override
+	public void login(Credential credential) {
 		UserInfo userInfo = new UserInfo(credential);
 
 		SecurityContext context = SecurityContextHolder.createEmptyContext();
 		Authentication authentication = new UsernamePasswordAuthenticationToken(
-			userInfo, credential.getPassword(), userInfo.getAuthorities());
+				userInfo, credential.getPassword(), userInfo.getAuthorities());
 		context.setAuthentication(authentication);
 
 		SecurityContextHolder.setContext(context);
-
-		return new CredentialDocument(credential, true);
 	}
 
 	@Override
@@ -431,25 +401,25 @@ public class SecurityManagerImpl implements SecurityManager {
 	}
 
 	@Override
-	@PreAuthorize("hasRole('admin')")
+	@IsAdmin
 	public void removeRole(Long groupRightInfoId) {
 		groupRightInfoRepository.deleteById(groupRightInfoId);
 	}
 
 	@Override
-	@PreAuthorize("hasRole('admin')")
+	@IsAdmin
 	public void removeUserRole(Long userId, Long groupRightInfoId) {
 		groupUserRepository.delete(groupUserRepository.getByUserAndRole(userId, groupRightInfoId));
 	}
 
 	@Override
-	@PreAuthorize("hasRole('admin')")
+	@IsAdmin
 	public void removeUsersFromRole(UUID portfolioId) {
 		groupUserRepository.deleteByPortfolio(portfolioId);
 	}
 
 	@Override
-	@PreAuthorize("hasRole('admin')")
+	@IsAdmin
 	public Long changeRole(Long rrgId, RoleDocument role) {
 		GroupRightInfo gri = groupRightInfoRepository.findById(rrgId).get();
 
@@ -467,7 +437,7 @@ public class SecurityManagerImpl implements SecurityManager {
 	}
 
 	@Override
-	@PreAuthorize("hasRole('admin')")
+	@IsAdmin
 	public String addUsersToRole(Long rrgid, CredentialList users) {
 		for (CredentialDocument user : users.getUsers()) {
 			addUserRole(rrgid, user.getId());

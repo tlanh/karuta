@@ -46,12 +46,12 @@ public class PortfolioGroupController extends AbstractController {
      */
 
     @PostMapping
-    public ResponseEntity<Long> create(@RequestParam String label,
-                                     @RequestParam String type,
-                                     @RequestParam Long parent) {
+    public ResponseEntity<String> create(@RequestParam String label,
+                                         @RequestParam String type,
+                                         @RequestParam Long parent) {
 
         return ResponseEntity.ok()
-                    .body(portfolioManager.addPortfolioGroup(label, type, parent));
+                    .body(portfolioManager.addPortfolioGroup(label, type, parent).toString());
 
     }
 
@@ -61,11 +61,11 @@ public class PortfolioGroupController extends AbstractController {
      * PUT /rest/api/portfoliogroups
      */
     @PutMapping
-    public ResponseEntity<Integer> addPortfolio(@RequestParam Long group,
-                                                @RequestParam UUID uuid,
-                                                @RequestParam String label) {
+    public ResponseEntity<String> addPortfolio(@RequestParam Long group,
+                                               @RequestParam(required = false) UUID uuid,
+                                               @RequestParam(required = false) String label) {
         return ResponseEntity.ok()
-                .body(portfolioManager.addPortfolioInGroup(uuid, group, label));
+                .body(Integer.toString(portfolioManager.addPortfolioInGroup(uuid, group, label)));
     }
 
     /**
@@ -81,9 +81,9 @@ public class PortfolioGroupController extends AbstractController {
      * @return group id or empty str if group id not found
      */
     @GetMapping
-    public HttpEntity<Object> getPortfolio(@RequestParam Long group,
-                                           @RequestParam UUID uuid,
-                                           @RequestParam String label) {
+    public HttpEntity<Object> getPortfolio(@RequestParam(required = false) Long group,
+                                           @RequestParam(required = false) UUID uuid,
+                                           @RequestParam(required = false) String label) {
 
         if (label != null) {
             Long groupid = portfolioManager.getPortfolioGroupIdFromLabel(label);
@@ -91,7 +91,7 @@ public class PortfolioGroupController extends AbstractController {
             if (groupid == -1) {
                 return ResponseEntity.notFound().build();
             } else {
-                return new HttpEntity<>(groupid);
+                return new HttpEntity<>(groupid.toString());
             }
         } else if (uuid != null) {
             return ResponseEntity.ok()
@@ -116,14 +116,14 @@ public class PortfolioGroupController extends AbstractController {
      * @return Code 200
      */
     @DeleteMapping
-    public ResponseEntity<Boolean> deletePortfolio(@RequestParam long group,
-                                                   @RequestParam UUID uuid) {
+    public ResponseEntity<String> deletePortfolio(@RequestParam long group,
+                                                  @RequestParam(required = false) UUID uuid) {
         if (uuid == null) {
             return ResponseEntity.ok()
-                    .body(portfolioManager.removePortfolioGroups(group));
+                    .body(Boolean.toString(portfolioManager.removePortfolioGroups(group)));
         } else {
             return ResponseEntity.ok()
-                    .body(portfolioManager.removePortfolioFromPortfolioGroups(uuid, group));
+                    .body(Boolean.toString(portfolioManager.removePortfolioFromPortfolioGroups(uuid, group)));
         }
     }
 }

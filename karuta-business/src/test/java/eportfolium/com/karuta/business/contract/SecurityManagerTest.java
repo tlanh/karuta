@@ -1,6 +1,7 @@
 package eportfolium.com.karuta.business.contract;
 
 import eportfolium.com.karuta.business.ServiceTest;
+import eportfolium.com.karuta.business.security.test.AsAdmin;
 import eportfolium.com.karuta.consumer.repositories.*;
 import eportfolium.com.karuta.document.CredentialDocument;
 import eportfolium.com.karuta.document.CredentialList;
@@ -8,11 +9,15 @@ import eportfolium.com.karuta.document.LoginDocument;
 import eportfolium.com.karuta.document.RoleDocument;
 import eportfolium.com.karuta.model.bean.*;
 import eportfolium.com.karuta.model.exception.BusinessException;
-import org.junit.Before;
+import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.crypto.password.Pbkdf2PasswordEncoder;
@@ -57,7 +62,9 @@ public class SecurityManagerTest {
 
     private final PasswordEncoder passwordEncoder = new Pbkdf2PasswordEncoder();
 
-    @Before
+    // It is important to clean-up the context *after* the test executes, otherwise
+    // the `@WithMockUser`-like annotations (e.g. `@AsAdmin`) are no-op.
+    @After
     public void setup() {
         SecurityContextHolder.clearContext();
     }
@@ -90,6 +97,7 @@ public class SecurityManagerTest {
     }
 
     @Test
+    @AsAdmin
     public void removeUsers() {
         Long userId = 42L;
 
@@ -105,6 +113,7 @@ public class SecurityManagerTest {
     }
 
     @Test
+    @AsAdmin
     public void addUsers() {
         Credential credential = new Credential();
         credential.setLogin("jdoe");
@@ -122,41 +131,6 @@ public class SecurityManagerTest {
 
         verify(credentialRepository, times(1))
                 .save(any(Credential.class));
-    }
-
-    @Test
-    public void addUser_WithExistingLogin() {
-        String login = "jdoe";
-
-        doReturn(true)
-                .when(credentialRepository)
-                .existsByLogin(login);
-
-        assertFalse(manager.addUser(login, "foo@bar.com"));
-
-        verify(credentialRepository, times(0))
-                .save(any(Credential.class));
-        verifyNoInteractions(emailManager);
-    }
-
-    @Test
-    public void addUser_WithoutExistingLogin()
-            throws UnsupportedEncodingException, MessagingException {
-        String login = "jdoe";
-        String email = "foo@bar.com";
-
-        doReturn(false)
-                .when(credentialRepository)
-                .existsByLogin(login);
-
-        assertTrue(manager.addUser(login, email));
-
-        verify(credentialRepository).save(any(Credential.class));
-
-        String template = "account";
-        String subject = "Welcome!";
-
-        verify(emailManager).send(eq(template), eq(subject), anyMap(), eq(email), eq(login));
     }
 
     @Test
@@ -249,6 +223,83 @@ public class SecurityManagerTest {
 
         assertEquals(credentialDocument.getUsername(), credential.getLogin());
 
+        verify(credentialRepository).save(credential);
+    }
+
+    @Test
+    public void changeUser_AdminAttribute_WithoutAdminRole() throws BusinessException {
+        Long byUserId = 42L;
+        Long forUserId = 45L;
+
+        String password = "s3cr3t";
+        String encodedPassword = passwordEncoder.encode(password);
+
+        Credential credential = new Credential();
+        credential.setPassword(encodedPassword);
+
+        doReturn(Optional.of(credential))
+                .when(credentialRepository)
+                .findActiveById(forUserId);
+
+        Collection<GrantedAuthority> authorities = Collections.singleton(new SimpleGrantedAuthority("DESIGNER"));
+        Authentication authentication = mock(Authentication.class);
+
+        doReturn(authorities)
+                .when(authentication)
+                .getAuthorities();
+
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(authentication);
+
+        SecurityContextHolder.setContext(context);
+
+        CredentialDocument document = mock(CredentialDocument.class);
+        when(document.getAdmin()).thenReturn(1);
+        when(document.getPrevpass()).thenReturn(password);
+
+        manager.changeUser(byUserId, forUserId, document);
+
+        assertEquals(0, credential.getIsAdmin());
+
+        verify(credentialRepository).findActiveById(forUserId);
+        verify(credentialRepository).save(credential);
+    }
+
+    @Test
+    public void changeUser_AdminAttribute_WithAdminRole() throws BusinessException {
+        Long byUserId = 42L;
+        Long forUserId = 45L;
+
+        Credential credential = new Credential();
+
+        doReturn(Optional.of(credential))
+                .when(credentialRepository)
+                .findActiveById(forUserId);
+
+        doReturn(true)
+                .when(credentialRepository)
+                .isAdmin(byUserId);
+
+        Collection<GrantedAuthority> authorities = Collections.singleton(new SimpleGrantedAuthority("ADMIN"));
+        Authentication authentication = mock(Authentication.class);
+
+        doReturn(authorities)
+                .when(authentication)
+                .getAuthorities();
+
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(authentication);
+
+        SecurityContextHolder.setContext(context);
+
+        CredentialDocument document = mock(CredentialDocument.class);
+        when(document.getAdmin()).thenReturn(1);
+
+        manager.changeUser(byUserId, forUserId, document);
+
+        assertEquals(1, credential.getIsAdmin());
+
+        verify(credentialRepository).findActiveById(forUserId);
         verify(credentialRepository).save(credential);
     }
 
@@ -399,6 +450,7 @@ public class SecurityManagerTest {
     }
 
     @Test
+    @AsAdmin
     public void addUserToGroup() {
         Long userId = 42L;
         Long groupId = 74L;
@@ -445,6 +497,7 @@ public class SecurityManagerTest {
     }
 
     @Test
+    @AsAdmin
     public void addUserRole_WithUnexistingGroupInfo() {
         Long groupId = 89L;
         Long userId = 42L;
@@ -632,6 +685,7 @@ public class SecurityManagerTest {
     }
 
     @Test
+    @AsAdmin
     public void removeRole() {
         Long roleId = 79L;
 
@@ -641,6 +695,7 @@ public class SecurityManagerTest {
     }
 
     @Test
+    @AsAdmin
     public void removeUserRole() {
         Long userId = 42L;
         Long roleId = 37L;
@@ -658,6 +713,7 @@ public class SecurityManagerTest {
     }
 
     @Test
+    @AsAdmin
     public void removeUsersFromRole() {
         UUID portfolioId = UUID.randomUUID();
 
@@ -667,6 +723,7 @@ public class SecurityManagerTest {
     }
 
     @Test
+    @AsAdmin
     public void changeRole() {
         UUID portfolioId = UUID.randomUUID();
         String label = "foo";
@@ -701,6 +758,7 @@ public class SecurityManagerTest {
     }
 
     @Test
+    @AsAdmin
     public void addUsersToRole() {
         Long groupId = 74L;
         Long user1Id = 42L;

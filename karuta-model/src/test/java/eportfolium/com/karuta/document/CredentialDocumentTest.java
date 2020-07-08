@@ -19,6 +19,8 @@ public class CredentialDocumentTest extends DocumentTest {
         user.setEmail("foo@bar.com");
         user.setDisplayFirstname("John");
         user.setDisplayLastname("Doe");
+        user.setIsAdmin(1);
+        user.setIsDesigner(0);
 
         String output = mapper.writeValueAsString(new CredentialDocument(user));
 
@@ -28,6 +30,8 @@ public class CredentialDocumentTest extends DocumentTest {
         assertContains("<email>foo@bar.com</email>", output);
         assertContains("<firstname>John</firstname>", output);
         assertContains("<lastname>Doe</lastname>", output);
+        assertContains("<designer>0</designer>", output);
+        assertContains("<admin>1</admin>", output);
     }
 
     @Test
@@ -63,7 +67,12 @@ public class CredentialDocumentTest extends DocumentTest {
 
         String output = mapper.writeValueAsString(document);
 
-        assertEquals("<user/>", output);
+        assertEquals("<user>" +
+                    "<admin>0</admin>" +
+                    "<designer>0</designer>" +
+                    "<active>0</active>" +
+                    "<substitute>0</substitute>" +
+                "</user>", output);
     }
 
     @Test

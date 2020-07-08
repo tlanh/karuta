@@ -45,7 +45,7 @@ public class GroupRightsInfoController extends AbstractController {
      *         <label></label> <owner>UID</owner> </groupRightInfo>
      *         </groupRightsInfos>
      */
-    @GetMapping(produces = "application/xml")
+    @GetMapping
     public HttpEntity<GroupRightInfoList> getAll(@RequestParam UUID portfolioId) {
         return new HttpEntity<>(portfolioManager.getGroupRightsInfos(portfolioId));
     }

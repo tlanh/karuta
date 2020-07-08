@@ -20,7 +20,6 @@ import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import eportfolium.com.karuta.business.contract.PortfolioManager;
-import eportfolium.com.karuta.business.contract.SecurityManager;
 import eportfolium.com.karuta.business.contract.UserManager;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import org.springframework.http.HttpEntity;
@@ -39,9 +38,6 @@ public class RoleController extends AbstractController {
     private UserManager userManager;
 
     @Autowired
-    private SecurityManager securityManager;
-
-    @Autowired
     private PortfolioManager portfolioManager;
 
     /**
@@ -49,7 +45,7 @@ public class RoleController extends AbstractController {
      *
      * GET /rest/api/roles/role/{roleId}
      */
-    @GetMapping(value = "/role/{roleId}", produces = {"application/xml"})
+    @GetMapping(value = "/role/{roleId}")
     public HttpEntity<RoleDocument> getRole(@PathVariable Long roleId) {
         return new HttpEntity<>(userManager.getRole(roleId));
     }
@@ -59,20 +55,9 @@ public class RoleController extends AbstractController {
      *
      * GET /rest/api/roles/portfolio/{portfolioId}
      */
-    @GetMapping(value = "/portfolio/{portfolioId}", produces = {"application/xml"})
+    @GetMapping(value = "/portfolio/{portfolioId}")
     public String getRolePortfolio(@RequestParam String role,
                                    @PathVariable UUID portfolioId) {
         return portfolioManager.getRoleByPortfolio(role, portfolioId);
-    }
-
-    /**
-     * Modify a role.
-     *
-     * PUT /rest/api/roles/role/{roleId}
-     */
-    @PutMapping(value = "/role/{roleId}", produces = "application/xml")
-    public String putRole(@RequestBody RoleDocument role,
-                          @PathVariable long roleId) {
-        return securityManager.changeRole(roleId, role).toString();
     }
 }

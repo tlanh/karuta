@@ -15,8 +15,10 @@
 
 package eportfolium.com.karuta.model.bean;
 
+import eportfolium.com.karuta.util.JavaTimeUtil;
+
 import java.lang.reflect.Method;
-import java.util.Calendar;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -31,7 +33,7 @@ public class AuditListener {
 	private void beforeUpdate(Object object) {
 		final Map<String, Object> properties = new HashMap<>();
 
-		properties.put("setModifDate", Calendar.getInstance().getTime());
+		properties.put("setModifDate", JavaTimeUtil.toJavaDate(LocalDateTime.now()));
 
 		for (Entry<String, Object> field : properties.entrySet()) {
 			try {

@@ -15,19 +15,27 @@
 
 package eportfolium.com.karuta.business.contract;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import eportfolium.com.karuta.document.ResourceDocument;
+import org.apache.http.client.HttpClient;
+
+import java.io.*;
 import java.util.UUID;
 
 public interface FileManager {
 
-	boolean rewriteFile(String sessionid, String backend, String user, UUID id, String lang, File file)
-			throws Exception;
-
 	String[] findFiles(String directoryPath, String id);
 
-	String unzip(String zipFile, String destinationFolder) throws FileNotFoundException, IOException;
+	String unzip(String zipFile, String destinationFolder) throws IOException;
 
+	boolean updateResource(ResourceDocument resource,
+						   InputStream content,
+						   String lang,
+						   boolean thumbnail);
 
+	boolean fetchResource(ResourceDocument resource,
+						  OutputStream output,
+						  String lang,
+						  boolean thumbnail);
+
+	HttpClient createClient();
 }

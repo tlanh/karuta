@@ -20,7 +20,6 @@ import eportfolium.com.karuta.business.UserInfo;
 import eportfolium.com.karuta.business.contract.ResourceManager;
 import eportfolium.com.karuta.document.CredentialDocument;
 import eportfolium.com.karuta.document.ResourceDocument;
-import eportfolium.com.karuta.document.ResourceList;
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import org.slf4j.Logger;
@@ -28,8 +27,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.UUID;
 
 import javax.servlet.http.HttpServletRequest;
@@ -48,31 +53,51 @@ public class ResourcesController extends AbstractController {
     /**
      * Fetch resource from node uuid.
      *
-     * GET /rest/api/resources/resource/{parentNodeId}
+     * GET /rest/api/resources/resource/{nodeId}
      */
-    @GetMapping(value = "/resource/{parentNodeId}", consumes = "application/xml",
-            produces = {"application/json", "application/xml"})
-    public HttpEntity<ResourceDocument> getResource(@RequestParam long group,
-                                                    @PathVariable UUID parentNodeId,
-                                                    Authentication authentication) throws BusinessException {
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+    @GetMapping(value = "/resource/{nodeId}")
+    public HttpEntity<ResourceDocument> getResource(@PathVariable UUID nodeId,
+                                                    @AuthenticationPrincipal UserInfo userInfo) throws BusinessException {
 
-        return new HttpEntity<>(resourceManager.getResource(parentNodeId, userInfo.getId(), group));
+        return new HttpEntity<>(resourceManager.getResource(nodeId, userInfo.getId()));
     }
 
-    /**
-     * Fetch all resource in a portfolio.
-     *
-     * GET /rest/api/resources/portfolios/{id}
-     */
-    @GetMapping(value = "/portfolios/{id}", produces = {"application/xml"})
-    public HttpEntity<ResourceList> getResources(@RequestParam long group,
-                                                 @PathVariable UUID id,
-                                                 Authentication authentication) {
+    @GetMapping("/resource/file/{id}")
+    public void fetchResource(@PathVariable UUID id,
+                              @RequestParam String lang,
+                              @RequestParam String size,
+                              @AuthenticationPrincipal UserInfo userInfo,
+                              HttpServletResponse response) throws IOException, BusinessException {
+        OutputStream output = response.getOutputStream();
 
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+        ResourceDocument document = resourceManager
+                .fetchResource(id, userInfo.getId(), output, lang, "T".equals(size));
 
-        return new HttpEntity<>(resourceManager.getResources(id, userInfo.getId(), group));
+        if (document == null) {
+            response.setStatus(404);
+        } else {
+            // FIXME: Take "lang" into account.
+            String name = document.getFilename();
+            String type = document.getType();
+
+            response.setHeader("Content-Type", type);
+            response.setHeader("Content-Disposition", "attachment; filename=\"" + name + "\"");
+        }
+    }
+
+    @PutMapping("/resource/file/{id}")
+    public String rewriteFile(@PathVariable UUID id,
+                              @RequestParam String lang,
+                              @RequestParam String size,
+                              @AuthenticationPrincipal UserInfo userInfo,
+                              HttpServletRequest request) throws IOException, BusinessException {
+        InputStream content = request.getInputStream();
+
+        if (resourceManager.updateContent(id, userInfo.getId(), content, lang, "T".equals(size))) {
+            return "Updated";
+        } else {
+            return "Error while updating resource.";
+        }
     }
 
     /**
@@ -80,19 +105,18 @@ public class ResourcesController extends AbstractController {
      *
      * PUT /rest/api/resources/resource/{parentNodeId}
      */
-    @PutMapping(value = "/resource/{parentNodeId}", produces = "application/xml")
+    @PutMapping(value = "/resource/{parentNodeId}")
     public String putResource(@RequestBody ResourceDocument resource,
                               @RequestParam (defaultValue = "-1")long group,
                               @PathVariable UUID parentNodeId,
-                              Authentication authentication,
                               HttpServletRequest request) throws BusinessException, JsonProcessingException {
 
     	HttpSession session = request.getSession(false);
     	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
-    	authentication = securityContext.getAuthentication();
+    	Authentication authentication = securityContext.getAuthentication();
     	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
 
-        return resourceManager.changeResource(parentNodeId, resource, userInfo.getId(), group)
+        return resourceManager.changeResource(parentNodeId, resource, userInfo.getId())
                     .toString();
     }
 
@@ -101,28 +125,22 @@ public class ResourcesController extends AbstractController {
      *
      * POST /rest/api/resources/{parentNodeId}
      */
-    @PostMapping(value = "/{parentNodeId}", produces = "application/xml")
+    @PostMapping(value = "/{parentNodeId}")
     public String postResource(@RequestBody ResourceDocument resource,
-                               @RequestParam long group,
                                @PathVariable UUID parentNodeId,
-                               Authentication authentication) throws BusinessException {
+                               @AuthenticationPrincipal UserInfo userInfo) throws BusinessException {
 
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
-
-        return resourceManager.addResource(parentNodeId, resource, userInfo.getId(), group);
+        return resourceManager.addResource(parentNodeId, resource, userInfo.getId());
     }
 
     /**
      * (?) POST /rest/api/resources
      */
-    @PostMapping(produces = "application/xml")
+    @PostMapping
     public String postResources(@RequestBody ResourceDocument document,
-                                @RequestParam long group,
                                 @RequestParam UUID resource,
-                                Authentication authentication) throws BusinessException {
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
-
-        return resourceManager.addResource(resource, document, userInfo.getId(), group);
+                                @AuthenticationPrincipal UserInfo userInfo) throws BusinessException {
+        return resourceManager.addResource(resource, document, userInfo.getId());
     }
 
     /**
@@ -130,14 +148,10 @@ public class ResourcesController extends AbstractController {
      *
      * DELETE /rest/api/resources/{id}
      */
-    @DeleteMapping(value = "/{id}", produces = "application/xml")
-    public String deleteResource(@RequestParam long group,
-                                 @PathVariable UUID id,
-                                 Authentication authentication) throws BusinessException {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
-
-        resourceManager.removeResource(id, userInfo.getId(), group);
+    @DeleteMapping(value = "/{id}")
+    public String deleteResource(@PathVariable UUID id,
+                                 @AuthenticationPrincipal UserInfo userInfo) throws BusinessException {
+        resourceManager.removeResource(id, userInfo.getId());
 
         return "";
     }

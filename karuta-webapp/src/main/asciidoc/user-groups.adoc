@@ -1,0 +1,18 @@
+== User groups
+
+=== POST /
+
+This endpoint adds a user to a group; only admin users can
+trigger it.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/add-user-to-group/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/add-user-to-group/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/add-user-to-group/http-response.adoc[]

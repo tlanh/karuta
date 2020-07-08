@@ -29,7 +29,7 @@ import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -55,17 +55,16 @@ public class RoleRightsGroupsController extends AbstractController {
      *
      * GET /rest/api/rolerightsgroups
      */
-    @GetMapping(produces = "application/xml")
+    @GetMapping
     public HttpEntity<Object> getGroups(@RequestParam UUID portfolio,
-                                        @RequestParam Long user,
-                                        @RequestParam String role) {
+                                        @RequestParam(required = false) String role) {
 
-        if (portfolio != null && role != null && user == null) {
+        if (role == null) {
+            return new HttpEntity<>(userManager.getRoleList(portfolio));
+        } else {
             GroupRightInfo gri = groupManager.getByPortfolioAndLabel(portfolio, role);
 
-            return new HttpEntity<>(gri.getId());
-        } else {
-            return new HttpEntity<>(userManager.getRoleList(portfolio, user));
+            return new HttpEntity<>(gri.getId().toString());
         }
     }
 
@@ -74,13 +73,9 @@ public class RoleRightsGroupsController extends AbstractController {
      *
      * GET /rest/api/rolerightsgroups/all/users
      */
-    @GetMapping(value = "/all/users", produces = "application/xml")
-    public HttpEntity<GroupUserList> getPortfolioUsers(@RequestParam UUID portfolio,
-                                                       Authentication authentication) {
-
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
-
-        return new HttpEntity<>(userManager.getUserRolesByPortfolio(portfolio, userInfo.getId()));
+    @GetMapping(value = "/all/users")
+    public HttpEntity<GroupUserList> getPortfolioUsers(@RequestParam UUID portfolio) {
+        return new HttpEntity<>(userManager.getUserRolesByPortfolio(portfolio));
     }
 
     /**
@@ -88,7 +83,7 @@ public class RoleRightsGroupsController extends AbstractController {
      *
      * GET /rest/api/rolerightsgroups/rolerightsgroup/{id}
      */
-    @GetMapping(value = "/rolerightsgroup/{id}", produces = "application/xml")
+    @GetMapping(value = "/rolerightsgroup/{id}")
     public HttpEntity<RoleRightsGroupDocument> getRightInfo(@PathVariable Long id) {
         return new HttpEntity<>(userManager.getUserRole(id));
     }
@@ -98,8 +93,7 @@ public class RoleRightsGroupsController extends AbstractController {
      *
      * POST /rest/api/rolerightsgroups/rolerightsgroup/{id}/users/user/{userId}
      */
-    @PostMapping(value = "/rolerightsgroup/{id}/users/user/{userId}",
-            produces = "application/xml")
+    @PostMapping(value = "/rolerightsgroup/{id}/users/user/{userId}")
     public String addUserRole(@PathVariable Long id,
                               @PathVariable Long userId) {
         return securityManager.addUserRole(id, userId);
@@ -110,7 +104,7 @@ public class RoleRightsGroupsController extends AbstractController {
      *
      * POST /rest/api/rolerightsgroups/rolerightsgroup/{id}/users
      */
-    @PostMapping(value = "/rolerightsgroup/{id}/users", produces = "application/xml")
+    @PostMapping(value = "/rolerightsgroup/{id}/users")
     public ResponseEntity<String> postUsers(@RequestBody CredentialList users,
                                             @PathVariable Long id) {
         securityManager.addUsersToRole(id, users);
@@ -123,7 +117,7 @@ public class RoleRightsGroupsController extends AbstractController {
      *
      * DELETE /rest/api/rolerightsgroups/rolerightsgroup/{id}
      */
-    @DeleteMapping(value = "/rolerightsgroup/{id}", produces = "application/xml")
+    @DeleteMapping(value = "/rolerightsgroup/{id}")
     public String removeRole(@PathVariable Long id) {
         securityManager.removeRole(id);
 
@@ -135,8 +129,7 @@ public class RoleRightsGroupsController extends AbstractController {
      *
      * DELETE /rest/api/rolerightsgroups/rolerightsgroup/{id}/users/user/{user-id}
      */
-    @DeleteMapping(value = "/rolerightsgroup/{id}/users/user/{userId}",
-            produces = "application/xml")
+    @DeleteMapping(value = "/rolerightsgroup/{id}/users/user/{userId}")
     public String removeUserRole(@PathVariable Long id,
                                  @PathVariable Long userId) {
         securityManager.removeUserRole(userId, id);
@@ -149,7 +142,7 @@ public class RoleRightsGroupsController extends AbstractController {
      *
      * DELETE /rest/api/rolerightsgroups/all/users
      */
-    @DeleteMapping(value = "/all/users", produces = "application/xml")
+    @DeleteMapping(value = "/all/users")
     public String removeUsersFromRole(@RequestParam UUID portfolio) {
         securityManager.removeUsersFromRole(portfolio);
 
@@ -161,7 +154,7 @@ public class RoleRightsGroupsController extends AbstractController {
      *
      * PUT /rest/api/rolerightsgroups/rolerightsgroup/{id}
      */
-    @PutMapping(value = "/rolerightsgroup/{id}", produces = "application/xml")
+    @PutMapping(value = "/rolerightsgroup/{id}")
     public String changeROle(@RequestBody RoleDocument role,
                              @PathVariable Long id) {
 
@@ -170,4 +163,3 @@ public class RoleRightsGroupsController extends AbstractController {
         return "";
     }
 }
-

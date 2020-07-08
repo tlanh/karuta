@@ -126,4 +126,17 @@ public class ResourceRepositoryTest extends TestHelpers {
 
         assertEquals(resource.getId(), found.getId());
     }
+
+    @Test
+    public void findByNodeId() {
+        Resource resource = resourceRecord();
+
+        Node node = nodeWithPortfolio();
+        node.setResource(resource);
+        nodeRepository.save(node);
+
+        Resource found = repository.findByNodeId(node.getId());
+
+        assertEquals(resource.getId(), found.getId());
+    }
 }

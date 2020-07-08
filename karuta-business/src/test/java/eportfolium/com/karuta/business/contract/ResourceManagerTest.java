@@ -17,6 +17,10 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.UUID;
@@ -45,19 +49,20 @@ public class ResourceManagerTest {
     @MockBean
     private PortfolioManager portfolioManager;
 
+    @MockBean
+    private FileManager fileManager;
+
     @Test
     public void getResource_WithoutProperRights() {
         Long userId = 42L;
-        Long groupId = 56L;
-
         UUID nodeId = UUID.randomUUID();
 
         doReturn(false)
                 .when(manager)
-                .hasRight(userId, groupId, nodeId, GroupRights.READ);
+                .hasRight(userId, nodeId, GroupRights.READ);
 
         try {
-            manager.getResource(nodeId, userId, groupId);
+            manager.getResource(nodeId, userId);
             fail("User must have the right to read to access this method.");
         } catch (BusinessException ignored) { }
     }
@@ -65,7 +70,6 @@ public class ResourceManagerTest {
     @Test
     public void getResource_WithProperRights() throws BusinessException {
         Long userId = 42L;
-        Long groupId = 56L;
 
         UUID nodeId = UUID.randomUUID();
         UUID resourceId = UUID.randomUUID();
@@ -76,13 +80,13 @@ public class ResourceManagerTest {
 
         doReturn(true)
                 .when(manager)
-                .hasRight(userId, groupId, nodeId, GroupRights.READ);
+                .hasRight(userId, nodeId, GroupRights.READ);
 
         doReturn(resource)
                 .when(resourceRepository)
                 .getResourceByParentNodeUuid(nodeId);
 
-        ResourceDocument resourceDocument = manager.getResource(nodeId, userId, groupId);
+        ResourceDocument resourceDocument = manager.getResource(nodeId, userId);
 
         assertEquals(resource.getId(), resourceDocument.getId());
         assertEquals(resource.getXsiType(), resourceDocument.getContent());
@@ -92,42 +96,17 @@ public class ResourceManagerTest {
     }
 
     @Test
-    public void getResources() {
-        Long userId = 42L;
-        Long groupId = 74L;
-
-        UUID portfolioId = UUID.randomUUID();
-        UUID nodeId = UUID.randomUUID();
-
-        Node node = new Node();
-        node.setId(nodeId);
-
-        Resource resource = new Resource();
-        resource.setNode(node);
-
-        doReturn(Collections.singletonList(resource))
-                .when(resourceRepository)
-                .getResourcesByPortfolioUUID(portfolioId);
-
-        ResourceList resourceList = manager.getResources(portfolioId, userId, groupId);
-
-        assertEquals(1, resourceList.getResources().size());
-        assertEquals(nodeId, resourceList.getResources().get(0).getId());
-    }
-
-    @Test
     public void changeResource_WithoutWriteRight() throws JsonProcessingException {
         Long userId = 42L;
-        Long groupId = 74L;
 
         UUID nodeId = UUID.randomUUID();
 
         doReturn(false)
                 .when(manager)
-                .hasRight(userId, groupId, nodeId, GroupRights.WRITE);
+                .hasRight(userId, nodeId, GroupRights.WRITE);
 
         try {
-            manager.changeResource(nodeId, null, userId, groupId);
+            manager.changeResource(nodeId, null, userId);
             fail("User must have write rights to change the resource.");
         } catch (BusinessException ignored) { }
     }
@@ -136,7 +115,6 @@ public class ResourceManagerTest {
     public void changeResource_WithWriteRight()
             throws JsonProcessingException, BusinessException {
         Long userId = 42L;
-        Long groupId = 74L;
 
         UUID nodeId = UUID.randomUUID();
         Resource resource = new Resource();
@@ -146,13 +124,13 @@ public class ResourceManagerTest {
 
         doReturn(true)
                 .when(manager)
-                .hasRight(userId, groupId, nodeId, GroupRights.WRITE);
+                .hasRight(userId, nodeId, GroupRights.WRITE);
 
         doReturn(resource)
                 .when(resourceRepository)
                 .getResourceByParentNodeUuid(nodeId);
 
-        int result = manager.changeResource(nodeId, document, userId, groupId);
+        int result = manager.changeResource(nodeId, document, userId);
 
         assertEquals(0, result);
 
@@ -160,25 +138,23 @@ public class ResourceManagerTest {
         assertEquals(userId, resource.getCredential().getId());
         assertEquals("<code>foo</code>", resource.getContent());
 
-        verify(portfolioManager).updateTimeByNode(nodeId);
         verify(resourceRepository).save(resource);
     }
 
     @Test
     public void addResource_WithoutWriteRight() {
         Long userId = 42L;
-        Long groupId = 74L;
 
         UUID nodeId = UUID.randomUUID();
 
         doReturn(false)
                 .when(manager)
-                .hasRight(userId, groupId, nodeId, GroupRights.WRITE);
+                .hasRight(userId, nodeId, GroupRights.WRITE);
 
         ResourceDocument resourceDocument = new ResourceDocument();
 
         try {
-            manager.addResource(nodeId, resourceDocument, userId, groupId);
+            manager.addResource(nodeId, resourceDocument, userId);
             fail("User must have write rights to add a resource.");
         } catch (BusinessException ignored) { }
     }
@@ -186,7 +162,6 @@ public class ResourceManagerTest {
     @Test
     public void addResource_WithWriteRight() throws BusinessException {
         Long userId = 42L;
-        Long groupId = 74L;
 
         UUID nodeId = UUID.randomUUID();
         UUID resourceId = UUID.randomUUID();
@@ -196,7 +171,7 @@ public class ResourceManagerTest {
 
         doReturn(true)
                 .when(manager)
-                .hasRight(userId, groupId, nodeId, GroupRights.WRITE);
+                .hasRight(userId, nodeId, GroupRights.WRITE);
 
         doReturn(Optional.of(resource))
                 .when(resourceRepository)
@@ -211,7 +186,7 @@ public class ResourceManagerTest {
         when(resourceDocument.getContent()).thenReturn("foo");
         when(resourceDocument.getId()).thenReturn(resourceId);
 
-        manager.addResource(nodeId, resourceDocument, userId, groupId);
+        manager.addResource(nodeId, resourceDocument, userId);
 
         assertEquals(resourceDocument.getXsiType(), resource.getXsiType());
         assertEquals(resourceDocument.getContent(), resource.getContent());
@@ -231,7 +206,6 @@ public class ResourceManagerTest {
     @Test
     public void addResource_WithAdminRight() throws BusinessException {
         Long userId = 42L;
-        Long groupId = 74L;
 
         UUID nodeId = UUID.randomUUID();
         UUID resourceId = UUID.randomUUID();
@@ -255,7 +229,7 @@ public class ResourceManagerTest {
         when(resourceDocument.getXsiType()).thenReturn("res");
         when(resourceDocument.getId()).thenReturn(resourceId);
 
-        manager.addResource(nodeId, resourceDocument, userId, groupId);
+        manager.addResource(nodeId, resourceDocument, userId);
 
         assertEquals(resourceDocument.getXsiType(), resource.getXsiType());
         assertEquals(resource, node.getResource());
@@ -272,16 +246,15 @@ public class ResourceManagerTest {
     @Test
     public void removeResource_WithoutDeleteRight() {
         Long userId = 42L;
-        Long groupId = 74L;
 
         UUID resourceId = UUID.randomUUID();
 
         doReturn(false)
                 .when(manager)
-                .hasRight(userId, groupId, resourceId, GroupRights.DELETE);
+                .hasRight(userId, resourceId, GroupRights.DELETE);
 
         try {
-            manager.removeResource(resourceId, userId, groupId);
+            manager.removeResource(resourceId, userId);
             fail("User must have delete right to delete a resource.");
         } catch (BusinessException ignored) { }
 
@@ -291,15 +264,14 @@ public class ResourceManagerTest {
     @Test
     public void removeResource_WithDeleteRight() throws BusinessException {
         Long userId = 42L;
-        Long groupId = 74L;
 
         UUID resourceId = UUID.randomUUID();
 
         doReturn(true)
                 .when(manager)
-                .hasRight(userId, groupId, resourceId, GroupRights.DELETE);
+                .hasRight(userId, resourceId, GroupRights.DELETE);
 
-        manager.removeResource(resourceId, userId, groupId);
+        manager.removeResource(resourceId, userId);
 
         verify(resourceRepository).deleteById(resourceId);
     }
@@ -307,15 +279,13 @@ public class ResourceManagerTest {
     @Test
     public void removeResource_BeingAdmin() throws BusinessException {
         Long userId = 42L;
-        Long groupId = 74L;
-
         UUID resourceId = UUID.randomUUID();
 
         doReturn(true)
                 .when(credentialRepository)
                 .isAdmin(userId);
 
-        manager.removeResource(resourceId, userId, groupId);
+        manager.removeResource(resourceId, userId);
 
         verify(resourceRepository).deleteById(resourceId);
     }
@@ -357,9 +327,9 @@ public class ResourceManagerTest {
                 .when(nodeRepository)
                 .isCodeExist(code, nodeId);
 
-        doReturn(1)
-                .when(nodeManager)
-                .updateNodeCode(nodeId, code);
+        doReturn(Optional.empty())
+                .when(nodeRepository)
+                .findById(nodeId);
 
         ResourceDocument resourceDocument = mock(ResourceDocument.class);
         when(resourceDocument.getCode()).thenReturn(code);
@@ -380,6 +350,7 @@ public class ResourceManagerTest {
         String xsiType = "nodeRes";
 
         UUID nodeId = UUID.randomUUID();
+        Node node = new Node();
 
         Resource resource = new Resource();
 
@@ -391,10 +362,16 @@ public class ResourceManagerTest {
                 .when(resourceRepository)
                 .getResourceOfResourceByNodeUuid(nodeId);
 
+        doReturn(Optional.of(node))
+                .when(nodeRepository)
+                .findById(nodeId);
+
         manager.changeResourceByXsiType(nodeId, xsiType, resourceDocument, userId);
 
         assertEquals(userId, resource.getModifUserId());
         assertEquals(resourceDocument.getContent(), resource.getContent());
+
+        assertEquals(code, node.getCode());
 
         verify(resourceRepository).getResourceOfResourceByNodeUuid(nodeId);
         verify(resourceRepository).save(resource);
@@ -465,5 +442,172 @@ public class ResourceManagerTest {
         verify(resourceRepository).deleteById(id);
         verify(resourceRepository).save(any(Resource.class));
         verifyNoMoreInteractions(resourceRepository);
+    }
+
+    @Test
+    public void updateContent_WithoutProperRights() {
+        Long userId = 42L;
+
+        UUID nodeId = UUID.randomUUID();
+
+        doReturn(false)
+                .when(manager)
+                .hasRight(userId, nodeId, GroupRights.WRITE);
+
+        try {
+            manager.updateContent(nodeId, userId, null, "fr", true);
+            fail("User must have write rights to update resource content.");
+        } catch (BusinessException ignored) { }
+    }
+
+    @Test
+    public void updateContent_WithProperRights_WithErrors() throws BusinessException {
+        Long userId = 42L;
+        InputStream input = new ByteArrayInputStream("".getBytes());
+        String lang = "fr";
+        boolean thumb = true;
+
+        UUID nodeId = UUID.randomUUID();
+
+        doReturn(true)
+                .when(manager)
+                .hasRight(userId, nodeId, GroupRights.WRITE);
+
+        Resource resource = new Resource();
+        resource.setNode(new Node());
+
+        doReturn(resource)
+                .when(resourceRepository)
+                .findByNodeId(nodeId);
+
+        doReturn(false)
+                .when(fileManager)
+                .updateResource(any(ResourceDocument.class), eq(input), eq(lang), eq(thumb));
+
+        assertFalse(manager.updateContent(nodeId, userId, input, lang, thumb));
+
+        verify(resourceRepository).findByNodeId(nodeId);
+        verifyNoMoreInteractions(resourceRepository);
+    }
+
+    @Test
+    public void updateContent_WithProperRights_WithoutErrors() throws BusinessException {
+        Long userId = 42L;
+        InputStream input = new ByteArrayInputStream("".getBytes());
+        String lang = "fr";
+        boolean thumb = true;
+
+        UUID nodeId = UUID.randomUUID();
+
+        doReturn(true)
+                .when(manager)
+                .hasRight(userId, nodeId, GroupRights.WRITE);
+
+        Resource resource = new Resource();
+        resource.setNode(new Node());
+
+        doReturn(resource)
+                .when(resourceRepository)
+                .findByNodeId(nodeId);
+
+        doReturn(true)
+                .when(fileManager)
+                .updateResource(any(ResourceDocument.class), eq(input), eq(lang), eq(thumb));
+
+        assertTrue(manager.updateContent(nodeId, userId, input, lang, thumb));
+
+        verify(resourceRepository).findByNodeId(nodeId);
+        verifyNoMoreInteractions(resourceRepository);
+    }
+
+    @Test
+    public void fetchResource_WithoutReadRight_WithError() {
+        Long userId = 42L;
+
+        OutputStream output = new ByteArrayOutputStream();
+        UUID nodeId = UUID.randomUUID();
+
+        doReturn(false)
+                .when(manager)
+                .hasRight(userId, nodeId, GroupRights.READ);
+
+        try {
+            manager.fetchResource(nodeId, userId, output, "fr", true);
+            fail("User must have read rights to get a resource.");
+        } catch (BusinessException ignored) { }
+    }
+
+    @Test
+    public void fetchResource_WithReadRight_WithError() throws BusinessException {
+        Long userId = 42L;
+        String lang = "fr";
+        boolean thumb = true;
+
+        OutputStream output = new ByteArrayOutputStream();
+        UUID nodeId = UUID.randomUUID();
+
+        doReturn(true)
+                .when(manager)
+                .hasRight(userId, nodeId, GroupRights.READ);
+
+        Resource resource = new Resource();
+        resource.setNode(new Node());
+
+        doReturn(resource)
+                .when(resourceRepository)
+                .findByNodeId(nodeId);
+
+        doReturn(false)
+                .when(fileManager)
+                .fetchResource(any(ResourceDocument.class), eq(output), eq(lang), eq(thumb));
+
+        ResourceDocument document = manager
+                .fetchResource(nodeId, userId, output, lang, thumb);
+
+        assertNull(document);
+
+        verify(resourceRepository).findByNodeId(nodeId);
+        verifyNoMoreInteractions(resourceRepository);
+
+        verify(fileManager)
+                .fetchResource(any(ResourceDocument.class), eq(output), eq(lang), eq(thumb));
+        verifyNoMoreInteractions(fileManager);
+    }
+
+    @Test
+    public void fetchResource_WithReadRight_WithoutError() throws BusinessException {
+        Long userId = 42L;
+        String lang = "fr";
+        boolean thumb = true;
+
+        OutputStream output = new ByteArrayOutputStream();
+        UUID nodeId = UUID.randomUUID();
+
+        doReturn(true)
+                .when(manager)
+                .hasRight(userId, nodeId, GroupRights.READ);
+
+        Resource resource = new Resource();
+        resource.setNode(new Node());
+
+        doReturn(resource)
+                .when(resourceRepository)
+                .findByNodeId(nodeId);
+
+        doReturn(true)
+                .when(fileManager)
+                .fetchResource(any(ResourceDocument.class), eq(output), eq(lang), eq(thumb));
+
+        ResourceDocument document = manager
+                .fetchResource(nodeId, userId, output, lang, thumb);
+
+        assertNotNull(document);
+
+        verify(resourceRepository).findByNodeId(nodeId);
+        verifyNoMoreInteractions(resourceRepository);
+
+        verify(fileManager)
+                .fetchResource(any(ResourceDocument.class), eq(output), eq(lang), eq(thumb));
+        verifyNoMoreInteractions(fileManager);
     }
 }

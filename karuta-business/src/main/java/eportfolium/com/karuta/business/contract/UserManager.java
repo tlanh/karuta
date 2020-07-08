@@ -18,6 +18,7 @@ package eportfolium.com.karuta.business.contract;
 import java.util.UUID;
 
 import eportfolium.com.karuta.document.*;
+import eportfolium.com.karuta.model.bean.Credential;
 
 public interface UserManager {
 
@@ -33,15 +34,15 @@ public interface UserManager {
 
 	Long getUserId(String userLogin);
 
-	Long getUserId(String userLogin, String email);
+	Credential getUser(String login, String email);
 
 	ProfileList getUserRolesByUserId(Long userId);
 
 	String getEmailByLogin(String userLogin);
 
-	RoleRightsGroupList getRoleList(UUID portfolioId, Long userId);
+	RoleRightsGroupList getRoleList(UUID portfolioId);
 
-	GroupUserList getUserRolesByPortfolio(UUID portfolioId, Long id);
+	GroupUserList getUserRolesByPortfolio(UUID portfolioId);
 
 	RoleRightsGroupDocument getUserRole(Long rrgid);
 

@@ -53,15 +53,8 @@ public class GroupInfoDocument {
         return roleId;
     }
 
-    // FIXME: Sometimes return the label in v3 ; check with v2
     @JsonGetter("role")
     public String getRole() {
         return role;
-    }
-
-    // FIXME: Ensure the front-end doesn't need it and remove
-    @JsonGetter("groupid")
-    public Long getGroupId() {
-        return id;
     }
 }

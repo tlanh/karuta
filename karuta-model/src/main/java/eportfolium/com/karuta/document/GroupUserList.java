@@ -10,18 +10,18 @@ import java.util.UUID;
 
 @JsonRootName("portfolio")
 public class GroupUserList {
-    private UUID portfolioId;
+    private UUID id;
     private List<GroupUserDocument> groups;
 
-    public GroupUserList(UUID portfolioId, List<GroupUserDocument> groups) {
-        this.portfolioId = portfolioId;
+    public GroupUserList(UUID id, List<GroupUserDocument> groups) {
+        this.id = id;
         this.groups = groups;
     }
 
     @JsonGetter("id")
     @JacksonXmlProperty(isAttribute = true)
-    public UUID getPortfolioId() {
-        return portfolioId;
+    public UUID getId() {
+        return id;
     }
 
     @JacksonXmlElementWrapper(useWrapping = false)

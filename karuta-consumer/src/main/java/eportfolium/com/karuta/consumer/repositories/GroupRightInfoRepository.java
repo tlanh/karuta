@@ -31,17 +31,11 @@ public interface GroupRightInfoRepository extends CrudRepository<GroupRightInfo,
             "AND gri.label = :label")
     Long getIdByNodeAndLabel(@Param("nodeId") UUID nodeId, @Param("label") String label);
 
-    @Query("SELECT DISTINCT gri FROM Resource r, GroupRights gr " +
-            "INNER JOIN gr.id.groupRightInfo gri " +
-            "WHERE r.credential.id = :userId " +
-            "AND gr.id.id = r.id")
-    List<GroupRightInfo> getByUser(@Param("userId") Long userId);
-
     @Query("SELECT gri FROM GroupRightInfo gri " +
             "LEFT JOIN gri.groupInfo gi " +
             "WHERE gri.portfolio.id = :portfolioId " +
             "AND gri.label = 'all'")
-    List<GroupRightInfo> getDefaultByPortfolio(@Param("portfolioId") UUID portfolioId);
+    GroupRightInfo getDefaultByPortfolio(@Param("portfolioId") UUID portfolioId);
 
     @Query("SELECT CASE WHEN COUNT(gri) > 0 THEN true ELSE false END " +
             "FROM GroupRightInfo gri " +

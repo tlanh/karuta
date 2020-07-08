@@ -14,6 +14,8 @@ import java.util.UUID;
 public interface CredentialRepository extends CrudRepository<Credential, Long> {
     Credential findByLogin(String login);
 
+    Credential findByLoginAndEmail(String login, String email);
+
     @Query("SELECT c FROM Credential c WHERE c.login = :login AND c.isAdmin = :admin")
     Credential findByLoginAndAdmin(@Param("login") String login, @Param("admin") Integer admin);
 
@@ -50,9 +52,6 @@ public interface CredentialRepository extends CrudRepository<Credential, Long> {
 
     @Query("SELECT c.id FROM Credential c WHERE c.login = :login")
     Long getIdByLogin(@Param("login") String login);
-
-    @Query("SELECT c.id FROM Credential c WHERE c.login = :login AND c.email = :email")
-    Long getIdByLoginAndEmail(@Param("login") String login, @Param("email") String email);
 
     @Query("SELECT c FROM Credential c " +
             "LEFT JOIN FETCH c.credentialSubstitution cs " +

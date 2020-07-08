@@ -1,0 +1,41 @@
+== Groups
+
+=== GET /
+
+This endpoint returns all the groups/roles in which the current user is
+present.
+
+include::{snippets}/groups-for-user/response-fields.adoc[]
+
+[source,role="primary"]
+.Curl
+include::{snippets}/groups-for-user/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/groups-for-user/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/groups-for-user/http-response.adoc[]
+
+=== GET /{id}
+
+This endpoint returns all the groups/roles in which the current user
+is present for a given portfolio based on its ID.
+
+[NOTE]
+The user that triggers this query must have the right to read this
+portfolio in order to get a response.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/groups-by-portfolio/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/groups-by-portfolio/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/groups-by-portfolio/http-response.adoc[]

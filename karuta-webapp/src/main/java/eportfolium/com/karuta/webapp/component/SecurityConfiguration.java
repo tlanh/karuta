@@ -16,11 +16,14 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
                 .cors()
                 .and()
                     .authorizeRequests()
-                    .antMatchers("/credential/login")
+                    .antMatchers("/credential/login", "/hello", "/docs/**")
                     .permitAll()
                 .and()
                     .authorizeRequests()
                     .anyRequest()
-                    .authenticated();
+                    .authenticated()
+                .and()
+                    .logout()
+                    .logoutUrl("/credential/logout");
     }
 }
