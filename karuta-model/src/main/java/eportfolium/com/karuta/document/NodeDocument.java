@@ -246,6 +246,34 @@ public class NodeDocument {
         this.resourceDocuments = documents;
     }
 
+    @JacksonXmlElementWrapper(useWrapping = false)
+    @JacksonXmlProperty(localName = "asmContext")
+    public void setContext( NodeDocument context ) {
+    	context.type = "asmContext";
+    	children.add(context);
+    }
+    
+    @JacksonXmlElementWrapper(useWrapping = false)
+    @JacksonXmlProperty(localName = "asmStructure")
+    public void setStructure( NodeDocument context ) {
+    	context.type = "asmStructure";
+    	children.add(context);
+    }
+    
+    @JacksonXmlElementWrapper(useWrapping = false)
+    @JacksonXmlProperty(localName = "asmUnit")
+    public void setUnit( NodeDocument context ) {
+    	context.type = "asmUnit";
+    	children.add(context);
+    }
+    
+    @JacksonXmlElementWrapper(useWrapping = false)
+    @JacksonXmlProperty(localName = "asmUnitStructure")
+    public void setUnitStructure( NodeDocument context ) {
+    	context.type = "asmUnitStructure";
+    	children.add(context);
+    }
+    
     public void addChildren(NodeDocument children) {
       children.setParent(this);
       this.children.add(children);
