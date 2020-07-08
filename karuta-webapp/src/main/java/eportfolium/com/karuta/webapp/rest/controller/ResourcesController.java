@@ -19,11 +19,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import eportfolium.com.karuta.business.UserInfo;
 import eportfolium.com.karuta.business.contract.ResourceManager;
 import eportfolium.com.karuta.document.ResourceDocument;
+import eportfolium.com.karuta.model.bean.GroupRights;
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -51,28 +53,34 @@ public class ResourcesController extends AbstractController {
      */
     @GetMapping(value = "/resource/{nodeId}")
     public HttpEntity<ResourceDocument> getResource(@PathVariable UUID nodeId,
-                                                    @AuthenticationPrincipal UserInfo userInfo) throws BusinessException {
+                                                    @AuthenticationPrincipal UserInfo userInfo) {
 
-        return new HttpEntity<>(resourceManager.getResource(nodeId, userInfo.getId()));
+        if (!resourceManager.hasRight(userInfo.getId(), nodeId, GroupRights.READ))
+            return ResponseEntity.status(403).build();
+
+        return new HttpEntity<>(resourceManager.getResource(nodeId));
     }
 
     @GetMapping("/resource/file/{id}")
     public void fetchResource(@PathVariable UUID id,
-                              @RequestParam String lang,
-                              @RequestParam String size,
+                              @RequestParam(defaultValue = "fr") String lang,
+                              @RequestParam(required = false) String size,
                               @AuthenticationPrincipal UserInfo userInfo,
-                              HttpServletResponse response) throws IOException, BusinessException {
+                              HttpServletResponse response) throws IOException {
         OutputStream output = response.getOutputStream();
 
-        ResourceDocument document = resourceManager
-                .fetchResource(id, userInfo.getId(), output, lang, "T".equals(size));
+        if (!resourceManager.hasRight(userInfo.getId(), id, GroupRights.READ)) {
+            response.setStatus(403);
+            return;
+        }
+
+        ResourceDocument document = resourceManager.fetchResource(id, output, lang, "T".equals(size));
 
         if (document == null) {
             response.setStatus(404);
         } else {
-            // FIXME: Take "lang" into account.
-            String name = document.getFilename();
-            String type = document.getType();
+            String name = document.getFilename(lang);
+            String type = document.getType(lang);
 
             response.setHeader("Content-Type", type);
             response.setHeader("Content-Disposition", "attachment; filename=\"" + name + "\"");
@@ -81,8 +89,8 @@ public class ResourcesController extends AbstractController {
 
     @PutMapping("/resource/file/{id}")
     public String rewriteFile(@PathVariable UUID id,
-                              @RequestParam String lang,
-                              @RequestParam String size,
+                              @RequestParam(defaultValue = "fr") String lang,
+                              @RequestParam(required = false) String size,
                               @AuthenticationPrincipal UserInfo userInfo,
                               HttpServletRequest request) throws IOException, BusinessException {
         InputStream content = request.getInputStream();

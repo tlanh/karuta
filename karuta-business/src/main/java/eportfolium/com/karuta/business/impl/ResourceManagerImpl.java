@@ -51,13 +51,7 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 
 
 	@Override
-	public ResourceDocument getResource(UUID parentNodeId, Long userId)
-			throws BusinessException {
-
-		if (!hasRight(userId, parentNodeId, GroupRights.READ)) {
-			throw new GenericBusinessException("403 FORBIDDEN : No READ credential");
-		}
-
+	public ResourceDocument getResource(UUID parentNodeId) {
 		Resource resource = resourceRepository.getResourceByParentNodeUuid(parentNodeId);
 
 		ResourceDocument document = new ResourceDocument(resource.getId());
@@ -192,15 +186,7 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 	}
 
 	@Override
-	public ResourceDocument fetchResource(UUID nodeId,
-										  Long userId,
-										  OutputStream output,
-										  String lang,
-										  boolean thumbnail) throws BusinessException {
-		if (!hasRight(userId, nodeId, GroupRights.READ)) {
-			throw new GenericBusinessException("No rights.");
-		}
-
+	public ResourceDocument fetchResource(UUID nodeId, OutputStream output, String lang, boolean thumbnail) {
 		Resource resource = resourceRepository.findByNodeId(nodeId);
 		ResourceDocument document = new ResourceDocument(resource, resource.getNode());
 

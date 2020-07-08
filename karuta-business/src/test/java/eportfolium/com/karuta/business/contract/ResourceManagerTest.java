@@ -53,24 +53,7 @@ public class ResourceManagerTest {
     private FileManager fileManager;
 
     @Test
-    public void getResource_WithoutProperRights() {
-        Long userId = 42L;
-        UUID nodeId = UUID.randomUUID();
-
-        doReturn(false)
-                .when(manager)
-                .hasRight(userId, nodeId, GroupRights.READ);
-
-        try {
-            manager.getResource(nodeId, userId);
-            fail("User must have the right to read to access this method.");
-        } catch (BusinessException ignored) { }
-    }
-
-    @Test
-    public void getResource_WithProperRights() throws BusinessException {
-        Long userId = 42L;
-
+    public void getResource() {
         UUID nodeId = UUID.randomUUID();
         UUID resourceId = UUID.randomUUID();
 
@@ -78,15 +61,11 @@ public class ResourceManagerTest {
         resource.setId(resourceId);
         resource.setXsiType("foo");
 
-        doReturn(true)
-                .when(manager)
-                .hasRight(userId, nodeId, GroupRights.READ);
-
         doReturn(resource)
                 .when(resourceRepository)
                 .getResourceByParentNodeUuid(nodeId);
 
-        ResourceDocument resourceDocument = manager.getResource(nodeId, userId);
+        ResourceDocument resourceDocument = manager.getResource(nodeId);
 
         assertEquals(resource.getId(), resourceDocument.getId());
         assertEquals(resource.getXsiType(), resourceDocument.getContent());
@@ -521,34 +500,12 @@ public class ResourceManagerTest {
     }
 
     @Test
-    public void fetchResource_WithoutReadRight_WithError() {
-        Long userId = 42L;
-
-        OutputStream output = new ByteArrayOutputStream();
-        UUID nodeId = UUID.randomUUID();
-
-        doReturn(false)
-                .when(manager)
-                .hasRight(userId, nodeId, GroupRights.READ);
-
-        try {
-            manager.fetchResource(nodeId, userId, output, "fr", true);
-            fail("User must have read rights to get a resource.");
-        } catch (BusinessException ignored) { }
-    }
-
-    @Test
-    public void fetchResource_WithReadRight_WithError() throws BusinessException {
-        Long userId = 42L;
+    public void fetchResource_WithError() {
         String lang = "fr";
         boolean thumb = true;
 
         OutputStream output = new ByteArrayOutputStream();
         UUID nodeId = UUID.randomUUID();
-
-        doReturn(true)
-                .when(manager)
-                .hasRight(userId, nodeId, GroupRights.READ);
 
         Resource resource = new Resource();
         resource.setNode(new Node());
@@ -562,7 +519,7 @@ public class ResourceManagerTest {
                 .fetchResource(any(ResourceDocument.class), eq(output), eq(lang), eq(thumb));
 
         ResourceDocument document = manager
-                .fetchResource(nodeId, userId, output, lang, thumb);
+                .fetchResource(nodeId, output, lang, thumb);
 
         assertNull(document);
 
@@ -575,17 +532,12 @@ public class ResourceManagerTest {
     }
 
     @Test
-    public void fetchResource_WithReadRight_WithoutError() throws BusinessException {
-        Long userId = 42L;
+    public void fetchResource_WithoutError() {
         String lang = "fr";
         boolean thumb = true;
 
         OutputStream output = new ByteArrayOutputStream();
         UUID nodeId = UUID.randomUUID();
-
-        doReturn(true)
-                .when(manager)
-                .hasRight(userId, nodeId, GroupRights.READ);
 
         Resource resource = new Resource();
         resource.setNode(new Node());
@@ -599,7 +551,7 @@ public class ResourceManagerTest {
                 .fetchResource(any(ResourceDocument.class), eq(output), eq(lang), eq(thumb));
 
         ResourceDocument document = manager
-                .fetchResource(nodeId, userId, output, lang, thumb);
+                .fetchResource(nodeId, output, lang, thumb);
 
         assertNotNull(document);
 
