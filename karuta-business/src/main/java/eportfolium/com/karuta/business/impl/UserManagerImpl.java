@@ -48,6 +48,9 @@ public class UserManagerImpl implements UserManager {
 
 	@Override
 	public CredentialList getUserList(String username, String firstname, String lastname) {
+		if( username == null ) username = "";
+		if( firstname == null ) firstname = "";
+		if( lastname == null ) lastname = "";
 		List<Credential> credentials = credentialRepository.getUsers(username, firstname, lastname);
 
 		return new CredentialList(credentials.stream()

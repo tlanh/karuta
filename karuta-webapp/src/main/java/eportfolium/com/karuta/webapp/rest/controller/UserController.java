@@ -99,9 +99,9 @@ public class UserController extends AbstractController {
     	HttpSession session = request.getSession(false);
     	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
     	authentication = securityContext.getAuthentication();
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+    	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
 
-        if (userInfo.isAdmin() || userInfo.isDesigner())
+        if (userInfo.getAdmin() > 0 || userInfo.getDesigner() > 0)
             return new HttpEntity<>(userManager.getUserList(username, firstname, lastname));
         else
             return new HttpEntity<>(userManager.getUserInfos(userInfo.getId()));
