@@ -126,7 +126,7 @@ public class FileManagerImpl implements FileManager {
 								  InputStream content,
 								  String lang,
 								  boolean thumbnail) {
-		String url = urlFor(resource, thumbnail);
+		String url = urlFor(resource, thumbnail, lang);
 
 		HttpPut request = new HttpPut(url);
 		request.setEntity(new InputStreamEntity(content));
@@ -148,7 +148,7 @@ public class FileManagerImpl implements FileManager {
 							  OutputStream output,
 							  String lang,
 							  boolean thumbnail) {
-		String url = urlFor(resource, thumbnail);
+		String url = urlFor(resource, thumbnail, lang);
 
 		HttpGet request = new HttpGet(url);
 
@@ -168,8 +168,8 @@ public class FileManagerImpl implements FileManager {
 		return HttpClients.createDefault();
 	}
 
-	private String urlFor(ResourceDocument resource, boolean thumbnail) {
-		String url = configurationManager.get("fileserver") + "/" + resource.getFileid();
+	private String urlFor(ResourceDocument resource, boolean thumbnail, String lang) {
+		String url = configurationManager.get("fileserver") + "/" + resource.getFileid(lang);
 
 		if (thumbnail)
 			url += "/thumb";

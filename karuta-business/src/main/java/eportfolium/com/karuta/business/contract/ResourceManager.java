@@ -26,7 +26,7 @@ import eportfolium.com.karuta.model.exception.BusinessException;
 
 public interface ResourceManager extends BaseManager {
 
-	ResourceDocument getResource(UUID parentNodeId, Long userId) throws BusinessException;
+	ResourceDocument getResource(UUID parentNodeId);
 
 	Integer changeResource(UUID parentNodeId, ResourceDocument resource, Long userId)
 			throws BusinessException, JsonProcessingException;
@@ -47,9 +47,5 @@ public interface ResourceManager extends BaseManager {
 						  String lang,
 						  boolean thumbnail) throws BusinessException;
 
-	ResourceDocument fetchResource(UUID nodeId,
-								   Long userId,
-								   OutputStream output,
-								   String lang,
-								   boolean thumbnail) throws BusinessException;
+	ResourceDocument fetchResource(UUID nodeId, OutputStream output, String lang, boolean thumbnail);
 }

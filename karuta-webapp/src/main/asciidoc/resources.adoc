@@ -1,0 +1,139 @@
+== Resources
+
+=== GET /resource/{nodeId}
+
+This endpoint returns a resource found by its parent node's ID.
+
+[NOTE]
+If the current user doesn't have the necessary rights to read the node,
+then a 403 (Forbidden) response is returned.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/get-resource/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/get-resource/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/get-resource/http-response.adoc[]
+
+=== GET /resource/file/{id}
+
+This endpoint returns a file held by a resource.
+
+[NOTE]
+The `Content-Type` and `Content-Disposition` headers are based on the
+resource's `type` and `filename` tags. Here, for documentation purposes,
+a text response is exposed.
+
+[NOTE]
+You can pass a `lang` parameter to get the resource's file for a specific
+locale; by default `fr` is implied. This parameter is used to compute the
+aforementioned headers.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/get-resource-file/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/get-resource-file/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/get-resource-file/http-response.adoc[]
+
+=== PUT /resource/file/{id}
+
+This endpoint updates the content of a resource's file.
+
+[NOTE]
+You can pass a `lang` parameter to update the resource's content for
+a specific locale. By default, `fr` is implied.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/update-resource-file/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/update-resource-file/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/update-resource-file/http-response.adoc[]
+
+=== PUT /resource/{nodeId}
+
+This endpoint updates a resource. The returned response body is 0
+when the operation succeeds.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/update-resource/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/update-resource/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/update-resource/http-response.adoc[]
+
+=== POST /{nodeId}
+
+This endpoint adds a resource attached to a node found through a
+given ID.
+
+[NOTE]
+The user needs to have the right to write on the parent node to be
+able to create the resource or be an admin user.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/add-resource/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/add-resource/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/add-resource/http-response.adoc[]
+
+=== POST /
+
+This endpoint works exactly as the previous one excepts that the
+resource's parent node ID is passed as a parameter rather than
+as a URL segment.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/add-resource-alternative/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/add-resource-alternative/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/add-resource-alternative/http-response.adoc[]
+
+=== DELETE /{id}
+
+This endpoint deletes a resource found by its ID.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/delete-resource/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/delete-resource/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/delete-resource/http-response.adoc[]

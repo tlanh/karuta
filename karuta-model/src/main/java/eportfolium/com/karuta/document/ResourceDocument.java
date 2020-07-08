@@ -2,13 +2,16 @@ package eportfolium.com.karuta.document;
 
 import com.fasterxml.jackson.annotation.*;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
 import eportfolium.com.karuta.model.bean.Node;
 import eportfolium.com.karuta.model.bean.Resource;
 
+import java.io.IOException;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Matcher;
@@ -28,9 +31,9 @@ public class ResourceDocument {
     private String code;
 
     // For file resources
-    private String filename;
-    private String fileid;
-    private String type;
+    private List<Map<String, String>> filename;
+    private List<Map<String, String>> fileid;
+    private List<Map<String, String>> type;
 
     public ResourceDocument() { }
 
@@ -46,6 +49,20 @@ public class ResourceDocument {
         this.modifDate = resource.getModifDate();
 
         this.content = resource.getContent();
+
+        if (resource.getContent() != null) {
+            try {
+                XmlMapper mapper = new XmlMapper();
+                ResourceDocument subset = mapper.readerFor(ResourceDocument.class)
+                        .readValue("<asmResource>" + resource.getContent() + "</asmResource>");
+
+                this.filename = subset.getFilename();
+                this.fileid = subset.getFileid();
+                this.type = subset.getType();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     @JsonGetter("id")
@@ -143,18 +160,48 @@ public class ResourceDocument {
     }
 
     @JsonGetter("filename")
-    public String getFilename() {
+    @JacksonXmlElementWrapper(useWrapping = false)
+    public List<Map<String, String>> getFilename() {
         return filename;
     }
 
+    public String getFilename(String lang) {
+        return findValueForLang(filename, lang);
+    }
+
+    public void setFilename(List<Map<String, String>> filename) {
+        this.filename = filename;
+        this.dumpMap("filename", filename);
+    }
+
     @JsonGetter("fileid")
-    public String getFileid() {
+    @JacksonXmlElementWrapper(useWrapping = false)
+    public List<Map<String, String>> getFileid() {
         return fileid;
     }
     //*/
 
+    public String getFileid(String lang) {
+        return findValueForLang(fileid, lang);
+    }
+
+    public void setFileid(List<Map<String, String>> fileid) {
+        this.fileid = fileid;
+        this.dumpMap("fileid", fileid);
+    }
+
     @JsonGetter("type")
-    public String getType() { return type; }
+    @JacksonXmlElementWrapper(useWrapping = false)
+    public List<Map<String, String>> getType() { return type; }
+
+    public String getType(String lang) {
+        return findValueForLang(type, lang);
+    }
+
+    public void setType(List<Map<String, String>> type) {
+        this.type = type;
+        this.dumpMap("type", type);
+    }
 
     @JsonRawValue
     public String getContent() {
@@ -188,5 +235,31 @@ public class ResourceDocument {
                 .append(">");
 
         content += builder.toString();
+    }
+
+    private String findValueForLang(List<Map<String, String>> values, String lang) {
+        if (values == null)
+            return "";
+
+        return values.stream()
+                .filter(f -> f.get("lang").equals(lang))
+                .findFirst()
+                .map(m -> m.get("value"))
+                .orElse("");
+    }
+
+    private void dumpMap(String name, List<Map<String, String>> values) {
+        if (this.content == null)
+            this.content = "";
+
+        StringBuilder stringBuilder = new StringBuilder("");
+
+        values.forEach(map -> {
+            stringBuilder.append("<").append(name);
+            map.forEach((k, v) -> stringBuilder.append(" ").append(k).append("=\"").append(v).append("\""));
+            stringBuilder.append(" />");
+        });
+
+        content += stringBuilder.toString();
     }
 }
