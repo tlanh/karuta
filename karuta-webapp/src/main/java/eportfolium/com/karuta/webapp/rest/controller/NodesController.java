@@ -80,7 +80,7 @@ public class NodesController extends AbstractController {
      */
     @GetMapping(value = "/node/{id}/children", consumes = "application/xml",
             produces = {"application/json", "application/xml"})
-    public HttpEntity<NodeDocument> getNodeWithChildren(@RequestParam long group,
+    public HttpEntity<String> getNodeWithChildren(@RequestParam long group,
                                                         @PathVariable UUID id,
                                                         @RequestParam Integer level,
                                                         Authentication authentication)
@@ -540,7 +540,7 @@ public class NodesController extends AbstractController {
      * GET /rest/api/nodes/{id}
      */
     @GetMapping(value = "/{id}", consumes = "application/xml")
-    public HttpEntity<NodeDocument> getNodeWithXSL(@RequestParam long group,
+    public HttpEntity<String> getNodeWithXSL(@RequestParam long group,
                                                    @PathVariable UUID id,
                                                    @RequestParam String lang,
                                                    @RequestParam("xsl-file") String xslFile,

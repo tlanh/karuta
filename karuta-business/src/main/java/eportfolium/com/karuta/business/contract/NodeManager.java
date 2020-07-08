@@ -109,7 +109,7 @@ public interface NodeManager extends BaseManager {
 	NodeList addNode(UUID parentNodeId, NodeDocument node, Long userId, Long groupId,
 			boolean forcedUuid) throws JsonProcessingException, BusinessException;
 
-	NodeDocument getNodeWithXSL(UUID nodeId, String xslFile, String parameters, Long id, Long groupId)
+	String getNodeWithXSL(UUID nodeId, String xslFile, String parameters, Long id, Long groupId)
 			throws BusinessException, JsonProcessingException;
 
 	NodeList getNodes(String rootNodeCode, String childSemtag, Long userId, Long groupId,

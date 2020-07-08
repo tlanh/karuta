@@ -1027,14 +1027,16 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 		UUID portfolioId = null;
 		UUID portfolioModelId = null;
 
+		List<UUID> single = new ArrayList<>();
+		single.add(parentNodeId);
+		Node pNode = nodeRepository.getNodes(single).get(0);
 		if (portfolio != null) {
 			portfolioId = portfolio.getId();
 			portfolioModelId = portfolio.getModelId();
 		}
 
 		// TODO getNodeRight postNode
-
-		UUID nodeId = writeNode(node, portfolioId, portfolioModelId, userId, nodeOrder, null, parentNodeId,
+		Node nodeId = writeNode(node, portfolioId, portfolioModelId, userId, nodeOrder, null, pNode,
 				false, false, forcedUuid, null, true);
 
 		portfolioManager.updateTimeByNode(portfolioId);
@@ -1043,7 +1045,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	}
 
 	@Override
-	public NodeDocument getNodeWithXSL(UUID nodeId, String xslFile, String parameters, Long userId,
+	public String getNodeWithXSL(UUID nodeId, String xslFile, String parameters, Long userId,
 			Long groupId) throws BusinessException, JsonProcessingException {
 		String result = null;
 		/// Préparation des paramètres pour les besoins futurs, format:

@@ -232,19 +232,17 @@ public class PortfolioController extends AbstractController {
      * @see #putPortfolio(PortfolioDocument, UUID, boolean, Authentication)
      */
     @GetMapping(value = "/portfolio/code/{code:.+}", produces = {"application/json", "application/xml"})
-    public HttpEntity<String> getByCode(@RequestParam long group,
-                                                   @PathVariable String code,
+    public HttpEntity<String> getByCode(@PathVariable String code,
                                                    @RequestParam (defaultValue = "false")boolean resources,
-                                                   @AuthenticationPrincipal UserInfo userInfo,
                                                    HttpServletRequest request)
             throws BusinessException, JsonProcessingException {
     	HttpSession session = request.getSession(false);
         SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
         Authentication authentication = securityContext.getAuthentication();
-//    	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
+    	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
         
         return new HttpEntity<>(portfolioManager
-                .getPortfolioByCode(code, userInfo.getId(), group, resources));
+                .getPortfolioByCode(code, userInfo.getId(), -1l, resources));
     }
 
     /**
