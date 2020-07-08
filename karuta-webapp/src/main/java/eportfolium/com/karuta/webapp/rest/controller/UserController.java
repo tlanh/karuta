@@ -68,8 +68,15 @@ public class UserController extends AbstractController {
      * @return
      */
     @PostMapping(consumes = "application/xml", produces = "application/xml")
-    public HttpEntity<CredentialList> postUser(@RequestBody CredentialList xmluser) {
-        return new HttpEntity<>(securityManager.addUsers(xmluser));
+    public HttpEntity<CredentialList> postUser(@RequestBody CredentialList xmluser,
+    		 Authentication authentication,
+    		 HttpServletRequest request) {
+    		 HttpSession session = request.getSession(false);
+    		 SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
+    		 authentication = securityContext.getAuthentication();
+    		 CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
+    		 
+    		 return new HttpEntity<>(securityManager.addUsers(xmluser));
     }
 
     /**
