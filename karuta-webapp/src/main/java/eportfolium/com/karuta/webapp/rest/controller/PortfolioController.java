@@ -48,6 +48,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -637,16 +638,43 @@ public class PortfolioController extends AbstractController {
      * @return <portfolios> <portfolio id="uuid"/> </portfolios>
      */
     @PostMapping(consumes = {"multipart/form-data", "application/xml"}, produces = "application/xml")
-    public HttpEntity<PortfolioList> postPortfolio(@RequestBody PortfolioDocument portfolio,
-                                                   @RequestParam int group,
-                                                   @RequestParam UUID model,
-                                                   @RequestParam boolean instance,
-                                                   @RequestParam String project,
-                                                   Authentication authentication) throws BusinessException, JsonProcessingException {
+    public HttpEntity<PortfolioList> postPortfolio(@RequestParam MultipartFile uploadfile,
+                                                   @RequestParam (required = false)UUID model,
+                                                   @RequestParam (defaultValue = "false")boolean instance,
+                                                   @RequestParam (defaultValue = "")String project,
+                                                   @AuthenticationPrincipal UserInfo userInfo,
+                                                   HttpServletRequest request) throws BusinessException, JsonProcessingException {
 
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
+    	HttpSession session = request.getSession(false);
+    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
+    	Authentication authentication = securityContext.getAuthentication();
+    	//    >CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
+    	 
+    	StringBuilder sbuilder = new StringBuilder();
+    	String content = "";
+    	
+			try
+			{
+				InputStream input = uploadfile.getInputStream();
+        byte[] buffer = new byte[2048];
+        int length;
+        while ((length = input.read(buffer)) != -1) {
+        	sbuilder.append(new String(buffer, 0, length));
+        }
+        input.close();
 
-        return new HttpEntity<>(portfolioManager.addPortfolio(portfolio, userInfo.getId(), group, model,
-                instance, project));
+				content = sbuilder.toString();
+			}
+			catch( IOException e )
+			{
+				e.printStackTrace();
+			}
+      ObjectMapper mapper = new XmlMapper();
+      PortfolioDocument document = mapper
+            .readerFor(PortfolioDocument.class)
+            .readValue(content);
+
+      return new HttpEntity<>(portfolioManager.addPortfolio(document, userInfo.getId(), 0, model,
+               instance, project));
     }
 }
