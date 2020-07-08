@@ -151,7 +151,7 @@ public class PortfolioController extends AbstractController {
                 .stream()
                 .filter(n -> n.getResources()
                         .stream()
-                        .anyMatch(r -> r.getLang() == lang && r.getFileid() != null))
+                        .anyMatch(r -> !r.getFileid(lang).isEmpty()))
                 .collect(Collectors.toList());
 
         // Loop through the different nodes that have file to
@@ -159,11 +159,11 @@ public class PortfolioController extends AbstractController {
         nodesWithFiles.forEach(node -> {
             ResourceDocument resource = node.getResources()
                                                 .stream()
-                                                .filter(r -> r.getFileid() != null)
+                                                .filter(r -> !r.getFileid(lang).isEmpty())
                                                 .findFirst()
                                                 .get();
 
-            String filename = resource.getFilename();
+            String filename = resource.getFilename(lang);
             String resourceLang = resource.getLang() != null ? resource.getLang() : "fr";
 
             if (filename.equals(""))
