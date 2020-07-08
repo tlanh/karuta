@@ -72,7 +72,7 @@ public class FileManagerTest {
                 .execute(captor.capture());
 
         ResourceDocument document = mock(ResourceDocument.class);
-        when(document.getFileid()).thenReturn("foo");
+        when(document.getFileid(lang)).thenReturn("foo");
 
         assertTrue(manager.updateResource(document, input, lang, thumb));
 
@@ -105,7 +105,7 @@ public class FileManagerTest {
                 .execute(captor.capture());
 
         ResourceDocument document = mock(ResourceDocument.class);
-        when(document.getFileid()).thenReturn("foo");
+        when(document.getFileid(lang)).thenReturn("foo");
 
         assertTrue(manager.updateResource(document, input, lang, thumb));
 
@@ -169,7 +169,7 @@ public class FileManagerTest {
                 .execute(captor.capture());
 
         ResourceDocument document = mock(ResourceDocument.class);
-        when(document.getFileid()).thenReturn("bar");
+        when(document.getFileid(lang)).thenReturn("bar");
 
         assertTrue(manager.fetchResource(document, output, lang, thumb));
 
