@@ -24,8 +24,8 @@ public class ResourceDocument {
     private Date modifDate;
     private String content = "";
 
-//    private String lang;
-//    private String code;
+    private String lang;
+    private String code;
 
     // For file resources
     private String filename;
@@ -81,6 +81,7 @@ public class ResourceDocument {
         this.content = content;
     }
 
+    /*
     @JsonIgnore
     public String getCode() {
       return getNodeContent("code", "");
@@ -89,6 +90,7 @@ public class ResourceDocument {
     public String getFileid() {			
       return getNodeContent("fileid", "");
     }
+    //*/
     
     private String getNodeContent( String tag, String lang )
     {
@@ -105,6 +107,7 @@ public class ResourceDocument {
     }
 
     /// FIXME: First lang tag found. Doesn't make sense since resource can have multiple language (for now?)
+    /*
     @JsonIgnore
     public String getLang() {
     	String lang = null;
@@ -119,8 +122,8 @@ public class ResourceDocument {
     public String getFilename() {
       return getNodeContent("filename", "");
     }
+    //*/
 
-    /*
     @JsonGetter("lang")
     public String getLang() {
         return lang;

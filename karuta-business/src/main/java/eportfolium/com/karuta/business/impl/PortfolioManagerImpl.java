@@ -187,7 +187,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	}
 
 	@Override
-	public PortfolioDocument getPortfolio(UUID portfolioId, Long userId, Integer cutoff)
+	public String getPortfolio(UUID portfolioId, Long userId, Integer cutoff)
 			throws BusinessException, JsonProcessingException {
 
 		Node rootNode = portfolioRepository.getPortfolioRootNode(portfolioId);
@@ -208,13 +208,8 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 
 		String data = getPortfolio(portfolioId, rootNode.getId(), userId,
         rights.getGroupRightInfo().getId(), owner, rights.getGroupRightInfo().getLabel(), cutoff);
-    ObjectMapper mapper = new XmlMapper();
-    PortfolioDocument portfolio = mapper
-        .readerFor(PortfolioDocument.class)
-        .readValue(data);
-
 		
-        return portfolio; 
+        return data; 
 	}
 
 	@Override
@@ -427,13 +422,25 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		}
 
 		if (resources) {
-			return getPortfolio(portfolio.getId(), userId, null);
+			String data = getPortfolio(portfolio.getId(), userId, null);
+	    ObjectMapper mapper = new XmlMapper();
+	    PortfolioDocument portfoliod = mapper
+	        .readerFor(PortfolioDocument.class)
+	        .readValue(data);
+
+			return portfoliod;
 		} else {
 			PortfolioDocument document = new PortfolioDocument(portfolio.getId());
 			document.setNodes(Collections.singletonList(nodeManager.getNode(portfolio.getRootNode().getId(), false, "nodeRes", userId,
 					null, false)));
 			/// For now
-			return getPortfolio(portfolio.getId(), userId, null);
+			String data = getPortfolio(portfolio.getId(), userId, null);
+	    ObjectMapper mapper = new XmlMapper();
+	    document = mapper
+	        .readerFor(PortfolioDocument.class)
+	        .readValue(data);
+
+			return document;
 		}
 	}
 
@@ -783,7 +790,14 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		// FIXME Inutilisé, nous instancions / copions un portfolio
 		String data = null;
 		if (portfolioModelId != null)
-			portfolioDocument = getPortfolio(portfolioModelId, userId, null);
+		{
+			data = getPortfolio(portfolioModelId, userId, null);
+			
+	    ObjectMapper mapper = new XmlMapper();
+	    portfolioDocument = mapper
+	        .readerFor(PortfolioDocument.class)
+	        .readValue(data);
+		}
 
 		Optional<NodeDocument> nodeDocument = portfolioDocument.getNodes()
 					.stream()
