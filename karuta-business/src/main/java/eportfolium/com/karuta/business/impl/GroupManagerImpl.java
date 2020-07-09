@@ -241,13 +241,10 @@ public class GroupManagerImpl implements GroupManager {
 		} else if (GroupRights.DELETE.equalsIgnoreCase(right)) {
 			groupRights.setDelete(true);
 		} else if (GroupRights.SUBMIT.equalsIgnoreCase(right)) {
-			//// FIXME: ajoute le rules_id prÃ©-cannÃ© pour certaine valeurs
 			groupRights.setSubmit(true);
 		} else if (GroupRights.ADD.equalsIgnoreCase(right)) {
 			groupRights.setAdd(true);
 		} else {
-			// Le droit d'executer des actions.
-			// FIXME Pas propre, à changer plus tard.
 			groupRights.setRulesId(right);
 		}
 
