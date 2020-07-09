@@ -34,6 +34,7 @@ public class CredentialDocument {
         this.email = credential.getEmail();
         this.admin = credential.getIsAdmin();
         this.designer = credential.getIsDesigner();
+        this.other = credential.getOther();
     }
 
     public CredentialDocument(Credential credential, boolean extra) {

@@ -43,13 +43,13 @@ public class Credential implements Serializable {
 	private int isAdmin;
 	private int isDesigner;
 	private int active;
-	private String displayFirstname;
-	private String displayLastname;
+	private String displayFirstname = "";
+	private String displayLastname = "";
 	private String email;
 	private String password;
 	private String token;
 	private Long CDate;
-	private String other;
+	private String other = "";
 	private CredentialSubstitution credentialSubstitution;
 
 	private Set<GroupUser> groups = new HashSet<GroupUser>();
