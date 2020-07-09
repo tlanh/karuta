@@ -20,12 +20,16 @@ import java.util.stream.Stream;
 public class PortfolioDocument {
     private UUID id;
     private UUID rootNodeId;
-    @JsonDeserialize(using = BooleanDeserializer.class)
-    private boolean owner;
-    private Long ownerId;
+
     private String code;
     private int version;
     private Long gid;
+
+    @JsonDeserialize(using = BooleanDeserializer.class)
+    private boolean owner;
+
+    private Long ownerId;
+
     @JsonFormat(pattern="yyyy-MM-dd HH:mm:ss.S")
     private Date modifDate;
 
@@ -127,14 +131,14 @@ public class PortfolioDocument {
         return owner;
     }
 
-    @JsonGetter("owner_id")
-    @JacksonXmlProperty(isAttribute = true, localName = "owner_id")
+    @JsonGetter("ownerid")
+    @JacksonXmlProperty(isAttribute = true, localName = "ownerid")
     public Long getOwnerId() {
         return ownerId;
     }
 
-    @JsonGetter("last_modif")
-    @JacksonXmlProperty(isAttribute = true, localName = "last_modif")
+    @JsonGetter("modified")
+    @JacksonXmlProperty(isAttribute = true, localName = "modified")
     @JsonFormat(pattern="yyyy-MM-dd HH:mm:ss.S")
     public Date getModifDate() {
         return modifDate;

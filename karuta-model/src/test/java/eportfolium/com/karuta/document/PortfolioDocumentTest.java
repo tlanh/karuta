@@ -29,7 +29,7 @@ public class PortfolioDocumentTest extends DocumentTest {
 
         String output = mapper.writeValueAsString(document);
 
-        assertContains("<portfolio id=\"" + id + "\" owner=\"false\" gid=\"12\"", output);
+        assertContains("<portfolio id=\"" + id + "\" gid=\"12\" owner=\"false\"", output);
     }
 
     @Test
@@ -39,7 +39,7 @@ public class PortfolioDocumentTest extends DocumentTest {
 
         String output = mapper.writeValueAsString(document);
 
-        assertContains("<portfolio id=\"" + id + "\" owner=\"true\" code=\"\">", output);
+        assertContains("<portfolio id=\"" + id + "\" code=\"\" owner=\"true\">", output);
     }
 
     @Test
@@ -62,8 +62,8 @@ public class PortfolioDocumentTest extends DocumentTest {
         String output = mapper.writeValueAsString(document);
 
         assertContains("<portfolio id=\"" + id + "\" ", output);
-        assertContains("owner=\"true\"", output);
-        assertContains("code=\"" + code + "\">", output);
+        assertContains("code=\"" + code + "\"", output);
+        assertContains("owner=\"true\">", output);
 
         assertContains("<asmRoot id=\"" + nodeId + "\" type=\"asmRoot\"", output);
         assertContains("xsi_type=\"foo\"", output);
@@ -111,7 +111,7 @@ public class PortfolioDocumentTest extends DocumentTest {
         assertContains("<portfolio id=\"" + portfolioId + "\" ", output);
         assertContains("root_node_id=\"" + nodeId + "\" ", output);
         assertContains("owner=\"true\"", output);
-        assertContains("last_modif=\"2020-11-10 10:10:10.0\">", output);
+        assertContains("modified=\"2020-11-10 10:10:10.0\">", output);
 
         assertContains("<asmRoot id=\"" + nodeId + "\" semtag=\"baz\" ", output);
         assertContains("<label>foo</label>", output);
