@@ -534,7 +534,6 @@ public class PortfolioController extends AbstractController {
      */
     @PostMapping(value = "/zip", consumes = "multipart/form-data")
     public String importZip(@RequestParam MultipartFile uploadfile,
-                            @RequestParam(required = false) String model,
                             @RequestParam(defaultValue = "false") boolean instance,
                             @RequestParam(required = false) String project,
                             @AuthenticationPrincipal UserInfo userInfo,
