@@ -41,7 +41,7 @@ INSERT INTO `configuration` (`name`, `value`) VALUES
 INSERT INTO `credential` (`userid`, `login`, `can_substitute`, `is_admin`, `is_designer`, `active`, `display_firstname`, `display_lastname`, `email`, `password`, `token`, `c_date`, `other`) VALUES
 (1, 'root', 0, 1, 0, 1, 'root', '', 'test@test.com', 'f5186f0900dc6dadb24dc0269692cd3d062c1f131a6fc43c6f86b6eec75f9f0b12c4c102731e5d9d', NULL, NULL, ''),
 (2, 'sys_public', 0, 0, 0, 1, 'System public account (users with account)', '', NULL, '$31$16$f-TvAhOhD4Q4ugGoC5m-AULoayisrTQDE5otQpexw5c', NULL, NULL, ''),
-(3, 'public', 0, 0, 0, 1, 'Public account (World)', '', NULL, '$31$16$f-TvAhOhD4Q4ugGoC5m-AULoayisrTQDE5otQpexw5c', NULL, NULL, '');
+(3, 'public', 0, 0, 0, 1, 'Public account (World)', '', NULL, '5f23cf51f79f95c77ffc7f0a7095659fdedb489161c56553feaf64f8037e63764e7b2390393c23b2', NULL, NULL, '');
 
 
 --
