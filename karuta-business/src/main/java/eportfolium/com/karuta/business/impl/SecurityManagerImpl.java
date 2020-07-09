@@ -175,7 +175,8 @@ public class SecurityManagerImpl implements SecurityManager {
 				credential.setCredentialSubstitution(subst);
 				credentialRepository.save(credential);
 			} else {
-				credentialSubstitutionRepository.deleteById(csId);
+				if (credentialSubstitutionRepository.existsById(csId))
+					credentialSubstitutionRepository.deleteById(csId);
 			}
 
 			processed.add(document);
@@ -243,7 +244,8 @@ public class SecurityManagerImpl implements SecurityManager {
 
 				credentialSubstitutionRepository.save(subst);
 			} else {
-				credentialSubstitutionRepository.deleteById(csId);
+				if (credentialSubstitutionRepository.existsById(csId))
+					credentialSubstitutionRepository.deleteById(csId);
 			}
 		}
 
