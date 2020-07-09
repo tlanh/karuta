@@ -46,7 +46,6 @@ public class ResourceDocumentTest extends DocumentTest {
 
         ResourceDocument document = new ResourceDocument(resource, node);
 
-        document.setLang("fr");
         document.setCode("bar");
 
         String output = mapper.writeValueAsString(document);
@@ -54,9 +53,8 @@ public class ResourceDocumentTest extends DocumentTest {
         assertContains("<asmResource id=\"" + resourceId + "\" ", output);
         assertContains("contextid=\"" + nodeId + "\" ", output);
         assertContains("xsi_type=\"foo\"", output);
-        assertContains("last_modif=\"2020-11-10T10:10:10.000+00:00\">", output);
+        assertContains("last_modif=\"2020-11-10 10:10:10.0\">", output);
 
-        assertContains("<lang>fr</lang>", output);
         assertContains("<code>bar</code>", output);
 
         assertContains("<content>" + rawXml + "</content>", output);
@@ -78,7 +76,6 @@ public class ResourceDocumentTest extends DocumentTest {
 
         String xml = "<asmResource xsi_type=\"foo\" id=\"" + id + "\" " +
                             "contextid=\"" + nodeId + "\">" +
-                        "<lang>fr</lang>" +
                         "<code>foo</code>" +
                         "<foo lang=\"fr\">v</foo>" +
                         "<bar></bar>" +
@@ -100,8 +97,6 @@ public class ResourceDocumentTest extends DocumentTest {
         assertEquals(nodeId, document.getNodeId());
 
         assertEquals("foo", document.getXsiType());
-
-        assertEquals("fr", document.getLang());
         assertEquals("foo", document.getCode());
 
         assertContains("<foo lang=\"fr\">v</foo><bar></bar>", document.getContent());

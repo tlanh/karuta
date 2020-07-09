@@ -65,7 +65,7 @@ public class PortfolioDocumentTest extends DocumentTest {
         assertContains("owner=\"true\"", output);
         assertContains("code=\"" + code + "\">", output);
 
-        assertContains("<node id=\"" + nodeId + "\" type=\"asmRoot\"", output);
+        assertContains("<asmRoot id=\"" + nodeId + "\" type=\"asmRoot\"", output);
         assertContains("xsi_type=\"foo\"", output);
     }
 
@@ -111,9 +111,9 @@ public class PortfolioDocumentTest extends DocumentTest {
         assertContains("<portfolio id=\"" + portfolioId + "\" ", output);
         assertContains("root_node_id=\"" + nodeId + "\" ", output);
         assertContains("owner=\"true\"", output);
-        assertContains("modified=\"2020-11-10T10:10:10.000+00:00\">", output);
+        assertContains("last_modif=\"2020-11-10 10:10:10.0\">", output);
 
-        assertContains("<node id=\"" + nodeId + "\" semtag=\"baz\" ", output);
+        assertContains("<asmRoot id=\"" + nodeId + "\" semtag=\"baz\" ", output);
         assertContains("<label>foo</label>", output);
         assertContains("<description>bar</description>", output);
         assertContains("<metadata public=\"true\"/>", output);
@@ -122,7 +122,7 @@ public class PortfolioDocumentTest extends DocumentTest {
 
         assertContains("<asmResource id=\"" + resourceId + "\" ", output);
         assertContains("contextid=\"" + nodeId +"\" xsi_type=\"quux\"", output);
-        assertContains("last_modif=\"2020-11-10T10:10:10.000+00:00\">", output);
+        assertContains("last_modif=\"2020-11-10 10:10:10.0\">", output);
         assertContains("<content><foo></foo></content>", output);
     }
 
@@ -132,11 +132,11 @@ public class PortfolioDocumentTest extends DocumentTest {
         UUID nodeId = UUID.randomUUID();
 
         String xml = "<portfolio id=\"" + id + "\">" +
-                        "<node type=\"asmRoot\" id=\"" + nodeId +"\">" +
+                        "<asmRoot type=\"asmRoot\" id=\"" + nodeId +"\">" +
                             "<asmResource code=\"foo\">" +
                                 "<foo></foo>" +
                             "</asmResource>" +
-                        "</node>" +
+                        "</asmRoot>" +
                 "</portfolio>";
 
         PortfolioDocument document = mapper.readerFor(PortfolioDocument.class)

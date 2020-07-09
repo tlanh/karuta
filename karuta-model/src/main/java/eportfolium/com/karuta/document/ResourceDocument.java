@@ -1,7 +1,6 @@
 package eportfolium.com.karuta.document;
 
 import com.fasterxml.jackson.annotation.*;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
@@ -14,12 +13,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @JsonRootName("asmResource")
 @JsonInclude(JsonInclude.Include.NON_ABSENT)
-@JsonSerialize(using = ResourceSerializer.class)
 public class ResourceDocument {
     private UUID id;
     private UUID nodeId;
@@ -98,58 +94,6 @@ public class ResourceDocument {
         this.content = content;
     }
 
-    /*
-    @JsonIgnore
-    public String getCode() {
-      return getNodeContent("code", "");
-    }
-
-    public String getFileid() {			
-      return getNodeContent("fileid", "");
-    }
-    //*/
-    
-    private String getNodeContent( String tag, String lang )
-    {
-    	String data = null;
-    	String l = "";
-    	if( !"".equals(lang) )
-    		l = String.format(".*lang=\"%s\".*", lang);
-			String tagReg = String.format("<%s%s>([^<]*)</%s>", tag, l, tag);
-			Pattern tagPat = Pattern.compile(tagReg);
-			Matcher startMatcher = tagPat.matcher(content);
-			if (startMatcher.find()) data = startMatcher.group(1);
-			
-			return data;
-    }
-
-    /// FIXME: First lang tag found. Doesn't make sense since resource can have multiple language (for now?)
-    /*
-    @JsonIgnore
-    public String getLang() {
-    	String lang = null;
-			String tagReg = "lang=\"([^\"]*)";
-			Pattern tagPat = Pattern.compile(tagReg);
-			Matcher startMatcher = tagPat.matcher(content);
-			if (startMatcher.find()) lang = startMatcher.group(1);
-			
-      return lang;
-    }
-
-    public String getFilename() {
-      return getNodeContent("filename", "");
-    }
-    //*/
-
-    @JsonGetter("lang")
-    public String getLang() {
-        return lang;
-    }
-
-    public void setLang(String lang) {
-        this.lang = lang;
-    }
-
     @JsonGetter("code")
     public String getCode() {
         return code;
@@ -179,7 +123,6 @@ public class ResourceDocument {
     public List<Map<String, String>> getFileid() {
         return fileid;
     }
-    //*/
 
     public String getFileid(String lang) {
         return findValueForLang(fileid, lang);
@@ -204,6 +147,7 @@ public class ResourceDocument {
     }
 
     @JsonRawValue
+    @JsonInclude(JsonInclude.Include.NON_DEFAULT)
     public String getContent() {
         return content;
     }

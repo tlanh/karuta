@@ -29,11 +29,12 @@ public class PortfolioDocument {
     @JsonFormat(pattern="yyyy-MM-dd HH:mm:ss.S")
     private Date modifDate;
 
-    private List<NodeDocument> nodes = new ArrayList<NodeDocument>();
+    private List<NodeDocument> nodes = new ArrayList<>();
 
     public PortfolioDocument() { }
 
     public PortfolioDocument(UUID id) {
+        this.version = 4;
         this.id = id;
     }
 
@@ -72,16 +73,13 @@ public class PortfolioDocument {
         child.setDescription(rootNode.getDescr());
         child.setSemtag(rootNode.getSemtag());
 
-            try
-						{
-							child.setMetadataWad(MetadataWadDocument.from(rootNode.getMetadataWad()));
-	            child.setMetadataEpm(MetadataEpmDocument.from(rootNode.getMetadataEpm()));
-	            child.setMetadata(MetadataDocument.from(rootNode.getMetadata()));
-						}
-						catch( JsonProcessingException e )
-						{
-							e.printStackTrace();
-						}
+        try {
+            child.setMetadataWad(MetadataWadDocument.from(rootNode.getMetadataWad()));
+            child.setMetadataEpm(MetadataEpmDocument.from(rootNode.getMetadataEpm()));
+            child.setMetadata(MetadataDocument.from(rootNode.getMetadata()));
+        } catch( JsonProcessingException e ) {
+            e.printStackTrace();
+        }
 
         child.setResources(Stream.of(
                 rootNode.getResResource(),
@@ -102,7 +100,7 @@ public class PortfolioDocument {
 
     @JsonGetter("version")
     public int getVersion() {
-        return version; // For backward compatibility ; cut if useless
+        return version;
     }
 
     @JsonGetter("id")
@@ -150,9 +148,9 @@ public class PortfolioDocument {
 
     @JacksonXmlProperty(localName = "asmRoot")
     public void setNodes(NodeDocument node) {
-    	node.type = "asmRoot";
-      this.nodes.add( node );
-  }
+        node.type = "asmRoot";
+        this.nodes.add( node );
+    }
 
     public void setNodes(List<NodeDocument> nodes) {
         this.nodes = nodes;

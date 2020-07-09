@@ -187,7 +187,7 @@ public class PortfolioController extends AbstractController {
                                                 .get();
 
             String filename = resource.getFilename(lang);
-            String resourceLang = resource.getLang() != null ? resource.getLang() : "fr";
+            String resourceLang = lang != null ? lang : "fr";
 
             if (filename.equals(""))
                 return;

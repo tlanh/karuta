@@ -2,12 +2,10 @@ package eportfolium.com.karuta.document;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import com.fasterxml.jackson.annotation.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
@@ -15,21 +13,16 @@ import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 public class MetadataDocument {
     protected static XmlMapper xmlMapper = new XmlMapper();
 
-    @JsonDeserialize(using = BooleanDeserializer.class)
     protected boolean isPublic;
-    @JsonDeserialize(using = BooleanDeserializer.class)
     protected boolean isPrivate;
 
-    @JsonDeserialize(using = BooleanDeserializer.class)
     protected boolean sharedResource;
-    @JsonDeserialize(using = BooleanDeserializer.class)
     protected boolean sharedNode;
-    @JsonDeserialize(using = BooleanDeserializer.class)
     protected boolean sharedNodeResource;
 
     protected String semantictag;
 
-    protected Map<String, String> attributes = new HashMap<String, String>();
+    protected Map<String, String> attributes = new HashMap<>();
 
     public MetadataDocument() { }
 
@@ -47,6 +40,7 @@ public class MetadataDocument {
         return isPublic;
     }
 
+    @JsonDeserialize(using = BooleanDeserializer.class)
     public void setPublic(boolean isPublic) {
         this.isPublic = isPublic;
         this.isPrivate = !isPublic;
@@ -59,6 +53,7 @@ public class MetadataDocument {
         return isPrivate;
     }
 
+    @JsonDeserialize(using = BooleanDeserializer.class)
     public void setPrivate(boolean isPrivate) {
         this.isPrivate = isPrivate;
         this.isPublic = !isPrivate;
@@ -71,6 +66,7 @@ public class MetadataDocument {
         return sharedResource;
     }
 
+    @JsonDeserialize(using = BooleanDeserializer.class)
     public void setSharedResource(boolean sharedResource) {
         this.sharedResource = sharedResource;
     }
@@ -82,6 +78,7 @@ public class MetadataDocument {
         return sharedNode;
     }
 
+    @JsonDeserialize(using = BooleanDeserializer.class)
     public void setSharedNode(boolean sharedNode) {
         this.sharedNode = sharedNode;
     }
@@ -93,6 +90,7 @@ public class MetadataDocument {
         return sharedNodeResource;
     }
 
+    @JsonDeserialize(using = BooleanDeserializer.class)
     public void setSharedNodeResource(boolean sharedNodeResource) {
         this.sharedNodeResource = sharedNodeResource;
     }
@@ -108,20 +106,9 @@ public class MetadataDocument {
     }
     
     @JsonAnySetter
-    public void setAttribute( String k, String v )
-    {
+    public void setAttribute(String k, String v) {
+        System.out.println("k = " + k);
+        System.out.println("v = " + v);
     	attributes.put(k, v);
-    }
-    
-    public String toString()
-    {
-    	StringBuilder build = new StringBuilder();
-    	if( semantictag != null )
-    		build.append("semantictag=\"").append(semantictag).append("\" ");
-    	
-    	for( Entry<String, String> e : attributes.entrySet() )
-    		build.append(e.getKey()).append("=\"").append(e.getValue()).append("\" ");
-    	
-    	return build.toString().trim();
     }
 }

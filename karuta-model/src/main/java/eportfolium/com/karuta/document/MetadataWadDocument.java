@@ -6,9 +6,6 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Map.Entry;
 
 @JsonRootName("metadata-wad")
 @JsonInclude(JsonInclude.Include.NON_ABSENT)
@@ -107,37 +104,5 @@ public class MetadataWadDocument extends MetadataDocument {
 
     public void setSubmitteddate(Date submitteddate) {
         this.submitteddate = submitteddate;
-    }
-    
-    public String toString()
-    {
-    	StringBuilder build = new StringBuilder();
-    	if( seenoderoles != null)
-    		build.append("seenoderoles").append("=\"").append(seenoderoles).append("\" ");
-    	if( delnoderoles != null)
-    		build.append("delnoderoles").append("=\"").append(delnoderoles).append("\" ");
-    	if( editnoderoles != null)
-    		build.append("editnoderoles").append("=\"").append(editnoderoles).append("\" ");
-    	if( editresroles != null)
-    		build.append("editresroles").append("=\"").append(editresroles).append("\" ");
-    	if( submitroles != null)
-    		build.append("submitroles").append("=\"").append(submitroles).append("\" ");
-    	if( showtoroles != null)
-    		build.append("showtoroles").append("=\"").append(showtoroles).append("\" ");
-    	if( showroles != null)
-    		build.append("showroles").append("=\"").append(showroles).append("\" ");
-    	if( notifyroles != null)
-    		build.append("notifyroles").append("=\"").append(notifyroles).append("\" ");
-    	if( menuroles != null)
-    		build.append("menuroles").append("=\"").append(menuroles).append("\" ");
-    	if( submitted != null)
-    		build.append("submitted").append("=\"").append(submitted).append("\" ");
-    	if( submitteddate != null)
-    		build.append("submitteddate").append("=\"").append(submitteddate).append("\" ");
-    	
-    	for( Entry<String, String> e : attributes.entrySet() )
-    		build.append(e.getKey()).append("=\"").append(e.getValue()).append("\" ");
-    	
-    	return build.toString().trim();
     }
 }

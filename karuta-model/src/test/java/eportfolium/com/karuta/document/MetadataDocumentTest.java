@@ -22,6 +22,19 @@ public class MetadataDocumentTest extends DocumentTest {
     }
 
     @Test
+    public void fromWithLegacyBooleanValues() throws JsonProcessingException {
+        String xml = "public=\"Y\" sharedResource=\"Y\" " +
+                "sharedNode=\"Y\" sharedNodeResource=\"Y\"";
+
+        MetadataDocument document = MetadataDocument.from(xml);
+
+        assertTrue(document.getPublic());
+        assertTrue(document.getSharedResource());
+        assertTrue(document.getSharedNode());
+        assertTrue(document.getSharedNodeResource());
+    }
+
+    @Test
     public void settingPublicReflectPrivate() {
         MetadataDocument document = new MetadataDocument();
 
