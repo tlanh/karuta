@@ -109,16 +109,16 @@
 			<version>2.1.1</version>
 		</dependency>
 
-    <dependency>
-        <groupId>mysql</groupId>
-        <artifactId>mysql-connector-java</artifactId>
-        <version>8.0.20</version>
-    </dependency>
-
 <dependency>
     <groupId>commons-fileupload</groupId>
     <artifactId>commons-fileupload</artifactId>
     <version>1.4</version>
+</dependency>
+
+<dependency>
+    <groupId>org.imsglobal</groupId>
+    <artifactId>basiclti-util</artifactId>
+    <version>1.2.0</version>
 </dependency>
 
 		<!-- ===== Tests ===== -->
@@ -148,6 +148,7 @@
 		<dependency>
 			<groupId>mysql</groupId>
 			<artifactId>mysql-connector-java</artifactId>
+			<version>8.0.20</version>
 		</dependency>
 
 		<dependency>
