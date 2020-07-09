@@ -18,7 +18,6 @@ package eportfolium.com.karuta.webapp.rest.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import eportfolium.com.karuta.business.UserInfo;
 import eportfolium.com.karuta.business.contract.ResourceManager;
-import eportfolium.com.karuta.document.CredentialDocument;
 import eportfolium.com.karuta.document.ResourceDocument;
 import eportfolium.com.karuta.model.bean.GroupRights;
 import eportfolium.com.karuta.model.exception.BusinessException;
@@ -26,8 +25,6 @@ import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -38,9 +35,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.UUID;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
 
 @RestController
 @RequestMapping("/resources")
@@ -115,14 +109,8 @@ public class ResourcesController extends AbstractController {
      */
     @PutMapping(value = "/resource/{parentNodeId}")
     public String putResource(@RequestBody ResourceDocument resource,
-                              @RequestParam (defaultValue = "-1")long group,
                               @PathVariable UUID parentNodeId,
-                              HttpServletRequest request) throws BusinessException, JsonProcessingException {
-
-    	HttpSession session = request.getSession(false);
-    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
-    	Authentication authentication = securityContext.getAuthentication();
-    	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
+                              @AuthenticationPrincipal UserInfo userInfo) throws BusinessException, JsonProcessingException {
 
         return resourceManager.changeResource(parentNodeId, resource, userInfo.getId())
                     .toString();

@@ -66,7 +66,7 @@ public class UserControllerTest extends ControllerTest {
 
     @Test
     @AsAdmin
-    public void getUsers_AdAdmin() throws Exception {
+    public void getUsers_AsAdmin() throws Exception {
         Credential credential = new Credential();
         credential.setLogin("jdoe");
         credential.setDisplayFirstname("John");

@@ -27,14 +27,10 @@ import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
 
 import java.io.File;
 import java.util.UUID;
@@ -56,17 +52,11 @@ public class NodesController extends AbstractController {
      *
      * @return nodes in the ASM format
      */
-    @GetMapping(value = "/node/{id}", produces = {"application/json", "application/xml"})
+    @GetMapping(value = "/node/{id}")
     public HttpEntity<String> getNode(@PathVariable UUID id,
-                                            @RequestParam(required = false) Integer level,
-                                            Authentication authentication,
-                                            HttpServletRequest request)
+                                      @RequestParam(required = false) Integer level,
+                                      @AuthenticationPrincipal UserInfo userInfo)
             throws BusinessException, JsonProcessingException {
-
-    	HttpSession session = request.getSession(false);
-    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
-    	authentication = securityContext.getAuthentication();
-    	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
 
         String data = nodeManager.getNode(id, false, userInfo.getId(), level);
         return new HttpEntity<>(data);
@@ -79,7 +69,7 @@ public class NodesController extends AbstractController {
      *
      * @return nodes in the ASM format
      */
-    @GetMapping(value = "/node/{id}/children", produces = {"application/json", "application/xml"})
+    @GetMapping(value = "/node/{id}/children")
     public HttpEntity<String> getNodeWithChildren(@PathVariable UUID id,
                                                         @RequestParam Integer level,
                                                         @AuthenticationPrincipal UserInfo userInfo)
@@ -95,18 +85,10 @@ public class NodesController extends AbstractController {
      *
      * @return <metadata-wad/>
      */
-    @GetMapping(value = "/node/{id}/metadatawad",
-            produces = {"application/json", "application/xml"})
+    @GetMapping(value = "/node/{id}/metadatawad")
     public HttpEntity<MetadataWadDocument> getNodeMetadataWad(@PathVariable UUID id,
-                                                              Authentication authentication,
-                                                              HttpServletRequest request)
+                                                              @AuthenticationPrincipal UserInfo userInfo)
             throws BusinessException, JsonProcessingException {
-
-    	HttpSession session = request.getSession(false);
-    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
-    	authentication = securityContext.getAuthentication();
-    	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
-
         return new HttpEntity<>(nodeManager.getNodeMetadataWad(id, userInfo.getId()));
     }
 
@@ -115,16 +97,8 @@ public class NodesController extends AbstractController {
      *
      * GET /rest/api/nodes/node/{id}/rights
      */
-    @GetMapping(value = "/node/{id}/rights", produces = { "application/json", "application/xml"})
-    public NodeRightsDocument getNodeRights(@PathVariable UUID id,
-                                Authentication authentication,
-                                HttpServletRequest request) throws BusinessException {
-
-    	HttpSession session = request.getSession(false);
-    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
-    	authentication = securityContext.getAuthentication();
-    	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
-
+    @GetMapping(value = "/node/{id}/rights")
+    public NodeRightsDocument getNodeRights(@PathVariable UUID id, @AuthenticationPrincipal UserInfo userInfo) {
         // TODO: Check with original code ; implementation is wrong for sure
         GroupRights gr = nodeManager.getRights(userInfo.getId(), id);
         return new NodeRightsDocument(id, gr);
@@ -234,14 +208,8 @@ public class NodesController extends AbstractController {
     @PutMapping(value = "/node/{id}/metadata")
     public String putMetadata(@RequestBody MetadataDocument metadata,
                               @PathVariable UUID id,
-                              Authentication authentication,
-                              HttpServletRequest request)
+                              @AuthenticationPrincipal UserInfo userInfo)
             throws BusinessException, JsonProcessingException {
-
-    	HttpSession session = request.getSession(false);
-    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
-    	authentication = securityContext.getAuthentication();
-    	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
 
         return nodeManager
                 .changeNodeMetadata(id, metadata, userInfo.getId());
@@ -255,14 +223,7 @@ public class NodesController extends AbstractController {
     @PutMapping(value = "/node/{id}/metadatawad")
     public String putMetadataWad(@RequestBody MetadataWadDocument metadata,
                                  @PathVariable UUID id,
-                                 Authentication authentication,
-                                 HttpServletRequest request)
-            throws BusinessException, JsonProcessingException {
-
-    	HttpSession session = request.getSession(false);
-    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
-    	authentication = securityContext.getAuthentication();
-    	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
+                                 @AuthenticationPrincipal UserInfo userInfo) throws BusinessException, JsonProcessingException {
 
         return nodeManager
                 .changeNodeMetadataWad(id, metadata, userInfo.getId());
@@ -276,14 +237,7 @@ public class NodesController extends AbstractController {
     @PutMapping(value = "/node/{id}/metadataepm")
     public String putMetadataEpm(@RequestBody MetadataEpmDocument metadata,
                                  @PathVariable UUID id,
-                                 Authentication authentication,
-                                 HttpServletRequest request)
-            throws BusinessException, JsonProcessingException {
-
-    	HttpSession session = request.getSession(false);
-    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
-    	authentication = securityContext.getAuthentication();
-    	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
+                                 @AuthenticationPrincipal UserInfo userInfo) throws BusinessException, JsonProcessingException {
 
         return nodeManager.changeNodeMetadataEpm(id, metadata, userInfo.getId());
     }
@@ -296,13 +250,7 @@ public class NodesController extends AbstractController {
     @PutMapping(value = "/node/{id}/nodecontext")
     public String putNodeContext(@RequestBody ResourceDocument resource,
                                  @PathVariable UUID id,
-                                 Authentication authentication,
-                                 HttpServletRequest request) throws BusinessException {
-
-    	HttpSession session = request.getSession(false);
-    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
-    	authentication = securityContext.getAuthentication();
-    	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
+                                 @AuthenticationPrincipal UserInfo userInfo) throws BusinessException {
 
         return nodeManager.changeNodeContext(id, resource, userInfo.getId());
     }
@@ -315,13 +263,7 @@ public class NodesController extends AbstractController {
     @PutMapping(value = "/node/{id}/noderesource")
     public String putNodeNodeResource(@RequestBody ResourceDocument resource,
                                       @PathVariable UUID id,
-                                      Authentication authentication,
-                                      HttpServletRequest request) throws Exception {
-
-    	HttpSession session = request.getSession(false);
-    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
-    	authentication = securityContext.getAuthentication();
-    	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
+                                      @AuthenticationPrincipal UserInfo userInfo) throws Exception {
 
         return nodeManager.changeNodeResource(id, resource, userInfo.getId());
     }
@@ -333,16 +275,10 @@ public class NodesController extends AbstractController {
      */
     @PostMapping("/node/import/{parentId}")
     public UUID importNode(@PathVariable UUID parentId,
-                           @RequestParam (required = false)String srcetag,
-                           @RequestParam (required = false)String srcecode,
-                           @RequestParam (required = false)UUID uuid,
-                           Authentication authentication,
-                           HttpServletRequest request) throws JsonProcessingException, BusinessException {
-
-    	HttpSession session = request.getSession(false);
-    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
-    	authentication = securityContext.getAuthentication();
-    	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
+                           @RequestParam(required = false) String srcetag,
+                           @RequestParam(required = false) String srcecode,
+                           @RequestParam(required = false) UUID uuid,
+                           @AuthenticationPrincipal UserInfo userInfo) throws JsonProcessingException, BusinessException {
 
         return nodeManager.importNode(parentId, srcetag, srcecode, uuid, userInfo.getId());
     }
@@ -355,16 +291,10 @@ public class NodesController extends AbstractController {
     @PostMapping("/node/copy/{parentId}")
     public UUID copyNode(@PathVariable UUID parentId,	/// Destination
                          /// Either (srcetag and srcecode) or uuid
-                         @RequestParam (required = false)String srcetag,
-                         @RequestParam (required = false)String srcecode,
-                         @RequestParam (required = false)UUID uuid,
-                         Authentication authentication,
-                         HttpServletRequest request) throws JsonProcessingException, BusinessException {
-
-    	HttpSession session = request.getSession(false);
-    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
-    	authentication = securityContext.getAuthentication();
-    	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
+                         @RequestParam(required = false) String srcetag,
+                         @RequestParam(required = false) String srcecode,
+                         @RequestParam(required = false) UUID uuid,
+                         @AuthenticationPrincipal UserInfo userInfo) throws JsonProcessingException, BusinessException {
 
         return nodeManager.copyNode(parentId, srcetag, srcecode, uuid, userInfo.getId());
     }
@@ -472,14 +402,9 @@ public class NodesController extends AbstractController {
      *
      * DELETE /rest/api/nodes/node/{id}
      */
-    @DeleteMapping(value = "/node/{id}", produces = "application/xml")
+    @DeleteMapping(value = "/node/{id}")
     public String deleteNode(@PathVariable UUID id,
-                             HttpServletRequest request) throws BusinessException {
-
-    	HttpSession session = request.getSession(false);
-    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
-    	Authentication authentication = securityContext.getAuthentication();
-    	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
+                             @AuthenticationPrincipal UserInfo userInfo) throws BusinessException {
 
         nodeManager.removeNode(id, userInfo.getId());
 

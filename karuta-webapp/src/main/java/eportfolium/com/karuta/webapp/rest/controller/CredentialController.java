@@ -19,7 +19,6 @@ import java.io.IOException;
 import java.util.*;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
 import javax.xml.parsers.ParserConfigurationException;
 
 import eportfolium.com.karuta.business.UserInfo;
@@ -33,12 +32,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.security.authentication.AuthenticationProvider;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 import edu.yale.its.tp.cas.client.ServiceTicketValidator;
 import eportfolium.com.karuta.business.contract.ConfigurationManager;
@@ -73,28 +66,12 @@ public class CredentialController extends AbstractController {
     private static Logger logger;
 
     /**
-     * Fetch current user info. <br>
-     * GET /rest/api/credential
+     * Fetch current user info.
      *
-     * @return <user id="uid"> <username></username> <firstname></firstname>
-     *         <lastname></lastname> <email></email> <admin>1/0</admin>
-     *         <designer>1/0</designer> <active>1/0</active>
-     *         <substitute>1/0</substitute> </user>
+     * GET /rest/api/credential
      */
-    @GetMapping(produces = "application/xml")
-    public HttpEntity<CredentialDocument> getCredential(Authentication authentication, HttpServletRequest request) {
-    	HttpSession session = request.getSession(false);
-    	CredentialDocument userInfo = null;
-    	if( session != null )
-    	{
-	    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
-	    	authentication = securityContext.getAuthentication();
-	    	userInfo = (CredentialDocument)authentication.getDetails();
-    	}
-    	
-    	if( userInfo == null )
-    		return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-
+    @GetMapping
+    public HttpEntity<CredentialDocument> getCredential(@AuthenticationPrincipal UserInfo userInfo) {
         return new HttpEntity<>(userManager.getUserInfos(userInfo.getId()));
     }
 
@@ -103,9 +80,8 @@ public class CredentialController extends AbstractController {
      *
      * POST /rest/api/credential/login
      */
-    @RequestMapping(value = "/login", consumes = "application/xml", produces = "application/xml",
-        method = { RequestMethod.POST, RequestMethod.PUT })
-    public HttpEntity<Object> postCredentialFromXml(HttpServletRequest request, @RequestBody LoginDocument credentials) {
+    @RequestMapping(value = "/login", method = { RequestMethod.POST, RequestMethod.PUT })
+    public HttpEntity<Object> postCredentialFromXml(@RequestBody LoginDocument credentials) {
 
         String authlog = configurationManager.get("auth_log");
         Logger authLog = null;
@@ -130,17 +106,6 @@ public class CredentialController extends AbstractController {
 
         } else {
             boolean substitute = credential.getSubstitute() == 1;
-
-      			List<GrantedAuthority> grantedAuthorities = new ArrayList<>();
-            UsernamePasswordAuthenticationToken authReq = new UsernamePasswordAuthenticationToken(login, credential.getPassword(), grantedAuthorities);
-            authReq.setDetails(credential);
-						Authentication authentication = authenticationProvider.authenticate(authReq);
-
-				    SecurityContext securityContext = SecurityContextHolder.getContext();
-				    securityContext.setAuthentication(authentication);
-
-						HttpSession session = request.getSession(true);
-				    session.setAttribute("SPRING_SECURITY_CONTEXT", securityContext);
 
             if (authLog != null) {
 

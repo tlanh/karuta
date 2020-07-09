@@ -31,13 +31,10 @@ import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
 
 @RestController
 @RequestMapping("/users")
@@ -60,16 +57,9 @@ public class UserController extends AbstractController {
      *
      * POST /rest/api/users
      */
-    @PostMapping(consumes = "application/xml", produces = "application/xml")
-    public HttpEntity<CredentialList> postUser(@RequestBody CredentialList xmluser,
-    		 Authentication authentication,
-    		 HttpServletRequest request) {
-    		 HttpSession session = request.getSession(false);
-    		 SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
-    		 authentication = securityContext.getAuthentication();
-    		 CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
-    		 
-    		 return new HttpEntity<>(securityManager.addUsers(xmluser));
+    @PostMapping
+    public HttpEntity<CredentialList> postUser(@RequestBody CredentialList xmluser) {
+        return new HttpEntity<>(securityManager.addUsers(xmluser));
     }
 
     /**
@@ -77,19 +67,13 @@ public class UserController extends AbstractController {
      *
      * GET/rest/api/users*parameters
      */
-    @GetMapping(produces = "application/xml")
-    public HttpEntity<Object> getUsers(@RequestParam(required = false)String username,
-                           @RequestParam(required = false)String firstname,
-                           @RequestParam(required = false)String lastname,
-                           Authentication authentication,
-                           HttpServletRequest request) {
+    @GetMapping
+    public HttpEntity<Object> getUsers(@RequestParam(required = false) String username,
+                                       @RequestParam(required = false) String firstname,
+                                       @RequestParam(required = false) String lastname,
+                                       @AuthenticationPrincipal UserInfo userInfo) {
 
-    	HttpSession session = request.getSession(false);
-    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
-    	authentication = securityContext.getAuthentication();
-    	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
-
-        if (userInfo.getAdmin() > 0 || userInfo.getDesigner() > 0)
+        if (userInfo.isAdmin() || userInfo.isDesigner())
             return new HttpEntity<>(userManager.getUserList(username, firstname, lastname));
         else
             return new HttpEntity<>(userManager.getUserInfos(userInfo.getId()));

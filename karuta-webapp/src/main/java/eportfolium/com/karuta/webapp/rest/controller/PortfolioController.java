@@ -28,16 +28,12 @@ import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import eportfolium.com.karuta.business.contract.*;
 import eportfolium.com.karuta.business.contract.SecurityManager;
 import eportfolium.com.karuta.business.UserInfo;
-import eportfolium.com.karuta.document.CredentialDocument;
 import eportfolium.com.karuta.business.security.IsAdmin;
 import eportfolium.com.karuta.business.security.IsAdminOrDesigner;
 import eportfolium.com.karuta.document.NodeDocument;
@@ -49,16 +45,14 @@ import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.webapp.annotation.InjectLogger;
+
+import javax.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/portfolios")
@@ -89,25 +83,16 @@ public class PortfolioController extends AbstractController {
      *
      * @param files              if set with resource, return a zip file
      * @param export             if set, return XML as a file download
-     * @return zip as file download content.
-     * @throws IOException 
      */
-    @GetMapping(value = "/portfolio/{id}", produces = {"application/xml", "application/json",
-            "application/zip", "application/octet-stream"})
-    public HttpEntity<Object> getPortfolio(@PathVariable (value = "id")UUID id,
-                                           @RequestParam (defaultValue = "true")boolean resources,
-                                           @RequestParam (defaultValue = "true")boolean files,
-                                           @RequestParam (required = false)String export,
-                                           @RequestParam (required = false)String lang,
-                                           @RequestParam (required = false)Integer level,
-                                           Authentication authentication,
-                                           HttpServletRequest request)
+    @GetMapping(value = "/portfolio/{id}")
+    public HttpEntity<Object> getPortfolio(@PathVariable UUID id,
+                                           @RequestParam(defaultValue = "true") boolean resources,
+                                           @RequestParam(defaultValue = "true")boolean files,
+                                           @RequestParam(required = false) String export,
+                                           @RequestParam(required = false) String lang,
+                                           @RequestParam(required = false) Integer level,
+                                           @AuthenticationPrincipal UserInfo userInfo)
             throws BusinessException, IOException {
-
-    	HttpSession session = request.getSession(false);
-    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
-    	authentication = securityContext.getAuthentication();
-    	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
 
         String portfolio = portfolioManager.getPortfolio(id, userInfo.getId(), level);
 
@@ -232,15 +217,11 @@ public class PortfolioController extends AbstractController {
      *
      * GET /rest/api/portfolios/code/{code}
      */
-    @GetMapping(value = "/portfolio/code/{code:.+}", produces = {"application/json", "application/xml"})
+    @GetMapping(value = "/portfolio/code/{code:.+}")
     public HttpEntity<PortfolioDocument> getByCode(@PathVariable String code,
                                                    @RequestParam (defaultValue = "false")boolean resources,
-                                                   HttpServletRequest request)
+                                                   @AuthenticationPrincipal UserInfo userInfo)
             throws BusinessException, JsonProcessingException {
-    	HttpSession session = request.getSession(false);
-        SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
-        Authentication authentication = securityContext.getAuthentication();
-    	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
         
         return new HttpEntity<>(portfolioManager
                 .getPortfolioByCode(code, userInfo.getId(), resources));
@@ -255,24 +236,16 @@ public class PortfolioController extends AbstractController {
      * @param active             false (also show inactive portoflios)
      * @param userid             for this user (only with root)
      */
-    @GetMapping(produces = {"application/json", "application/xml"})
-    public HttpEntity<Object> getPortfolios(@RequestParam (defaultValue = "true")boolean active,
-                                            @RequestParam (required = false)Integer userid,
-                                            @RequestParam (required = false)String code,
-                                            @RequestParam (required = false)UUID portfolio,
-                                            @RequestParam (required = false)Integer level,
-                                            @RequestParam(name="public", required = false)String public_var,
-                                            @RequestParam (defaultValue = "false")boolean project,
-                                            Authentication authentication,
-                                            HttpServletRequest request)
+    @GetMapping
+    public HttpEntity<Object> getPortfolios(@RequestParam(defaultValue = "true") boolean active,
+                                            @RequestParam(required = false) Integer userid,
+                                            @RequestParam(required = false) String code,
+                                            @RequestParam(required = false) UUID portfolio,
+                                            @RequestParam(required = false) Integer level,
+                                            @RequestParam(name="public", required = false) String public_var,
+                                            @RequestParam(defaultValue = "false") boolean project,
+                                            @AuthenticationPrincipal UserInfo userInfo)
             throws BusinessException, JsonProcessingException {
-
-    	HttpSession session = request.getSession(false);
-    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
-    	authentication = securityContext.getAuthentication();
-    	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
-
-//        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
 
         if (portfolio != null) {
             return new HttpEntity<>(portfolioManager.getPortfolio(portfolio, userInfo.getId(), level));
@@ -359,13 +332,7 @@ public class PortfolioController extends AbstractController {
      */
     @PutMapping("/portfolio/{portfolio}")
     public String putConfiguration(@PathVariable UUID portfolio,
-                                      @RequestParam Boolean active,
-                                      Authentication authentication,
-                                      HttpServletRequest request) {
-    	HttpSession session = request.getSession(false);
-    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
-    	authentication = securityContext.getAuthentication();
-    	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
+                                   @RequestParam Boolean active) {
 
         portfolioManager.changePortfolioConfiguration(portfolio, active);
 
@@ -391,22 +358,17 @@ public class PortfolioController extends AbstractController {
     @PostMapping("/instanciate/{id}")
     @PreAuthorize("hasRole('admin') or hasRole('designer')")
     public ResponseEntity<String> instanciate(@PathVariable String id,
-                                              @RequestParam (required = false)String sourcecode,
+                                              @RequestParam(required = false) String sourcecode,
                                               @RequestParam String targetcode,
-                                              @RequestParam (defaultValue = "false")boolean copyshared,
-                                              @RequestParam (required = false)String groupname,
-                                              @RequestParam (defaultValue = "false")boolean owner,
-                                              Authentication authentication,
-                                              HttpServletRequest request)
-          throws BusinessException {
-    	HttpSession session = request.getSession(false);
-    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
-    	authentication = securityContext.getAuthentication();
-    	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
+                                              @RequestParam(defaultValue = "false") boolean copyshared,
+                                              @RequestParam(required = false) String groupname,
+                                              @RequestParam(defaultValue = "false") boolean owner,
+                                              @AuthenticationPrincipal UserInfo userInfo) throws BusinessException {
 
         /// Vérifiez si le code existe, trouvez-en un qui convient, sinon. Eh.
         String newcode = targetcode;
         int num = 0;
+
         while (nodeManager.isCodeExist(newcode))
             newcode = targetcode + " (" + num++ + ")";
         targetcode = newcode;
@@ -575,14 +537,10 @@ public class PortfolioController extends AbstractController {
                             @RequestParam(required = false) String model,
                             @RequestParam(defaultValue = "false") boolean instance,
                             @RequestParam(required = false) String project,
-                            Authentication authentication,
+                            @AuthenticationPrincipal UserInfo userInfo,
                             HttpServletRequest request)
             throws BusinessException, IOException {
 
-    	HttpSession session = request.getSession(false);
-    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
-    	authentication = securityContext.getAuthentication();
-    	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
         javax.servlet.ServletContext servletContext = request.getSession().getServletContext();
         String path = servletContext.getRealPath("/");
 
@@ -597,13 +555,7 @@ public class PortfolioController extends AbstractController {
      */
     @DeleteMapping(value = "/portfolio/{id}")
     public String delete(@PathVariable UUID id,
-                         Authentication authentication,
-                         HttpServletRequest request) throws Exception {
-
-    	HttpSession session = request.getSession(false);
-    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
-    	authentication = securityContext.getAuthentication();
-    	CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
+                         @AuthenticationPrincipal UserInfo userInfo) {
 
         portfolioManager.removePortfolio(id, userInfo.getId());
 
@@ -620,40 +572,35 @@ public class PortfolioController extends AbstractController {
      *                           Otherwise just write nodes xml: ASM format
      * @return <portfolios> <portfolio id="uuid"/> </portfolios>
      */
-    @PostMapping(consumes = {"multipart/form-data", "application/xml"}, produces = "application/xml")
+    @PostMapping
     public HttpEntity<PortfolioList> postPortfolio(@RequestParam MultipartFile uploadfile,
-                                                   @RequestParam (required = false)UUID model,
-                                                   @RequestParam (defaultValue = "false")boolean instance,
-                                                   @RequestParam (defaultValue = "")String project,
-                                                   @AuthenticationPrincipal UserInfo userInfo,
-                                                   HttpServletRequest request) throws BusinessException, JsonProcessingException {
-
-    	HttpSession session = request.getSession(false);
-    	SecurityContext securityContext = (SecurityContext) session.getAttribute("SPRING_SECURITY_CONTEXT");
-    	Authentication authentication = securityContext.getAuthentication();
-    	//    >CredentialDocument userInfo = (CredentialDocument)authentication.getDetails();
+                                                   @RequestParam(required = false) UUID model,
+                                                   @RequestParam(defaultValue = "false") boolean instance,
+                                                   @RequestParam(defaultValue = "") String project,
+                                                   @AuthenticationPrincipal UserInfo userInfo) throws BusinessException, JsonProcessingException {
     	 
     	StringBuilder sbuilder = new StringBuilder();
     	String content = "";
     	
-			try
-			{
-				InputStream input = uploadfile.getInputStream();
-        byte[] buffer = new byte[2048];
-        int length;
-        while ((length = input.read(buffer)) != -1) {
-        	sbuilder.append(new String(buffer, 0, length));
-        }
-        input.close();
+        try {
+            InputStream input = uploadfile.getInputStream();
+            byte[] buffer = new byte[2048];
+            int length;
 
-				content = sbuilder.toString();
-			}
-			catch( IOException e )
-			{
-				e.printStackTrace();
-			}
-      ObjectMapper mapper = new XmlMapper();
-      PortfolioDocument document = mapper
+            while ((length = input.read(buffer)) != -1) {
+                sbuilder.append(new String(buffer, 0, length));
+            }
+
+            input.close();
+
+            content = sbuilder.toString();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        ObjectMapper mapper = new XmlMapper();
+
+        PortfolioDocument document = mapper
             .readerFor(PortfolioDocument.class)
             .readValue(content);
 

@@ -169,7 +169,7 @@ public class ResourcesControllerTest extends ControllerTest {
 
         doReturn(new Resource())
                 .when(resourceRepository)
-                .getResourceByParentNodeUuid(parentNodeId);
+                .getResourceOfResourceByNodeUuid(parentNodeId);
 
         String xml = "<asmResource id=\"" + parentNodeId +"\" xsi_type=\"nodeRes\">" +
                     "<label lang=\"fr\">Nouvelle section</label>" +
