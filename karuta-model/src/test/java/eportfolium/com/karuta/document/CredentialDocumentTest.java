@@ -68,8 +68,11 @@ public class CredentialDocumentTest extends DocumentTest {
         String output = mapper.writeValueAsString(document);
 
         assertEquals("<user>" +
+                    "<firstname></firstname>" +
+                    "<lastname></lastname>" +
                     "<admin>0</admin>" +
                     "<designer>0</designer>" +
+                    "<other></other>" +
                     "<active>0</active>" +
                     "<substitute>0</substitute>" +
                 "</user>", output);
