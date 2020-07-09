@@ -6,7 +6,6 @@ import eportfolium.com.karuta.consumer.repositories.CredentialRepository;
 import eportfolium.com.karuta.consumer.repositories.NodeRepository;
 import eportfolium.com.karuta.consumer.repositories.ResourceRepository;
 import eportfolium.com.karuta.document.ResourceDocument;
-import eportfolium.com.karuta.document.ResourceList;
 import eportfolium.com.karuta.model.bean.GroupRights;
 import eportfolium.com.karuta.model.bean.Node;
 import eportfolium.com.karuta.model.bean.Resource;
@@ -21,7 +20,6 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Collections;
 import java.util.Optional;
 import java.util.UUID;
 

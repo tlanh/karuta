@@ -21,7 +21,6 @@ import java.util.UUID;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import eportfolium.com.karuta.document.ResourceDocument;
-import eportfolium.com.karuta.document.ResourceList;
 import eportfolium.com.karuta.model.exception.BusinessException;
 
 public interface ResourceManager extends BaseManager {
