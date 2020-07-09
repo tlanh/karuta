@@ -28,11 +28,10 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
-import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.UUID;
 
@@ -91,11 +90,10 @@ public class ResourcesController extends AbstractController {
     public String rewriteFile(@PathVariable UUID id,
                               @RequestParam(defaultValue = "fr") String lang,
                               @RequestParam(required = false) String size,
-                              @AuthenticationPrincipal UserInfo userInfo,
-                              HttpServletRequest request) throws IOException, BusinessException {
-        InputStream content = request.getInputStream();
+                              @RequestParam MultipartFile uploadfile,
+                              @AuthenticationPrincipal UserInfo userInfo) throws IOException, BusinessException {
 
-        if (resourceManager.updateContent(id, userInfo.getId(), content, lang, "T".equals(size))) {
+        if (resourceManager.updateContent(id, userInfo.getId(), uploadfile.getInputStream(), lang, "T".equals(size))) {
             return "Updated";
         } else {
             return "Error while updating resource.";
