@@ -75,7 +75,7 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 		portfolioRepository.findById(parentNodeId)
 				.ifPresent(portfolio -> portfolioRepository.save(portfolio));
 
-		res.setContent(resource.getContent());
+		res.setContent(xmlAttributes(resource));
 		res.setModifUserId(userId);
 		res.setModifDate(JavaTimeUtil.toJavaDate(LocalDateTime.now()));
 		resourceRepository.save(res);
@@ -86,11 +86,12 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 	@Override
 	public String addResource(UUID parentNodeId, ResourceDocument resource, Long userId)
 			throws BusinessException {
-		/*
+
 		if (!credentialRepository.isAdmin(userId)
 				&& !hasRight(userId, parentNodeId, GroupRights.WRITE))
 			throw new GenericBusinessException("403 FORBIDDEN : No right to write");
-		//*/
+
+
 		if( resource.getId() == null )
 			return "";
 
@@ -100,16 +101,16 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 				.orElseGet(() -> new Resource(resource.getId()));
 
 		res.setXsiType(xsiType);
-		Resource resUp = updateResourceAttrs(res, resource.getContent(), userId);
+		updateResourceAttrs(res, resource.getContent(), userId);
 
 		nodeRepository.findById(parentNodeId).ifPresent(node -> {
 			if (xsiType.equals("nodeRes")) {
-				node.setResource(resUp);
+				node.setResource(res);
 				node.setSharedNodeResUuid(null);
 			} else if (xsiType.equals("context")) {
-				node.setContextResource(resUp);
+				node.setContextResource(res);
 			} else {
-				node.setResResource(resUp);
+				node.setResResource(res);
 				node.setSharedResUuid(null);
 			}
 
@@ -203,11 +204,11 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 		}
 	}
 
-	private Resource updateResourceAttrs(Resource resource, String content, Long userId) {
+	private void updateResourceAttrs(Resource resource, String content, Long userId) {
 		resource.setContent(content);
 		resource.setCredential(new Credential(userId));
 		resource.setModifUserId(userId);
 
-		return resourceRepository.save(resource);
+		resourceRepository.save(resource);
 	}
 }

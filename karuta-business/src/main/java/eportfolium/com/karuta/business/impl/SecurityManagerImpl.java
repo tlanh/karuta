@@ -158,7 +158,7 @@ public class SecurityManagerImpl implements SecurityManager {
 			credential.setDisplayFirstname(document.getFirstname());
 			credential.setDisplayLastname(document.getLastname());
 
-			credential = credentialRepository.save(credential);
+			credentialRepository.save(credential);
 
 			/// FIXME: More complete rule to use
 			CredentialSubstitutionId csId = new CredentialSubstitutionId();
@@ -171,7 +171,7 @@ public class SecurityManagerImpl implements SecurityManager {
 				CredentialSubstitution subst = new CredentialSubstitution();
 				subst.setId(csId);
 
-				subst = credentialSubstitutionRepository.save(subst);
+				credentialSubstitutionRepository.save(subst);
 				credential.setCredentialSubstitution(subst);
 				credentialRepository.save(credential);
 			} else {

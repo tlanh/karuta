@@ -105,14 +105,13 @@ public class ResourceManagerTest {
 
         doReturn(resource)
                 .when(resourceRepository)
-                .getResourceByParentNodeUuid(nodeId);
+                .getResourceOfResourceByNodeUuid(nodeId);
 
         int result = manager.changeResource(nodeId, document, userId);
 
         assertEquals(0, result);
 
         assertEquals(userId, resource.getModifUserId());
-        assertEquals(userId, resource.getCredential().getId());
         assertEquals("<code>foo</code>", resource.getContent());
 
         verify(resourceRepository).save(resource);
@@ -169,7 +168,7 @@ public class ResourceManagerTest {
         assertEquals(resourceDocument.getContent(), resource.getContent());
         assertEquals(userId, resource.getModifUserId());
 
-        assertEquals(resource, node.getResResource());
+        assertEquals(resource, node.getResource());
 
         verify(resourceRepository).findById(resourceId);
         verify(resourceRepository).save(resource);
@@ -209,7 +208,7 @@ public class ResourceManagerTest {
         manager.addResource(nodeId, resourceDocument, userId);
 
         assertEquals(resourceDocument.getXsiType(), resource.getXsiType());
-        assertEquals(resource, node.getResource());
+        assertEquals(resource, node.getResResource());
 
         verify(resourceRepository).findById(resourceId);
         verify(resourceRepository).save(resource);
