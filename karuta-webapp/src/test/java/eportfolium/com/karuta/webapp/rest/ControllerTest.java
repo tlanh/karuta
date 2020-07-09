@@ -3,6 +3,7 @@ package eportfolium.com.karuta.webapp.rest;
 import eportfolium.com.karuta.business.contract.*;
 import eportfolium.com.karuta.business.contract.SecurityManager;
 import eportfolium.com.karuta.consumer.repositories.*;
+import eportfolium.com.karuta.model.bean.Credential;
 import eportfolium.com.karuta.webapp.component.SecurityConfiguration;
 import org.junit.Before;
 import org.junit.Rule;
@@ -24,6 +25,8 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.documentationConfiguration;
 import static org.springframework.restdocs.operation.preprocess.Preprocessors.prettyPrint;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
@@ -121,6 +124,9 @@ public abstract class ControllerTest {
 
     @Before
     public void setup() {
+      // Configure how save behave, otherwise it returns null
+      when(credentialRepository.save(any(Credential.class))).thenReturn(new Credential());
+
         this.mvc = MockMvcBuilders.webAppContextSetup(this.context)
                 .apply(documentationConfiguration(this.restDocumentation)
                             .operationPreprocessors()

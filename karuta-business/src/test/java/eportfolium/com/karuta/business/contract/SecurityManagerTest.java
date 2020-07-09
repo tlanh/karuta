@@ -115,8 +115,12 @@ public class SecurityManagerTest {
     @Test
     @AsAdmin
     public void addUsers() {
+    	
         Credential credential = new Credential();
         credential.setLogin("jdoe");
+        
+        // Configure how save behave, otherwise it returns null
+        when(credentialRepository.save(any(Credential.class))).thenReturn(credential);
 
         CredentialDocument document1 = new CredentialDocument(credential);
         CredentialDocument document2 = new CredentialDocument();
