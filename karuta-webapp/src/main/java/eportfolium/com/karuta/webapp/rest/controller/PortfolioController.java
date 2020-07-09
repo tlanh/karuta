@@ -396,7 +396,7 @@ public class PortfolioController extends AbstractController {
     @PostMapping("/copy/{id}")
     @IsAdminOrDesigner
     public ResponseEntity<String> copyPortfolio(@PathVariable UUID id,
-                                                @RequestParam String sourcecode,
+                                                @RequestParam (required = false)String sourcecode,
                                                 @RequestParam String targetcode,
                                                 @RequestParam boolean owner,
                                                 @AuthenticationPrincipal UserInfo userInfo) throws BusinessException {
