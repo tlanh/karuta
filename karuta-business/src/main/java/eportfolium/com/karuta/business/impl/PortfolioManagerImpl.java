@@ -541,8 +541,8 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	}
 
 	@Override
-	public String getPortfolios(long userId, Boolean active, long substid, Boolean project) {
-		List<Portfolio> portfolios = getPortfolios(userId, substid, active, project);
+	public String getPortfolios(long userId, Boolean active, long substid, boolean specialProject, String portfolioCode) {
+		List<Portfolio> portfolios = getPortfolios(userId, substid, active, specialProject, portfolioCode);
 
 		String psformat = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><portfolios count=\"%d\">%s</portfolios>";
 		String pformat = "<portfolio id=\"%s\" root_node_id=\"%s\" owner=\"%s\" ownerid=\"%s\" modified=\"%s\">%s</portfolio>";
@@ -1727,7 +1727,8 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	public List<Portfolio> getPortfolios(Long userId,
 								  Long substId,
 								  Boolean portfolioActive,
-								  Boolean portfolioProject) {
+								  boolean specialProject,
+								  String portfolioCode) {
 
 		// INNER JOIN p.rootNode
 		// INNET JOIN rootNode.resResource
@@ -1748,18 +1749,31 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 			return cb.equal(root.get("modifUserId"), userId);
 		});
 
-		// AND p.rootNode.semantictag LIKE '%karuta-project%'
-		Specification<Portfolio> portfolioFilter = Specification.where((root, query, cb) -> {
-			Join<Portfolio, Node> rootNode = root.join("rootNode");
-
-			return cb.like(rootNode.get("semantictag"), "%karuta-project%");
-		});
-
 		Sort sort = Sort.by("rootNode.resResource");
 		Specification<Portfolio> spec = active;
 
-		if (portfolioProject)
+		if ( specialProject )
+		{
+			// AND p.rootNode.semantictag LIKE '%karuta-project%'
+			Specification<Portfolio> portfolioFilter = Specification.where((root, query, cb) -> {
+				Join<Portfolio, Node> rootNode = root.join("rootNode");
+
+				return cb.like(rootNode.get("semantictag"), "%karuta-project%");
+			});
+
 			spec = spec.and(portfolioFilter);
+		}
+		else if ( portfolioCode != null )
+		{
+			Specification<Portfolio> portfolioFilter = Specification.where((root, query, cb) -> {
+				Join<Portfolio, Node> rootNode = root.join("rootNode");
+
+				String condition = String.format("%%%s%%", portfolioCode);
+				return cb.like(rootNode.get("code"), condition);
+			});
+
+			spec = spec.and(portfolioFilter);
+		}
 
 		if (credentialRepository.isAdmin(userId)) {
 			return portfolioRepository.findAll(spec, sort);

@@ -243,9 +243,15 @@ public class PortfolioController extends AbstractController {
                                             @RequestParam(required = false) UUID portfolio,
                                             @RequestParam(required = false) Integer level,
                                             @RequestParam(name="public", required = false) String public_var,
-                                            @RequestParam(defaultValue = "false") boolean project,
+                                            @RequestParam(required = false) String project,
                                             @AuthenticationPrincipal UserInfo userInfo)
             throws BusinessException, JsonProcessingException {
+
+    	String portfolioCode = null;
+    	boolean specialProject = false;
+    	if("false".equals(project) || "0".equals(project)) specialProject = false;
+    	else if("true".equals(project) || "1".equals(project)) specialProject = true;
+			else if(project != null && project.length()>0) portfolioCode = project;
 
         if (portfolio != null) {
             return new HttpEntity<>(portfolioManager.getPortfolio(portfolio, userInfo.getId(), level));
@@ -257,15 +263,15 @@ public class PortfolioController extends AbstractController {
             long publicid = userManager.getUserId("public");
 
             return new HttpEntity<>(portfolioManager.getPortfolios(publicid,
-                        active, 0, project));
+                        active, 0, specialProject, portfolioCode));
 
         } else if (userid != null && securityManager.isAdmin(userInfo.getId())) {
             return new HttpEntity<>(portfolioManager.getPortfolios(userid,
-                        active, userInfo.getSubstituteId(), project));
+                        active, userInfo.getSubstituteId(), specialProject, portfolioCode));
 
         } else {
             return new HttpEntity<>(portfolioManager.getPortfolios(userInfo.getId(),
-                        active, userInfo.getSubstituteId(), project));
+                        active, userInfo.getSubstituteId(), specialProject, portfolioCode));
         }
     }
 
