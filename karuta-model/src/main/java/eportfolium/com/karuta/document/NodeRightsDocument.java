@@ -1,5 +1,6 @@
 package eportfolium.com.karuta.document;
 
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.annotation.JsonRootName;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import eportfolium.com.karuta.model.bean.GroupRights;
@@ -14,6 +15,7 @@ public class NodeRightsDocument {
     private static class RoleElement {
         private final GroupRights groupRights;
 
+        @JsonPropertyOrder({"RD", "WR", "DL", "SB"})
         private static class RightsElement {
             private final boolean read, write, delete, submit;
 
