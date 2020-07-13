@@ -107,8 +107,6 @@ public class MetadataDocument {
     
     @JsonAnySetter
     public void setAttribute(String k, String v) {
-        System.out.println("k = " + k);
-        System.out.println("v = " + v);
     	attributes.put(k, v);
     }
 }
