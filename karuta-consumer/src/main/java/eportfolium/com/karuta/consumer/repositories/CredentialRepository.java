@@ -21,9 +21,6 @@ public interface CredentialRepository extends CrudRepository<Credential, Long> {
 
     boolean existsByLogin(String login);
 
-    @Query("SELECT c FROM Credential c WHERE c.id = :id AND c.active = 1")
-    Optional<Credential> findActiveById(@Param("id") Long id);
-
     @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END " +
             "FROM Credential c WHERE c.id = :id AND c.isAdmin = 1")
     boolean isAdmin(@Param("id") Long id);

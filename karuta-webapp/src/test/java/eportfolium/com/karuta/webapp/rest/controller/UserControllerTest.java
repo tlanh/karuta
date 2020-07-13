@@ -302,7 +302,7 @@ public class UserControllerTest extends ControllerTest {
 
         doReturn(Optional.of(credential))
                 .when(credentialRepository)
-                .findActiveById(otherId);
+                .findById(otherId);
 
         mvc.perform(putBuilder("/users/user/" + otherId)
                     .content(xml))

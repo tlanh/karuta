@@ -187,7 +187,7 @@ public class SecurityManagerImpl implements SecurityManager {
 
 	@Override
 	public Long changeUser(Long byUserId, Long forUserId, CredentialDocument user) throws BusinessException {
-		Credential credential = credentialRepository.findActiveById(forUserId)
+		Credential credential = credentialRepository.findById(forUserId)
 									.orElseThrow(() -> new GenericBusinessException("Unexisting user"));
 
 		if (!credentialRepository.isAdmin(byUserId) &&

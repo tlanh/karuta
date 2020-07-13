@@ -23,8 +23,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.crypto.password.Pbkdf2PasswordEncoder;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import javax.mail.MessagingException;
-import java.io.UnsupportedEncodingException;
 import java.util.*;
 
 import static org.junit.Assert.*;
@@ -138,19 +136,19 @@ public class SecurityManagerTest {
     }
 
     @Test
-    public void changeUser_WithNotActiveUser() {
+    public void changeUser_WithUnexistingUser() {
         Long byUserId = 0L;
         Long forUserId = 42L;
 
         doReturn(Optional.empty())
                 .when(credentialRepository)
-                .findActiveById(forUserId);
+                .findById(forUserId);
 
         CredentialDocument credentialDocument = new CredentialDocument();
 
         try {
             manager.changeUser(byUserId, forUserId, credentialDocument);
-            fail("Not active user must not be changed.");
+            fail("Unexisting user can't be changed.");
         } catch (BusinessException ignored) { }
     }
 
@@ -167,7 +165,7 @@ public class SecurityManagerTest {
 
         doReturn(Optional.of(credential))
                 .when(credentialRepository)
-                .findActiveById(forUserId);
+                .findById(forUserId);
 
         CredentialDocument credentialDocument = new CredentialDocument();
         credentialDocument.setPrevpass("wrongpassword");
@@ -191,7 +189,7 @@ public class SecurityManagerTest {
 
         doReturn(Optional.of(credential))
                 .when(credentialRepository)
-                .findActiveById(forUserId);
+                .findById(forUserId);
 
         CredentialDocument credentialDocument = mock(CredentialDocument.class);
 
@@ -218,7 +216,7 @@ public class SecurityManagerTest {
 
         doReturn(Optional.of(credential))
                 .when(credentialRepository)
-                .findActiveById(forUserId);
+                .findById(forUserId);
 
         CredentialDocument credentialDocument = mock(CredentialDocument.class);
         when(credentialDocument.getUsername()).thenReturn("jdoe");
@@ -243,7 +241,7 @@ public class SecurityManagerTest {
 
         doReturn(Optional.of(credential))
                 .when(credentialRepository)
-                .findActiveById(forUserId);
+                .findById(forUserId);
 
         Collection<GrantedAuthority> authorities = Collections.singleton(new SimpleGrantedAuthority("ROLE_DESIGNER"));
         Authentication authentication = mock(Authentication.class);
@@ -265,7 +263,7 @@ public class SecurityManagerTest {
 
         assertEquals(0, credential.getIsAdmin());
 
-        verify(credentialRepository).findActiveById(forUserId);
+        verify(credentialRepository).findById(forUserId);
         verify(credentialRepository).save(credential);
     }
 
@@ -278,7 +276,7 @@ public class SecurityManagerTest {
 
         doReturn(Optional.of(credential))
                 .when(credentialRepository)
-                .findActiveById(forUserId);
+                .findById(forUserId);
 
         doReturn(true)
                 .when(credentialRepository)
@@ -303,7 +301,7 @@ public class SecurityManagerTest {
 
         assertEquals(1, credential.getIsAdmin());
 
-        verify(credentialRepository).findActiveById(forUserId);
+        verify(credentialRepository).findById(forUserId);
         verify(credentialRepository).save(credential);
     }
 

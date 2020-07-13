@@ -56,24 +56,6 @@ public class CredentialRepositoryTest extends TestHelpers {
     }
 
     @Test
-    public void findActiveById() {
-        Credential credential = savableCredential();
-        credential.setActive(1);
-
-        repository.save(credential);
-
-        Optional<Credential> found = repository.findActiveById(credential.getId());
-
-        assertTrue(found.isPresent());
-        assertEquals(credential.getId(), found.get().getId());
-
-        credential.setActive(0);
-        repository.save(credential);
-
-        assertFalse(repository.findActiveById(credential.getId()).isPresent());
-    }
-
-    @Test
     public void isAdmin() {
         Credential credential = savableCredential();
         credential.setIsAdmin(1);
