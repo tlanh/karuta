@@ -9,7 +9,6 @@ import eportfolium.com.karuta.webapp.rest.AsUser;
 import eportfolium.com.karuta.webapp.rest.ControllerTest;
 import org.junit.Test;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.http.MediaType;
 import org.springframework.restdocs.payload.JsonFieldType;
 
 import java.util.Arrays;
@@ -19,6 +18,7 @@ import java.util.UUID;
 
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.core.StringContains.containsString;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
 import static org.springframework.restdocs.payload.PayloadDocumentation.*;
@@ -309,6 +309,8 @@ public class UserControllerTest extends ControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(Long.toString(otherId)))
                 .andDo(document("update-user-as-admin"));
+
+        assertEquals(1, credential.getIsAdmin());
 
         verify(securityManager).changeUser(eq(userId), eq(otherId), any(CredentialDocument.class));
     }

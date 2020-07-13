@@ -245,7 +245,7 @@ public class SecurityManagerTest {
                 .when(credentialRepository)
                 .findActiveById(forUserId);
 
-        Collection<GrantedAuthority> authorities = Collections.singleton(new SimpleGrantedAuthority("DESIGNER"));
+        Collection<GrantedAuthority> authorities = Collections.singleton(new SimpleGrantedAuthority("ROLE_DESIGNER"));
         Authentication authentication = mock(Authentication.class);
 
         doReturn(authorities)
@@ -284,7 +284,7 @@ public class SecurityManagerTest {
                 .when(credentialRepository)
                 .isAdmin(byUserId);
 
-        Collection<GrantedAuthority> authorities = Collections.singleton(new SimpleGrantedAuthority("ADMIN"));
+        Collection<GrantedAuthority> authorities = Collections.singleton(new SimpleGrantedAuthority("ROLE_ADMIN"));
         Authentication authentication = mock(Authentication.class);
 
         doReturn(authorities)

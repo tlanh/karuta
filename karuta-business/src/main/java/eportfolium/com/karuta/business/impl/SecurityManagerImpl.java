@@ -214,7 +214,7 @@ public class SecurityManagerImpl implements SecurityManager {
 			Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
 			if (authentication != null &&
-					authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ADMIN"))) {
+					authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
 				credential.setIsAdmin(user.getAdmin());
 			}
 		}
