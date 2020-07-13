@@ -23,7 +23,6 @@ public class ResourceDocument {
     private Date modifDate;
     private String content = "";
 
-    private String lang;
     private String code;
 
     // For file resources
