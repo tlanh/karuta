@@ -15,18 +15,11 @@
 
 package eportfolium.com.karuta.business.impl;
 
-import java.io.BufferedReader;
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.Deflater;
@@ -209,38 +202,58 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	}
 
 	@Override
-    public String getZippedPortfolio(PortfolioDocument portfolio) throws IOException {
-        String filePath = System.getProperty("user.dir") + "/tmp_getPortfolio_" + new Date()
-                + ".xml";
-        String zipPath = System.getProperty("user.dir") + "/tmp_getPortfolio_" + new Date() + ".zip";
+	public File getZippedPortfolio(PortfolioDocument portfolio, String lang) throws IOException {
+		File zipFile = File.createTempFile(portfolio.getId().toString(), ".zip");
 
-        XmlMapper xmlMapper = new XmlMapper();
+		XmlMapper xmlMapper = new XmlMapper();
 
-        try (PrintWriter ecrire = new PrintWriter(new FileOutputStream(filePath));
-             ZipOutputStream zip = new ZipOutputStream(new FileOutputStream(zipPath))) {
-            File file = new File(filePath);
+		try (ZipOutputStream zip = new ZipOutputStream(new FileOutputStream(zipFile))) {
+			zip.setMethod(ZipOutputStream.DEFLATED);
+			zip.setLevel(Deflater.BEST_COMPRESSION);
 
-            ecrire.println(xmlMapper.writeValueAsString(portfolio));
-            ecrire.flush();
+			// The file containing the portfolio as XML
+			ZipEntry entry = new ZipEntry(portfolio.getId().toString() + ".xml");
 
-            zip.setMethod(ZipOutputStream.DEFLATED);
-            zip.setLevel(Deflater.BEST_COMPRESSION);
-            File dataDirectories = new File(file.getName());
-            FileInputStream fis = new FileInputStream(dataDirectories);
-            byte[] bytes = new byte[fis.available()];
-            fis.read(bytes);
+			zip.putNextEntry(entry);
+			zip.write(xmlMapper.writeValueAsString(portfolio).getBytes());
+			zip.closeEntry();
 
-            ZipEntry entry = new ZipEntry(file.getName());
-            entry.setTime(dataDirectories.lastModified());
-            zip.putNextEntry(entry);
-            zip.write(bytes);
-            zip.closeEntry();
-            fis.close();
-            file.delete();
+			Predicate<ResourceDocument> filter;
 
-            return zipPath;
-        }
-    }
+			if (lang == null)
+				filter = (r) -> r.getFileid() != null && !r.getFileid().isEmpty();
+			else
+				filter = (r) -> !r.getFileid(lang).isEmpty();
+
+			// Nodes with file resources inside the portfolio.
+			List<ResourceDocument> fileResources = portfolio
+					.getRoot()
+					.getResources()
+					.stream()
+					.filter(filter)
+					.collect(Collectors.toList());
+
+			for (ResourceDocument resource : fileResources) {
+				String filename = resource.getFilename(lang);
+
+				if (filename.equals(""))
+					continue;
+
+				String fullname = String.format("%s_%s.%s",
+						resource.getNodeId().toString(),
+						lang,
+						filename.substring(filename.lastIndexOf(".") + 1));
+
+				ZipEntry fileEntry = new ZipEntry(fullname);
+
+				zip.putNextEntry(fileEntry);
+				fileManager.fetchResource(resource, zip, lang, false);
+				zip.closeEntry();
+			}
+
+			return zipFile;
+		}
+	}
 
 	private PortfolioDocument getPortfolio(Node rootNode, Long userId, GroupRightInfo groupRightInfo, boolean owner, Integer cutoff)
 			throws JsonProcessingException {

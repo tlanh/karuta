@@ -21,7 +21,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
-import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -29,8 +29,10 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+
 import eportfolium.com.karuta.business.contract.*;
 import eportfolium.com.karuta.business.contract.SecurityManager;
 import eportfolium.com.karuta.business.UserInfo;
@@ -107,18 +109,8 @@ public class PortfolioController extends AbstractController {
                     .body(portfolio);
 
         } else if (resources && files) {
-            // TODO: Rely on PortfolioManager#getZippedPortfolio
-//          String code = portfolio.getCode().replace("_", "");
-          // String code = "FIXME";
-          
-            //// Cas du renvoi d'un ZIP
-            File tempZip = getZipFile(portfolio, lang);
-
-            /// Return zip file
-            RandomAccessFile f = new RandomAccessFile(tempZip.getAbsoluteFile(), "r");
-            byte[] b = new byte[(int) f.length()];
-            f.read(b);
-            f.close();
+            File tempZip = portfolioManager.getZippedPortfolio(null, lang);
+            byte[] zipContent = Files.readAllBytes(tempZip.toPath());
 
             // Temp file cleanup
             tempZip.delete();
@@ -126,89 +118,11 @@ public class PortfolioController extends AbstractController {
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + ".zip\"")
-                    .body(b);
+                    .body(zipContent);
         } else {
             return new HttpEntity<>(portfolio);
         }
 
-    }
-
-    private File getZipFile(PortfolioDocument portfolio, final String lang)
-            throws IOException {
-
-        File tempZip = File.createTempFile(portfolio.getId().toString(), ".zip");
-
-        FileOutputStream fos = new FileOutputStream(tempZip);
-        ZipOutputStream zos = new ZipOutputStream(fos);
-
-        /// Write XML file to zip
-        ZipEntry ze = new ZipEntry(portfolio.getId().toString() + ".xml");
-        zos.putNextEntry(ze);
-
-        byte[] bytes = new XmlMapper()
-                                .writeValueAsString(portfolio)
-                                .getBytes(StandardCharsets.UTF_8);
-        zos.write(bytes);
-        zos.closeEntry();
-
-        // TODO: Fix
-        List<NodeDocument> nodesWithFiles = null;
-        /*portfolio
-                .getNodes()
-                .stream()
-                .filter(n -> n.getResources()
-                        .stream()
-                        .anyMatch(r -> !r.getFileid(lang).isEmpty()))
-                .collect(Collectors.toList());*/
-
-        // Loop through the different nodes that have file to
-        // fetch them.
-        nodesWithFiles.forEach(node -> {
-            ResourceDocument resource = node.getResources()
-                                                .stream()
-                                                .filter(r -> !r.getFileid(lang).isEmpty())
-                                                .findFirst()
-                                                .get();
-
-            String filename = resource.getFilename(lang);
-            String resourceLang = lang != null ? lang : "fr";
-
-            if (filename.equals(""))
-                return;
-
-            String fullname = String.format("%s_%s.%s",
-                    node.getId().toString(),
-                    resourceLang,
-                    filename.substring(filename.lastIndexOf(".") + 1));
-
-            // Save entry to zip file
-            try {
-                // TODO: Properly fetch the resource ; looks like it hasn't
-                //  been imported from original code
-                // String resourceDocument = resourceManager.getResource(node.getId(), userId, 0L);
-
-                InputStream content = null;
-                ZipEntry entry = new ZipEntry(fullname);
-
-                zos.putNextEntry(entry);
-                int inByte;
-                byte[] buf = new byte[4096];
-
-                while ((inByte = content.read(buf)) != -1) {
-                    zos.write(buf, 0, inByte);
-                }
-
-                content.close();
-                zos.closeEntry();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        });
-
-        zos.close();
-        fos.close();
-
-        return tempZip;
     }
 
     /**
@@ -467,7 +381,7 @@ public class PortfolioController extends AbstractController {
                 }
             }
 
-            files.add(getZipFile(portfolio, lang));
+            files.add(portfolioManager.getZippedPortfolio(portfolio, lang));
         }
 
         // Make a big zip of it

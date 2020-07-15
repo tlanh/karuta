@@ -15,6 +15,7 @@
 
 package eportfolium.com.karuta.business.contract;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
@@ -42,7 +43,7 @@ public interface PortfolioManager extends BaseManager {
 								   Long userId,
 								   Integer cutoff) throws BusinessException, JsonProcessingException;
 
-	String getZippedPortfolio(PortfolioDocument portfolio) throws IOException;
+	File getZippedPortfolio(PortfolioDocument portfolio, String lang) throws IOException;
 
 	PortfolioDocument getPortfolioByCode(String portfolioCode,
 										 Long userId,
