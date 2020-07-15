@@ -6,7 +6,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonRootName;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 import eportfolium.com.karuta.model.bean.Node;
 import eportfolium.com.karuta.model.bean.Portfolio;
@@ -33,7 +32,7 @@ public class PortfolioDocument {
     @JsonFormat(pattern="yyyy-MM-dd HH:mm:ss.S")
     private Date modifDate;
 
-    private List<NodeDocument> nodes = new ArrayList<>();
+    private NodeDocument root;
 
     public PortfolioDocument() { }
 
@@ -55,11 +54,11 @@ public class PortfolioDocument {
         this.code = "";
     }
 
-    public PortfolioDocument(UUID id, boolean owner, String code, List<NodeDocument> nodes) {
+    public PortfolioDocument(UUID id, boolean owner, String code, NodeDocument root) {
         this(id, owner);
 
         this.code = code;
-        this.nodes = nodes;
+        this.root = root;
     }
 
     public PortfolioDocument(Portfolio portfolio, boolean owner) {
@@ -93,7 +92,7 @@ public class PortfolioDocument {
                     .map(r -> new ResourceDocument(r, rootNode))
                     .collect(Collectors.toList()));
 
-        this.nodes = Collections.singletonList(child);
+        this.root = child;
     }
 
     @JsonGetter("code")
@@ -122,7 +121,7 @@ public class PortfolioDocument {
     @JsonGetter("root_node_id")
     @JacksonXmlProperty(isAttribute = true, localName = "root_node_id")
     public UUID getRootNodeId() {
-        return rootNodeId;
+        return root != null ? root.getId() : rootNodeId;
     }
 
     @JsonGetter("owner")
@@ -144,19 +143,14 @@ public class PortfolioDocument {
         return modifDate;
     }
 
-    @JacksonXmlElementWrapper(useWrapping = false)
     @JacksonXmlProperty(localName = "asmRoot")
-    public List<NodeDocument> getNodes() {
-        return nodes;
+    public NodeDocument getRoot() {
+        return root;
     }
 
     @JacksonXmlProperty(localName = "asmRoot")
-    public void setNodes(NodeDocument node) {
+    public void setRoot(NodeDocument node) {
         node.type = "asmRoot";
-        this.nodes.add( node );
-    }
-
-    public void setNodes(List<NodeDocument> nodes) {
-        this.nodes = nodes;
+        this.root = node;
     }
 }

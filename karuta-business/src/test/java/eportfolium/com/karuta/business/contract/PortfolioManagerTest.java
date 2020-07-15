@@ -1,10 +1,12 @@
 package eportfolium.com.karuta.business.contract;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import eportfolium.com.karuta.business.ServiceTest;
 import eportfolium.com.karuta.business.security.test.AsAdmin;
 import eportfolium.com.karuta.consumer.repositories.*;
 import eportfolium.com.karuta.document.*;
 import eportfolium.com.karuta.model.bean.*;
+import eportfolium.com.karuta.model.exception.BusinessException;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
@@ -122,6 +124,89 @@ public class PortfolioManagerTest {
     }
 
     @Test
+    public void getPortfolio() throws JsonProcessingException, BusinessException {
+        Long userId = 42L;
+        UUID portfolioId = UUID.randomUUID();
+
+        GroupRightInfo groupRightInfo = new GroupRightInfo();
+        groupRightInfo.setId(89L);
+        groupRightInfo.setLabel("foo");
+
+        GroupRights groupRights = new GroupRights();
+        groupRights.setId(new GroupRightsId());
+        groupRights.setRead(true);
+        groupRights.setGroupRightInfo(groupRightInfo);
+
+        doReturn(groupRights)
+                .when(manager)
+                .getRightsOnPortfolio(userId, portfolioId);
+
+        Portfolio portfolio = new Portfolio();
+        portfolio.setId(portfolioId);
+        portfolio.setModifUserId(userId);
+
+        Node rootNode = new Node();
+        rootNode.setId(UUID.randomUUID());
+        rootNode.setPortfolio(portfolio);
+
+        portfolio.setRootNode(rootNode);
+
+        doReturn(rootNode)
+                .when(portfolioRepository)
+                .getPortfolioRootNode(portfolioId);
+
+        doReturn(true)
+                .when(portfolioRepository)
+                .isOwner(portfolioId, userId);
+
+        Node firstNode = new Node();
+        firstNode.setId(UUID.randomUUID());
+        firstNode.setAsmType("asmContext");
+
+        Node secondNode = new Node();
+        secondNode.setId(UUID.randomUUID());
+        secondNode.setAsmType("asmUnitStructure");
+
+        Node thirdNode = new Node();
+        thirdNode.setId(UUID.randomUUID());
+        thirdNode.setAsmType("asmUnit");
+
+        rootNode.setChildrenStr(firstNode.getId().toString() + "," + secondNode.getId().toString());
+        secondNode.setChildrenStr(thirdNode.getId().toString());
+
+        doReturn(Arrays.asList(rootNode, firstNode, secondNode, thirdNode))
+                .when(nodeRepository)
+                .getNodesWithResources(portfolio.getId());
+
+        PortfolioDocument document = manager.getPortfolio(portfolioId, userId, null);
+
+        assertEquals(portfolio.getId(), document.getId());
+        assertEquals(rootNode.getId(), document.getRootNodeId());
+        assertTrue(document.getOwner());
+        assertEquals(userId, document.getOwnerId());
+
+        NodeDocument rootDocument = document.getRoot();
+
+        assertEquals(2, rootDocument.getChildren().size());
+
+        NodeDocument firstChild = rootDocument.getChildren().get(0);
+
+        assertEquals(firstNode.getId(), firstChild.getId());
+        assertEquals(firstNode.getAsmType(), firstChild.getType());
+
+        NodeDocument secondChild = rootDocument.getChildren().get(1);
+
+        assertEquals(secondNode.getId(), secondChild.getId());
+        assertEquals(secondNode.getAsmType(), secondChild.getType());
+        assertEquals(1, secondChild.getChildren().size());
+
+        NodeDocument thirdChild = secondChild.getChildren().get(0);
+
+        assertEquals(thirdNode.getId(), thirdChild.getId());
+        assertEquals(thirdNode.getAsmType(), thirdChild.getType());
+    }
+
+    @Test
     public void getPortfolioShared() {
         Long userId = 42L;
         Long gid = 84L;
@@ -171,7 +256,6 @@ public class PortfolioManagerTest {
     @Test
     public void getRightsOnPortfolio_WithOtherUsedId() {
         Long userId  = 42L;
-        Long groupId = 74L;
 
         UUID portfolioId = UUID.randomUUID();
         UUID nodeId = UUID.randomUUID();

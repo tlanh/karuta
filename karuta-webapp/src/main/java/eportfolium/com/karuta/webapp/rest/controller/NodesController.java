@@ -53,13 +53,12 @@ public class NodesController extends AbstractController {
      * @return nodes in the ASM format
      */
     @GetMapping(value = "/node/{id}")
-    public HttpEntity<String> getNode(@PathVariable UUID id,
+    public HttpEntity<NodeDocument> getNode(@PathVariable UUID id,
                                       @RequestParam(required = false) Integer level,
                                       @AuthenticationPrincipal UserInfo userInfo)
             throws BusinessException, JsonProcessingException {
 
-        String data = nodeManager.getNode(id, false, userInfo.getId(), level);
-        return new HttpEntity<>(data);
+        return new HttpEntity<>(nodeManager.getNode(id, false, userInfo.getId(), level));
     }
 
     /**
@@ -70,7 +69,7 @@ public class NodesController extends AbstractController {
      * @return nodes in the ASM format
      */
     @GetMapping(value = "/node/{id}/children")
-    public HttpEntity<String> getNodeWithChildren(@PathVariable UUID id,
+    public HttpEntity<NodeDocument> getNodeWithChildren(@PathVariable UUID id,
                                                         @RequestParam Integer level,
                                                         @AuthenticationPrincipal UserInfo userInfo)
             throws BusinessException, JsonProcessingException {

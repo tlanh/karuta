@@ -38,7 +38,7 @@ public interface PortfolioManager extends BaseManager {
 
 	boolean removePortfolioGroups(Long portfolioGroupId);
 
-	String getPortfolio(UUID portfolioId,
+	PortfolioDocument getPortfolio(UUID portfolioId,
 								   Long userId,
 								   Integer cutoff) throws BusinessException, JsonProcessingException;
 

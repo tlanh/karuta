@@ -87,35 +87,32 @@ public class PortfolioController extends AbstractController {
     @GetMapping(value = "/portfolio/{id}")
     public HttpEntity<Object> getPortfolio(@PathVariable UUID id,
                                            @RequestParam(defaultValue = "true") boolean resources,
-                                           @RequestParam(defaultValue = "true")boolean files,
-                                           @RequestParam(required = false) String export,
+                                           @RequestParam(defaultValue = "true") boolean files,
+                                           @RequestParam(required = false) boolean export,
                                            @RequestParam(required = false) String lang,
                                            @RequestParam(required = false) Integer level,
-                                           @AuthenticationPrincipal UserInfo userInfo)
-            throws BusinessException, IOException {
+                                           @AuthenticationPrincipal UserInfo userInfo) throws BusinessException, IOException {
 
-        String portfolio = portfolioManager.getPortfolio(id, userInfo.getId(), level);
+        PortfolioDocument portfolio = portfolioManager.getPortfolio(id, userInfo.getId(), level);
 
-        SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
-        String timeFormat = dt.format(new Date());
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HHmmss");
 
-        if (export == null) {
+        String code = portfolio.getCode().replace("_", "");
+        String filename = code + "-" + dateFormat.format(new Date());
+
+        if (export) {
             return ResponseEntity
                     .ok()
-//                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename = \"" + code + "-" + timeFormat + ".xml\"")
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + ".xml\"")
                     .body(portfolio);
+
         } else if (resources && files) {
             // TODO: Rely on PortfolioManager#getZippedPortfolio
 //          String code = portfolio.getCode().replace("_", "");
-          String code = "FIXME";
-
-          ObjectMapper mapper = new XmlMapper();
-          PortfolioDocument document = mapper
-              .readerFor(PortfolioDocument.class)
-              .readValue(portfolio);
+          // String code = "FIXME";
           
             //// Cas du renvoi d'un ZIP
-            File tempZip = getZipFile(document, lang);
+            File tempZip = getZipFile(portfolio, lang);
 
             /// Return zip file
             RandomAccessFile f = new RandomAccessFile(tempZip.getAbsoluteFile(), "r");
@@ -127,8 +124,8 @@ public class PortfolioController extends AbstractController {
             tempZip.delete();
 
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE)
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename = \"" + code + "-" + timeFormat + ".zip")
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + ".zip\"")
                     .body(b);
         } else {
             return new HttpEntity<>(portfolio);
@@ -154,13 +151,15 @@ public class PortfolioController extends AbstractController {
         zos.write(bytes);
         zos.closeEntry();
 
-        List<NodeDocument> nodesWithFiles = portfolio
+        // TODO: Fix
+        List<NodeDocument> nodesWithFiles = null;
+        /*portfolio
                 .getNodes()
                 .stream()
                 .filter(n -> n.getResources()
                         .stream()
                         .anyMatch(r -> !r.getFileid(lang).isEmpty()))
-                .collect(Collectors.toList());
+                .collect(Collectors.toList());*/
 
         // Loop through the different nodes that have file to
         // fetch them.
@@ -454,23 +453,14 @@ public class PortfolioController extends AbstractController {
 
         /// Create all the zip files
         for (UUID portfolioId : uuids) {
-            String content = portfolioManager.getPortfolio(portfolioId, userInfo.getId(), null);
-            
-            ObjectMapper mapper = new XmlMapper();
-            PortfolioDocument portfolio = mapper
-                  .readerFor(PortfolioDocument.class)
-                  .readValue(content);
+            PortfolioDocument portfolio = portfolioManager.getPortfolio(portfolioId, userInfo.getId(), null);
 
             // No name yet
             if ("".equals(name)) {
-                Optional<NodeDocument> nodeDocument = portfolio
-                        .getNodes()
-                        .stream()
-                        .filter(n -> n.getType().equals("asmRoot"))
-                        .findFirst();
+                NodeDocument asmRoot = portfolio.getRoot();
 
-                if (nodeDocument.isPresent()) {
-                    List<ResourceDocument> resources = nodeDocument.get().getResources();
+                if (asmRoot != null) {
+                    List<ResourceDocument> resources = asmRoot.getResources();
 
                     if (!resources.isEmpty())
                         name = resources.get(0).getCode();

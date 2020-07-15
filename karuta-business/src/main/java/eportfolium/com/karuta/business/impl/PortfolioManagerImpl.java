@@ -37,7 +37,6 @@ import javax.persistence.criteria.Join;
 import javax.persistence.criteria.ListJoin;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import eportfolium.com.karuta.business.contract.*;
@@ -187,7 +186,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	}
 
 	@Override
-	public String getPortfolio(UUID portfolioId, Long userId, Integer cutoff)
+	public PortfolioDocument getPortfolio(UUID portfolioId, Long userId, Integer cutoff)
 			throws BusinessException, JsonProcessingException {
 
 		Node rootNode = portfolioRepository.getPortfolioRootNode(portfolioId);
@@ -195,21 +194,18 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		GroupRights rights = getRightsOnPortfolio(userId, portfolioId);
 
 		if (!rights.isRead()) {
-			userId = credentialRepository.getPublicId();
-			/// Vérifie les droits avec le compte publique (dernière chance)
-			GroupRights publicRights = groupRightsRepository.getPublicRightsByUserId(rootNode.getId(), userId);
+			Long publicId = credentialRepository.getPublicId();
+
+			GroupRights publicRights = groupRightsRepository.getPublicRightsByUserId(rootNode.getId(), publicId);
+
 			if (!publicRights.isRead()) {
 				throw new GenericBusinessException("Vous n'avez pas les droits nécessaires.");
 			}
 		}
 
-		Long ownerId = portfolioRepository.getOwner(portfolioId);
-		boolean owner = ownerId.equals(userId);
+		boolean owner = portfolioRepository.isOwner(portfolioId, userId);
 
-		String data = getPortfolio(portfolioId, rootNode.getId(), userId,
-        rights.getGroupRightInfo().getId(), owner, rights.getGroupRightInfo().getLabel(), cutoff);
-		
-        return data; 
+		return getPortfolio(rootNode, userId, rights.getGroupRightInfo(), owner, cutoff);
 	}
 
 	@Override
@@ -246,38 +242,29 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
         }
     }
 
-	private String getPortfolio(UUID portfolioId,
-										   UUID rootuuid,
-										   Long userId,
-										   Long groupId,
-										   boolean owner,
-										   String role,
-										   Integer cutoff) throws JsonProcessingException {
+	private PortfolioDocument getPortfolio(Node rootNode, Long userId, GroupRightInfo groupRightInfo, boolean owner, Integer cutoff)
+			throws JsonProcessingException {
 		/// Node -> parent
 		Map<UUID, Tree> entries = new HashMap<>();
-		Node rootnode = portfolioRepository.getPortfolioRootNode(portfolioId);
-		Portfolio p = rootnode.getPortfolio();
-		List<Pair<Node, GroupRights>> structure = getPortfolioStructure(portfolioId, userId, groupId);
 
-		processQuery(structure, entries, role);
+		Portfolio portfolio = rootNode.getPortfolio();
+		List<Pair<Node, GroupRights>> structure = getPortfolioStructure(portfolio.getId(), userId, groupRightInfo.getId());
 
-		structure = getSharedStructure(portfolioId, userId, cutoff);
+		processQuery(structure, entries, groupRightInfo.getLabel());
 
-		if (structure != null) {
-			processQuery(structure, entries, role);
+		structure = getSharedStructure(portfolio.getId(), userId, cutoff);
+
+		processQuery(structure, entries, groupRightInfo.getLabel());
+
+		Tree root = entries.get(rootNode.getId());
+		PortfolioDocument portfolioDocument = new PortfolioDocument(portfolio, owner);
+
+		if (root != null) {
+			reconstructTree(root.node, root, entries);
+			portfolioDocument.setRoot(root.node);
 		}
 
-		/// Reconstruct functional tree
-		StringBuilder data = new StringBuilder();
-		Tree root = entries.get(rootuuid);
-
-		if (root != null)
-			reconstructTree(data, root, entries);
-
-		String psformat = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><portfolio id=\"%s\" root_node_id=\"%s\" owner=\"%s\" ownerid=\"%s\" modified=\"%s\">%s</portfolio>";
-		boolean isowner = p.getModifUserId() == userId ? true : false;
-
-		return String.format(psformat, p.getId(), rootnode.getId(), isowner, p.getModifUserId(), p.getModifDate(), data.toString());
+		return portfolioDocument;
 	}
 
 	private List<Pair<Node, GroupRights>> getPortfolioStructure(UUID portfolioId, Long userId, Long groupId) {
@@ -290,31 +277,31 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		if (rootNode != null
 				&& (credentialRepository.isAdmin(userId)
 						|| credentialRepository.isDesigner(userId, rootNode.getId())
-						|| userId == portfolioRepository.getOwner(portfolioId))) {
+						|| portfolioRepository.isOwner(portfolioId, userId))) {
+
 			List<Node> nodes = nodeRepository.getNodesWithResources(portfolioId);
-			for (Node node : nodes) {
+
+			nodes.forEach(node -> {
 				GroupRights rights = new GroupRights(new GroupRightsId(new GroupRightInfo(), null), true);
 				portfolioStructure.add(Pair.of(node, rights));
-			}
-		}
-		/// FIXME: Il faudrait peut-être prendre une autre stratégie pour sélectionner
-		/// les bonnes données : Cas propriétaire OU cas general (via les droits
-		/// partagés)
-		else if (hasRights(userId, portfolioId)) {
+			});
+
+		} else if (hasRights(userId, portfolioId)) {
 			Map<UUID, GroupRights> rights = new HashMap<>();
 
 			String login = credentialRepository.getLoginById(userId);
-//				FIXME: Devrait peut-être verifier si la personne a les droits d'y accéder?
+
 			List<GroupRights> grList = groupRightsRepository.getPortfolioAndUserRights(portfolioId, login,
 					groupId);
+
 			for (GroupRights gr : grList) {
 				if (rights.containsKey(gr.getGroupRightsId())) {
 					GroupRights original = rights.get(gr.getGroupRightsId());
-					original.setRead(Boolean.logicalOr(gr.isRead(), original.isRead()));
-					original.setWrite(Boolean.logicalOr(gr.isWrite(), original.isWrite()));
-					original.setDelete(Boolean.logicalOr(gr.isDelete(), original.isDelete()));
-					original.setSubmit(Boolean.logicalOr(gr.isSubmit(), original.isSubmit()));
-					original.setAdd(Boolean.logicalOr(gr.isAdd(), original.isAdd()));
+					original.setRead(gr.isRead() || original.isRead());
+					original.setWrite(gr.isWrite() || original.isWrite());
+					original.setDelete(gr.isDelete() || original.isDelete());
+					original.setSubmit(gr.isSubmit() || original.isSubmit());
+					original.setAdd(gr.isAdd() || original.isAdd());
 				} else {
 					rights.put(gr.getGroupRightsId(), gr);
 				}
@@ -322,23 +309,19 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 
 			List<Node> nodes = nodeRepository.getNodes(new ArrayList<>(rights.keySet()));
 
-			// Sélectionne les données selon la filtration
-			for (Node node : nodes) {
-				if (rights.containsKey(node.getId())) { // Verification des droits
-					GroupRights groupRights = rights.get(node.getId());
-					if (groupRights.isRead()) { // On doit au moins avoir le droit de lecture
-						portfolioStructure.add(Pair.of(node, groupRights));
-					}
-				}
-			}
+			nodes.stream()
+					.filter(node -> rights.containsKey(node.getId()))
+					.filter(node -> rights.get(node.getId()).isRead())
+					.forEach(node -> portfolioStructure.add(Pair.of(node, rights.get(node.getId()))));
 
-		} else if (portfolioRepository.isPublic(portfolioId)) // Public case, looks like previous query, but with
-		{
+		} else if (portfolioRepository.isPublic(portfolioId)) {
+
 			List<Node> nodes = nodeRepository.getNodesWithResources(portfolioId);
-			for (Node node : nodes) {
+
+			nodes.forEach(node -> {
 				GroupRights groupRights = new GroupRights(true, false, false, false);
 				portfolioStructure.add(Pair.of(node, groupRights));
-			}
+			});
 		}
 
 		return portfolioStructure;
@@ -422,23 +405,12 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		}
 
 		if (resources) {
-			String data = getPortfolio(portfolio.getId(), userId, null);
-	    ObjectMapper mapper = new XmlMapper();
-	    PortfolioDocument portfoliod = mapper
-	        .readerFor(PortfolioDocument.class)
-	        .readValue(data);
+			return getPortfolio(portfolio.getId(), userId, null);
 
-			return portfoliod;
 		} else {
 			PortfolioDocument document = new PortfolioDocument(portfolio.getId());
-			document.setNodes(Collections.singletonList(nodeManager.getNode(portfolio.getRootNode().getId(), false, "nodeRes", userId,
-					null, false)));
-			/// For now
-			String data = getPortfolio(portfolio.getId(), userId, null);
-	    ObjectMapper mapper = new XmlMapper();
-	    document = mapper
-	        .readerFor(PortfolioDocument.class)
-	        .readValue(data);
+			document.setRoot(nodeManager.getNode(portfolio.getRootNode().getId(), false, "nodeRes", userId,
+					null, false));
 
 			return document;
 		}
@@ -579,10 +551,10 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	public boolean rewritePortfolioContent(PortfolioDocument portfolio, UUID portfolioId, Long userId,
 										   Boolean portfolioActive) throws BusinessException, JsonProcessingException {
 
-		NodeDocument rootNode = portfolio.getNodes().stream()
-				.filter(n -> n.getType().equals("asmRoot"))
-				.findFirst()
-				.orElseThrow(() -> new GenericBusinessException("No root node found"));
+		NodeDocument rootNode = portfolio.getRoot();
+
+		if (rootNode == null)
+			throw new GenericBusinessException("No root node found");
 
 		UUID rootNodeUuid = portfolio.getId() != null ? portfolio.getId() : UUID.randomUUID();
 
@@ -713,9 +685,8 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 											.readerFor(MetadataDocument.class)
 											.readValue("<metadata>" + current.getMetadata() + "</metadata>");
 
-
-//			if (metadata.getPublic())
-//				setPublic = true;
+			if (metadata.getPublic())
+				setPublic = true;
 
 			for (String s : resolve.groups.keySet()) {
 				GroupRightInfo gri = new GroupRightInfo();
@@ -770,9 +741,9 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 
 			updateTime(portfolioId);
 
-			// Rendre le portfolio public si nécessaire
-//			if (setPublic)
-//				groupManager.setPublicState(userId, portfolioId, true);
+			// Define portfolio as public if necessary.
+			if (setPublic)
+				groupManager.setPublicState(userId, portfolioId, true);
 		}
 
 		return portfolioId;
@@ -788,29 +759,16 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		// Si le modèle est renseigné, on ignore le XML poste et on récupère le contenu
 		// du modèle a la place
 		// FIXME Inutilisé, nous instancions / copions un portfolio
-		String data = null;
-		if (portfolioModelId != null)
-		{
-			data = getPortfolio(portfolioModelId, userId, null);
-			
-	    ObjectMapper mapper = new XmlMapper();
-	    portfolioDocument = mapper
-	        .readerFor(PortfolioDocument.class)
-	        .readValue(data);
+
+		if (portfolioModelId != null) {
+			portfolioDocument = getPortfolio(portfolioModelId, userId, null);
 		}
 
-		Optional<NodeDocument> nodeDocument = portfolioDocument.getNodes()
-					.stream()
-					.filter(n -> n.getType().equals("asmRoot")
-									&& n.getResources() != null
-									&& !n.getResources().isEmpty())
-					.findFirst();
+		NodeDocument rootNode = portfolioDocument.getRoot();
 
-		if (!nodeDocument.isPresent()) {
+		if (rootNode == null) {
 			throw new GenericBusinessException("Exception handling node");
 		}
-
-		NodeDocument rootNode = nodeDocument.get();
 
 		Optional<ResourceDocument> resourceDocument = rootNode
 				.getResources()
@@ -955,14 +913,12 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
                     .readerFor(PortfolioDocument.class)
                     .readValue(xml);
 
-            Optional<NodeDocument> asmRoot = document.getNodes().stream()
-                    .filter(n -> n.getType().equals("asmRoot"))
-                    .findFirst();
+            NodeDocument asmRoot = document.getRoot();
 
-            if (!asmRoot.isPresent())
+            if (asmRoot == null)
                 continue;
 
-            Optional<ResourceDocument> resource = asmRoot.get()
+            Optional<ResourceDocument> resource = asmRoot
                     .getResources()
                     .stream()
                     .filter(n -> "nodeRes".equals(n.getXsiType())).findFirst();
@@ -1682,11 +1638,8 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 
 		Credential cr = credential.get();
 		
-		//// From intermediate object to DB object
-		Optional<NodeDocument> onodedoc = portfolio.getNodes().stream()
-				.filter(n -> n.getType().equals("asmRoot")).findFirst();
-		NodeDocument nodedoc = onodedoc.get();
-		
+		NodeDocument asmRoot = portfolio.getRoot();
+
 		Map<UUID, UUID> resolve = new HashMap<>();
 		
 		Portfolio port = new Portfolio();
@@ -1695,11 +1648,11 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		port.setActive(1);
 		port = portfolioRepository.save(port);
 		
-		Node node = nodeManager.writeNode(nodedoc, port.getId(), null, userId, 0, null,
+		Node node = nodeManager.writeNode(asmRoot, port.getId(), null, userId, 0, null,
         null, false, false, true, resolve, false);
 		
     //// Fetch back DB object that was saved
-    UUID uuid = nodedoc.getId();
+    UUID uuid = asmRoot.getId();
     Optional<Node> rNode = nodeRepository.findById(uuid);
 
 		port.setRootNode(node);

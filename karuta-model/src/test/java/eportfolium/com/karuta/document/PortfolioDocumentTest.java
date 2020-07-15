@@ -53,17 +53,15 @@ public class PortfolioDocumentTest extends DocumentTest {
 
         NodeDocument nodeDocument = new NodeDocument(node);
 
-        List<NodeDocument> nodes = Collections.singletonList(nodeDocument);
-
         UUID id = UUID.randomUUID();
         String code = "karuta.model";
-        PortfolioDocument document = new PortfolioDocument(id, true, code, nodes);
+        PortfolioDocument document = new PortfolioDocument(id, true, code, nodeDocument);
 
         String output = mapper.writeValueAsString(document);
 
         assertContains("<portfolio id=\"" + id + "\" ", output);
         assertContains("code=\"" + code + "\"", output);
-        assertContains("owner=\"true\">", output);
+        assertContains("owner=\"true\"", output);
 
         assertContains("<asmRoot id=\"" + nodeId + "\" type=\"asmRoot\"", output);
         assertContains("xsi_type=\"foo\"", output);
@@ -144,9 +142,8 @@ public class PortfolioDocumentTest extends DocumentTest {
 
 
         assertEquals(id, document.getId());
-        assertEquals(1, document.getNodes().size());
 
-        NodeDocument node = document.getNodes().get(0);
+        NodeDocument node = document.getRoot();
 
         assertEquals(nodeId, node.getId());
         assertEquals("asmRoot", node.getType());
