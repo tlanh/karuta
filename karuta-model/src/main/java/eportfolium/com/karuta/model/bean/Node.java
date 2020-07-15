@@ -84,7 +84,7 @@ public class Node implements Serializable {
 	}
 
 	public Node(Node original) {
-		this.parentNode = original.getParentNode() != null ? original.getParentNode() : null;
+		this.parentNode = original.getParentNode();
 		this.childrenStr = original.getChildrenStr();
 		this.nodeOrder = original.getNodeOrder();
 		this.metadata = original.getMetadata();
