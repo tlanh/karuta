@@ -88,7 +88,7 @@ public class PortfolioController extends AbstractController {
     @GetMapping(value = "/portfolio/{id}")
     public HttpEntity<Object> getPortfolio(@PathVariable UUID id,
                                            @RequestParam(defaultValue = "true") boolean resources,
-                                           @RequestParam(defaultValue = "true") boolean files,
+                                           @RequestParam(defaultValue = "false") boolean files,
                                            @RequestParam(required = false) boolean export,
                                            @RequestParam(required = false) String lang,
                                            @RequestParam(required = false) Integer level,
@@ -108,7 +108,7 @@ public class PortfolioController extends AbstractController {
                     .body(portfolio);
 
         } else if (resources && files) {
-            File tempZip = portfolioManager.getZippedPortfolio(null, lang);
+            File tempZip = portfolioManager.getZippedPortfolio(portfolio, lang);
             byte[] zipContent = Files.readAllBytes(tempZip.toPath());
 
             // Temp file cleanup
