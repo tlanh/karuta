@@ -46,7 +46,6 @@ import eportfolium.com.karuta.model.exception.GenericBusinessException;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -255,6 +254,7 @@ public class PortfolioController extends AbstractController {
      * PUT /rest/api/portfolios/portfolios/{portfolio-id}
      */
     @PutMapping("/portfolio/{portfolio}")
+    @IsAdmin
     public String putConfiguration(@PathVariable UUID portfolio,
                                    @RequestParam Boolean active) {
 
@@ -280,7 +280,7 @@ public class PortfolioController extends AbstractController {
      * @return instanciated portfolio uuid
      */
     @PostMapping("/instanciate/{id}")
-    @PreAuthorize("hasRole('admin') or hasRole('designer')")
+    @IsAdminOrDesigner
     public ResponseEntity<String> instanciate(@PathVariable String id,
                                               @RequestParam(required = false) String sourcecode,
                                               @RequestParam String targetcode,
