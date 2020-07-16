@@ -432,28 +432,6 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 						nodeRepository.save(n);
 					});
 
-        } else if ("submitall".equals(macroName)) {
-            List<Node> children = getChildren(nodeId);
-
-            log.info("ACTION: " + macroName + " grid: " + grid + " -> uuid: " + nodeId);
-
-            /// Insert/replace existing editing related rights
-            /// Same as submit, except we don't limit to user's own group right
-            boolean hasChanges = updateAllNodesRights(children, grid);
-
-            if (!hasChanges)
-                return "unchanged";
-
-            document.setSubmitted(true);
-            document.setSubmitteddate(new Date());
-
-            final String metadataAttributes = xmlAttributes(document);
-
-            nodeRepository.findById(nodeId)
-					.ifPresent(n -> {
-						n.setMetadataWad(metadataAttributes);
-						nodeRepository.save(n);
-					});
         }
 
 		return "OK";
@@ -1885,32 +1863,6 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 				groupRightsRepository.save(gr);
 			} else {
 				gr = new GroupRights();
-				gr.setId(new GroupRightsId(new GroupRightInfo(grid), node.getId()));
-
-				groupRightsRepository.save(gr);
-			}
-		}
-
-		return !nodes.isEmpty();
-	}
-
-	public boolean updateAllNodesRights(List<Node> nodes, Long grid) {
-		for (Node node : nodes) {
-			List<GroupRights> grList = groupRightsRepository.getRightsById(node.getId());
-
-			if (!grList.isEmpty()) {
-				for (GroupRights tmpGr : grList) {
-					tmpGr.setWrite(false);
-					tmpGr.setDelete(false);
-					tmpGr.setAdd(false);
-					tmpGr.setSubmit(false);
-					tmpGr.setTypesId(null);
-					tmpGr.setRulesId(null);
-
-					groupRightsRepository.save(tmpGr);
-				}
-			} else {
-				GroupRights gr = new GroupRights();
 				gr.setId(new GroupRightsId(new GroupRightInfo(grid), node.getId()));
 
 				groupRightsRepository.save(gr);
