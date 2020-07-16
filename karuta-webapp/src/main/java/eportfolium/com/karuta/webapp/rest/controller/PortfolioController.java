@@ -281,7 +281,7 @@ public class PortfolioController extends AbstractController {
      */
     @PostMapping("/instanciate/{id}")
     @IsAdminOrDesigner
-    public ResponseEntity<String> instanciate(@PathVariable String id,
+    public ResponseEntity<String> instanciate(@PathVariable UUID id,
                                               @RequestParam(required = false) String sourcecode,
                                               @RequestParam String targetcode,
                                               @RequestParam(defaultValue = "false") boolean copyshared,

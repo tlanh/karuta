@@ -79,7 +79,7 @@ public interface PortfolioManager extends BaseManager {
 	boolean rewritePortfolioContent(PortfolioDocument portfolio, UUID portfolioId, Long userId, Boolean portfolioActive)
 			throws BusinessException, JsonProcessingException;
 
-	String instanciatePortfolio(String portfolioId, String srccode, String tgtcode, Long id,
+	String instanciatePortfolio(UUID portfolioId, String srccode, String tgtcode, Long id,
 			boolean copyshared, String groupname, boolean setOwner);
 
 	String importPortfolio(String path, InputStream fileInputStream, Long id, boolean instantiate, String projectName)

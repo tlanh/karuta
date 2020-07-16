@@ -1017,27 +1017,24 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	}
 
 	@Override
-	public String instanciatePortfolio(String portfolioId, String srccode, String tgtcode, Long id,
+	public String instanciatePortfolio(UUID portfolioId, String srccode, String tgtcode, Long id,
 			boolean copyshared, String groupname, boolean setOwner) {
 
 		//// Fetch nodes to be instanciated
 		Portfolio portfolio = null;
 		Long owner = null;
-		Credential credential = null;
 		List<Node> nodelist = null;
-		if( srccode != null ) /// Find by source code
-		{
+
+		if (srccode != null) { /// Find by source code
 			portfolio = portfolioRepository.getPortfolioFromNodeCode(srccode);
 			owner = portfolio.getCredential().getId();
-			nodelist = new ArrayList<Node>();
-			nodelist.addAll(portfolio.getNodes());
-		}
-		else
-		{
-			nodelist = nodeRepository.getNodes(UUID.fromString(portfolioId));
+			nodelist = new ArrayList<>(portfolio.getNodes());
+		} else {
+			nodelist = nodeRepository.getNodes(portfolioId);
 			owner = nodelist.get(0).getModifUserId();
 		}
-		credential = credentialRepository.getUserInfos(owner);
+
+		Credential credential = credentialRepository.getUserInfos(owner);
 
 		class Helper
 		{
