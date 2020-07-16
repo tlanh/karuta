@@ -17,13 +17,14 @@ package eportfolium.com.karuta.business.impl;
 
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 
 import eportfolium.com.karuta.consumer.repositories.*;
@@ -118,34 +119,22 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	}
 
 	@Override
-	public Node writeNode(NodeDocument node, UUID portfolioId, UUID portfolioModelId, Long userId,
-						  int ordrer, UUID forcedId, Node parentNode, boolean sharedResParent,
-						  boolean sharedNodeResParent, boolean rewriteId, Map<UUID, UUID> resolve, boolean parseRights)
+	public Node writeNode(NodeDocument node, UUID portfolioId, Long userId, int ordrer, UUID forcedId,
+						  Node parentNode, boolean rewriteId, Map<UUID, UUID> resolve, boolean parseRights)
 			throws BusinessException, JsonProcessingException {
 
 		if (node == null)
 			return null;
 
-		boolean sharedRes = false;
-		boolean sharedNode = false;
-		boolean sharedNodeRes = false;
-
-		final String asmType = node.getType();
-		final String xsiType = node.getXsiType();
-		final String semtag = node.getSemtag();
-		final String format = node.getFormat();
-		final String label = node.getLabel();
-		final String descr = node.getDescription();
-
-		String metadataStr = "";
-		String metadataWadStr = "";
-		String metadataEpmStr = "";
-
 		String code = "";
-    Optional<ResourceDocument> resource = node.getResources()
-        .stream()
-        .filter(n -> "nodeRes".equals(n.getXsiType())).findFirst();
-		if( resource.get() != null ) code = resource.get().getCode();
+
+		Optional<ResourceDocument> resource = node.getResources()
+			.stream()
+			.filter(n -> "nodeRes".equals(n.getXsiType())).findFirst();
+
+		if (resource.isPresent())
+			code = resource.get().getCode();
+
 		String semanticTag = null;
 
 		final UUID nodeId = rewriteId ? node.getId() : (forcedId != null ? forcedId : UUID.randomUUID());
@@ -156,7 +145,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 		// If we are dealing with the root of the tree, we need to ensure
 		// that the node's type is "asmRoot".
 		if (nodeId != null && node.getParent() != null) {
-			if (!asmType.equals("asmRoot") && portfolioId == null)
+			if (!node.getType().equals("asmRoot") && portfolioId == null)
 				throw new GenericBusinessException("Missing node with 'asmRoot' type");
 
 			List<ResourceDocument> resourceDocuments = node.getResources();
@@ -166,97 +155,45 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 			}
 		}
 
-		if( node.getMetadataWad() != null )
-		{
-			metadataWadStr = node.getMetadataWad().toString();
-		}
 		if (parseRights && node.getMetadataWad() != null) {
 			MetadataWadDocument metadataWad = node.getMetadataWad();
 
-			if (metadataWad.getSeenoderoles() != null) {
-				for (String role : metadataWad.getSeenoderoles().split(" ")) {
-					groupManager.addGroupRights(role, nodeId, GroupRights.READ, portfolioId,
-							userId);
+			BiConsumer<String, String> processRoles = (roles, right) -> {
+				if (roles != null) {
+					for (String role : roles.split(" ")) {
+						groupManager.addGroupRights(role, nodeId, right, portfolioId, userId);
+					}
 				}
-			}
+			};
 
-			if (metadataWad.getDelnoderoles() != null) {
-				for (String role : metadataWad.getDelnoderoles().split(" ")) {
-					groupManager.addGroupRights(role, nodeId, GroupRights.DELETE, portfolioId,
-							userId);
-				}
-			}
-
-			if (metadataWad.getEditnoderoles() != null) {
-				for (String role : metadataWad.getEditnoderoles().split("")) {
-					groupManager.addGroupRights(role, nodeId, GroupRights.WRITE, portfolioId,
-							userId);
-				}
-			}
-
-			if (metadataWad.getEditnoderoles() != null) {
-				for (String role : metadataWad.getEditnoderoles().split(" ")) {
-					groupManager.addGroupRights(role, nodeId, GroupRights.WRITE, portfolioId,
-							userId);
-				}
-			}
-
-			if (metadataWad.getSubmitroles() != null) {
-				for (String role : metadataWad.getSubmitroles().split(" ")) {
-					groupManager.addGroupRights(role, nodeId, GroupRights.SUBMIT, portfolioId,
-							userId);
-				}
-			}
-
-			if (metadataWad.getShowtoroles() != null) {
-				for (String role : metadataWad.getShowtoroles().split(" ")) {
-					groupManager.addGroupRights(role, nodeId, GroupRights.NONE, portfolioId,
-							userId);
-				}
-			}
+			processRoles.accept(metadataWad.getSeenoderoles(), GroupRights.READ);
+			processRoles.accept(metadataWad.getDelnoderoles(), GroupRights.DELETE);
+			processRoles.accept(metadataWad.getEditnoderoles(), GroupRights.WRITE);
+			processRoles.accept(metadataWad.getEditresroles(), GroupRights.WRITE);
+			processRoles.accept(metadataWad.getSubmitroles(), GroupRights.SUBMIT);
+			processRoles.accept(metadataWad.getShowtoroles(), GroupRights.NONE);
 
 			if (metadataWad.getNotifyroles() != null) {
 				groupManager.changeNotifyRoles(portfolioId, nodeId,
 						metadataWad.getNotifyroles().replace(" ", ","));
 			}
 
-			/// Need at least parsed rights to make it public
-			boolean ispublic = false;
-			MetadataDocument metadata = node.getMetadata();
-			if( metadata.getPrivate() )
-				ispublic = true;
-			groupManager.setPublicState(userId, portfolioId, ispublic);
+			groupManager.setPublicState(userId, portfolioId, node.getMetadata().getPublic());
 
 		}
 
-		if (node.getMetadataEpm() != null) {
-			metadataEpmStr = node.getMetadataEpm().toString();
-		}
 
 		if (node.getMetadata() != null) {
 			MetadataDocument metadata = node.getMetadata();
-			metadataStr = metadata.toString();
-			
-			/*
-			if (metadata.getSharedResource())
-				sharedRes = true;
-			if (metadata.getSharedNode())
-				sharedNode = true;
-			if (metadata.getSharedNodeResource())
-				sharedNodeRes = true;
-			//*/
 
 			semanticTag = metadata.getSemantictag();
 		}
 
-		Node nodeDB = add(nodeId, parentNode, asmType, xsiType, sharedRes, sharedNode, sharedNodeRes,
-					metadataStr, metadataWadStr, metadataEpmStr, semtag,
-					semanticTag, label, code, descr, format, ordrer, userId, portfolioId);
+		Node nodeEntity = add(node, nodeId, parentNode, semanticTag, code, ordrer, userId, portfolioId);
 
 		//// Insert resource associated with this node
-		for( ResourceDocument d : node.getResources() )
-		{
-			resourceManager.addResource(nodeDB.getId(), d, userId);
+		for (ResourceDocument resourceDocument : node.getResources()) {
+			resourceManager.addResource(nodeEntity.getId(), resourceDocument, userId);
 		}
 		
 		// Loop through children to go down in the tree.
@@ -269,16 +206,15 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 				if (!rewriteId)
 					childId = UUID.randomUUID();
 
-				writeNode(child, portfolioId, portfolioModelId, userId, k, childId, nodeDB, sharedRes,
-							sharedNodeRes, rewriteId, resolve, parseRights);
+				writeNode(child, portfolioId, userId, k, childId, nodeEntity, rewriteId, resolve, parseRights);
 				k++;
 			}
 		}
 
-		if( parentNode != null )	/// Update parent children list, if asmRoot, no parent
+		if (parentNode != null)	// Update parent children list, if asmRoot, no parent
 			updateNode(parentNode.getId());
 
-		return nodeDB;
+		return nodeEntity;
 	}
 
 	@Override
@@ -1019,24 +955,17 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 
 	@Override
 	public NodeList addNode(UUID parentNodeId, NodeDocument node, Long userId, boolean forcedUuid)
-			throws JsonProcessingException, BusinessException {
+			throws BusinessException, JsonProcessingException {
 
 		Integer nodeOrder = nodeRepository.getNodeNextOrderChildren(parentNodeId);
 		Portfolio portfolio = portfolioRepository.getPortfolioFromNode(parentNodeId);
-		UUID portfolioId = null;
-		UUID portfolioModelId = null;
 
-		List<UUID> single = new ArrayList<>();
-		single.add(parentNodeId);
-		Node pNode = nodeRepository.getNodes(single).get(0);
-		if (portfolio != null) {
-			portfolioId = portfolio.getId();
-			portfolioModelId = portfolio.getModelId();
-		}
+		UUID portfolioId = portfolio != null ? portfolio.getId() : null;
+
+		Node pNode = nodeRepository.getNodes(Collections.singletonList(parentNodeId)).get(0);
 
 		// TODO getNodeRight postNode
-		Node nodeId = writeNode(node, portfolioId, portfolioModelId, userId, nodeOrder, null, pNode,
-				false, false, forcedUuid, null, true);
+		Node nodeId = writeNode(node, portfolioId, userId, nodeOrder, null, pNode, forcedUuid, null, true);
 
 		portfolioManager.updateTimeByNode(portfolioId);
 
@@ -2022,10 +1951,8 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 				});
 	}
 
-	private Node add(UUID nodeId, Node nodeParent, String asmType, String xsiType,
-					 boolean sharedRes, boolean sharedNode, boolean sharedNodeRes, String metadata, String metadataWad, String metadataEpm, String semtag,
-					 String semanticTag, String label, String code, String descr, String format, int order, Long modifUserId,
-					 UUID portfolioId) {
+	private Node add(NodeDocument nodeDocument, UUID nodeId, Node nodeParent, String semanticTag, String code, int order, Long userId,
+					 UUID portfolioId) throws JsonProcessingException {
 		
 		Node node = new Node();
 		node.setId(nodeId);
@@ -2034,32 +1961,42 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 		node.setChildrenStr("");
 
 		node.setNodeOrder(order);
-		node.setAsmType(asmType);
-		node.setXsiType(xsiType);
-		node.setSharedRes(sharedRes);
-		node.setSharedNode(sharedNode);
-		node.setSharedNodeRes(sharedNodeRes);
+		node.setAsmType(nodeDocument.getType());
+		node.setXsiType(nodeDocument.getXsiType());
 
-		node.setMetadata(metadata);
-		node.setMetadataWad(metadataWad);
-		node.setMetadataEpm(metadataEpm);
-		node.setSemtag(semtag);
-		node.setSemantictag(semanticTag);
-		node.setLabel(label);
-		node.setCode(code);
-		node.setDescr(descr);
-		node.setFormat(format);
-		node.setModifUserId(modifUserId);
+		MetadataDocument metadata = nodeDocument.getMetadata();
 
-		if (portfolioId != null)
-		{
-			Optional<Portfolio> p = portfolioRepository.findById(portfolioId);
-			node.setPortfolio(p.get());
+		if (metadata != null) {
+			node.setSharedRes(metadata.getSharedResource());
+			node.setSharedNode(metadata.getSharedNode());
+			node.setSharedNodeRes(metadata.getSharedNodeResource());
 		}
 
-		node = nodeRepository.save(node);
+		XmlMapper xmlMapper = new XmlMapper();
 
-		return node;
+		if (nodeDocument.getMetadata() != null)
+			node.setMetadata(xmlMapper.writeValueAsString(nodeDocument.getMetadata()));
+
+		if (nodeDocument.getMetadataWad() != null)
+			node.setMetadataWad(xmlMapper.writeValueAsString(nodeDocument.getMetadataWad()));
+
+		if (nodeDocument.getMetadataEpm() != null)
+			node.setMetadataEpm(xmlMapper.writeValueAsString(nodeDocument.getMetadataEpm()));
+
+		node.setSemtag(nodeDocument.getSemtag());
+		node.setSemantictag(semanticTag);
+		node.setLabel(nodeDocument.getLabel());
+		node.setCode(code);
+		node.setDescr(nodeDocument.getDescription());
+		node.setFormat(nodeDocument.getFormat());
+		node.setModifUserId(userId);
+
+		if (portfolioId != null) {
+			portfolioRepository.findById(portfolioId)
+				.ifPresent(node::setPortfolio);
+		}
+
+		return nodeRepository.save(node);
 	}
 
 	private int update(UUID nodeId, String asmType, String xsiType, String semantictag, String label, String code,

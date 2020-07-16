@@ -578,7 +578,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 			userId = portfolioRecord.getCredential().getId();
 		}
 
-		nodeManager.writeNode(rootNode, portfolioRecord.getId(), portfolioRecord.getModelId(), userId, 0, null, null, false, false,
+		nodeManager.writeNode(rootNode, portfolioRecord.getId(), userId, 0, null, null,
 				true, null, false);
 
 		// On récupère le noeud root généré précédemment et on l'affecte au portfolio.
@@ -812,8 +812,8 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 
 		Portfolio portfolio = add(uuid, userId, null);
 
-		nodeManager.writeNode(rootNode, portfolio.getId(), portfolioModelId, userId, 0, uuid, null,
-				false, false, false, null, parseRights);
+		nodeManager.writeNode(rootNode, portfolio.getId(), userId, 0, uuid, null,
+				false, null, parseRights);
 
 		// On récupère le noeud root généré précédemment et on l'affecte au portfolio.
 		portfolio.setRootNode(nodeRepository.getRootNodeByPortfolio(portfolio.getId()));
@@ -1660,18 +1660,13 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		port.setModifUserId(cr.getId());
 		port.setActive(1);
 		port = portfolioRepository.save(port);
-		
-		Node node = nodeManager.writeNode(asmRoot, port.getId(), null, userId, 0, null,
-        null, false, false, true, resolve, false);
-		
-    //// Fetch back DB object that was saved
-    UUID uuid = asmRoot.getId();
-    Optional<Node> rNode = nodeRepository.findById(uuid);
+
+		Node node = nodeManager.writeNode(asmRoot, port.getId(), userId, 0, null,
+				null, true, resolve, false);
 
 		port.setRootNode(node);
 		port = portfolioRepository.save(port);
 
-//		nodeRepository.save(node);
 		credentialRepository.save(cr);
 
 		return port;

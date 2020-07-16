@@ -49,8 +49,7 @@ public interface NodeManager extends BaseManager {
 	 * forcedParentUuid permet de forcer l'uuid parent, independamment de l'attribut
 	 * du noeud fourni
 	 */
-	Node writeNode(NodeDocument node, UUID portfolioId, UUID portfolioModelId, Long userId, int ordrer,
-				   UUID forcedId, Node parentNode, boolean sharedResParent, boolean sharedNodeResParent,
+	Node writeNode(NodeDocument node, UUID portfolioId, Long userId, int ordrer, UUID forcedId, Node parentNode,
 				   boolean rewriteId, Map<UUID, UUID> resolve, boolean parseRights)
 			throws BusinessException, JsonProcessingException;
 
