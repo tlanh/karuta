@@ -38,7 +38,6 @@ import eportfolium.com.karuta.business.security.IsAdmin;
 import eportfolium.com.karuta.consumer.repositories.*;
 import eportfolium.com.karuta.document.*;
 import eportfolium.com.karuta.model.bean.*;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
@@ -1629,15 +1628,6 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 			groupManager.setPublicState(userId, newPortfolioUuid, true);
 
 		return newPortfolioUuid;
-	}
-
-	private String passwdGen() {
-		Random random = new Random();
-
-		double num_bytes = Math.ceil(24 * 0.75);
-		byte[] bytes = new byte[(int) num_bytes];
-		random.nextBytes(bytes);
-		return new String(Base64.encodeBase64(bytes)).replaceAll("\\s+$", "").substring(0, 24);
 	}
 
 	private Portfolio add(UUID rootNodeId, Long userId, PortfolioDocument portfolio) throws JsonProcessingException, BusinessException {
