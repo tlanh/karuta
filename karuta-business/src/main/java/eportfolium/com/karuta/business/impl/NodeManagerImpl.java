@@ -97,11 +97,11 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 		final GroupRights rights = getRights(userId, nodeId);
 
 		if (!rights.isRead()) {
-			userId = credentialRepository.getPublicId();
-
 			/// Vérifie les droits avec le compte publique (dernière chance)
 			if (!nodeRepository.isPublic(nodeId))
 				throw new GenericBusinessException("Vous n'avez pas les droits nécessaires.");
+
+			userId = credentialRepository.getPublicId();
 		}
 
 		List<Pair<Node, GroupRights>> nodes = getNodePerLevel(nodeId, userId, rights.getGroupRightInfo().getId(),
