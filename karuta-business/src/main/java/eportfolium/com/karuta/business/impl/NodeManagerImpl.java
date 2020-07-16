@@ -450,68 +450,26 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 
 			resolve.put(uuid, rolesMap);
 
-			// FIXME MARCHE PAS !
 			MetadataWadDocument metadata = MetadataWadDocument.from(meta);
 
-			if (metadata.getSeenoderoles() != null) {
-				for (String role : metadata.getSeenoderoles().split(" ")) {
-					if (!rolesMap.containsKey(role)) {
-						GroupRights gr = new GroupRights();
-						gr.setRead(true);
-						rolesMap.put(role, gr);
+			BiConsumer<String, Consumer<GroupRights>> processRoles = (roleStr, consumer) -> {
+				if (roleStr != null) {
+					for (String role : roleStr.split(" ")) {
+						if (!rolesMap.containsKey(role)) {
+							GroupRights gr = new GroupRights();
+							consumer.accept(gr);
+							rolesMap.put(role, gr);
+						}
 					}
 				}
-			}
+			};
 
-			if (metadata.getShowtoroles() != null) {
-				for (String role : metadata.getShowtoroles().split(" ")) {
-					if (!rolesMap.containsKey(role)) {
-						GroupRights gr = new GroupRights();
-						gr.setRead(false);
-						rolesMap.put(role, gr);
-					}
-				}
-			}
-
-			if (metadata.getDelnoderoles() != null) {
-				for (String role : metadata.getDelnoderoles().split(" ")) {
-					if (!rolesMap.containsKey(role)) {
-						GroupRights gr = new GroupRights();
-						gr.setDelete(true);
-						rolesMap.put(role, gr);
-					}
-				}
-			}
-
-			if (metadata.getEditnoderoles() != null) {
-				for (String role : metadata.getEditnoderoles().split(" ")) {
-					if (!rolesMap.containsKey(role)) {
-						GroupRights gr = new GroupRights();
-						gr.setWrite(true);
-						rolesMap.put(role, gr);
-					}
-				}
-			}
-
-			if (metadata.getSubmitroles() != null) {
-				for (String role : metadata.getSubmitroles().split(" ")) {
-					if (!rolesMap.containsKey(role)) {
-						GroupRights gr = new GroupRights();
-						gr.setSubmit(true);
-						rolesMap.put(role, gr);
-					}
-				}
-			}
-
-			if (metadata.getEditresroles() != null) {
-				for (String role : metadata.getEditresroles().split(" ")) {
-					if (!rolesMap.containsKey(role)) {
-						GroupRights gr = new GroupRights();
-						gr.setWrite(true);
-						rolesMap.put(role, gr);
-					}
-				}
-			}
+			processRoles.accept(metadata.getSeenoderoles(),  (gr) -> gr.setRead(true));
+			processRoles.accept(metadata.getShowtoroles(),   (gr) -> gr.setRead(false));
+			processRoles.accept(metadata.getDelnoderoles(),  (gr) -> gr.setDelete(true));
+			processRoles.accept(metadata.getEditnoderoles(), (gr) -> gr.setWrite(true));
+			processRoles.accept(metadata.getSubmitroles(),   (gr) -> gr.setSubmit(true));
+			processRoles.accept(metadata.getEditresroles(),  (gr) -> gr.setWrite(true));
 
 			if (metadata.getMenuroles() != null) {
 				for (String role : metadata.getMenuroles().split(";")) {
@@ -542,24 +500,21 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 
 			nodeRepository.save(n);
 
-			/// Ajout des droits des noeuds FIXME
 			GroupRightsId grId = new GroupRightsId();
-			GroupRightInfo gri = null;
 
 			for (Entry<UUID, Map<String, GroupRights>> entry : resolve.entrySet()) {
-				uuid = entry.getKey();
+				UUID id = entry.getKey();
 				Map<String, GroupRights> gr = entry.getValue();
 
 				for (Entry<String, GroupRights> rightElem : gr.entrySet()) {
 					String group = rightElem.getKey();
 
-					GroupRights gr2 = groupRightsRepository.getRightsByIdAndLabel(uuid, group);
-					if (gr2 != null)
-						gri = gr2.getGroupRightInfo();
+					GroupRights gr2 = groupRightsRepository.getRightsByIdAndLabel(id, group);
+					GroupRightInfo gri = gr2 != null ? gr2.getGroupRightInfo() : null;
 
 					GroupRights rightValue = rightElem.getValue();
 					grId.setGroupRightInfo(gri);
-					grId.setId(uuid);
+					grId.setId(id);
 					GroupRights toUpdate = groupRightsRepository.findById(grId).get();
 
 					toUpdate.setRead(rightValue.isRead());
@@ -710,56 +665,15 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 					&& !credentialRepository.isDesigner(userId, nodeId))
 				throw new GenericBusinessException("403 FORBIDDEN, No admin right");
 
-		UUID parentid = null;
-
 		/// Copy portfolio base info
-		final Node baseNodeToRemove = nodeRepository.findById(nodeId).get();
+		final Node nodeToRemove = nodeRepository.findById(nodeId).get();
 
 		/// Portfolio id, nécessaire pour plus tard !
-		final UUID portfolioId = baseNodeToRemove.getPortfolio().getId();
+		final UUID portfolioId = nodeToRemove.getPortfolio().getId();
 		final List<Node> nodes = nodeRepository.getNodesWithResources(portfolioId);
 
-		/// Trouver un parent pour réorganiser les enfants restants.
-		if (baseNodeToRemove.getParentNode() != null)
-			parentid = baseNodeToRemove.getParentNode().getId();
-
-		final Set<Node> nodesToDelete = new LinkedHashSet<>();
+		final Set<Node> nodesToDelete = listHierarchy(nodeToRemove, nodes, null);
 		final Set<Resource> resourcesToDelete = new LinkedHashSet<>();
-		final Map<Integer, Set<String>> mapParentid = new HashMap<>();
-
-		Set<String> setParentid = new LinkedHashSet<>();
-
-		// Initialisation
-		setParentid.add(baseNodeToRemove.getId().toString());
-		mapParentid.put(0, setParentid);
-
-		// On descend les noeuds
-		int level = 0;
-		boolean added = true;
-
-		while (added) {
-			Set<Node> setParent = new LinkedHashSet<>();
-			setParentid = new LinkedHashSet<>();
-
-			for (Node node : nodes) {
-				for (String parentId : mapParentid.get(level)) {
-					if (node.getParentNode() != null
-							&& node.getParentNode().getId().toString().equals(parentId)) {
-						setParentid.add(node.getId().toString());
-						setParent.add(node);
-						break;
-					}
-				}
-			}
-
-			mapParentid.put(level + 1, setParentid);
-			nodesToDelete.addAll(setParent);
-			added = !setParentid.isEmpty(); // On s'arrete quand rien n'a été ajouté
-			level++; // Prochaine étape
-		}
-
-		// On ajoute le noeud de base dans les noeuds à effacer
-		nodesToDelete.add(baseNodeToRemove);
 
 		// On liste les ressources à effacer
 		for (Node nodeToDelete : nodesToDelete) {
@@ -776,18 +690,12 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 			}
 		}
 
-		/// Met à jour la dernière date de modification, commencez par le faire puisque
-		/// le noeud n'existera plus après.
 		portfolioManager.updateTimeByNode(nodeId);
-
-		// On efface les noeuds
 		nodeRepository.deleteAll(nodesToDelete);
-
-		// On efface les ressources
 		resourceRepository.deleteAll(resourcesToDelete);
 
-		if (parentid != null)
-			updateNode(parentid);
+		if (nodeToRemove.getParentNode() != null)
+			updateNode(nodeToRemove.getParentNode().getId());
 	}
 
 	@Override
@@ -795,7 +703,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 		if (!credentialRepository.isAdmin(userid) && !credentialRepository.isDesigner(userid, nodeId))
 			throw new GenericBusinessException("FORBIDDEN 403 : No admin right");
 
-		// Pour qu'un noeud ne s'ajoute pas lui-même comme noeud parent
+		// To avoid defining a node as its parent.
 		if (nodeId.equals(parentId))
 			return false;
 
@@ -1033,56 +941,19 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 							&& StringUtils.indexOf(n.getSemantictag(), parentSemtag) != -1)
 				.findFirst();
 
-			final Map<Integer, Set<Node>> nodesByLevel = new HashMap<>();
 
-			if (parentTagNode.isPresent()) {
-				nodesByLevel.put(0, Collections.singleton(parentTagNode.get()));
-			} else {
-				nodesByLevel.put(0, new LinkedHashSet<>());
-			}
+			Stream<Node> nodeStream = listHierarchy(parentTagNode.orElse(null), new ArrayList<>(), cutoff)
+					.stream()
+					.filter(node -> StringUtils.indexOf(node.getSemantictag(), childSemtag) != -1)
+					.sorted((o1, o2) -> {
+						int result = StringUtils.compare(o1.getCode(), o2.getCode());
 
-			int level = 0;
-			boolean added = true;
-
-			while (added && (cutoff == null || level < cutoff)) {
-				Set<Node> found = new HashSet<>();
-
-				for (Node node : nodes) {
-					for (Node t_node : nodesByLevel.get(level)) {
-						if (node.getParentNode() != null
-								&& t_node.getId().equals(node.getParentNode().getId())) {
-							found.add(node);
-							break;
+						if (result == 0) {
+							return NumberUtils.compare(o1.getNodeOrder(), o2.getNodeOrder());
 						}
-					}
-				}
 
-				nodesByLevel.put(level + 1, found);
-				level = level + 1;
-
-				// We stop once nothing is added anymore
-				added = !found.isEmpty();
-			}
-
-			Set<Node> semtagSet = new HashSet<>();
-
-			for (Set<Node> nodeSet : nodesByLevel.values()) {
-				for (Node t_node : nodeSet) {
-					if (StringUtils.indexOf(t_node.getSemantictag(), childSemtag) != -1) {
-						semtagSet.add(t_node);
-					}
-				}
-			}
-
-			Stream<Node> nodeStream = semtagSet.stream().sorted((o1, o2) -> {
-				int result = StringUtils.compare(o1.getCode(), o2.getCode());
-
-				if (result == 0) {
-					return NumberUtils.compare(o1.getNodeOrder(), o2.getNodeOrder());
-				}
-
-				return result;
-			});
+						return result;
+					});
 
 			return new NodeList(nodeStream
 					.map(this::getNodeDocument)
@@ -1109,120 +980,84 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 
 		Node n = nodeOptional.get();
 
-		/// Portfolio id, nécessaire plus tard !
 		UUID portfolioId = n.getPortfolio().getId();
 		List<Node> nodes = nodeRepository.getNodes(portfolioId);
 
-		/// Initialise la descente des noeuds, si il y a un partage on partira de le
-		/// sinon du noeud par défaut
-		/// FIXME: There will be something with shared_node_uuid
+		Set<UUID> parentIds = listHierarchy(n, nodes, cutoff)
+				.stream()
+				.map(Node::getId)
+				.collect(Collectors.toSet());
 
-		Map<Integer, Set<UUID>> mapParentid = new HashMap<>();
-		Set<UUID> setParentid = new LinkedHashSet<>();
-
-		setParentid.add(n.getId());
-		mapParentid.put(0, setParentid);
-
-		/// On boucle, avec les shared_node si ils existent.
-		/// FIXME: Possibilité de boucle infini
-		int level = 0;
-		boolean added = true;
-
-		while (added && (cutoff == null || level < cutoff)) {
-			Set<UUID> parentIds = new HashSet<>();
-
-			for (Node node : nodes) {
-				for (UUID t_parent_node : mapParentid.get(level)) {
-					if (node.getParentNode() != null
-							&& node.getParentNode().getId().equals(t_parent_node)) {
-						parentIds.add(node.getId());
-						break;
-					}
-				}
-			}
-
-			mapParentid.put(level + 1, parentIds);
-			setParentid.addAll(parentIds);
-
-			added = !parentIds.isEmpty(); // On s'arrete quand rien n'a été ajouté
-			level = level + 1; // Prochaine étape
-		}
-
-		Map<UUID, GroupRights> t_rights_22 = new HashMap<>();
+		Map<UUID, GroupRights> rights = new HashMap<>();
 
 		if (credentialRepository.isDesigner(userId, nodeId) || credentialRepository.isAdmin(userId)) {
-			for (UUID t_node_parent : setParentid) {
+			for (UUID parentNode : parentIds) {
 				GroupRights gr = new GroupRights();
-				gr.setId(new GroupRightsId(null, t_node_parent));
+				gr.setId(new GroupRightsId(null, parentNode));
 				gr.setRead(true);
 				gr.setWrite(true);
 				gr.setDelete(true);
 				gr.setSubmit(false);
 				gr.setAdd(false);
-				t_rights_22.put(t_node_parent, gr);
+
+				rights.put(parentNode, gr);
 			}
 		} else {
 			if (nodeRepository.isPublic(nodeId)) {
-				for (UUID t_node_parent : setParentid) {
+				for (UUID parentNode : parentIds) {
 					GroupRights gr = new GroupRights();
-					gr.setId(new GroupRightsId(null, t_node_parent));
+					gr.setId(new GroupRightsId(null, parentNode));
 					gr.setRead(true);
 					gr.setWrite(false);
 					gr.setDelete(true);
 					gr.setSubmit(false);
 					gr.setAdd(false);
-					t_rights_22.put(t_node_parent, gr);
+
+					rights.put(parentNode, gr);
 				}
 			}
 
 			// Aggregation des droits avec 'all', l'appartenance du groupe de l'utilisateur,
 			// et les droits propres a l'utilisateur
 			GroupRightInfo gri1 = groupRightInfoRepository.getByPortfolioAndLabel(portfolioId, "all");
-			GroupUser gu = groupUserRepository.getUniqueByUser(userId);
-			Long grid3 = 0L;
+			GroupInfo gi = groupUserRepository.getUniqueByUser(userId)
+					.getGroupInfo();
 
-			for (Node node : nodes) {
-				if (node.getId().equals(nodeId)
-						&& node.getPortfolio().equals(gu.getGroupInfo().getGroupRightInfo().getPortfolio())) {
-					grid3 = gu.getGroupInfo().getGroupRightInfo().getId();
-				}
-			}
+			Long grid3 = nodes.stream()
+					.filter(node -> node.getId().equals(nodeId) &&
+							node.getPortfolio().equals(gi.getGroupRightInfo().getPortfolio()))
+					.findFirst()
+					.map(node -> gi.getGroupRightInfo().getId())
+					.orElse(0L);
 
 			List<GroupRights> grList = groupRightsRepository.getByPortfolioAndGridList(portfolioId, gri1.getId(), rrgId,
 					grid3);
-			for (UUID ts : setParentid) {
+
+			for (UUID ts : parentIds) {
 				for (GroupRights item : grList) {
 					if (item.getGroupRightsId().equals(ts)) {
-						if (t_rights_22.containsKey(item.getGroupRightsId())) {
-							GroupRights original = t_rights_22.get(item.getGroupRightsId());
-							original.setRead(Boolean.logicalOr(item.isRead(), original.isRead()));
-							original.setWrite(Boolean.logicalOr(item.isWrite(), original.isWrite()));
-							original.setDelete(Boolean.logicalOr(item.isDelete(), original.isDelete()));
-							original.setSubmit(Boolean.logicalOr(item.isSubmit(), original.isSubmit()));
-							original.setAdd(Boolean.logicalOr(item.isAdd(), original.isAdd()));
+						if (rights.containsKey(item.getGroupRightsId())) {
+							GroupRights original = rights.get(item.getGroupRightsId());
+							original.setRead(item.isRead() || original.isRead());
+							original.setWrite(item.isWrite() || original.isWrite());
+							original.setDelete(item.isDelete() || original.isDelete());
+							original.setSubmit(item.isSubmit() || original.isSubmit());
+							original.setAdd(item.isAdd() || original.isAdd());
 						} else {
-							t_rights_22.put(item.getGroupRightsId(), item);
+							rights.put(item.getGroupRightsId(), item);
 						}
 					}
 				}
 			}
 		}
 
-		List<Node> nodeList = nodeRepository.getNodes(new ArrayList<>(setParentid));
-		List<Pair<Node, GroupRights>> finalResults = new ArrayList<>();
+		List<Node> nodeList = nodeRepository.getNodes(new ArrayList<>(parentIds));
 
-		// Sélectionne les données selon la filtration
-		for (Node node : nodeList) {
-			if (t_rights_22.containsKey(node.getId())) { // Verification des droits
-				GroupRights rights = t_rights_22.get(node.getId());
-				if (rights.isRead()) { // On doit au moins avoir le droit de lecture
-					finalResults.add(Pair.of(node, rights));
-				}
-			}
-		}
-
-		return finalResults;
-
+		return nodeList.stream()
+				.filter(node -> rights.containsKey(node.getId()))
+				.filter(node -> rights.get(node.getId()).isRead())
+				.map(node -> Pair.of(node, rights.get(node.getId())))
+				.collect(Collectors.toList());
 	}
 
     /**
@@ -1771,16 +1606,8 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
                 }
 
                 if (metadata.getNotifyroles() != null) {
-                    /// Format pour l'instant: actionroles="sender:1,2;responsable:4"
-                    StringTokenizer tokens = new StringTokenizer(metadata.getNotifyroles(), " ");
-                    String notifyRoles = "";
-
-                    if (tokens.hasMoreElements())
-                        notifyRoles = tokens.nextElement().toString();
-                    while (tokens.hasMoreElements())
-                        notifyRoles += "," + tokens.nextElement().toString();
-
-                    groupManager.changeNotifyRoles(portfolioUuid, uuid, notifyRoles);
+                    groupManager.changeNotifyRoles(portfolioUuid, uuid,
+							metadata.getNotifyroles().replace(" ", ","));
                 }
             }
 
@@ -2027,5 +1854,35 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 		GroupRights groupRights = getRights(userId, nodeId);
 
 		return new NodeRightsDocument(nodeId, groupRights);
+	}
+
+	private Set<Node> listHierarchy(Node base, List<Node> nodes, Integer cutoff) {
+		Map<Integer, Set<Node>> treeMap = new HashMap<>();
+		Set<Node> allChildren = new LinkedHashSet<>();
+
+		if (base != null)
+			nodes.add(base);
+
+		treeMap.put(0, allChildren);
+
+		int level = 0;
+		boolean added = true;
+
+		while (added && (cutoff == null || level < cutoff)) {
+			Set<Node> parentNodes = treeMap.get(level);
+
+			Set<Node> children = nodes.stream()
+					.filter(node -> node.getParentNode() != null)
+					.filter(node -> parentNodes.stream().anyMatch(n -> n.getId().equals(node.getParentNode().getId())))
+					.collect(Collectors.toSet());
+
+			treeMap.put(level + 1, children);
+			allChildren.addAll(children);
+
+			added = !children.isEmpty();
+			level++;
+		}
+
+		return allChildren;
 	}
 }
