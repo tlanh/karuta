@@ -132,12 +132,17 @@ public class PortfolioController extends AbstractController {
      */
     @GetMapping(value = "/portfolio/code/{code:.+}")
     public HttpEntity<PortfolioDocument> getByCode(@PathVariable String code,
-                                                   @RequestParam (defaultValue = "false")boolean resources,
+                                                   @RequestParam(required = false) boolean resources,
                                                    @AuthenticationPrincipal UserInfo userInfo)
             throws BusinessException, JsonProcessingException {
-        
-        return new HttpEntity<>(portfolioManager
-                .getPortfolioByCode(code, userInfo.getId(), resources));
+
+        PortfolioDocument portfolioDocument = portfolioManager
+                .getPortfolioByCode(code, userInfo.getId(), resources);
+
+        if (portfolioDocument == null)
+            return ResponseEntity.notFound().build();
+
+        return new HttpEntity<>(portfolioDocument);
     }
 
     /**
