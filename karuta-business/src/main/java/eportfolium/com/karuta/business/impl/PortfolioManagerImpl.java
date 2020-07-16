@@ -804,7 +804,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 				throw new GenericBusinessException("CONFLICT : Existing code.");
 			}
 
-//			resourceDocument.get().setCode(code);
+			resourceDocument.get().setCode(code);
 		}
 
 		UUID uuid = UUID.randomUUID();
