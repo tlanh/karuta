@@ -27,7 +27,8 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import javax.persistence.criteria.Join;
-import javax.persistence.criteria.ListJoin;
+import javax.persistence.criteria.JoinType;
+import javax.persistence.criteria.SetJoin;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -535,7 +536,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 
 	@Override
 	public String getPortfolios(long userId, Boolean active, long substid, Boolean specialProject, String portfolioCode) {
-		List<Portfolio> portfolios = getPortfolios(userId, substid, active, specialProject, portfolioCode);
+		List<Portfolio> portfolios = getPortfolioList(userId, active, specialProject, portfolioCode);
 
 		String psformat = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><portfolios count=\"%d\">%s</portfolios>";
 		String pformat = "<portfolio id=\"%s\" root_node_id=\"%s\" owner=\"%s\" ownerid=\"%s\" modified=\"%s\">%s</portfolio>";
@@ -1677,38 +1678,40 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	}
 
 	@Override
-	public List<Portfolio> getPortfolios(Long userId,
-								  Long substId,
-								  Boolean portfolioActive,
-								  Boolean specialProject,
-								  String portfolioCode) {
+	public List<Portfolio> getPortfolioList(Long userId, boolean active, boolean specialProject, String portfolioCode) {
+		Specification<Portfolio> spec = buildSpec(userId, active, specialProject, portfolioCode);
+		Sort sort = Sort.by(Sort.Order.asc("modifDate"));
 
+		return portfolioRepository.findAll(spec, sort);
+	}
+
+	@Override
+	public Long getPortfolioCount(Long userId, boolean active, Boolean specialProject, String portfolioCode) {
+		return portfolioRepository.count(buildSpec(userId, active, specialProject, portfolioCode));
+	}
+
+	private Specification<Portfolio> buildSpec(Long userId, boolean active, Boolean specialProject, String portfolioCode) {
 		// INNER JOIN p.rootNode
+		// INNET JOIN rootNode.resource
 		// INNET JOIN rootNode.resResource
+		// INNET JOIN rootNode.contextResource
 		// WHERE p.active = :active
-		Specification<Portfolio> active = Specification.where((root, query, cb) -> {
-			Join<Portfolio, Node> nodeJoin = root.join("rootNode");
-			nodeJoin.join("resource");
-			
-			int pactive = 0;
-			if( portfolioActive )
-				pactive =1;
+		Specification<Portfolio> spec = Specification.where((root, query, cb) -> {
+			Join<Portfolio, Node> nodeJoin = root.join("rootNode", JoinType.LEFT);
 
-			return cb.equal(root.get("active"), pactive);
-		});
+			nodeJoin.join("resource", JoinType.LEFT);
+			nodeJoin.join("resResource", JoinType.LEFT);
+			nodeJoin.join("contextResource", JoinType.LEFT);
 
-		// AND p.modifUserId = :modifUserId
-		Specification<Portfolio> modifUser = Specification.where((root, query, cb) -> {
-			return cb.equal(root.get("modifUserId"), userId);
+			return cb.equal(root.get("active"), active ? 1 : 0);
 		});
 
 		Sort sort = Sort.by("rootNode.resResource");
-		Specification<Portfolio> spec = active;
 
 		if ( specialProject != null )
 		{
 			// AND p.rootNode.semantictag LIKE '%karuta-project%'
-			Specification<Portfolio> portfolioFilter = Specification.where((root, query, cb) -> {
+			Specification<Portfolio> tagFilter = Specification.where((root, query, cb) -> {
 				Join<Portfolio, Node> rootNode = root.join("rootNode");
 
 				if( specialProject )
@@ -1717,30 +1720,44 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 					return cb.notLike(rootNode.get("semantictag"), "%karuta-project%");
 			});
 
-			spec = spec.and(portfolioFilter);
+			spec = spec.and(tagFilter);
 		}
 		
 		if ( portfolioCode != null )
 		{
-			Specification<Portfolio> portfolioFilter = Specification.where((root, query, cb) -> {
+			// AND p.rootNode.code LIKE '%:code%'
+			Specification<Portfolio> codeFilter = Specification.where((root, query, cb) -> {
 				Join<Portfolio, Node> rootNode = root.join("rootNode");
 
 				String condition = String.format("%%%s%%", portfolioCode);
 				return cb.like(rootNode.get("code"), condition);
 			});
 
-			spec = spec.and(portfolioFilter);
+			spec = spec.and(codeFilter);
 		}
 
 		if (credentialRepository.isAdmin(userId)) {
-			return portfolioRepository.findAll(spec, sort);
+			return spec;
 		} else {
-			
+			// p.modifUserId = :userId
+			Specification<Portfolio> modifUser = Specification.where((root, query, cb) -> {
+				return cb.equal(root.get("modifUserId"), userId);
+			});
+
 			List<Portfolio> owned = portfolioRepository.findAll(spec.and(modifUser), sort);
 			List<Portfolio> shared = portfolioRepository.getPortfolioSharedWithRights(userId);
 
-			return Stream.concat(owned.stream(), shared.stream())
-					.collect(Collectors.toList());
+			// p.credential.groups.credential = :userId
+			Specification<Portfolio> groups = Specification.where((root, query, cb) -> {
+				Join<Portfolio, Credential> credentialJoin = root.join("credential", JoinType.LEFT);
+				SetJoin<Credential, GroupUser> groupJoin = credentialJoin.joinSet("groups", JoinType.LEFT);
+
+				query.groupBy(root.get("id"));
+
+				return cb.equal(groupJoin.get("id").get("credential").get("id"), userId);
+			});
+
+			return spec.and(modifUser.or(groups));
 		}
 	}
 }
