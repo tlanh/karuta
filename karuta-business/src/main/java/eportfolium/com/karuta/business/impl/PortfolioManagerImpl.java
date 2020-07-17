@@ -193,12 +193,11 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	}
 
 	@Override
-	public File getZippedPortfolio(PortfolioDocument portfolio, String lang, String servletContext) throws IOException {
-		File zipFile = File.createTempFile(portfolio.getId().toString(), ".zip");
-
+	public ByteArrayOutputStream getZippedPortfolio(PortfolioDocument portfolio, String lang, String servletContext) throws IOException {
+		ByteArrayOutputStream output = new ByteArrayOutputStream();
 		XmlMapper xmlMapper = new XmlMapper();
 
-		try (ZipOutputStream zip = new ZipOutputStream(new FileOutputStream(zipFile))) {
+		try (ZipOutputStream zip = new ZipOutputStream(output)) {
 			zip.setMethod(ZipOutputStream.DEFLATED);
 			zip.setLevel(Deflater.BEST_COMPRESSION);
 
@@ -242,7 +241,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 				zip.closeEntry();
 			}
 
-			return zipFile;
+			return output;
 		}
 	}
 

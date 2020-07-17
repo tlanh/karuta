@@ -15,13 +15,7 @@
 
 package eportfolium.com.karuta.webapp.rest.controller;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.RandomAccessFile;
-import java.nio.file.Files;
+import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -121,16 +115,11 @@ public class PortfolioController extends AbstractController {
 
         } else if (resources && files) {
 
-            File tempZip = portfolioManager.getZippedPortfolio(portfolio, lang, contextPath);
-            byte[] zipContent = Files.readAllBytes(tempZip.toPath());
-
-            // Temp file cleanup
-            tempZip.delete();
-
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + ".zip\"")
-                    .body(zipContent);
+                    .body(portfolioManager.getZippedPortfolio(portfolio, lang, contextPath).toByteArray());
+
         } else {
             return new HttpEntity<>(xmlPortfolio);
         }
@@ -329,16 +318,16 @@ public class PortfolioController extends AbstractController {
      * @return zipped portfolio (with files) inside zip file
      */
     @GetMapping(value = "/zip", consumes = "application/zip")
-    public Object getZip(@RequestParam String portfolios,
-                         @RequestParam String lang,
-                         @AuthenticationPrincipal UserInfo userInfo) throws Exception {
+    public ResponseEntity<byte[]> getZip(@RequestParam String portfolios,
+                                         @RequestParam(required = false) String lang,
+                                         @AuthenticationPrincipal UserInfo userInfo) throws Exception {
 
     	String contextPath = httpServletRequest.getContextPath();
         List<UUID> uuids = Arrays.stream(portfolios.split(","))
                 .map(UUID::fromString)
                 .collect(Collectors.toList());
 
-        List<File> files = new ArrayList<>();
+        Map<UUID, ByteArrayOutputStream> files = new HashMap<>();
 
         /// Suppose the first portfolio has the right name to be used
         String name = "";
@@ -365,58 +354,30 @@ public class PortfolioController extends AbstractController {
                 }
             }
 
-            files.add(portfolioManager.getZippedPortfolio(portfolio, lang, contextPath));
+            files.put(portfolio.getId(), portfolioManager.getZippedPortfolio(portfolio, lang, contextPath));
         }
 
-        // Make a big zip of it
-        File tempDir = new File(System.getProperty("java.io.tmpdir", null));
-        File bigZip = File.createTempFile("project_", ".zip", tempDir);
+        // Generate a zip of all the different zips
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        ZipOutputStream zos = new ZipOutputStream(output);
 
-        // Add content to it
-        FileOutputStream fos = new FileOutputStream(bigZip);
-        ZipOutputStream zos = new ZipOutputStream(fos);
+        for (Map.Entry<UUID, ByteArrayOutputStream> file : files.entrySet()) {
+            ZipEntry ze = new ZipEntry(file.getKey().toString() + ".zip");
 
-        byte[] buffer = new byte[0x1000];
-
-        for (File file : files) {
-            FileInputStream fis = new FileInputStream(file);
-            String filename = file.getName();
-
-            /// Write XML file to zip
-            ZipEntry ze = new ZipEntry(filename + ".zip");
             zos.putNextEntry(ze);
-            int read = 1;
-            while (read > 0) {
-                read = fis.read(buffer);
-                zos.write(buffer);
-            }
-            fis.close();
+            zos.write(file.getValue().toByteArray());
             zos.closeEntry();
         }
+
         zos.close();
 
-        /// Return zip file
-        RandomAccessFile f = new RandomAccessFile(bigZip.getAbsoluteFile(), "r");
-        byte[] b = new byte[(int) f.length()];
-        f.read(b);
-        f.close();
-
-        Date time = new Date();
         SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
-        String timeFormat = dt.format(time);
+        String timeFormat = dt.format(new Date());
 
-        ResponseEntity response = ResponseEntity.ok()
+        return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename = \"" + name + "-" + timeFormat + ".zip\"")
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE)
-                .body(b);
-
-        // Delete all zipped file
-        files.forEach(File::delete);
-
-        // And the over-arching zip.
-        bigZip.delete();
-
-        return response;
+                .body(output.toByteArray());
     }
 
     /**
