@@ -19,6 +19,8 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -109,37 +111,25 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 
 	/// temp class
 
-	class GroupRight {
-		Right getGroup(String label) {
-			Right r = rights.get(label.trim());
-			if (r == null) {
-				r = new Right();
-				rights.put(label, r);
-			}
-			return r;
+	private static class GroupRight {
+		Map<String, GroupRights> rights = new HashMap<>();
+
+		GroupRights getGroup(String label) {
+			return rights.computeIfAbsent(label.trim(), k -> new GroupRights());
 		}
 
 		void setNotify(String roles) {
-			for (Right r : rights.values()) {
-				r.notify = roles.trim();
-			}
+			rights.values().forEach(r -> r.setNotifyRoles(roles.trim()));
 		}
-
-		Map<String, Right> rights = new HashMap<>();
 	}
 
-	class Resolver {
-		GroupRight getUuid(String uuid) {
-			GroupRight gr = resolve.get(uuid);
-			if (gr == null) {
-				gr = new GroupRight();
-				resolve.put(uuid, gr);
-			}
-			return gr;
-		};
-
+	private static class Resolver {
 		Map<String, GroupRight> resolve = new HashMap<>();
 		Map<String, Long> groups = new HashMap<>();
+
+		GroupRight getUuid(String uuid) {
+			return resolve.computeIfAbsent(uuid, k -> new GroupRight());
+		}
 	}
 
 	@Override
@@ -373,7 +363,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 			/// Les tours de boucle seront toujours <= au nombre de noeud du portfolio.
 			int level = 0;
 			boolean added = true;
-			while (added && (cutoff == null ? true : level < cutoff)) {
+			while (added && (cutoff == null || level < cutoff)) {
 				Set<UUID> parentIdSet2 = new HashSet<>();
 
 				for (Node node : nodes) {
@@ -605,17 +595,6 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		return true;
 	}
 
-	static class Right {
-		boolean rd = false;
-		boolean wr = false;
-		boolean dl = false;
-		boolean sb = false;
-		boolean ad = false;
-		String types = "";
-		String rules = "";
-		String notify = "";
-	}
-
 	@Override
 	public UUID postPortfolioParserights(UUID portfolioId, Long userId) throws JsonProcessingException, BusinessException {
 
@@ -640,7 +619,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 
 			if (metadataWad.getSeenoderoles() != null) {
 				for (String nodeRole : metadataWad.getSeenoderoles().split(" ")) {
-					role.getGroup(nodeRole).rd = true;
+					role.getGroup(nodeRole).setRead(true);
 
 					resolve.groups.put(nodeRole, 0L);
 				}
@@ -648,7 +627,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 
 			if (metadataWad.getShowtoroles() != null) {
 				for (String nodeRole : metadataWad.getShowtoroles().split(" ")) {
-					role.getGroup(nodeRole).rd = false;
+					role.getGroup(nodeRole).setRead(false);
 
 					resolve.groups.put(nodeRole, 0L);
 				}
@@ -656,7 +635,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 
 			if (metadataWad.getDelnoderoles() != null) {
 				for (String nodeRole : metadataWad.getDelnoderoles().split(" ")) {
-					role.getGroup(nodeRole).dl = true;
+					role.getGroup(nodeRole).setDelete(true);
 
 					resolve.groups.put(nodeRole, 0L);
 				}
@@ -664,7 +643,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 
 			if (metadataWad.getEditnoderoles() != null) {
 				for (String nodeRole : metadataWad.getEditnoderoles().split(" ")) {
-					role.getGroup(nodeRole).wr = true;
+					role.getGroup(nodeRole).setWrite(true);
 
 					resolve.groups.put(nodeRole, 0L);
 				}
@@ -672,7 +651,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 
 			if (metadataWad.getEditresroles() != null) {
 				for (String nodeRole : metadataWad.getEditresroles().split(" ")) {
-					role.getGroup(nodeRole).wr = true;
+					role.getGroup(nodeRole).setWrite(true);
 
 					resolve.groups.put(nodeRole, 0L);
 				}
@@ -680,7 +659,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 
 			if (metadataWad.getSubmitroles() != null) {
 				for (String nodeRole : metadataWad.getSubmitroles().split(" ")) {
-					role.getGroup(nodeRole).sb = true;
+					role.getGroup(nodeRole).setSubmit(true);
 
 					resolve.groups.put(nodeRole, 0L);
 				}
@@ -735,22 +714,15 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 			for (Entry<String, GroupRight> entry : resolve.resolve.entrySet()) {
 				GroupRight gr = entry.getValue();
 
-				for (Entry<String, Right> rightelem : gr.rights.entrySet()) {
+				for (Entry<String, GroupRights> rightelem : gr.rights.entrySet()) {
 					String group = rightelem.getKey();
 					long grid = resolve.groups.get(group);
-					Right rightval = rightelem.getValue();
-					GroupRights groupRights = new GroupRights();
+
+					GroupRights groupRights = rightelem.getValue();
+
 					groupRights.setId(new GroupRightsId());
 					groupRights.setGroupRightInfo(new GroupRightInfo(grid));
 					groupRights.setGroupRightsId(UUID.fromString(entry.getKey()));
-					groupRights.setRead(rightval.rd);
-					groupRights.setWrite(rightval.wr);
-					groupRights.setDelete(rightval.dl);
-					groupRights.setSubmit(rightval.sb);
-					groupRights.setAdd(rightval.ad);
-					groupRights.setTypesId(rightval.types);
-					groupRights.setRulesId(rightval.rules);
-					groupRights.setNotifyRoles(rightval.notify);
 
 					groupRightsRepository.save(groupRights);
 				}
@@ -1096,26 +1068,23 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 			{
 				/// Set notification for all groups associated with this uuid
 				Set<String> keys = resolve.keySet();
-				for( String k : keys )
-				{
-					Pair<UUID, String> p = new ImmutablePair<UUID, String>(uuid, k);
-					GroupRights gr = rights.get(p);
-					if( gr != null )
+
+				for (String k : keys) {
+					GroupRights gr = rights.get(Pair.of(uuid, k));
+
+					if (gr != null)
 						gr.setNotifyRoles(notify);
 				}
 			}
 			
-			void save()
-			{
-				/// Send all GroupRights
-				for( GroupRights gr : rights.values() )
-					groupRightsRepository.save(gr);
+			void save() {
+				groupRightsRepository.saveAll(rights.values());
 			}
 
-			HashMap<String, GroupRightInfo> resolve = new HashMap<String, GroupRightInfo>();
-			HashMap<Pair<UUID, String>, GroupRights> rights = new HashMap<Pair<UUID, String>, GroupRights>();
+			HashMap<String, GroupRightInfo> resolve = new HashMap<>();
+			HashMap<Pair<UUID, String>, GroupRights> rights = new HashMap<>();
 			Portfolio portfolio = null;
-		};
+		}
 		
 		/// Make new portfolio
 		Portfolio copyPortfolio = new Portfolio();
@@ -1133,42 +1102,42 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		Node asmroot = null;
 		
 		//// To resolve new parent uuid
-		HashMap<UUID, UUID> resolve = new HashMap<UUID, UUID>();
-		HashMap<UUID, Node> copyList = new HashMap<UUID, Node>(nodelist.size());
+		HashMap<UUID, UUID> resolve = new HashMap<>();
+		HashMap<UUID, Node> copyList = new HashMap<>(nodelist.size());
 		/// Bundle of branches from base instance for children resolution
-		HashMap<UUID, String> oldfaggot = new HashMap<UUID, String>();
+		HashMap<UUID, String> oldfaggot = new HashMap<>();
 		
 		/// For rights resolution, group name -> DB object
-		for( Node n : nodelist )
-		{
-			/// Duplicate node (this also duplicate resources)
+		for (Node n : nodelist) {
+			/// Duplicate node (this also duplicates resources)
 			Node cn = new Node(n);
 			
 			/// Set new portfolio ownership
 			cn.setPortfolio(copyPortfolio);
 			
 			/// Need to send so some values get updated
-			if( cn.getResource() != null )
-				resourceRepository.save(cn.getResource());
-			if(cn.getResResource() != null)
-				resourceRepository.save(cn.getResResource());
-			if( cn.getContextResource() != null )
-				resourceRepository.save(cn.getContextResource());
+			Stream.of(cn.getResource(), cn.getResResource(), cn.getContextResource())
+					.filter(Objects::nonNull)
+					.forEach(resource -> resourceRepository.save(resource));
+
 			cn = nodeRepository.save(cn);
 
 			// Need to set parent and children list after the fact since list is unordered
 			oldfaggot.put(n.getId(), n.getChildrenStr());
-			if( asmroot == null )
-			{
+
+			if (asmroot == null) {
 				Node p = cn.getParentNode();
-				if( p == null )	// root node
-				{
+
+				if (p == null) {
 					/// Update code
 					cn.setCode(tgtcode);
 					Resource res = cn.getResource();
-					String rescontent = res.getContent();
-					rescontent = rescontent.replaceAll("<code>.*</code>", String.format("<code>%s</code>", tgtcode));
-					res.setContent(rescontent);
+
+					String content = res.getContent()
+							.replaceAll("<code>.*</code>", String.format("<code>%s</code>", tgtcode));
+
+					res.setContent(content);
+
 					/// Update/keep track of new objects
 					resourceRepository.save(res);
 					cn = asmroot = nodeRepository.save(cn);
@@ -1176,130 +1145,68 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 			}
 
 			/// Keep copy for child list update and resolution
-			copyList.put(cn.getId(), cn);
-			/// New UUID resolution
-			resolve.put(n.getId(), cn.getId());
+			UUID nodeId = cn.getId();
+
+			copyList.put(nodeId, cn);
+			resolve.put(n.getId(), nodeId);
 			
 			/// Parse metadata for rights
 			String metadatawad = cn.getMetadataWad();
-			MetadataWadDocument mwd = null;
-			try { mwd = MetadataWadDocument.from(metadatawad); }
-			catch( JsonProcessingException e ){ e.printStackTrace(); }
-			
-			/// Read rights
-			String snr = mwd.getSeenoderoles();
-			if( snr != null )
-			{
-				StringTokenizer tokens = new StringTokenizer(snr, " ");
-				while (tokens.hasMoreElements())
-				{
-					String nodeRole = tokens.nextElement().toString();
-					GroupRights right = helper.getRights(cn.getId(), nodeRole);
-					right.setRead(true);
-				}
-			}
-			/// Read rights
-			String str = mwd.getShowtoroles();
-			if( str != null )
-			{
-				StringTokenizer tokens = new StringTokenizer(str, " ");
-				while (tokens.hasMoreElements())
-				{
-					String nodeRole = tokens.nextElement().toString();
-					GroupRights right = helper.getRights(cn.getId(), nodeRole);
-					/// User shown to can't see by default
-					right.setRead(false);
-				}
-			}
-			/// Delete
-			String dnr = mwd.getDelnoderoles();
-			if( dnr != null )
-			{
-				StringTokenizer tokens = new StringTokenizer(dnr, " ");
-				while (tokens.hasMoreElements())
-				{
-					String nodeRole = tokens.nextElement().toString();
-					GroupRights right = helper.getRights(cn.getId(), nodeRole);
-					right.setDelete(true);
-				}
-			}
-			/// Write
-			String enr = mwd.getEditnoderoles();
-			if( enr != null )
-			{
-				StringTokenizer tokens = new StringTokenizer(enr, " ");
-				while (tokens.hasMoreElements())
-				{
-					String nodeRole = tokens.nextElement().toString();
-					GroupRights right = helper.getRights(cn.getId(), nodeRole);
-					right.setWrite(true);
-				}
-			}
-			/// Submit
-			String sr = mwd.getSubmitroles();
-			if( sr != null )
-			{
-				StringTokenizer tokens = new StringTokenizer(sr, " ");
-				while (tokens.hasMoreElements())
-				{
-					String nodeRole = tokens.nextElement().toString();
-					GroupRights right = helper.getRights(cn.getId(), nodeRole);
-					right.setSubmit(true);
-				}
-			}
-			/// Actions
-			String ar = null;
-//			String ar = mwd.getAttributes().get("actionroles");
-			if( ar != null )
-			{
-				/// Format pour l'instant: actionroles="sender:1,2;responsable:4"
-				StringTokenizer tokens = new StringTokenizer(ar, ";");
-				while (tokens.hasMoreElements())
-				{
-					String nodeRole = tokens.nextElement().toString();
-					StringTokenizer data = new StringTokenizer(nodeRole, ":");
-					String nrole = data.nextElement().toString();
-					String actions = data.nextElement().toString().trim();
-					
-					GroupRights right = helper.getRights(cn.getId(), nrole);
-					right.setRulesId(actions);
-				}
-			}
-			/// Menus
-			String mr = mwd.getMenuroles();
-			if( mr != null )
-			{
-				/// Format pour l'instant: code_portfolio,tag_semantique,label@en/libelle@fr,roles[;autre menu]
-				StringTokenizer tokens = new StringTokenizer(mr, ";");
-				while (tokens.hasMoreElements())
-				{
-					String menuline = tokens.nextElement().toString();
-					String[] data = menuline.split(",");
-					String menurolename = data[3];
-	
-					if( menurolename != null )
-					{
-						// Break down list of roles
-						String[] roles = menurolename.split(" ");
-						// Only ensure that group exists, for logical use
-						for( int i=0; i<roles.length; ++i )
-							helper.getRights(cn.getId(), roles[i]);
+
+			try {
+				MetadataWadDocument mwd = MetadataWadDocument.from(metadatawad);
+
+				/// Read rights
+				BiConsumer<String, Consumer<GroupRights>> processRoles = (roles, mapper) -> {
+					if (roles == null)
+						return;
+
+					for (String role : roles.split(" ")) {
+						GroupRights rights = helper.getRights(nodeId, role);
+						mapper.accept(rights);
+					}
+				};
+
+				processRoles.accept(mwd.getSeenoderoles(),  (right) -> right.setRead(true));
+				processRoles.accept(mwd.getShowtoroles(),   (right) -> right.setRead(false));
+				processRoles.accept(mwd.getDelnoderoles(),  (right) -> right.setDelete(true));
+				processRoles.accept(mwd.getEditnoderoles(), (right) -> right.setWrite(true));
+				processRoles.accept(mwd.getSubmitroles(),   (right) -> right.setSubmit(true));
+
+				if (mwd.getMenuroles() != null) {
+					/// Current format: code_portfolio,tag_semantique,label@en/libelle@fr,roles[;autre menu]
+
+					for (String menuline : mwd.getMenuroles().split(";")) {
+						String[] data = menuline.split(",");
+						String menurolename = data[3];
+
+						if( menurolename != null )
+						{
+							// Break down list of roles
+							String[] roles = menurolename.split(" ");
+							// Only ensure that group exists, for logical use
+							for (String role : roles)
+								helper.getRights(cn.getId(), role);
+						}
 					}
 				}
-			}
-			/// Notification
-			String nr = mwd.getNotifyroles();
-			if( nr != null )
-			{
-				///// FIXME: Should be done in UI
-				/// Format pour l'instant: notifyroles="sender responsable[ responsable]"
-				StringTokenizer tokens = new StringTokenizer(nr, " ");
-				String merge = "";
-				if( tokens.hasMoreElements() )
-					merge = tokens.nextElement().toString().trim();
-				while (tokens.hasMoreElements())
-					merge += ","+tokens.nextElement().toString().trim();
-				helper.setNotify( cn.getId(), merge);	/// Add person to alert in all roles in this uuid
+
+				/// Notification
+				String nr = mwd.getNotifyroles();
+				if( nr != null )
+				{
+					///// FIXME: Should be done in UI
+					/// Format pour l'instant: notifyroles="sender responsable[ responsable]"
+					StringTokenizer tokens = new StringTokenizer(nr, " ");
+					String merge = "";
+					if( tokens.hasMoreElements() )
+						merge = tokens.nextElement().toString().trim();
+					while (tokens.hasMoreElements())
+						merge += ","+tokens.nextElement().toString().trim();
+					helper.setNotify( cn.getId(), merge);	/// Add person to alert in all roles in this uuid
+				}
+			} catch (JsonProcessingException e) {
+				e.printStackTrace();
 			}
 		}
 		
@@ -1313,7 +1220,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		for( Entry<UUID, String> e : oldfaggot.entrySet() )
 		{
 			UUID nk = e.getKey();
-			ArrayList<String> cl = new ArrayList<String>();
+			ArrayList<String> cl = new ArrayList<>();
 			String ocl = e.getValue();
 			if( "".equals(ocl) ) continue;
 			String token[] = ocl.split(",");
