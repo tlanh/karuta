@@ -162,69 +162,32 @@ public class PortfolioController extends AbstractController {
      * removed).
      *
      * GET /rest/api/portfolios.
-     *
-     * @param active             false (also show inactive portoflios)
-     * @param userid             for this user (only with root)
      */
     @GetMapping
-    public HttpEntity<Object> getPortfolios(@RequestParam(defaultValue = "true") boolean active,
+    public HttpEntity<String> getPortfolios(@RequestParam(defaultValue = "true") boolean active,
+                                            @RequestParam(required = false) String search,
+                                            @RequestParam(required = false) boolean count,
                                             @RequestParam(required = false) Integer userid,
-                                            @RequestParam(required = false) String code,
-                                            @RequestParam(required = false) UUID portfolio,
-                                            @RequestParam(required = false) Integer level,
-                                            @RequestParam(name="public", required = false) String public_var,
                                             @RequestParam(required = false) String project,
                                             @AuthenticationPrincipal UserInfo userInfo)
             throws BusinessException, JsonProcessingException {
 
-    	String portfolioCode = null;
-    	Boolean specialProject = null;
-    	if("false".equals(project) || "0".equals(project)) specialProject = false;
-    	else if("true".equals(project) || "1".equals(project)) specialProject = true;
-			else if(project != null && project.length()>0) portfolioCode = project;
+        String portfolioCode = search;
+        boolean specialProject = "true".equals(project) || "1".equals(project);
 
-        if (portfolio != null) {
-            return new HttpEntity<>(portfolioManager.getPortfolio(portfolio, userInfo.getId(), level));
+        if (project != null && project.length() > 0)
+            portfolioCode = project;
 
-        } else if (code != null) {
-            return new HttpEntity<>(portfolioManager.getPortfolioByCode(code, userInfo.getId(), false));
-
-        } else if (public_var != null) {
-            long publicid = userManager.getUserId("public");
-
-            return new HttpEntity<>(portfolioManager.getPortfolios(publicid,
-                        active, 0, specialProject, portfolioCode));
-
-        } else if (userid != null && securityManager.isAdmin(userInfo.getId())) {
+        if (userid != null && securityManager.isAdmin(userInfo.getId())) {
             return new HttpEntity<>(portfolioManager.getPortfolios(userid,
-                        active, userInfo.getSubstituteId(), specialProject, portfolioCode));
+                        active, count, specialProject, portfolioCode));
 
         } else {
             return new HttpEntity<>(portfolioManager.getPortfolios(userInfo.getId(),
-                        active, userInfo.getSubstituteId(), specialProject, portfolioCode));
+                        active, count, specialProject, portfolioCode));
+
         }
     }
-
-    /**
-     * Rewrite portfolio content.
-     *
-     * PUT /rest/api/portfolios/portfolios/{id}
-     *
-     * @param portfolio       GET /rest/api/portfolios/portfolio/{id}
-     *                           and/or the asm format
-     */
-    /*
-    @PutMapping(value = "/portfolio/{id}", consumes = "application/xml", produces = "application/xml")
-    public String putPortfolio(@RequestBody PortfolioDocument portfolio,
-                               @PathVariable UUID id,
-                               @RequestParam boolean active,
-                               @AuthenticationPrincipal UserInfo userInfo) throws BusinessException, JsonProcessingException {
-
-        portfolioManager.rewritePortfolioContent(portfolio, id, userInfo.getId(), active);
-
-        return "";
-    }
-    //*/
 
     /**
      * Reparse portfolio rights.

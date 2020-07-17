@@ -535,38 +535,43 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	}
 
 	@Override
-	public String getPortfolios(long userId, Boolean active, long substid, Boolean specialProject, String portfolioCode) {
-		List<Portfolio> portfolios = getPortfolioList(userId, active, specialProject, portfolioCode);
-
+	public String getPortfolios(long userId, boolean active, boolean count, Boolean specialProject, String portfolioCode) {
 		String psformat = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><portfolios count=\"%d\">%s</portfolios>";
-		String pformat = "<portfolio id=\"%s\" root_node_id=\"%s\" owner=\"%s\" ownerid=\"%s\" modified=\"%s\">%s</portfolio>";
-		String arformat = "<asmRoot id=\"%s\"><metadata-wad %s/><metadata-epm %s/><metadata %s/><code>%s</code><label>%s</label><description>%s</description>%s</asmRoot>";
-		String rformat = "<asmResource id=\"%s\" contextid=\"%s\" xsi_type=\"%s\">%s</asmResource>";
-		
-		StringBuilder sb = new StringBuilder();
-		for( Portfolio p : portfolios )
-		{
-			Node rn = p.getRootNode();
-			Resource nr = rn.getResource();
-			Resource cr = rn.getContextResource();
-			
-			StringBuilder res = new StringBuilder();
-			res.append(String.format(rformat, nr.getId(), rn.getId(), nr.getXsiType(), nr.getContent()));
-			res.append(String.format(rformat, cr.getId(), rn.getId(), cr.getXsiType(), cr.getContent()));
-			
-			String rootdata = String.format(arformat, rn.getId(), rn.getMetadataWad(), rn.getMetadataEpm(), rn.getMetadata(), rn.getCode(), rn.getLabel(), rn.getDescr(), res.toString());
-			
-			boolean isowner = userId == p.getModifUserId() ? true : false;
-			sb.append(String.format(pformat, p.getId(), rn.getId(), isowner, rn.getModifUserId(), p.getModifDate(), rootdata));
-		}
 
-		return String.format(psformat, portfolios.size(), sb.toString());
+		if (count) {
+			return String.format(psformat, getPortfolioCount(userId, active, specialProject, portfolioCode), "");
+		} else {
+			List<Portfolio> portfolios = getPortfolioList(userId, active, specialProject, portfolioCode);
+
+			String pformat = "<portfolio id=\"%s\" root_node_id=\"%s\" owner=\"%s\" ownerid=\"%s\" modified=\"%s\">%s</portfolio>";
+			String arformat = "<asmRoot id=\"%s\"><metadata-wad %s/><metadata-epm %s/><metadata %s/><code>%s</code><label>%s</label><description>%s</description>%s</asmRoot>";
+			String rformat = "<asmResource id=\"%s\" contextid=\"%s\" xsi_type=\"%s\">%s</asmResource>";
+
+			StringBuilder sb = new StringBuilder();
+			for( Portfolio p : portfolios )
+			{
+				Node rn = p.getRootNode();
+				Resource nr = rn.getResource();
+				Resource cr = rn.getContextResource();
+
+				StringBuilder res = new StringBuilder();
+				res.append(String.format(rformat, nr.getId(), rn.getId(), nr.getXsiType(), nr.getContent()));
+				res.append(String.format(rformat, cr.getId(), rn.getId(), cr.getXsiType(), cr.getContent()));
+
+				String rootdata = String.format(arformat, rn.getId(), rn.getMetadataWad(), rn.getMetadataEpm(), rn.getMetadata(), rn.getCode(), rn.getLabel(), rn.getDescr(), res.toString());
+
+				boolean isowner = userId == p.getModifUserId() ? true : false;
+				sb.append(String.format(pformat, p.getId(), rn.getId(), isowner, rn.getModifUserId(), p.getModifDate(), rootdata));
+			}
+
+			return String.format(psformat, portfolios.size(), sb.toString());
 
 		/*
 		return new PortfolioList(portfolios.stream()
                 .map(p -> new PortfolioDocument(p, p.getModifUserId().equals(userId)))
                 .collect(Collectors.toList()));
 		//*/
+		}
 	}
 
 	@Override

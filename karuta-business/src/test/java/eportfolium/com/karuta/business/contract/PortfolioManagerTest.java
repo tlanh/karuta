@@ -232,7 +232,7 @@ public class PortfolioManagerTest {
 
         PortfolioList portfolioList = manager.getPortfolioShared(userId);
 
-        assertEquals(1, portfolioList.getCount());
+        assertEquals(Long.valueOf(1), portfolioList.getCount());
         assertEquals(1, portfolioList.getPortfolios().size());
 
         assertEquals(portfolioId, portfolioList.getPortfolios().get(0).getId());
