@@ -1,5 +1,19 @@
+/* =======================================================
+	Copyright 2020 - ePortfolium - Licensed under the
+	Educational Community License, Version 2.0 (the "License"); you may
+	not use this file except in compliance with the License. You may
+	obtain a copy of the License at
+
+	http://www.osedu.org/licenses/ECL-2.0
+
+	Unless required by applicable law or agreed to in writing,
+	software distributed under the License is distributed on an "AS IS"
+	BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+	or implied. See the License for the specific language governing
+	permissions and limitations under the License.
+   ======================================================= */
+
 package eportfolium.com.karuta.model.bean;
-// Generated 13 juin 2019 19:14:13 by Hibernate Tools 5.2.10.Final
 
 import java.io.Serializable;
 import java.util.HashSet;
@@ -21,28 +35,11 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 import javax.persistence.UniqueConstraint;
 
-import org.hibernate.search.annotations.Indexed;
-
-/**
- * @author mlengagne
- *         <p>
- *         A qualification, achievement, personal quality, or aspect of a
- *         person's background, typically when used to indicate that they are
- *         suitable for something. recruitment is based mainly on academic
- *         credentials
- *         </p>
- *
- */
-@Indexed
 @Entity
 @Table(name = "credential", uniqueConstraints = @UniqueConstraint(columnNames = "login"))
 public class Credential implements Serializable {
 
 	private static final long serialVersionUID = -8685729959105792177L;
-
-	public static final String defaultDateInputPattern = "dd/MM/yy";
-	public static final String defaultDateViewPattern = "dd MMM yyyy";
-	public static final String defaultDateListPattern = "yyyy-MM-dd";
 
 	private Long id;
 	private String login;
@@ -50,13 +47,13 @@ public class Credential implements Serializable {
 	private int isAdmin;
 	private int isDesigner;
 	private int active;
-	private String displayFirstname;
-	private String displayLastname;
+	private String displayFirstname = "";
+	private String displayLastname = "";
 	private String email;
 	private String password;
 	private String token;
 	private Long CDate;
-	private String other;
+	private String other = "";
 	private CredentialSubstitution credentialSubstitution;
 
 	private Set<GroupUser> groups = new HashSet<GroupUser>();
@@ -296,19 +293,6 @@ public class Credential implements Serializable {
 
 	public void setSubUser(String subUser) {
 		this.subUser = subUser;
-	}
-
-	public void addPortfolio(Portfolio portfolio) {
-		portfolio.setCredential(this);
-	}
-
-	/**
-	 * Beware - in JPA to persist this change you must merge or remove the child.
-	 * Merging the parent will not cascade to the child because it no longer has a
-	 * reference to the child.
-	 */
-	public void removePortfolio(Portfolio portfolio) {
-		portfolio.setCredential(null);
 	}
 
 	public void internalAddPortfolio(Portfolio portfolio) {

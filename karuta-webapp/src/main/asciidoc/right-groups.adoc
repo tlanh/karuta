@@ -1,0 +1,21 @@
+== Right groups
+
+=== POST /
+
+This endpoint changes the group right associated to a user group.
+
+[NOTE]
+It is only reachable as an admin user; regular users will get a
+403 (Forbidden) response.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/change-right-group/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/change-right-group/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/change-right-group/http-response.adoc[]

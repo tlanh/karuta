@@ -1,37 +1,50 @@
+/* =======================================================
+	Copyright 2020 - ePortfolium - Licensed under the
+	Educational Community License, Version 2.0 (the "License"); you may
+	not use this file except in compliance with the License. You may
+	obtain a copy of the License at
+
+	http://www.osedu.org/licenses/ECL-2.0
+
+	Unless required by applicable law or agreed to in writing,
+	software distributed under the License is distributed on an "AS IS"
+	BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+	or implied. See the License for the specific language governing
+	permissions and limitations under the License.
+   ======================================================= */
+
 package eportfolium.com.karuta.business.contract;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.Map;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.UUID;
 
-import org.springframework.util.MimeType;
-
+import com.fasterxml.jackson.core.JsonProcessingException;
+import eportfolium.com.karuta.document.ResourceDocument;
 import eportfolium.com.karuta.model.exception.BusinessException;
-import eportfolium.com.karuta.model.exception.DoesNotExistException;
 
-public interface ResourceManager {
+public interface ResourceManager extends BaseManager {
 
-	String getResource(MimeType outMimeType, String nodeParentUuid, Long userId, Long groupId) throws BusinessException;
+	ResourceDocument getResource(UUID parentNodeId);
 
-	String getResource(String nodeUuid);
+	Integer changeResource(UUID parentNodeId, ResourceDocument resource, Long userId)
+			throws BusinessException, JsonProcessingException;
 
-	String getResource(UUID nodeUuid);
+	String addResource(UUID parentNodeId, ResourceDocument resource, Long userId)
+			throws BusinessException;
 
-	String getResources(MimeType outMimeType, String portfolioUuid, Long userId, Long groupId) throws Exception;
+	void removeResource(UUID resourceId, Long userId) throws BusinessException;
 
-	Integer changeResource(MimeType inMimeType, String nodeParentUuid, String in, Long userId, Long groupId)
-			throws BusinessException, Exception;
+	void changeResourceByXsiType(UUID nodeId, String xsiType, ResourceDocument resource, Long userId)
+			throws BusinessException;
 
-	String addResource(MimeType inMimeType, String nodeParentUuid, String in, Long userId, Long groupId)
-			throws BusinessException, Exception;
+	void updateResource(UUID id, String xsiType, String content, Long userId);
 
-	void removeResource(String resourceUuid, Long userId, Long groupId) throws DoesNotExistException, BusinessException;
+	boolean updateContent(UUID nodeId,
+						  Long userId,
+						  InputStream content,
+						  String lang,
+						  boolean thumbnail) throws BusinessException;
 
-	void changeResourceByXsiType(String nodeUuid, String xsiType, String content, Long userId) throws Exception;
-
-	Map<String, String> transferResourceTable(Connection con, Map<Long, Long> userIds) throws SQLException;
-
-	void removeResources();
-
+	ResourceDocument fetchResource(UUID nodeId, OutputStream output, String lang, boolean thumbnail);
 }

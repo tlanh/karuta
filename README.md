@@ -1,96 +1,46 @@
-# Optimisation des performances et de la maintenabilité du backend de Karuta.
+# Karuta
 
-Ceci est le dépôt associé au projet
-[_Karuta_](https://github.com/karutaproject/karuta-backend).
+This repository contains the source code of the Karuta backend. This project
+provides the logic layer of the Karuta project ; to fully set it up, you also
+need to install :
 
-Pour plus d'informations, consulter la [_documentation_](http://www.mediafire.com/file/1e7alnwc58gn9o5/Karuta-doc.zip/file) associé au projet de refonte du backend.
+* [Karuta frontend](https://github.com/karutaproject/karuta-frontend)
+* [Karuta fileserver](https://github.com/karutaproject/karuta-fileserver)
 
-## Améliorations apportées
+## Installation
 
-- Révision de la structure du code : 
-	- passage en architecture n-tiers plus modulaire : usage de frameworks (Hibernate, Spring, ...).
-- Révision de la sécurité des comptes d'utilisateurs (nouveau processus de chiffrement des mdp en BDD).
-- Mapping de la structure de la base de données sur des objets Java.
-- Révision de la gestion des erreurs au sein de l'application.
-- Compatible avec la version 9  de Tomcat.
-- Tests unitaires et tests d'intégration.
-- Suppression fichier de configuration `configKaruta.properties`, remplacer par une table configuration en base de données.
+To install this project, you need the following requirements:
 
-## Contenu
+* MySQL 5 or 8
+* Java 8+
+* Tomcat
 
--   `db` : les éléments de création de la base de données _DB_KARUTA_
--   `karuta-batch` : Le module contient les batches de l'application.
--   `karuta-business` : Le module contient le logique métier de l’application avec notamment les classes Manager.
--   `karuta-consumer` : Le module contient les éléments d'interaction avec la base de données. S'y trouvent notamment les DAO.
--   `karuta-model` : Le module contient les objets métiers (les beans DO). 
--   `karuta-webapp` : Le module contient "l’application web" du back-end (contrôleurs, Web services REST).Ces services sont destinées à être consommées par l’application avec IHM (karuta-frontend).
+Then, you need to do the following steps:
 
-## Procédure d’installation du back-end de Karuta (développement).
-Ces étapes vous permettront d’installer, de modifier et d’exécuter rapidement le back-end de Karuta.
+* Download the WAR archive and put it in the `webapps/` folder of
+  your Tomcat installation.
+* Create a MySQL database
+* Then, configure the connection to the database by placing a file
+  called `application.properties` inside the `lib/config` directory
+  of Tomcat.
+  
+  You can use [this one](karuta-webapp/src/main/resources/application.properties)
+  as a basis.
 
-### Dézipper le projet.
-- Décompressez le [_fichier_](https://github.com/mlengagne/karuta/archive/master.zip) téléchargé, ce qui vous donnera un répertoire appelé karuta-master ou similaire.
-- Déplacez-le dans votre zone de développement, par exemple. /devel/karuta/. NE choisissez PAS un répertoire dont le chemin contient des espaces, par exemple. n'utilisez pas de répertoire dont le chemin inclut C:/Documents and Settings/.
+## Additional documentation
 
-### Ouvrez-le dans Eclipse. 
-- Eclipse 2019-12 R est préférable. Eclipse IDE pour les développeurs Java EE est un bon choix. (Le back-end de Karuta a été développé avec).
-- Dans Eclipse, choisissez _File > Import..._, puis choisissez  _Maven > Existing Maven Projects_, cliquer sur _Next >_, définissez le répertoire racine sur votre répertoire karuta-master eg. /devel/karuta-master/, cliquer sur _Finish_.
-- Le projet n’est pas encore construit, il affichera donc des erreurs.
+If you are looking for the documentation of the different available
+endpoints, once the application is started, you can go to the
+`/rest/api/docs/index.html` URL.
 
-### Installer JBoss Tools dans Eclipse. 
-- Dans Eclipse, choisissez _Help > Eclipse Marketplace..._, puis dans la barre de recherche, tapez « JBoss Tools ». Une fois la recherche terminée, cliquez sur Install et suivez les instructions.
+On the other hand, here are some additional documentation for developers:
 
-### Assurez-vous que le projet utilise Java 8.
-Dans Eclipse, faites un clic droit sur le projet et choisissez Properties puis Java Compiler et assurer vous que Compiler compliance level is 1.8. Vous devrez peut-être activer Enable project specific settings.
+* [Introduction](docs/01-intro.md)
+* [Security](docs/02-security.md)
+* [Tests](docs/03-tests.md)
 
-### Actualisez le projet.
-- Dans Eclipse, cliquez avec le bouton droit sur le projet racine « Karuta » et choisissez actualiser. Cela devrait générer le projet avec succès et ne montrer aucune erreur.
-- Cela permet également d’exécuter un build maven, si le projet n’avait pas été encore construit jusque là. _NB : cela peut prendre du temps car des dépendances sont à télécharger_.
+## License
 
-### Installer Apache Tomcat 9. 
-Tomcat est un serveur HTTP à part entière qui gère les servlets et les JSP. Il sera notre serveur Web pour le développement.
-- Go to [_Apache Downloads_](https://tomcat.apache.org/download-90.cgi) et téléchargez le .zip de la section Core.
-- Une fois téléchargé, décompressez-le. Déplacez-le vers un emplacement approprié (par exemple, /devel/apache-tomcat-9.0.30).
-- Dans Eclipse, en bas de la Fenêtre, dans la vue « Servers », cliquez sur New... et créer un nouveau serveur, suivez les instructions
-
-### Installer MySQL. 
-- Pour  Linux, suivez ce tutoriel : [_http://www-lisic.univ-littoral.fr/~ramat/downloads/tp-asr-5.pdf_](http://www-lisic.univ-littoral.fr/~ramat/downloads/tp-asr-5.pdf) .
-- Pour Windows, installez [_EasyPHP_](https://www.easyphp.org/save-easyphp-devserver-latest.php). Durant l’installation, NE choisissez PAS le répertoire par défaut C:/Program Files/… Privilégier un répertoire utilisateur (cad. un répertoire ou pas besoin d’avoir des droits administrateur) comme par exemple : C:\Users\<Votre_Nom>\devel\EasyPhp
-
-- Vous disposez désormais de l'environnement suivant : 
-
-Web Server           | Business             | Persistence          | Database Server          | Logger
--------------------- | -------------------- | -------------------- | ------------------------ | --------- 
-Tomcat 9             | Spring IOC           | Hibernate            | MySQL                    | Log4j
-(As jars in project) | (As jars in project) | (As jars in project) | (Nécessite installation) | (As jars in project)
-
-## Comment utiliser Karuta ?
-
-### Démarrer Karuta dans Eclipse :
-- Clic droit sur Tomcat Server 9, puis cliquez sur **add and remove**, choisissez « karuta-webapp ». 
-- À nouveau clic droit sur Tomcat Server 9 puis cliquez sur **start**.
-- **Si erreur**, notamment `ClassNotFoundException` for `org.slf4j.Logger or org.slf4j.impl.StaticLoggerBinder`, vérifier les arguments du serveur J2EE. 
-	- Choisissez _Run > Run Configurations...._ La fenêtre « Run Configurations » apparaît.
-	- Choisissez Tomcat v9 server at localhost ou similaire.
-	- Cliquez sur l'onglet Arguments.
-	- Ajoutez à la suite dans la zone de texte VM arguments: `-Dlog4j.configurationFile=log4j.properties`
-
-- **Vérifiez que Karuta fonctionne** en allant, avec votre navigateur web, sur la page [_http://localhost:8080/karuta-webapp_](http://localhost:8080/karuta-webapp). Une page avec It works doit s’afficher !
-
-### Remplissez la base de données MySQL :
-1. Dans Eclipse, arrêter Karuta-webapp (dans la vue Console, cliquez sur la case rouge).
-2. À partir du projet racine « Karuta », ouvrir les dossiers db > karuta-backend. A l’intérieur du dossier se trouve les scripts MySQL que vous devrez exécuter.
-3. Ouvrir phpMyAdmin
-	- Sur Windows, d’abord démarrer EasyPhp. Puis à partir du dashboard d’easyPHP, démarrer le serveur de base de données et le serveur HTTP. Enfin, ouvrez phpMyAdmin.
-	- Sur Linux, [_http://localhost/phpmyadmin/_](http://localhost/phpmyadmin/)
-4. Pour créer la base de données depuis phpmyadmin, exécuter dans l'ordre les scripts SQL suivants :
-	- `01_create_db_user_karuta.sql`
-	- `02_create_db_karuta.sql`
-	- `10_insert_data_db_karuta.sql`
-
-### Redémarrez Karuta.
-- **Vérifiez que Karuta fonctionne** en allant, avec votre navigateur web, sur la page [_http://localhost:8080/karuta-webapp_](http://localhost:8080/karuta-webapp)
-- **Essayez de faire un test rapide** pour voir si le système fonctionne ...
-	- Dans Eclipse, projet karuta-webapp => recherchez le fichier de test `src/test/java/eportfolium/com/karuta/webapp/rest/controller/CredentialBasicLiveTest.java`
-	- Double clic sur le fichier pour l’ouvrir. Puis, choisissez _Run > Run As > Junit Test_. 
-Dans la vue « Console », le texte suivant doit s’afficher : _Output from Server .... created._
+Karuta is distributed under the terms of the ECL (Educational Community
+License) version 2.0. You can check out the `LICENSE` file for further
+information.

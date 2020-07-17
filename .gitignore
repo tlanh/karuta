@@ -1,0 +1,14 @@
+# Output files
+target/
+
+# IntelliJ files
+*.iml
+.idea/
+
+# Eclipse files
+.metadata
+.classpath
+.project
+.settings
+
+.gitignore

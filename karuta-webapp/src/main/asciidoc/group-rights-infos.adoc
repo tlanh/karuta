@@ -1,0 +1,18 @@
+== Group rights infos
+
+=== GET /
+
+This endpoint provides all the group rights infos attached to a given
+portfolio ID. It is only accessible for admin users.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/group-rights-infos-by-portfolio/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/group-rights-infos-by-portfolio/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/group-rights-infos-by-portfolio/http-response.adoc[]

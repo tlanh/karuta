@@ -1,145 +1,111 @@
+/* =======================================================
+	Copyright 2020 - ePortfolium - Licensed under the
+	Educational Community License, Version 2.0 (the "License"); you may
+	not use this file except in compliance with the License. You may
+	obtain a copy of the License at
+
+	http://www.osedu.org/licenses/ECL-2.0
+
+	Unless required by applicable law or agreed to in writing,
+	software distributed under the License is distributed on an "AS IS"
+	BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+	or implied. See the License for the specific language governing
+	permissions and limitations under the License.
+   ======================================================= */
+
 package eportfolium.com.karuta.business.contract;
 
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
-import javax.xml.parsers.ParserConfigurationException;
-
-import org.springframework.util.MimeType;
-
+import com.fasterxml.jackson.core.JsonProcessingException;
+import eportfolium.com.karuta.document.*;
 import eportfolium.com.karuta.model.bean.GroupRights;
 import eportfolium.com.karuta.model.bean.Node;
 import eportfolium.com.karuta.model.exception.BusinessException;
-import eportfolium.com.karuta.model.exception.DoesNotExistException;
 
-public interface NodeManager {
+public interface NodeManager extends BaseManager {
 
-	String getNode(MimeType outMimeType, String nodeUuid, boolean withChildren, Long userId, Long groupId, String label,
-			Integer cutoff) throws DoesNotExistException, BusinessException, Exception;
+	NodeDocument getNode(UUID nodeId, boolean withChildren, Long userId,
+			Integer cutoff) throws BusinessException, JsonProcessingException;
 
-	String getChildNodes(String parentNodeCode, String parentSemtag, String semtag) throws Exception;
+	void resetRights(List<Node> children) throws JsonProcessingException;
 
-	GroupRights getRights(Long userId, Long groupId, String nodeUuid);
+	void changeRights(UUID nodeId, String label, GroupRights rights);
 
-	void resetRights(List<Node> children) throws ParserConfigurationException;
+	UUID getPortfolioIdFromNode(Long userId, UUID nodeId) throws BusinessException;
 
-	/**
-	 * <node uuid=""> <role name=""> <right RD="" WR="" DL="" />
-	 * <action>reset</action> </role> </node> ====== <portfolio uuid="">
-	 * <xpath>XPATH</xpath> <role name=""> <right RD="" WR="" DL="" />
-	 * <action>reset</action> </role> </portfolio> ====== <portfoliogroup name="">
-	 * <xpath>XPATH</xpath> <role name=""> <right RD="" WR="" DL="" />
-	 * <action>reset</action> </role> </portfoliogroup>
-	 * 
-	 * @param xmlNode
-	 * @param userId
-	 * @param subId
-	 * @param label
-	 * @throws BusinessException
-	 * @throws Exception
-	 */
-	void changeRights(String xmlNode, Long id, Long credentialSubstitutionId, String label)
-			throws BusinessException, Exception;
+	NodeDocument getNode(UUID nodeId, boolean withChildren, String withChildrenOfXsiType, Long userId,
+			String label, boolean checkSecurity) throws JsonProcessingException;
 
-	String changeRights(Long userId, String nodeUuid, String role, GroupRights rights) throws BusinessException;
+	NodeDocument getNodeBySemanticTag(UUID portfolioId, String semantictag, Long userId)
+			throws BusinessException, JsonProcessingException;
 
-	String getPortfolioIdFromNode(Long userId, String nodeUuid) throws DoesNotExistException, BusinessException;
-
-	String getNodeXmlOutput(String nodeUuid, boolean withChildren, String withChildrenOfXsiType, Long userId,
-			Long groupId, String label, boolean checkSecurity);
-
-	String getNodeBySemanticTag(MimeType textXml, String portfolioUuid, String semantictag, Long userId, Long groupId)
+	NodeList getNodesBySemanticTag(Long userId, UUID portfolioId, String semanticTag)
 			throws BusinessException;
-
-	String getNodesBySemanticTag(MimeType outMimeType, Long userId, Long groupId, String portfolioUuid,
-			String semanticTag) throws BusinessException;
 
 	/**
 	 * forcedParentUuid permet de forcer l'uuid parent, independamment de l'attribut
 	 * du noeud fourni
-	 * 
-	 * @param c
-	 * @param node
-	 * @param portfolioUuid
-	 * @param portfolioModelId
-	 * @param userId
-	 * @param ordrer
-	 * @param forcedUuid
-	 * @param forcedUuidParent
-	 * @param sharedResParent
-	 * @param sharedNodeResParent
-	 * @param rewriteId
-	 * @param resolve
-	 * @param parseRights
-	 * @return
-	 * @throws BusinessException
 	 */
-	String writeNode(org.w3c.dom.Node node, String portfolioUuid, String portfolioModelId, Long userId, int ordrer,
-			String forcedUuid, String forcedUuidParent, boolean sharedResParent, boolean sharedNodeResParent,
-			boolean rewriteId, Map<String, String> resolve, boolean parseRights) throws BusinessException;
+	Node writeNode(NodeDocument node, UUID portfolioId, Long userId, int ordrer, UUID forcedId, Node parentNode,
+				   boolean rewriteId, Map<UUID, UUID> resolve, boolean parseRights)
+			throws BusinessException, JsonProcessingException;
 
-	boolean isCodeExist(String code, String uuid);
+	boolean isCodeExist(String code);
 
-	String executeMacroOnNode(long userId, String nodeUuid, String macroName) throws BusinessException;
+	String executeMacroOnNode(long userId, UUID nodeId, String macroName)
+			throws JsonProcessingException, BusinessException;
 
-	String getNodeMetadataWad(MimeType mimeType, String nodeUuid, Long userId, Long groupId)
-			throws DoesNotExistException, BusinessException;
+	MetadataWadDocument getNodeMetadataWad(UUID nodeId, Long userId)
+			throws BusinessException, JsonProcessingException;
 
-	Integer changeNode(MimeType inMimeType, String nodeUuid, String xmlNode, Long userId, Long groupId)
-			throws Exception;
+	Integer changeNode(UUID nodeId, NodeDocument node, Long userId)
+			throws BusinessException, JsonProcessingException;
 
-	void removeNode(String nodeUuid, Long userId, long groupId) throws BusinessException;
+	void removeNode(UUID nodeId, Long userId) throws BusinessException;
 
-	long getRoleByNode(Long userId, String nodeUuid, String role) throws BusinessException;
+	long getRoleByNode(Long userId, UUID nodeUuid, String role) throws BusinessException;
 
-	String changeNodeMetadataWad(MimeType mimeType, String nodeUuid, String xmlMetawad, Long userId, Long groupId)
-			throws Exception;
+	String changeNodeMetadataWad(UUID nodeId, MetadataWadDocument metadata, Long userId)
+			throws BusinessException, JsonProcessingException;
 
-	boolean changeParentNode(Long userid, String uuid, String uuidParent) throws BusinessException;
+	boolean changeParentNode(Long userid, UUID id, UUID parentId) throws BusinessException;
 
-	Long moveNodeUp(String nodeUuid) throws BusinessException;
+	Long moveNodeUp(UUID nodeId);
 
-	String addNodeFromModelBySemanticTag(MimeType inMimeType, String nodeUuid, String semanticTag, Long userId,
-			Long groupId) throws Exception;
+	NodeList addNodeFromModelBySemanticTag(UUID nodeId, String semanticTag, Long userId)
+			throws BusinessException, JsonProcessingException;
 
-	String changeNodeMetadataEpm(MimeType mimeType, String nodeUuid, String xmlMetadataEpm, Long id, long groupId)
-			throws Exception;
+	String changeNodeMetadataEpm(UUID nodeId, MetadataEpmDocument metadata, Long id)
+			throws BusinessException, JsonProcessingException;
 
-	String changeNodeMetadata(MimeType mimeType, String nodeUuid, String xmlNode, Long id, long groupId)
-			throws DoesNotExistException, BusinessException, Exception;
+	String changeNodeMetadata(UUID nodeId, MetadataDocument metadata, Long id)
+			throws BusinessException, JsonProcessingException;
 
-	String changeNodeContext(MimeType mimeType, String nodeUuid, String xmlNode, Long userId, Long groupId)
-			throws BusinessException, Exception;
+	String changeNodeContext(UUID nodeId, ResourceDocument resource, Long userId)
+			throws BusinessException;
 
-	String changeNodeResource(MimeType mimeType, String nodeUuid, String xmlNode, Long id, Long groupId)
-			throws BusinessException, Exception;
+	String changeNodeResource(UUID nodeId, ResourceDocument resource, Long id)
+			throws BusinessException;
 
-	String addNode(MimeType inMimeType, String parentNodeUuid, String xmlNode, Long userId, Long groupId,
-			boolean forcedUuid) throws Exception;
+	NodeList addNode(UUID parentNodeId, NodeDocument node, Long userId, boolean forcedUuid)
+			throws JsonProcessingException, BusinessException;
 
-	String getNodeWithXSL(MimeType textXml, String nodeUuid, String xslFile, String parameters, Long id, Long groupId)
-			throws BusinessException, Exception;
+	NodeDocument getNodeWithXSL(UUID nodeId, String xslFile, String parameters, Long id)
+			throws BusinessException, JsonProcessingException;
 
-	String getNodes(MimeType mimeType, String rootNodeCode, String childSemtag, Long userId, Long groupId,
+	NodeList getNodes(String rootNodeCode, String childSemtag, Long userId,
 			String parentSemtag, String parentNodeCode, Integer cutoff) throws BusinessException;
 
-	String executeAction(Long userId, String nodeUuid, String action, String role);
+	UUID copyNode(UUID destId, String tag, String code, UUID sourceId, Long userId)
+			throws BusinessException, JsonProcessingException;
 
-	String copyNode(MimeType inMimeType, String destUuid, String tag, String code, String srcuuid, Long userId,
-			Long groupId) throws Exception;
+	UUID importNode(UUID parentId, String semtag, String code, UUID sourceId, Long id)
+			throws BusinessException, JsonProcessingException;
 
-	String importNode(MimeType mimeType, String parentId, String semtag, String code, String srcuuid, Long id,
-			long groupId) throws BusinessException, Exception;
+	List<Node> getChildren(UUID nodeId);
 
-	void transferAnnotationTable(Connection con, Map<String, String> nodesIds) throws SQLException;
-
-	void removeAnnotations();
-
-	void removeNodes();
-
-	Map<String, String> transferNodeTable(Connection con, Map<String, String> rtIds, Map<String, String> portIds,
-			Map<Long, Long> userIds) throws SQLException;
-
+	NodeRightsDocument getRights(UUID nodeId, Long userId);
 }

@@ -1,256 +1,214 @@
+/* =======================================================
+	Copyright 2020 - ePortfolium - Licensed under the
+	Educational Community License, Version 2.0 (the "License"); you may
+	not use this file except in compliance with the License. You may
+	obtain a copy of the License at
+
+	http://www.osedu.org/licenses/ECL-2.0
+
+	Unless required by applicable law or agreed to in writing,
+	software distributed under the License is distributed on an "AS IS"
+	BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+	or implied. See the License for the specific language governing
+	permissions and limitations under the License.
+   ======================================================= */
+
 package eportfolium.com.karuta.business.impl;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
 
-import org.apache.commons.lang3.StringUtils;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import eportfolium.com.karuta.business.contract.FileManager;
+import eportfolium.com.karuta.consumer.repositories.PortfolioRepository;
+import eportfolium.com.karuta.consumer.repositories.ResourceRepository;
+import eportfolium.com.karuta.document.*;
+import eportfolium.com.karuta.model.bean.*;
+import eportfolium.com.karuta.util.JavaTimeUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Isolation;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.MimeType;
-import org.w3c.dom.Document;
-import org.w3c.dom.NodeList;
 
-import eportfolium.com.karuta.business.contract.NodeManager;
 import eportfolium.com.karuta.business.contract.ResourceManager;
-import eportfolium.com.karuta.consumer.contract.dao.PortfolioDao;
-import eportfolium.com.karuta.consumer.contract.dao.ResourceTableDao;
-import eportfolium.com.karuta.consumer.util.DomUtils;
-import eportfolium.com.karuta.model.bean.GroupRights;
-import eportfolium.com.karuta.model.bean.Node;
-import eportfolium.com.karuta.model.bean.ResourceTable;
 import eportfolium.com.karuta.model.exception.BusinessException;
-import eportfolium.com.karuta.model.exception.DoesNotExistException;
 import eportfolium.com.karuta.model.exception.GenericBusinessException;
 
 @Service
 @Transactional
-public class ResourceManagerImpl extends BaseManager implements ResourceManager {
+public class ResourceManagerImpl extends BaseManagerImpl implements ResourceManager {
 
 	@Autowired
-	private PortfolioDao portfolioDao;
+	private FileManager fileManager;
 
 	@Autowired
-	private NodeManager nodeManager;
+	private ResourceRepository resourceRepository;
 
 	@Autowired
-	private ResourceTableDao resourceTableDao;
+	private PortfolioRepository portfolioRepository;
 
-	public String getResource(MimeType outMimeType, String nodeParentUuid, Long userId, Long groupId)
+
+	@Override
+	public ResourceDocument getResource(UUID parentNodeId) {
+		Resource resource = resourceRepository.getResourceByParentNodeUuid(parentNodeId);
+
+		ResourceDocument document = new ResourceDocument(resource.getId());
+
+		document.setNodeId(parentNodeId);
+		document.setContent(resource.getXsiType());
+
+		return document;
+	}
+
+	@Override
+	public Integer changeResource(UUID parentNodeId, ResourceDocument resource, Long userId)
+			throws BusinessException, JsonProcessingException {
+
+		if (!hasRight(userId, parentNodeId, GroupRights.WRITE))
+			throw new GenericBusinessException("403 FORBIDDEN : No WRITE credential");
+
+		Resource res = resourceRepository.getResourceOfResourceByNodeUuid(parentNodeId);
+
+		// To update `modifDate`.
+		portfolioRepository.findById(parentNodeId)
+				.ifPresent(portfolio -> portfolioRepository.save(portfolio));
+
+		res.setContent(xmlAttributes(resource));
+		res.setModifUserId(userId);
+		res.setModifDate(JavaTimeUtil.toJavaDate(LocalDateTime.now()));
+		resourceRepository.save(res);
+
+		return 0;
+	}
+
+	@Override
+	public String addResource(UUID parentNodeId, ResourceDocument resource, Long userId)
 			throws BusinessException {
 
-		if (!hasRight(userId, groupId, nodeParentUuid, GroupRights.READ)) {
-			throw new GenericBusinessException("403 FORBIDDEN : No READ credential");
-		}
+		if (!credentialRepository.isAdmin(userId)
+				&& !hasRight(userId, parentNodeId, GroupRights.WRITE))
+			throw new GenericBusinessException("403 FORBIDDEN : No right to write");
 
-		ResourceTable rt = resourceTableDao.getResourceByParentNodeUuid(nodeParentUuid);
 
-		String result = "<asmResource id=\"" + rt.getId().toString() + "\" contextid=\"" + nodeParentUuid + "\"  >"
-				+ rt.getXsiType() + "</asmResource>";
+		if( resource.getId() == null )
+			return "";
 
-		return result;
-	}
+		String xsiType = resource.getXsiType();
 
-	/** Récupère le noeud, et assemble les ressources, s'il y en a */
-	public String getResource(UUID nodeUuid) {
-		return getResource(nodeUuid.toString());
-	}
+		Resource res = resourceRepository.findById(resource.getId())
+				.orElseGet(() -> new Resource(resource.getId()));
 
-	/** Récupère le noeud, et assemble les ressources, s'il y en a */
-	public String getResource(String nodeUuid) {
-		String result = "";
+		res.setXsiType(xsiType);
+		updateResourceAttrs(res, resource.getContent(), userId);
 
-		try {
-			Node resNode = nodeDao.findById(UUID.fromString(nodeUuid));
-			String m_epm = resNode.getMetadataEpm();
-			if (m_epm == null)
-				m_epm = "";
-			result += "<" + resNode.getAsmType() + " id='" + resNode.getId().toString() + "'>";
-			result += "<metadata " + resNode.getMetadata() + "/>";
-			result += "<metadata-epm " + m_epm + "/>";
-			result += "<metadata-wad " + resNode.getMetadataWad() + "/>";
-
-			ResourceTable resResource = resNode.getResource();
-			if (resResource != null && resResource.getId() != null) {
-				result += "<asmResource id='" + resResource.getId().toString() + "' contextid='"
-						+ resNode.getId().toString() + "' xsi_type='" + resResource.getXsiType() + "'>";
-				result += resResource.getContent();
-				result += "</asmResource>";
+		nodeRepository.findById(parentNodeId).ifPresent(node -> {
+			if (xsiType.equals("nodeRes")) {
+				node.setResource(res);
+				node.setSharedNodeResUuid(null);
+			} else if (xsiType.equals("context")) {
+				node.setContextResource(res);
+			} else {
+				node.setResResource(res);
+				node.setSharedResUuid(null);
 			}
 
-			resResource = resNode.getResResource();
-			if (resResource != null && resResource.getId() != null) {
-				result += "<asmResource id='" + resResource.getId().toString() + "' contextid='"
-						+ resNode.getId().toString() + "' xsi_type='" + resResource.getXsiType() + "'>";
-				result += resResource.getContent();
-				result += "</asmResource>";
-
-			}
-
-			resResource = resNode.getContextResource();
-			if (resResource != null && resResource.getId() != null) {
-				result += "<asmResource id='" + resResource.getId().toString() + "' contextid='"
-						+ resNode.getId().toString() + "' xsi_type='" + resResource.getXsiType() + "'>";
-				result += resResource.getContent();
-				result += "</asmResource>";
-
-			}
-			result += "</" + resNode.getAsmType() + ">";
-		} catch (DoesNotExistException e) {
-		}
-
-		return result;
-	}
-
-	public String getResources(MimeType outMimeType, String portfolioUuid, Long userId, Long groupId) throws Exception {
-		List<ResourceTable> res = resourceTableDao.getResourcesByPortfolioUUID(portfolioUuid);
-		String returnValue = "";
-		if (outMimeType.getSubtype().equals("xml")) {
-			returnValue += "<resources>";
-			for (ResourceTable rt : res) {
-				returnValue += "<resource " + DomUtils.getXmlAttributeOutput("id", rt.getNode().getId().toString())
-						+ " />";
-			}
-			returnValue += "</resources>";
-		} else {
-			returnValue += "{";
-			boolean firstNode = true;
-			for (ResourceTable rt : res) {
-				if (firstNode)
-					firstNode = false;
-				else
-					returnValue += " , ";
-				returnValue += "resource: { " + DomUtils.getJsonAttributeOutput("id", rt.getNode().getId().toString())
-						+ " } ";
-			}
-			returnValue += "}";
-		}
-		return returnValue;
-	}
-
-	public Integer changeResource(MimeType inMimeType, String nodeParentUuid, String xmlResource, Long userId,
-			Long groupId) throws BusinessException, Exception {
-
-		int retVal = -1;
-
-		xmlResource = DomUtils.filterXmlResource(xmlResource);
-
-		ResourceTable rt = resourceTableDao.getResourceByParentNodeUuid(nodeParentUuid);
-		String nodeUuid = rt.getId().toString();
-
-		Document doc = DomUtils.xmlString2Document(xmlResource, new StringBuffer());
-		// Puis on le recrée
-		org.w3c.dom.Node node = (doc.getElementsByTagName("asmResource")).item(0);
-
-		if (!hasRight(userId, groupId, nodeParentUuid, GroupRights.WRITE))
-			throw new GenericBusinessException("403 FORBIDDEN : No WRITE credential");
-
-		portfolioDao.updateTimeByNode(nodeParentUuid);
-
-		retVal = resourceTableDao.updateResource(nodeUuid, null, DomUtils.getInnerXml(node), userId);
-
-		return retVal;
-
-	}
-
-	public String addResource(MimeType inMimeType, String nodeParentUuid, String in, Long userId, Long groupId)
-			throws BusinessException, Exception {
-		if (!credentialDao.isAdmin(userId))
-			throw new GenericBusinessException("403 FORBIDDEN : No ADMIN right");
-
-		in = DomUtils.filterXmlResource(in);
-
-		if (!hasRight(userId, groupId, nodeParentUuid, GroupRights.WRITE)) {
-			throw new GenericBusinessException("403 FORBIDDEN : No WRITE credential");
-		} else
-			nodeManager.addNode(inMimeType, nodeParentUuid, in, userId, groupId, true);
+			nodeRepository.save(node);
+		});
 
 		return "";
 	}
 
-	public void removeResource(String resourceUuid, Long userId, Long groupId)
-			throws DoesNotExistException, BusinessException {
-		if (!credentialDao.isAdmin(userId))
+	@Override
+	public void removeResource(UUID resourceId, Long userId) throws BusinessException {
+		if (!credentialRepository.isAdmin(userId)
+				&& !hasRight(userId, resourceId, GroupRights.DELETE))
 			throw new GenericBusinessException("403 FORBIDDEN : No admin right");
 
-		if (hasRight(userId, groupId, resourceUuid, GroupRights.DELETE)) {
-			resourceTableDao.removeById(UUID.fromString(resourceUuid));
-		}
+		resourceRepository.deleteById(resourceId);
 	}
 
-	public void changeResourceByXsiType(String nodeUuid, String xsiType, String content, Long userId) throws Exception {
-		if (StringUtils.equals(xsiType, "nodeRes")) {
-			resourceTableDao.updateResResource(nodeUuid, content, userId);
-			/// Interprétation du code XML.
-			Document doc = DomUtils.xmlString2Document(
-					"<?xml version='1.0' encoding='UTF-8' standalone='no'?><res>" + content + "</res>",
-					new StringBuffer());
-			NodeList nodes = doc.getElementsByTagName("code");
-			org.w3c.dom.Node code = nodes.item(0);
-			if (code != null) {
-				org.w3c.dom.Node codeContent = code.getFirstChild();
+	@Override
+	public void changeResourceByXsiType(UUID nodeId,
+										String xsiType,
+										ResourceDocument resource,
+										Long userId) throws BusinessException {
 
-				String codeVal;
-				if (codeContent != null) {
-					codeVal = codeContent.getNodeValue();
-					// Vérifier si le code existe déjà.
-					if (nodeDao.isCodeExist(codeVal, nodeUuid)) {
-						throw new GenericBusinessException("CONFLICT : code already exists.");
-					} else {
-						if (nodeDao.updateNodeCode(nodeUuid, codeVal) > 0) {
-							throw new GenericBusinessException("Cannot update node code");
-						}
-					}
-				}
-			}
-		} else if (StringUtils.equals(xsiType, "context")) {
-			resourceTableDao.updateContextResource(nodeUuid, content, userId);
+		Resource existing;
 
+		if ("nodeRes".equals(xsiType)) {
+			String code = resource.getCode();
+
+			Node node = nodeRepository.findById(nodeId)
+					.orElseThrow(() -> new GenericBusinessException("Cannot update node code"));
+
+			if (nodeRepository.isCodeExist(code, nodeId))
+				throw new GenericBusinessException("CONFLICT : code already exists.");
+
+			node.setCode(code);
+			nodeRepository.save(node);
+
+			existing = resourceRepository.getResourceOfResourceByNodeUuid(nodeId);
+		} else if ("context".equals(xsiType)) {
+			existing = resourceRepository.getContextResourceByNodeUuid(nodeId);
 		} else {
-			resourceTableDao.updateResource(nodeUuid, content, userId);
+			existing = resourceRepository.getResourceByParentNodeUuid(nodeId);
 		}
 
+		updateResourceAttrs(existing, resource.getContent(), userId);
 	}
 
 	@Override
-	@Transactional(isolation = Isolation.DEFAULT, propagation = Propagation.REQUIRES_NEW)
-	public Map<String, String> transferResourceTable(Connection con, Map<Long, Long> userIds) throws SQLException {
-		ResultSet res = resourceTableDao.getMysqlResources(con);
-		ResourceTable rt = null;
-		Map<String, String> resourceIds = new HashMap<String, String>();
+	public void updateResource(UUID id, String xsiType, String content, Long userId) {
+		resourceRepository.deleteById(id);
 
-		try {
-			while (res.next()) {
-				rt = new ResourceTable();
-				rt.setXsiType(res.getString("xsi_type"));
-				rt.setContent(res.getString("content"));
-				try {
-					rt.setCredential(credentialDao.findById(userIds.get(res.getLong("user_id"))));
-				} catch (DoesNotExistException e) {
-					e.printStackTrace();
-				}
-				rt.setModifUserId(userIds.get(res.getLong("modif_user_id")));
-				rt.setModifDate(res.getDate("modif_date"));
-				rt = resourceTableDao.merge(rt);
-				resourceIds.put(res.getString("node_uuid"), rt.getId().toString());
-			}
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-		return resourceIds;
+		Date now = JavaTimeUtil.toJavaDate(LocalDateTime.now(JavaTimeUtil.defaultTimezone));
+
+		Resource resource = new Resource(
+			id,
+			xsiType,
+			content,
+			new Credential(userId),
+			userId,
+			now
+		);
+
+		resourceRepository.save(resource);
 	}
 
 	@Override
-	@Transactional(isolation = Isolation.DEFAULT, propagation = Propagation.REQUIRES_NEW)
-	public void removeResources() {
-		resourceTableDao.removeAll();
+	public boolean updateContent(UUID nodeId,
+								 Long userId,
+								 InputStream content,
+								 String lang,
+								 boolean thumbnail) throws BusinessException {
+		if (!hasRight(userId, nodeId, GroupRights.WRITE))
+			throw new GenericBusinessException("No rights.");
+
+		Resource resource = resourceRepository.findByNodeId(nodeId);
+		ResourceDocument document = new ResourceDocument(resource, resource.getNode());
+
+		return fileManager.updateResource(document, content, lang, thumbnail);
 	}
 
+	@Override
+	public ResourceDocument fetchResource(UUID nodeId, OutputStream output, String lang, boolean thumbnail) {
+		Resource resource = resourceRepository.findByNodeId(nodeId);
+		ResourceDocument document = new ResourceDocument(resource, resource.getNode());
+
+		if (fileManager.fetchResource(document, output, lang, thumbnail)) {
+			return document;
+		} else {
+			return null;
+		}
+	}
+
+	private void updateResourceAttrs(Resource resource, String content, Long userId) {
+		resource.setContent(content);
+		resource.setCredential(new Credential(userId));
+		resource.setModifUserId(userId);
+
+		resourceRepository.save(resource);
+	}
 }

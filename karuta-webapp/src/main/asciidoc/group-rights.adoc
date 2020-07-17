@@ -1,0 +1,34 @@
+== Group rights
+
+=== GET /
+
+Returns all existing group rights for a given group ID.
+
+include::{snippets}/group-rights-all/response-fields.adoc[]
+
+[source,role="primary"]
+.Curl
+include::{snippets}/group-rights-all/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/group-rights-all/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/group-rights-all/http-response.adoc[]
+
+
+=== DELETE /
+
+[source,role="primary"]
+.Curl
+include::{snippets}/group-rights-delete/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/group-rights-delete/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/group-rights-delete/http-response.adoc[]
