@@ -240,6 +240,63 @@ public class PortfolioManagerTest {
     }
 
     @Test
+    public void getPortfolioByCode_WithResources() throws JsonProcessingException, BusinessException {
+        Long userId = 42L;
+        String code = "foobar";
+
+        Portfolio portfolio = new Portfolio();
+        portfolio.setId(UUID.randomUUID());
+
+        doReturn(portfolio)
+                .when(portfolioRepository)
+                .getPortfolioFromNodeCode(code);
+
+        PortfolioDocument document = new PortfolioDocument();
+
+        doReturn(document)
+                .when(manager)
+                .getPortfolio(portfolio.getId(), userId, null);
+
+        PortfolioDocument returned = manager.getPortfolioByCode(code, userId, true);
+
+        assertEquals(document, returned);
+
+        verify(manager).getPortfolio(portfolio.getId(), userId, null);
+        verifyNoInteractions(nodeManager);
+    }
+
+    @Test
+    public void getPortfolioByCode_WithoutResources() throws JsonProcessingException, BusinessException {
+        Long userId = 42L;
+        String code = "foobar";
+
+        Node node = new Node();
+        node.setId(UUID.randomUUID());
+
+        Portfolio portfolio = new Portfolio();
+        portfolio.setId(UUID.randomUUID());
+        portfolio.setRootNode(node);
+
+        doReturn(portfolio)
+                .when(portfolioRepository)
+                .getPortfolioFromNodeCode(code);
+
+        NodeDocument nodeDocument = new NodeDocument();
+
+        doReturn(nodeDocument)
+                .when(nodeManager)
+                .getNode(node.getId(), false, "nodeRes", userId, null, false);
+
+        PortfolioDocument returned = manager.getPortfolioByCode(code, userId, false);
+
+        assertEquals(portfolio.getId(), returned.getId());
+        assertEquals(nodeDocument, returned.getRoot());
+
+        verify(nodeManager).getNode(node.getId(), false, "nodeRes", userId, null, false);
+        verify(manager, times(0)).getPortfolio(portfolio.getId(), userId, null);
+    }
+
+    @Test
     public void getRightsOnPortfolio_WithMatchingOwnerId() {
         Long userId = 42L;
         UUID portfolioId = UUID.randomUUID();
