@@ -211,16 +211,14 @@ public class PortfolioController extends AbstractController {
      * PUT /rest/api/portfolios/portfolios/{id}/setOwner/{ownerId}
      */
     @PutMapping(value = "/portfolio/{id}/setOwner/{ownerId}")
-    public Boolean changeOwner(@PathVariable UUID id,
+    public String changeOwner(@PathVariable UUID id,
                                @PathVariable long ownerId,
                                @AuthenticationPrincipal UserInfo userInfo) {
 
-        // Vérifie si l'utilisateur connecté est administrateur ou propriétaire du
-        // portfolio actuel.
         if (securityManager.isAdmin(userInfo.getId()) || portfolioManager.isOwner(userInfo.getId(), id)) {
-            return portfolioManager.changePortfolioOwner(id, ownerId);
+            return String.valueOf(portfolioManager.changePortfolioOwner(id, ownerId));
         } else {
-            return false;
+            return "false";
         }
     }
 
@@ -301,8 +299,6 @@ public class PortfolioController extends AbstractController {
                                                 @RequestParam boolean owner,
                                                 @AuthenticationPrincipal UserInfo userInfo) throws BusinessException {
 
-        /// Check if code exist, find a suitable one otherwise. Eh.
-        // FIXME : Check original Karuta version ; no new code found.
         if (nodeManager.isCodeExist(targetcode)) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("code exist");
         }
@@ -502,7 +498,7 @@ public class PortfolioController extends AbstractController {
             .readerFor(PortfolioDocument.class)
             .readValue(content);
 
-      return new HttpEntity<>(portfolioManager.addPortfolio(document, userInfo.getId(), model,
+        return new HttpEntity<>(portfolioManager.addPortfolio(document, userInfo.getId(), model,
                instance, project));
     }
 }
