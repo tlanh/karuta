@@ -75,7 +75,7 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 		portfolioRepository.findById(parentNodeId)
 				.ifPresent(portfolio -> portfolioRepository.save(portfolio));
 
-		res.setContent(xmlAttributes(resource));
+		res.setContent(resource.getContent());
 		res.setModifUserId(userId);
 		res.setModifDate(JavaTimeUtil.toJavaDate(LocalDateTime.now()));
 		resourceRepository.save(res);
