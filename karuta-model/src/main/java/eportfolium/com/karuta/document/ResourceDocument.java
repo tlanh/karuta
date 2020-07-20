@@ -151,6 +151,8 @@ public class ResourceDocument {
         return content;
     }
 
+    /// Raw value does nothing, it's already processed
+    @JsonRawValue
     @JsonAnySetter
     public void ignored(String name, Object value) {
         StringBuilder builder = new StringBuilder("<");
@@ -166,7 +168,11 @@ public class ResourceDocument {
 
             builder.append(">");
             if( attributes.get("") != null )
-                builder.append(attributes.get(""));
+            {
+            	String processed = attributes.get("").toString();
+            	processed = processed.replace("&", "&amp;");
+                builder.append(processed);
+            }
         } else {
         	builder.append(">");
         	if( value != null )
