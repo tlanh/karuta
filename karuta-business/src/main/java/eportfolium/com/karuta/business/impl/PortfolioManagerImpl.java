@@ -178,7 +178,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	}
 
 	@Override
-	public PortfolioDocument getPortfolio(UUID portfolioId, Long userId, Integer cutoff)
+	public String getPortfolio(UUID portfolioId, Long userId, Integer cutoff)
 			throws BusinessException, JsonProcessingException {
 
 		Node rootNode = portfolioRepository.getPortfolioRootNode(portfolioId);
@@ -254,7 +254,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		}
 	}
 
-	private PortfolioDocument getPortfolio(Node rootNode, Long userId, GroupRightInfo groupRightInfo, boolean owner, Integer cutoff)
+	private String getPortfolio(Node rootNode, Long userId, GroupRightInfo groupRightInfo, boolean owner, Integer cutoff)
 			throws JsonProcessingException {
 		/// Node -> parent
 		Map<UUID, Tree> entries = new HashMap<>();
@@ -271,12 +271,18 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		Tree root = entries.get(rootNode.getId());
 		PortfolioDocument portfolioDocument = new PortfolioDocument(portfolio, owner);
 
+		StringBuilder sb = new StringBuilder();
+		String headerXML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><portfolio code=\"0\" id=\""+portfolio.getId()+"\" owner=\""+owner+"\"><version>4</version>";
+		sb.append(headerXML);
+		
 		if (root != null) {
-			reconstructTree(root.node, root, entries);
+			reconstructTree(sb, root.node, root, entries);
 			portfolioDocument.setRoot(root.node);
 		}
 
-		return portfolioDocument;
+		sb.append("</portfolio>");
+		
+		return sb.toString();
 	}
 
 	private List<Pair<Node, GroupRights>> getPortfolioStructure(UUID portfolioId, Long userId, Long groupId) {
@@ -408,7 +414,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	}
 
 	@Override
-	public PortfolioDocument getPortfolioByCode(String portfolioCode, Long userId,
+	public String getPortfolioByCode(String portfolioCode, Long userId,
 			boolean resources) throws BusinessException, JsonProcessingException {
 		Portfolio portfolio = portfolioRepository.getPortfolioFromNodeCode(portfolioCode);
 
@@ -424,7 +430,9 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 			document.setRoot(nodeManager.getNode(portfolio.getRootNode().getId(), false, "nodeRes", userId,
 					null, false));
 
-			return document;
+			XmlMapper xmlMapper = new XmlMapper();
+
+			return xmlMapper.writeValueAsString(document);
 		}
 	}
 
@@ -773,7 +781,12 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		// FIXME Inutilisé, nous instancions / copions un portfolio
 
 		if (portfolioModelId != null) {
-			portfolioDocument = getPortfolio(portfolioModelId, userId, null);
+      ObjectMapper mapper = new XmlMapper();
+      String xml = getPortfolio(portfolioModelId, userId, null);
+    
+      portfolioDocument = mapper
+	            .readerFor(PortfolioDocument.class)
+	            .readValue(xml);
 		}
 
 		NodeDocument rootNode = portfolioDocument.getRoot();

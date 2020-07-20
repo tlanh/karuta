@@ -35,6 +35,7 @@ import eportfolium.com.karuta.model.bean.GroupRightInfo;
 import eportfolium.com.karuta.model.bean.GroupRights;
 import eportfolium.com.karuta.model.bean.GroupRightsId;
 import eportfolium.com.karuta.model.bean.Node;
+import eportfolium.com.karuta.model.bean.Resource;
 
 public abstract class BaseManagerImpl implements BaseManager {
 
@@ -54,6 +55,8 @@ public abstract class BaseManagerImpl implements BaseManager {
 	protected static class Tree {
 		NodeDocument node = null;
 		String childString = "";
+		String type = "";
+		String nodeContent = "";
 	}
 
 	@Override
@@ -116,6 +119,38 @@ public abstract class BaseManagerImpl implements BaseManager {
 			if (node.getId() == null)
 				continue;
 
+			StringBuilder data = new StringBuilder(256);
+			String nodeFormat = "<%s delete=\"%s\" id=\"%s\" read=\"%s\" role=\"%s\" submit=\"%s\" write=\"%s\" last_modif=\"%s\" xsi_type=\"%s\">" +
+					"<metadata-wad %s/>" +
+					"<metadata-epm %s/>" +
+					"<metadata %s/>";
+			
+			String nodeData = String.format(nodeFormat, node.getAsmType(), groupRights.isDelete(), node.getId(), groupRights.isRead(), "", groupRights.isSubmit(), groupRights.isWrite(), node.getModifDate(), node.getXsiType(),
+					node.getMetadataWad(), node.getMetadataEpm(), node.getMetadata());
+			data.append(nodeData);
+			
+			String resFormat = "<asmResource contextid=\"%s\" id=\"%s\" last_modif=\"%s\" xsi_type=\"%s\">%s</asmResource>";
+			Resource noderes = node.getResource();
+			if( noderes != null )
+			{
+				String resData = String.format(resFormat, node.getId(), noderes.getId(), noderes.getModifDate(), noderes.getXsiType(), noderes.getContent());
+				data.append(resData);
+			}
+			
+			Resource nodectx = node.getContextResource();
+			if( nodectx != null )
+			{
+				String resData = String.format(resFormat, nodectx.getId(), nodectx.getId(), nodectx.getModifDate(), nodectx.getXsiType(), nodectx.getContent());
+				data.append(resData);
+			}
+			
+			Resource noderesres = node.getResResource();
+			if( noderesres != null )
+			{
+				String resData = String.format(resFormat, node.getId(), noderesres.getId(), noderesres.getModifDate(), noderesres.getXsiType(), noderesres.getContent());
+				data.append(resData);
+			}
+
 			NodeDocument nodeDocument = new NodeDocument(node, groupRights, role);
 
 			nodeDocument.setMetadataWad(MetadataWadDocument.from(node.getMetadataWad()));
@@ -133,6 +168,8 @@ public abstract class BaseManagerImpl implements BaseManager {
 			/// Prepare data to reconstruct tree
 			Tree entry = new Tree();
 			entry.node = nodeDocument;
+			entry.type = node.getAsmType();
+			entry.nodeContent = data.toString();
 
 			if (StringUtils.isNotEmpty(node.getChildrenStr())) {
 				entry.childString = node.getChildrenStr();
@@ -142,12 +179,14 @@ public abstract class BaseManagerImpl implements BaseManager {
 		}
 	}
 
-	protected void reconstructTree(NodeDocument root, Tree node, Map<UUID, Tree> entries) {
+	protected void reconstructTree(StringBuilder sb, NodeDocument root, Tree node, Map<UUID, Tree> entries) {
 		if (node.childString == null)
 			return;
 
 		Stream<String> childIds = Stream.of(node.childString.split(","));
 
+		sb.append(node.nodeContent);
+		
 		childIds
 				.filter(id -> !id.equals(""))
 				.forEach(id -> {
@@ -155,9 +194,10 @@ public abstract class BaseManagerImpl implements BaseManager {
 
 					if (child != null) {
 						root.getChildren().add(child.node);
-						reconstructTree(child.node, child, entries);
+						reconstructTree(sb, child.node, child, entries);
 					}
 				});
+		sb.append("</").append(node.type).append(">");
 	}
 
 	protected String xmlAttributes(MetadataDocument document) throws JsonProcessingException {
