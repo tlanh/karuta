@@ -39,13 +39,13 @@ public interface PortfolioManager extends BaseManager {
 
 	boolean removePortfolioGroups(Long portfolioGroupId);
 
-	PortfolioDocument getPortfolio(UUID portfolioId,
+	String getPortfolio(UUID portfolioId,
 								   Long userId,
 								   Integer cutoff) throws BusinessException, JsonProcessingException;
 
 	File getZippedPortfolio(PortfolioDocument portfolio, String lang) throws IOException;
 
-	PortfolioDocument getPortfolioByCode(String portfolioCode,
+	String getPortfolioByCode(String portfolioCode,
 										 Long userId,
 										 boolean resources) throws BusinessException, JsonProcessingException;
 

@@ -94,20 +94,29 @@ public class PortfolioController extends AbstractController {
                                            @RequestParam(required = false) Integer level,
                                            @AuthenticationPrincipal UserInfo userInfo) throws BusinessException, IOException {
 
-        PortfolioDocument portfolio = portfolioManager.getPortfolio(id, userInfo.getId(), level);
+        String xmlPortfolio = portfolioManager.getPortfolio(id, userInfo.getId(), level);
+
+        if( !export && !files )
+          return new HttpEntity<>(xmlPortfolio);
 
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HHmmss");
 
+        ObjectMapper mapper = new XmlMapper();
+        PortfolioDocument portfolio = mapper
+  	            .readerFor(PortfolioDocument.class)
+  	            .readValue(xmlPortfolio);
+        
         String code = portfolio.getCode().replace("_", "");
         String filename = code + "-" + dateFormat.format(new Date());
-
+        
         if (export) {
             return ResponseEntity
                     .ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + ".xml\"")
-                    .body(portfolio);
+                    .body(xmlPortfolio);
 
         } else if (resources && files) {
+
             File tempZip = portfolioManager.getZippedPortfolio(portfolio, lang);
             byte[] zipContent = Files.readAllBytes(tempZip.toPath());
 
@@ -119,7 +128,7 @@ public class PortfolioController extends AbstractController {
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + ".zip\"")
                     .body(zipContent);
         } else {
-            return new HttpEntity<>(portfolio);
+            return new HttpEntity<>(xmlPortfolio);
         }
 
     }
@@ -130,18 +139,18 @@ public class PortfolioController extends AbstractController {
      * GET /rest/api/portfolios/code/{code}
      */
     @GetMapping(value = "/portfolio/code/{code:.+}")
-    public HttpEntity<PortfolioDocument> getByCode(@PathVariable String code,
+    public HttpEntity<String> getByCode(@PathVariable String code,
                                                    @RequestParam(required = false) boolean resources,
                                                    @AuthenticationPrincipal UserInfo userInfo)
             throws BusinessException, JsonProcessingException {
 
-        PortfolioDocument portfolioDocument = portfolioManager
+        String portfolio = portfolioManager
                 .getPortfolioByCode(code, userInfo.getId(), resources);
 
-        if (portfolioDocument == null)
+        if (portfolio == null)
             return ResponseEntity.notFound().build();
 
-        return new HttpEntity<>(portfolioDocument);
+        return new HttpEntity<>(portfolio);
     }
 
     /**
@@ -372,7 +381,13 @@ public class PortfolioController extends AbstractController {
 
         /// Create all the zip files
         for (UUID portfolioId : uuids) {
-            PortfolioDocument portfolio = portfolioManager.getPortfolio(portfolioId, userInfo.getId(), null);
+            String xmlportfolio = portfolioManager.getPortfolio(portfolioId, userInfo.getId(), null);
+
+            ObjectMapper mapper = new XmlMapper();
+
+            PortfolioDocument portfolio = mapper
+                .readerFor(PortfolioDocument.class)
+                .readValue(xmlportfolio);
 
             // No name yet
             if ("".equals(name)) {

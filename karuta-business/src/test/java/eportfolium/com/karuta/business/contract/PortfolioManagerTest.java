@@ -1,6 +1,9 @@
 package eportfolium.com.karuta.business.contract;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+
 import eportfolium.com.karuta.business.ServiceTest;
 import eportfolium.com.karuta.business.security.test.AsAdmin;
 import eportfolium.com.karuta.consumer.repositories.*;
@@ -178,7 +181,11 @@ public class PortfolioManagerTest {
                 .when(nodeRepository)
                 .getNodesWithResources(portfolio.getId());
 
-        PortfolioDocument document = manager.getPortfolio(portfolioId, userId, null);
+        String xmlPortfolio = manager.getPortfolio(portfolioId, userId, null);
+        ObjectMapper mapper = new XmlMapper();
+        PortfolioDocument document = mapper
+            .readerFor(PortfolioDocument.class)
+            .readValue(xmlPortfolio);
 
         assertEquals(portfolio.getId(), document.getId());
         assertEquals(rootNode.getId(), document.getRootNodeId());

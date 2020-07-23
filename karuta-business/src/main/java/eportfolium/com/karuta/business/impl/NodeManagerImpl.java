@@ -111,9 +111,11 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 		Map<UUID, Tree> entries = new HashMap<>();
 		processQuery(nodes, entries, rights.getGroupRightInfo().getLabel());
 
+		StringBuilder sb = new StringBuilder();
+		
 		/// Reconstruct functional tree
 		Tree root = entries.get(nodeId);
-		reconstructTree(root.node, root, entries);
+		reconstructTree(sb, root.node, root, entries);
 
 		return root.node;
 	}
