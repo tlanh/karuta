@@ -171,6 +171,9 @@ public class ResourceDocument {
             {
             	String processed = attributes.get("").toString();
             	processed = processed.replace("&", "&amp;");
+            	processed = processed.replace("<", "&lt;");
+            	processed = processed.replace(">", "&gt;");
+            	
                 builder.append(processed);
             }
         } else {
