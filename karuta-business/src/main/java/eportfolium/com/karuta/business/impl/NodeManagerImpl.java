@@ -799,8 +799,9 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 
 		UUID portfolioUuid = portfolioRepository.getPortfolioUuidFromNode(nodeId);
 
-		// Public has to be managed via the group/user function
-		groupManager.setPublicState(userId, portfolioUuid, metadata.getPublic());
+		if( metadata.getPublic() != null )
+			// Public has to be managed via the group/user function
+			groupManager.setPublicState(userId, portfolioUuid, metadata.getPublic());
 
 		final String metadataAttributes = xmlAttributes(metadata);
 
@@ -808,9 +809,12 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 			.ifPresent(node -> {
 				node.setMetadata(metadataAttributes);
 				node.setSemantictag(metadata.getSemantictag());
-				node.setSharedRes(metadata.getSharedResource());
-				node.setSharedNode(metadata.getSharedNode());
-				node.setSharedNodeRes(metadata.getSharedNodeResource());
+				if( metadata.getSharedResource() != null )
+					node.setSharedRes(metadata.getSharedResource());
+				if( metadata.getSharedNode() != null )
+					node.setSharedNode(metadata.getSharedNode());
+				if( metadata.getSharedNodeResource() != null )
+					node.setSharedNodeRes(metadata.getSharedNodeResource());
 
 				nodeRepository.save(node);
 				portfolioManager.updateTime(portfolioUuid);

@@ -13,12 +13,12 @@ import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 public class MetadataDocument {
     protected static XmlMapper xmlMapper = new XmlMapper();
 
-    protected boolean isPublic;
-    protected boolean isPrivate;
+    protected Boolean isPublic;
+    protected Boolean isPrivate;
 
-    protected boolean sharedResource;
-    protected boolean sharedNode;
-    protected boolean sharedNodeResource;
+    protected Boolean sharedResource;
+    protected Boolean sharedNode;
+    protected Boolean sharedNodeResource;
 
     protected String semantictag;
 
@@ -36,7 +36,7 @@ public class MetadataDocument {
 
     @JsonGetter("public")
     @JacksonXmlProperty(isAttribute = true)
-    public boolean getPublic() {
+    public Boolean getPublic() {
         return isPublic;
     }
 
@@ -49,7 +49,7 @@ public class MetadataDocument {
     @JsonGetter("private")
     @JacksonXmlProperty(isAttribute = true)
     @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-    public boolean getPrivate() {
+    public Boolean getPrivate() {
         return isPrivate;
     }
 
@@ -62,7 +62,7 @@ public class MetadataDocument {
     @JsonGetter("sharedResource")
     @JacksonXmlProperty(isAttribute = true)
     @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-    public boolean getSharedResource() {
+    public Boolean getSharedResource() {
         return sharedResource;
     }
 
@@ -74,7 +74,7 @@ public class MetadataDocument {
     @JsonGetter("sharedNode")
     @JacksonXmlProperty(isAttribute = true)
     @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-    public boolean getSharedNode() {
+    public Boolean getSharedNode() {
         return sharedNode;
     }
 
@@ -86,7 +86,7 @@ public class MetadataDocument {
     @JsonGetter("sharedNodeResource")
     @JacksonXmlProperty(isAttribute = true)
     @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-    public boolean getSharedNodeResource() {
+    public Boolean getSharedNodeResource() {
         return sharedNodeResource;
     }
 
