@@ -15,7 +15,7 @@ public class RoleRightsGroupList {
     }
 
     @JacksonXmlElementWrapper(useWrapping = false)
-    @JacksonXmlProperty(localName = "rolerightgroup")
+    @JacksonXmlProperty(localName = "rolerightsgroup")
     public List<RoleRightsGroupDocument> getGroups() {
         return groups;
     }
