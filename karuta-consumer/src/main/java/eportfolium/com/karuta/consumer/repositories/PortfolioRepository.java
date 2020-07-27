@@ -56,6 +56,14 @@ public interface PortfolioRepository extends CrudRepository<Portfolio, UUID>,
             "WHERE gu.id.credential.id = :userId")
     List<Map<String, Object>> getPortfolioShared(@Param("userId") Long userId);
 
+    @Query("SELECT p " +
+        "FROM GroupUser gu " +
+        "INNER JOIN gu.id.groupInfo gi " +
+        "INNER JOIN gi.groupRightInfo gri " +
+        "INNER JOIN gri.portfolio p " +
+        "WHERE gu.id.credential.id = :userId")
+    List<Portfolio> getPortfolioSharedWithRights(@Param("userId") Long userId);
+
     @Query("SELECT p FROM Node n " +
             "INNER JOIN n.portfolio p WITH p.active = 1 " +
             "WHERE n.asmType = 'asmRoot' " +
