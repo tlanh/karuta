@@ -822,18 +822,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 
 		UUID uuid = UUID.randomUUID();
 
-		Portfolio portfolio = add(uuid, userId, null);
-
-		nodeManager.writeNode(rootNode, portfolio.getId(), userId, 0, uuid, null,
-				false, null, parseRights);
-
-		// On récupère le noeud root généré précédemment et on l'affecte au portfolio.
-		portfolio.setRootNode(nodeRepository.getRootNodeByPortfolio(portfolio.getId()));
-
-		portfolio.setActive(1);
-		portfolio.setModelId(portfolioModelId);
-
-		portfolioRepository.save(portfolio);
+		Portfolio portfolio = add(uuid, userId, portfolioDocument);
 
 		/// Si nous instancions, nous n'avons pas besoin du rôle de concepteur
 		securityManager.addRole(portfolio.getId(), "all", userId);
