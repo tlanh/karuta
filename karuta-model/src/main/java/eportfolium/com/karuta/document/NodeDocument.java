@@ -37,9 +37,9 @@ public class NodeDocument {
     @JsonFormat(pattern="yyyy-MM-dd HH:mm:ss.S")
     private Date modifDate;
 
-    private MetadataDocument metadataDocument;
-    private MetadataEpmDocument metadataEpmDocument;
-    private MetadataWadDocument metadataWadDocument;
+    private MetadataDocument metadataDocument = new MetadataDocument();
+    private MetadataEpmDocument metadataEpmDocument = new MetadataEpmDocument();
+    private MetadataWadDocument metadataWadDocument = new MetadataWadDocument();
     private List<ResourceDocument> resourceDocuments;
 
     private List<NodeDocument> children = new ArrayList<>();
@@ -221,16 +221,19 @@ public class NodeDocument {
 
     @JacksonXmlProperty(localName = "metadata")
     public void setMetadata(MetadataDocument document) {
+    	if( document != null )
         this.metadataDocument = document;
     }
 
     @JacksonXmlProperty(localName = "metadata-epm")
     public void setMetadataEpm(MetadataEpmDocument document) {
+    	if( document != null )
         this.metadataEpmDocument = document;
     }
 
     @JacksonXmlProperty(localName = "metadata-wad")
     public void setMetadataWad(MetadataWadDocument document) {
+    	if( document != null )
         this.metadataWadDocument = document;
     }
 

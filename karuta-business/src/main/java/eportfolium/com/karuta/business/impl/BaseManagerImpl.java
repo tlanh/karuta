@@ -204,7 +204,7 @@ public abstract class BaseManagerImpl implements BaseManager {
 		final String attributesChain = attributeWriter.writeValueAsString(document);
 
 		return attributesChain
-				.substring(2, attributesChain.length() - 2);
+				.substring(1, attributesChain.length() - 2).trim();
 	}
 
 	protected String xmlAttributes(ResourceDocument document) throws JsonProcessingException {

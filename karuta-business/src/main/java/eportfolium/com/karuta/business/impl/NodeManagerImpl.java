@@ -1757,16 +1757,23 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 			node.setSharedNodeRes(metadata.getSharedNodeResource());
 		}
 
-		XmlMapper xmlMapper = new XmlMapper();
-
 		if (nodeDocument.getMetadata() != null)
-			node.setMetadata(xmlMapper.writeValueAsString(nodeDocument.getMetadata()));
+		{
+			String attrvalue = xmlAttributes(nodeDocument.getMetadata());
+			node.setMetadata(attrvalue);
+		}
 
 		if (nodeDocument.getMetadataWad() != null)
-			node.setMetadataWad(xmlMapper.writeValueAsString(nodeDocument.getMetadataWad()));
+		{
+			String attrvalue = xmlAttributes(nodeDocument.getMetadataWad());
+			node.setMetadataWad(attrvalue);
+		}
 
 		if (nodeDocument.getMetadataEpm() != null)
-			node.setMetadataEpm(xmlMapper.writeValueAsString(nodeDocument.getMetadataEpm()));
+		{
+			String attrvalue = xmlAttributes(nodeDocument.getMetadataEpm());
+			node.setMetadataEpm(attrvalue);
+		}
 
 		node.setSemtag(nodeDocument.getSemtag());
 		node.setSemantictag(semanticTag);

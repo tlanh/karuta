@@ -16,9 +16,9 @@ public class MetadataDocument {
     protected Boolean isPublic;
     protected Boolean isPrivate;
 
-    protected Boolean sharedResource;
-    protected Boolean sharedNode;
-    protected Boolean sharedNodeResource;
+    protected Boolean sharedResource = false;
+    protected Boolean sharedNode = false;
+    protected Boolean sharedNodeResource = false;
 
     protected String semantictag;
 
