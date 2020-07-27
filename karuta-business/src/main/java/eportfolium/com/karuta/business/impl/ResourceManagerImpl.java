@@ -86,9 +86,21 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 	@Override
 	public String addResource(UUID parentNodeId, ResourceDocument resource, Long userId)
 			throws BusinessException {
+		
+		String retval = "";
+		Optional<Node> node = nodeRepository.findById(parentNodeId);
+		if( node.isPresent() )
+			retval = addResource( node.get(), resource, userId);
+		return retval;
+	}
+
+
+	@Override
+	public String addResource(Node parentNodeId, ResourceDocument resource, Long userId)
+			throws BusinessException {
 
 		if (!credentialRepository.isAdmin(userId)
-				&& !hasRight(userId, parentNodeId, GroupRights.WRITE))
+				&& !hasRight(userId, parentNodeId.getId(), GroupRights.WRITE))
 			throw new GenericBusinessException("403 FORBIDDEN : No right to write");
 
 

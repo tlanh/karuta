@@ -195,7 +195,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 
 		//// Insert resource associated with this node
 		for (ResourceDocument resourceDocument : node.getResources()) {
-			resourceManager.addResource(nodeEntity.getId(), resourceDocument, userId);
+			resourceManager.addResource(nodeEntity, resourceDocument, userId);
 		}
 		
 		// Loop through children to go down in the tree.
