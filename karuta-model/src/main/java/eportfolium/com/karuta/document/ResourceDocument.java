@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.UUID;
 
 @JsonRootName("asmResource")
@@ -205,12 +206,24 @@ public class ResourceDocument {
             this.content = "";
 
         StringBuilder stringBuilder = new StringBuilder("");
+        stringBuilder.append("<").append(name);
 
-        values.forEach(map -> {
-            stringBuilder.append("<").append(name);
-            map.forEach((k, v) -> stringBuilder.append(" ").append(k).append("=\"").append(v).append("\""));
-            stringBuilder.append(" />");
-        });
+        String nodecontent = "";
+        for( Map<String, String> value : values )
+        {
+        	for( Entry<String, String> entry : value.entrySet() )
+        	{
+          	if( !"".equals(entry.getKey()) )
+          		stringBuilder.append(" ").append(entry.getKey()).append("=\"").append(entry.getValue()).append("\"");
+          	else
+          		nodecontent = entry.getValue();
+        	}
+        }
+        stringBuilder.append(">");
+        stringBuilder.append(nodecontent);
+        stringBuilder.append("</");
+        stringBuilder.append(name);
+        stringBuilder.append(">");
 
         content += stringBuilder.toString();
     }

@@ -115,19 +115,19 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 		res.setXsiType(xsiType);
 		updateResourceAttrs(res, resource.getContent(), userId);
 
-		nodeRepository.findById(parentNodeId).ifPresent(node -> {
-			if (xsiType.equals("nodeRes")) {
-				node.setResource(res);
-				node.setSharedNodeResUuid(null);
-			} else if (xsiType.equals("context")) {
-				node.setContextResource(res);
-			} else {
-				node.setResResource(res);
-				node.setSharedResUuid(null);
-			}
+		res = resourceRepository.save(res);
+		
+		if (xsiType.equals("nodeRes")) {
+			parentNodeId.setResource(res);
+			parentNodeId.setSharedNodeResUuid(null);
+		} else if (xsiType.equals("context")) {
+			parentNodeId.setContextResource(res);
+		} else {
+			parentNodeId.setResResource(res);
+			parentNodeId.setSharedResUuid(null);
+		}
 
-			nodeRepository.save(node);
-		});
+		nodeRepository.save(parentNodeId);
 
 		return "";
 	}
