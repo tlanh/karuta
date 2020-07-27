@@ -34,7 +34,7 @@ public class NodeDocument {
     private boolean submit;
 
     private String role;
-    @JsonFormat(pattern="yyyy-MM-dd HH:mm:ss.S")
+    @JsonDeserialize(using = DateDeserializer.class)
     private Date modifDate;
 
     private MetadataDocument metadataDocument = new MetadataDocument();
@@ -162,7 +162,7 @@ public class NodeDocument {
 
     @JsonGetter("last_modif")
     @JacksonXmlProperty(isAttribute = true, localName = "last_modif")
-    @JsonFormat(pattern="yyyy-MM-dd HH:mm:ss.S")
+    @JsonDeserialize(using = DateDeserializer.class)
     public Date getModifDate() {
         return modifDate;
     }

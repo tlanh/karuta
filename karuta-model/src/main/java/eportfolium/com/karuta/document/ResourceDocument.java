@@ -1,6 +1,7 @@
 package eportfolium.com.karuta.document;
 
 import com.fasterxml.jackson.annotation.*;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
@@ -85,7 +86,7 @@ public class ResourceDocument {
 
     @JsonGetter("last_modif")
     @JacksonXmlProperty(isAttribute = true, localName = "last_modif")
-    @JsonFormat(pattern="yyyy-MM-dd HH:mm:ss.S")
+    @JsonDeserialize(using = DateDeserializer.class)
     public Date getModifDate() {
         return modifDate;
     }
