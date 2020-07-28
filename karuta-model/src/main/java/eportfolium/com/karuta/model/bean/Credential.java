@@ -25,10 +25,6 @@ import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.JoinTable;
-import javax.persistence.ManyToMany;
-import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
@@ -58,7 +54,6 @@ public class Credential implements Serializable {
 
 	private Set<GroupUser> groups = new HashSet<GroupUser>();
 	private Set<Portfolio> portfolios = new HashSet<Portfolio>();
-	private Usersfolder folder;
 
 	private String subUser;
 
@@ -316,15 +311,4 @@ public class Credential implements Serializable {
 				+ token + ", other=" + other + "]";
 	}
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinTable(name = "usersfolder_user", joinColumns = {
-			@JoinColumn(name = "userid", nullable = false, updatable = false) }, inverseJoinColumns = {
-					@JoinColumn(name = "fid", nullable = false, updatable = false) })
-	public Usersfolder getFolder() {
-		return this.folder;
-	}
-
-	public void setFolder(Usersfolder folder) {
-		this.folder = folder;
-	}
 }
