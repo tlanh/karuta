@@ -29,7 +29,7 @@ public class PortfolioDocument {
 
     private Long ownerId;
 
-    @JsonFormat(pattern="yyyy-MM-dd HH:mm:ss.S")
+    @JsonDeserialize(using = DateDeserializer.class)
     private Date modifDate;
 
     private NodeDocument root;
@@ -138,7 +138,7 @@ public class PortfolioDocument {
 
     @JsonGetter("modified")
     @JacksonXmlProperty(isAttribute = true, localName = "modified")
-    @JsonFormat(pattern="yyyy-MM-dd HH:mm:ss.S")
+    @JsonDeserialize(using = DateDeserializer.class)
     public Date getModifDate() {
         return modifDate;
     }

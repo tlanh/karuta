@@ -1,6 +1,7 @@
 package eportfolium.com.karuta.document;
 
 import com.fasterxml.jackson.annotation.*;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
@@ -12,6 +13,7 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.UUID;
 
 @JsonRootName("asmResource")
@@ -84,7 +86,7 @@ public class ResourceDocument {
 
     @JsonGetter("last_modif")
     @JacksonXmlProperty(isAttribute = true, localName = "last_modif")
-    @JsonFormat(pattern="yyyy-MM-dd HH:mm:ss.S")
+    @JsonDeserialize(using = DateDeserializer.class)
     public Date getModifDate() {
         return modifDate;
     }
@@ -171,6 +173,9 @@ public class ResourceDocument {
             {
             	String processed = attributes.get("").toString();
             	processed = processed.replace("&", "&amp;");
+            	processed = processed.replace("<", "&lt;");
+            	processed = processed.replace(">", "&gt;");
+            	
                 builder.append(processed);
             }
         } else {
@@ -202,12 +207,24 @@ public class ResourceDocument {
             this.content = "";
 
         StringBuilder stringBuilder = new StringBuilder("");
+        stringBuilder.append("<").append(name);
 
-        values.forEach(map -> {
-            stringBuilder.append("<").append(name);
-            map.forEach((k, v) -> stringBuilder.append(" ").append(k).append("=\"").append(v).append("\""));
-            stringBuilder.append(" />");
-        });
+        String nodecontent = "";
+        for( Map<String, String> value : values )
+        {
+        	for( Entry<String, String> entry : value.entrySet() )
+        	{
+          	if( !"".equals(entry.getKey()) )
+          		stringBuilder.append(" ").append(entry.getKey()).append("=\"").append(entry.getValue()).append("\"");
+          	else
+          		nodecontent = entry.getValue();
+        	}
+        }
+        stringBuilder.append(">");
+        stringBuilder.append(nodecontent);
+        stringBuilder.append("</");
+        stringBuilder.append(name);
+        stringBuilder.append(">");
 
         content += stringBuilder.toString();
     }

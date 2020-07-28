@@ -195,7 +195,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 
 		//// Insert resource associated with this node
 		for (ResourceDocument resourceDocument : node.getResources()) {
-			resourceManager.addResource(nodeEntity.getId(), resourceDocument, userId);
+			resourceManager.addResource(nodeEntity, resourceDocument, userId);
 		}
 		
 		// Loop through children to go down in the tree.
@@ -799,8 +799,9 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 
 		UUID portfolioUuid = portfolioRepository.getPortfolioUuidFromNode(nodeId);
 
-		// Public has to be managed via the group/user function
-		groupManager.setPublicState(userId, portfolioUuid, metadata.getPublic());
+		if( metadata.getPublic() != null )
+			// Public has to be managed via the group/user function
+			groupManager.setPublicState(userId, portfolioUuid, metadata.getPublic());
 
 		final String metadataAttributes = xmlAttributes(metadata);
 
@@ -808,9 +809,12 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 			.ifPresent(node -> {
 				node.setMetadata(metadataAttributes);
 				node.setSemantictag(metadata.getSemantictag());
-				node.setSharedRes(metadata.getSharedResource());
-				node.setSharedNode(metadata.getSharedNode());
-				node.setSharedNodeRes(metadata.getSharedNodeResource());
+				if( metadata.getSharedResource() != null )
+					node.setSharedRes(metadata.getSharedResource());
+				if( metadata.getSharedNode() != null )
+					node.setSharedNode(metadata.getSharedNode());
+				if( metadata.getSharedNodeResource() != null )
+					node.setSharedNodeRes(metadata.getSharedNodeResource());
 
 				nodeRepository.save(node);
 				portfolioManager.updateTime(portfolioUuid);
@@ -1753,16 +1757,23 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 			node.setSharedNodeRes(metadata.getSharedNodeResource());
 		}
 
-		XmlMapper xmlMapper = new XmlMapper();
-
 		if (nodeDocument.getMetadata() != null)
-			node.setMetadata(xmlMapper.writeValueAsString(nodeDocument.getMetadata()));
+		{
+			String attrvalue = xmlAttributes(nodeDocument.getMetadata());
+			node.setMetadata(attrvalue);
+		}
 
 		if (nodeDocument.getMetadataWad() != null)
-			node.setMetadataWad(xmlMapper.writeValueAsString(nodeDocument.getMetadataWad()));
+		{
+			String attrvalue = xmlAttributes(nodeDocument.getMetadataWad());
+			node.setMetadataWad(attrvalue);
+		}
 
 		if (nodeDocument.getMetadataEpm() != null)
-			node.setMetadataEpm(xmlMapper.writeValueAsString(nodeDocument.getMetadataEpm()));
+		{
+			String attrvalue = xmlAttributes(nodeDocument.getMetadataEpm());
+			node.setMetadataEpm(attrvalue);
+		}
 
 		node.setSemtag(nodeDocument.getSemtag());
 		node.setSemantictag(semanticTag);

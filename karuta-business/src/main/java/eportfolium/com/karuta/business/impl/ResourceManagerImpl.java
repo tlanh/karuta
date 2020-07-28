@@ -86,9 +86,21 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 	@Override
 	public String addResource(UUID parentNodeId, ResourceDocument resource, Long userId)
 			throws BusinessException {
+		
+		String retval = "";
+		Optional<Node> node = nodeRepository.findById(parentNodeId);
+		if( node.isPresent() )
+			retval = addResource( node.get(), resource, userId);
+		return retval;
+	}
+
+
+	@Override
+	public String addResource(Node parentNodeId, ResourceDocument resource, Long userId)
+			throws BusinessException {
 
 		if (!credentialRepository.isAdmin(userId)
-				&& !hasRight(userId, parentNodeId, GroupRights.WRITE))
+				&& !hasRight(userId, parentNodeId.getId(), GroupRights.WRITE))
 			throw new GenericBusinessException("403 FORBIDDEN : No right to write");
 
 
@@ -103,19 +115,19 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 		res.setXsiType(xsiType);
 		updateResourceAttrs(res, resource.getContent(), userId);
 
-		nodeRepository.findById(parentNodeId).ifPresent(node -> {
-			if (xsiType.equals("nodeRes")) {
-				node.setResource(res);
-				node.setSharedNodeResUuid(null);
-			} else if (xsiType.equals("context")) {
-				node.setContextResource(res);
-			} else {
-				node.setResResource(res);
-				node.setSharedResUuid(null);
-			}
+		res = resourceRepository.save(res);
+		
+		if (xsiType.equals("nodeRes")) {
+			parentNodeId.setResource(res);
+			parentNodeId.setSharedNodeResUuid(null);
+		} else if (xsiType.equals("context")) {
+			parentNodeId.setContextResource(res);
+		} else {
+			parentNodeId.setResResource(res);
+			parentNodeId.setSharedResUuid(null);
+		}
 
-			nodeRepository.save(node);
-		});
+		nodeRepository.save(parentNodeId);
 
 		return "";
 	}

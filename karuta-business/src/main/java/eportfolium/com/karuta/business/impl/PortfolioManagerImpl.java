@@ -822,18 +822,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 
 		UUID uuid = UUID.randomUUID();
 
-		Portfolio portfolio = add(uuid, userId, null);
-
-		nodeManager.writeNode(rootNode, portfolio.getId(), userId, 0, uuid, null,
-				false, null, parseRights);
-
-		// On récupère le noeud root généré précédemment et on l'affecte au portfolio.
-		portfolio.setRootNode(nodeRepository.getRootNodeByPortfolio(portfolio.getId()));
-
-		portfolio.setActive(1);
-		portfolio.setModelId(portfolioModelId);
-
-		portfolioRepository.save(portfolio);
+		Portfolio portfolio = add(uuid, userId, portfolioDocument);
 
 		/// Si nous instancions, nous n'avons pas besoin du rôle de concepteur
 		securityManager.addRole(portfolio.getId(), "all", userId);
@@ -1739,21 +1728,11 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		if (credentialRepository.isAdmin(userId)) {
 			return portfolioRepository.findAll(spec, sort);
 		} else {
-			Specification<Portfolio> userIds = spec.and((root, query, cb) -> {
-				List<Long> ids = Arrays.asList(userId, substId);
-
-				Join<Portfolio, Credential> credentialJoin = root.join("credential");
-				ListJoin<Credential, GroupUser> groupJoin = credentialJoin.joinList("groups");
-
-				query.groupBy(root.get("portfolio.id"));
-
-				return groupJoin.get("groups.id.credential.id").in(ids);
-			});
-
+			
 			List<Portfolio> owned = portfolioRepository.findAll(spec.and(modifUser), sort);
-			List<Portfolio> editable = portfolioRepository.findAll(spec.and(userIds), sort);
+			List<Portfolio> shared = portfolioRepository.getPortfolioSharedWithRights(userId);
 
-			return Stream.concat(owned.stream(), editable.stream())
+			return Stream.concat(owned.stream(), shared.stream())
 					.collect(Collectors.toList());
 		}
 	}

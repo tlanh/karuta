@@ -21,6 +21,7 @@ import java.util.UUID;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import eportfolium.com.karuta.document.ResourceDocument;
+import eportfolium.com.karuta.model.bean.Node;
 import eportfolium.com.karuta.model.exception.BusinessException;
 
 public interface ResourceManager extends BaseManager {
@@ -31,6 +32,9 @@ public interface ResourceManager extends BaseManager {
 			throws BusinessException, JsonProcessingException;
 
 	String addResource(UUID parentNodeId, ResourceDocument resource, Long userId)
+			throws BusinessException;
+
+	String addResource(Node parentNodeId, ResourceDocument resource, Long userId)
 			throws BusinessException;
 
 	void removeResource(UUID resourceId, Long userId) throws BusinessException;
