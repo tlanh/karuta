@@ -53,7 +53,7 @@ public class NodesController extends AbstractController {
      * @return nodes in the ASM format
      */
     @GetMapping(value = "/node/{id}")
-    public HttpEntity<NodeDocument> getNode(@PathVariable UUID id,
+    public HttpEntity<String> getNode(@PathVariable UUID id,
                                       @RequestParam(required = false) Integer level,
                                       @AuthenticationPrincipal UserInfo userInfo)
             throws BusinessException, JsonProcessingException {
@@ -69,7 +69,7 @@ public class NodesController extends AbstractController {
      * @return nodes in the ASM format
      */
     @GetMapping(value = "/node/{id}/children")
-    public HttpEntity<NodeDocument> getNodeWithChildren(@PathVariable UUID id,
+    public HttpEntity<String> getNodeWithChildren(@PathVariable UUID id,
                                                         @RequestParam Integer level,
                                                         @AuthenticationPrincipal UserInfo userInfo)
             throws BusinessException, JsonProcessingException {
@@ -416,7 +416,7 @@ public class NodesController extends AbstractController {
      * GET /rest/api/nodes/{id}
      */
     @GetMapping(value = "/{id}")
-    public HttpEntity<NodeDocument> getNodeWithXSL(@PathVariable UUID id,
+    public HttpEntity<String> getNodeWithXSL(@PathVariable UUID id,
                                                    @RequestParam String lang,
                                                    @RequestParam("xsl-file") String xslFile,
                                                    @AuthenticationPrincipal UserInfo userInfo,

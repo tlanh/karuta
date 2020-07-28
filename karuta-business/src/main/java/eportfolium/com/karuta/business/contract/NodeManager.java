@@ -27,7 +27,7 @@ import eportfolium.com.karuta.model.exception.BusinessException;
 
 public interface NodeManager extends BaseManager {
 
-	NodeDocument getNode(UUID nodeId, boolean withChildren, Long userId,
+	String getNode(UUID nodeId, boolean withChildren, Long userId,
 			Integer cutoff) throws BusinessException, JsonProcessingException;
 
 	void resetRights(List<Node> children) throws JsonProcessingException;
@@ -93,7 +93,7 @@ public interface NodeManager extends BaseManager {
 	NodeList addNode(UUID parentNodeId, NodeDocument node, Long userId, boolean forcedUuid)
 			throws JsonProcessingException, BusinessException;
 
-	NodeDocument getNodeWithXSL(UUID nodeId, String xslFile, String parameters, Long id)
+	String getNodeWithXSL(UUID nodeId, String xslFile, String parameters, Long id)
 			throws BusinessException, JsonProcessingException;
 
 	NodeList getNodes(String rootNodeCode, String childSemtag, Long userId,
