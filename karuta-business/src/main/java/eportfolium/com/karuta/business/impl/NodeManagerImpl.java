@@ -1874,7 +1874,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 		Set<Node> allChildren = new LinkedHashSet<>();
 
 		if (base != null)
-			nodes.add(base);
+			allChildren.add(base);
 
 		treeMap.put(0, allChildren);
 
