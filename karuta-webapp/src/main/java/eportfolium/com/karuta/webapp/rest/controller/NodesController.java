@@ -312,9 +312,9 @@ public class NodesController extends AbstractController {
     @GetMapping
     public HttpEntity<NodeList> getNodes(@RequestParam String portfoliocode,
                                          @RequestParam String semtag,
-                                         @RequestParam String semtag_parent,
-                                         @RequestParam String code_parent,
-                                         @RequestParam Integer level,
+                                         @RequestParam (required = false) String semtag_parent,
+                                         @RequestParam (required = false) String code_parent,
+                                         @RequestParam (required = false) Integer level,
                                          @AuthenticationPrincipal UserInfo userInfo) throws BusinessException {
 
         return new HttpEntity<>(nodeManager.getNodes(portfoliocode, semtag, userInfo.getId(),
