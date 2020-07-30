@@ -10,7 +10,9 @@ import eportfolium.com.karuta.model.bean.Node;
 import eportfolium.com.karuta.model.bean.Resource;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -102,6 +104,11 @@ public class ResourceDocument {
 
     public void setCode(String code) {
         this.code = code;
+        List<Map<String, String>> temp = new ArrayList<Map<String, String>>();
+        HashMap<String, String> tmap = new HashMap<String, String>();
+        temp.add(tmap);
+        tmap.put("", code);
+        this.dumpMap("code", temp);
     }
 
     @JsonGetter("filename")

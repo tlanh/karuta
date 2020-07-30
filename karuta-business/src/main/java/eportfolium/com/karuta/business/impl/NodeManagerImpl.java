@@ -92,7 +92,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	private InMemoryCache<UUID, Map<UUID, List<Node>>> cachedNodes = new InMemoryCache<>(600, 1500, 6);
 
 	@Override
-	public NodeDocument getNode(UUID nodeId, boolean withChildren, Long userId, Integer cutoff)
+	public String getNode(UUID nodeId, boolean withChildren, Long userId, Integer cutoff)
 			throws BusinessException, JsonProcessingException {
 		final GroupRights rights = getRights(userId, nodeId);
 
@@ -117,7 +117,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 		Tree root = entries.get(nodeId);
 		reconstructTree(sb, root.node, root, entries);
 
-		return root.node;
+		return sb.toString();
 	}
 
 	@Override
@@ -865,7 +865,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	}
 
 	@Override
-	public NodeDocument getNodeWithXSL(UUID nodeId, String xslFile, String parameters, Long userId)
+	public String getNodeWithXSL(UUID nodeId, String xslFile, String parameters, Long userId)
 			throws BusinessException, JsonProcessingException {
 		/// Préparation des paramètres pour les besoins futurs, format:
 		/// "par1:par1val;par2:par2val;..."
@@ -1874,7 +1874,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 		Set<Node> allChildren = new LinkedHashSet<>();
 
 		if (base != null)
-			nodes.add(base);
+			allChildren.add(base);
 
 		treeMap.put(0, allChildren);
 

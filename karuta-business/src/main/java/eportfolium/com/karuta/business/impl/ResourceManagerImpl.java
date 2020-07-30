@@ -148,12 +148,11 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 										Long userId) throws BusinessException {
 
 		Resource existing;
+		Node node = nodeRepository.findById(nodeId)
+				.orElseThrow(() -> new GenericBusinessException("Cannot update node code"));
 
 		if ("nodeRes".equals(xsiType)) {
 			String code = resource.getCode();
-
-			Node node = nodeRepository.findById(nodeId)
-					.orElseThrow(() -> new GenericBusinessException("Cannot update node code"));
 
 			if (nodeRepository.isCodeExist(code, nodeId))
 				throw new GenericBusinessException("CONFLICT : code already exists.");
@@ -161,11 +160,11 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 			node.setCode(code);
 			nodeRepository.save(node);
 
-			existing = resourceRepository.getResourceOfResourceByNodeUuid(nodeId);
+			existing = node.getResource();
 		} else if ("context".equals(xsiType)) {
-			existing = resourceRepository.getContextResourceByNodeUuid(nodeId);
+			existing = node.getContextResource();
 		} else {
-			existing = resourceRepository.getResourceByParentNodeUuid(nodeId);
+			existing = node.getResResource();
 		}
 
 		updateResourceAttrs(existing, resource.getContent(), userId);
