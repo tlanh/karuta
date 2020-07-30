@@ -174,7 +174,7 @@ public class PortfolioController extends AbstractController {
             throws BusinessException, JsonProcessingException {
 
     	String portfolioCode = null;
-    	boolean specialProject = false;
+    	Boolean specialProject = null;
     	if("false".equals(project) || "0".equals(project)) specialProject = false;
     	else if("true".equals(project) || "1".equals(project)) specialProject = true;
 			else if(project != null && project.length()>0) portfolioCode = project;

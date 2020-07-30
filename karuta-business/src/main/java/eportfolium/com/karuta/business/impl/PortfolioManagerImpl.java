@@ -533,7 +533,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	}
 
 	@Override
-	public String getPortfolios(long userId, Boolean active, long substid, boolean specialProject, String portfolioCode) {
+	public String getPortfolios(long userId, Boolean active, long substid, Boolean specialProject, String portfolioCode) {
 		List<Portfolio> portfolios = getPortfolios(userId, substid, active, specialProject, portfolioCode);
 
 		String psformat = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><portfolios count=\"%d\">%s</portfolios>";
@@ -1677,7 +1677,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	public List<Portfolio> getPortfolios(Long userId,
 								  Long substId,
 								  Boolean portfolioActive,
-								  boolean specialProject,
+								  Boolean specialProject,
 								  String portfolioCode) {
 
 		// INNER JOIN p.rootNode
@@ -1702,18 +1702,22 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		Sort sort = Sort.by("rootNode.resResource");
 		Specification<Portfolio> spec = active;
 
-		if ( specialProject )
+		if ( specialProject != null )
 		{
 			// AND p.rootNode.semantictag LIKE '%karuta-project%'
 			Specification<Portfolio> portfolioFilter = Specification.where((root, query, cb) -> {
 				Join<Portfolio, Node> rootNode = root.join("rootNode");
 
-				return cb.like(rootNode.get("semantictag"), "%karuta-project%");
+				if( specialProject )
+					return cb.like(rootNode.get("semantictag"), "%karuta-project%");
+				else
+					return cb.notLike(rootNode.get("semantictag"), "%karuta-project%");
 			});
 
 			spec = spec.and(portfolioFilter);
 		}
-		else if ( portfolioCode != null )
+		
+		if ( portfolioCode != null )
 		{
 			Specification<Portfolio> portfolioFilter = Specification.where((root, query, cb) -> {
 				Join<Portfolio, Node> rootNode = root.join("rootNode");
