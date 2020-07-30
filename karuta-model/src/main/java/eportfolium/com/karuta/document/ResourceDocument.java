@@ -104,11 +104,14 @@ public class ResourceDocument {
 
     public void setCode(String code) {
         this.code = code;
-        List<Map<String, String>> temp = new ArrayList<Map<String, String>>();
-        HashMap<String, String> tmap = new HashMap<String, String>();
-        temp.add(tmap);
-        tmap.put("", code);
-        this.dumpMap("code", temp);
+        if( code != null )
+        {
+	        List<Map<String, String>> temp = new ArrayList<Map<String, String>>();
+	        HashMap<String, String> tmap = new HashMap<String, String>();
+	        temp.add(tmap);
+	        tmap.put("", code);
+	        this.dumpMap("code", temp);
+        }
     }
 
     @JsonGetter("filename")
