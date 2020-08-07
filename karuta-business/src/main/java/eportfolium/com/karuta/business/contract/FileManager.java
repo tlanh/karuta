@@ -16,7 +16,10 @@
 package eportfolium.com.karuta.business.contract;
 
 import eportfolium.com.karuta.document.ResourceDocument;
+import eportfolium.com.karuta.model.bean.Resource;
+
 import org.apache.http.client.HttpClient;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
 import java.util.UUID;
@@ -27,15 +30,17 @@ public interface FileManager {
 
 	String unzip(String zipFile, String destinationFolder) throws IOException;
 
-	boolean updateResource(ResourceDocument resource,
+	String updateResource(ResourceDocument resource,
 						   InputStream content,
 						   String lang,
-						   boolean thumbnail);
+						   boolean thumbnail,
+						   String contextPath);
 
 	boolean fetchResource(ResourceDocument resource,
 						  OutputStream output,
 						  String lang,
-						  boolean thumbnail);
+						  boolean thumbnail,
+						  String contextPath);
 
 	HttpClient createClient();
 }

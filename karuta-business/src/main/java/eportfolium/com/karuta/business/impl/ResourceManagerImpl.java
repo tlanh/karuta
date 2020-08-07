@@ -15,13 +15,25 @@
 
 package eportfolium.com.karuta.business.impl;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.StringReader;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
+
+import eportfolium.com.karuta.business.contract.ConfigurationManager;
 import eportfolium.com.karuta.business.contract.FileManager;
 import eportfolium.com.karuta.consumer.repositories.PortfolioRepository;
 import eportfolium.com.karuta.consumer.repositories.ResourceRepository;
@@ -31,6 +43,14 @@ import eportfolium.com.karuta.util.JavaTimeUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
+import org.w3c.dom.ls.DOMImplementationLS;
+import org.w3c.dom.ls.LSSerializer;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 
 import eportfolium.com.karuta.business.contract.ResourceManager;
 import eportfolium.com.karuta.model.exception.BusinessException;
@@ -48,7 +68,6 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 
 	@Autowired
 	private PortfolioRepository portfolioRepository;
-
 
 	@Override
 	public ResourceDocument getResource(UUID parentNodeId) {
@@ -189,30 +208,82 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 	}
 
 	@Override
-	public boolean updateContent(UUID nodeId,
+	public String updateContent(UUID nodeId,
 								 Long userId,
-								 InputStream content,
+								 InputStream uploadfile,
 								 String lang,
-								 boolean thumbnail) throws BusinessException {
+								 boolean thumbnail,
+								 String contextPath) throws BusinessException {
 		if (!hasRight(userId, nodeId, GroupRights.WRITE))
 			throw new GenericBusinessException("No rights.");
 
 		Resource resource = resourceRepository.findByNodeId(nodeId);
 		ResourceDocument document = new ResourceDocument(resource, resource.getNode());
 
-		return fileManager.updateResource(document, content, lang, thumbnail);
+		return fileManager.updateResource(document, uploadfile, lang, thumbnail, contextPath);
 	}
 
 	@Override
-	public ResourceDocument fetchResource(UUID nodeId, OutputStream output, String lang, boolean thumbnail) {
-		Resource resource = resourceRepository.findByNodeId(nodeId);
-		ResourceDocument document = new ResourceDocument(resource, resource.getNode());
+	public ResourceDocument fetchResource(UUID nodeId, OutputStream output, String lang, boolean thumbnail, String contextPath) {
+		Resource resource = resourceRepository.getResourceOfResourceByNodeUuid(nodeId);
+		ResourceDocument document = new ResourceDocument();
 
-		if (fileManager.fetchResource(document, output, lang, thumbnail)) {
+		//// Since values don't get parsed correctly
+		try
+		{
+			DocumentBuilderFactory documentBuilderFactory =DocumentBuilderFactory.newInstance();
+			DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
+			InputSource is = new InputSource(new StringReader("<node>"+resource.getContent()+"</node>"));
+			Document doc = documentBuilder.parse(is);
+			DOMImplementationLS impl = (DOMImplementationLS)doc.getImplementation().getFeature("LS", "3.0");
+			LSSerializer serial = impl.createLSSerializer();
+			serial.getDomConfig().setParameter("xml-declaration", false);
+			
+			//// ID to search
+			String resolve = findData(doc, "fileid", lang);
+			document.setFileid(lang, resolve);
+
+			/// Or just a single one shared
+			if( "".equals(resolve) )
+			{
+				output.close();
+				return document;
+			}
+			
+			//// Filename
+			String filename = findData(doc, "filename", lang);
+			document.setFilename(lang, filename);
+
+			String type = findData(doc, "type", lang);
+			document.setType(lang, type);
+		}
+		catch( Exception e )
+		{
+			e.printStackTrace();
+		}
+
+		if (fileManager.fetchResource(document, output, lang, thumbnail, contextPath)) {
 			return document;
 		} else {
 			return null;
 		}
+	}
+	
+	private String findData( Document doc, String name, String lang) throws XPathExpressionException
+	{
+		XPath xPath = XPathFactory.newInstance().newXPath();
+
+		String retval = null;
+		String filterType = "//*[local-name()='"+name+"' and @lang='"+lang+"']";
+		NodeList textList = (NodeList) xPath.compile(filterType).evaluate(doc, XPathConstants.NODESET);
+		String type = "";
+		if( textList.getLength() != 0 )
+		{
+			Element fileNode = (Element) textList.item(0);
+			retval = fileNode.getTextContent();
+		}
+
+		return retval;
 	}
 
 	private void updateResourceAttrs(Resource resource, String content, Long userId) {

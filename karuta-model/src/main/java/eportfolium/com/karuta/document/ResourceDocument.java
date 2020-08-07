@@ -129,6 +129,22 @@ public class ResourceDocument {
         this.dumpMap("filename", filename);
     }
 
+    public void setFilename(String lang, String filename) {
+    	Map<String, String> map = null;
+    	if( this.filename == null )
+    	{
+    		this.filename = new ArrayList<Map<String, String>>();
+    		map = new HashMap<String, String>();
+    		this.filename.add(map);
+    	}
+    	else
+    		map = this.fileid.get(0);
+    	map.put("lang", lang);
+    	map.put("value", filename);
+      this.dumpMap("filename", this.filename);
+    }
+
+
     @JsonGetter("fileid")
     @JacksonXmlElementWrapper(useWrapping = false)
     public List<Map<String, String>> getFileid() {
@@ -144,6 +160,21 @@ public class ResourceDocument {
         this.dumpMap("fileid", fileid);
     }
 
+    public void setFileid(String lang, String fileid) {
+    	Map<String, String> map = null;
+    	if( this.fileid == null )
+    	{
+    		this.fileid = new ArrayList<Map<String, String>>();
+    		map = new HashMap<String, String>();
+    		this.fileid.add(map);
+    	}
+    	else
+    		map = this.fileid.get(0);
+    	map.put("lang", lang);
+    	map.put("value", fileid);
+      this.dumpMap("fileid", this.fileid);
+    }
+
     @JsonGetter("type")
     @JacksonXmlElementWrapper(useWrapping = false)
     public List<Map<String, String>> getType() { return type; }
@@ -155,6 +186,21 @@ public class ResourceDocument {
     public void setType(List<Map<String, String>> type) {
         this.type = type;
         this.dumpMap("type", type);
+    }
+
+    public void setType(String lang, String type) {
+    	Map<String, String> map = null;
+    	if( this.type == null )
+    	{
+    		this.type = new ArrayList<Map<String, String>>();
+    		map = new HashMap<String, String>();
+    		this.type.add(map);
+    	}
+    	else
+    		map = this.type.get(0);
+    	map.put("lang", lang);
+    	map.put("value", type);
+      this.dumpMap("type", this.type);
     }
 
     @JsonRawValue

@@ -19,6 +19,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.UUID;
 
+import org.springframework.web.multipart.MultipartFile;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import eportfolium.com.karuta.document.ResourceDocument;
 import eportfolium.com.karuta.model.bean.Node;
@@ -44,11 +46,12 @@ public interface ResourceManager extends BaseManager {
 
 	void updateResource(UUID id, String xsiType, String content, Long userId);
 
-	boolean updateContent(UUID nodeId,
+	String updateContent(UUID nodeId,
 						  Long userId,
-						  InputStream content,
+						  InputStream uploadfile,
 						  String lang,
-						  boolean thumbnail) throws BusinessException;
+						  boolean thumbnail,
+						  String contextPath) throws BusinessException;
 
-	ResourceDocument fetchResource(UUID nodeId, OutputStream output, String lang, boolean thumbnail);
+	ResourceDocument fetchResource(UUID nodeId, OutputStream output, String lang, boolean thumbnail, String contextPath);
 }
