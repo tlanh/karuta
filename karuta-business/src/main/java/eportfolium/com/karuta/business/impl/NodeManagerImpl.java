@@ -1306,7 +1306,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
                 resourceCopy.setModifUserId(userId);
 
                 if (!node.isSharedRes() || !node.getSharedNode() || !node.isSharedNodeRes()) {
-                    resourceRepository.save(resourceCopy);
+                    resourceCopy = resourceRepository.save(resourceCopy);
                     resources.put(node.getResource(), resourceCopy);
                 }
             }
@@ -1316,7 +1316,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
                 resourceCopy.setModifUserId(userId);
 
                 if (!node.isSharedRes() || !node.getSharedNode() || !node.isSharedNodeRes()) {
-                    resourceRepository.save(resourceCopy);
+                	resourceCopy = resourceRepository.save(resourceCopy);
                     resources.put(node.getResource(), resourceCopy);
                 }
             }
@@ -1326,7 +1326,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
                 resourceCopy.setModifUserId(userId);
 
                 if (!node.isSharedRes() || !node.getSharedNode() || !node.isSharedNodeRes()) {
-                    resourceRepository.save(resourceCopy);
+                	resourceCopy = resourceRepository.save(resourceCopy);
                     resources.put(node.getResource(), resourceCopy);
                 }
             }
@@ -1619,6 +1619,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 
             /// Ajout des droits des noeuds
             for (GroupRights gr : t_group_rights.values()) {
+            	if( gr != null )
                 groupRightsRepository.save(gr);
             }
         }
