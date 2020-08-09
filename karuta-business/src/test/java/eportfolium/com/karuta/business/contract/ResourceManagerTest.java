@@ -431,7 +431,7 @@ public class ResourceManagerTest {
                 .hasRight(userId, nodeId, GroupRights.WRITE);
 
         try {
-            manager.updateContent(nodeId, userId, null, "fr", true);
+            manager.updateContent(nodeId, userId, null, "fr", true, "");
             fail("User must have write rights to update resource content.");
         } catch (BusinessException ignored) { }
     }
@@ -458,9 +458,10 @@ public class ResourceManagerTest {
 
         doReturn(false)
                 .when(fileManager)
-                .updateResource(any(ResourceDocument.class), eq(input), eq(lang), eq(thumb));
+                .updateResource(any(ResourceDocument.class), eq(input), eq(lang), eq(thumb), "");
 
-        assertFalse(manager.updateContent(nodeId, userId, input, lang, thumb));
+        String retval = manager.updateContent(nodeId, userId, input, lang, thumb, "");
+        assertNull(retval);
 
         verify(resourceRepository).findByNodeId(nodeId);
         verifyNoMoreInteractions(resourceRepository);
@@ -488,9 +489,10 @@ public class ResourceManagerTest {
 
         doReturn(true)
                 .when(fileManager)
-                .updateResource(any(ResourceDocument.class), eq(input), eq(lang), eq(thumb));
+                .updateResource(any(ResourceDocument.class), eq(input), eq(lang), eq(thumb), "");
 
-        assertTrue(manager.updateContent(nodeId, userId, input, lang, thumb));
+        String retval = manager.updateContent(nodeId, userId, input, lang, thumb, "");
+        assertNotNull(retval);
 
         verify(resourceRepository).findByNodeId(nodeId);
         verifyNoMoreInteractions(resourceRepository);
@@ -513,10 +515,10 @@ public class ResourceManagerTest {
 
         doReturn(false)
                 .when(fileManager)
-                .fetchResource(any(ResourceDocument.class), eq(output), eq(lang), eq(thumb));
+                .fetchResource(any(ResourceDocument.class), eq(output), eq(lang), eq(thumb), "");
 
         ResourceDocument document = manager
-                .fetchResource(nodeId, output, lang, thumb);
+                .fetchResource(nodeId, output, lang, thumb, "");
 
         assertNull(document);
 
@@ -524,7 +526,7 @@ public class ResourceManagerTest {
         verifyNoMoreInteractions(resourceRepository);
 
         verify(fileManager)
-                .fetchResource(any(ResourceDocument.class), eq(output), eq(lang), eq(thumb));
+                .fetchResource(any(ResourceDocument.class), eq(output), eq(lang), eq(thumb), "");
         verifyNoMoreInteractions(fileManager);
     }
 
@@ -545,10 +547,10 @@ public class ResourceManagerTest {
 
         doReturn(true)
                 .when(fileManager)
-                .fetchResource(any(ResourceDocument.class), eq(output), eq(lang), eq(thumb));
+                .fetchResource(any(ResourceDocument.class), eq(output), eq(lang), eq(thumb), "");
 
         ResourceDocument document = manager
-                .fetchResource(nodeId, output, lang, thumb);
+                .fetchResource(nodeId, output, lang, thumb, "");
 
         assertNotNull(document);
 
@@ -556,7 +558,7 @@ public class ResourceManagerTest {
         verifyNoMoreInteractions(resourceRepository);
 
         verify(fileManager)
-                .fetchResource(any(ResourceDocument.class), eq(output), eq(lang), eq(thumb));
+                .fetchResource(any(ResourceDocument.class), eq(output), eq(lang), eq(thumb), "");
         verifyNoMoreInteractions(fileManager);
     }
 }

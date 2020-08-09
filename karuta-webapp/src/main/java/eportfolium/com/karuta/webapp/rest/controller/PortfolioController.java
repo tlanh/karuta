@@ -77,6 +77,9 @@ public class PortfolioController extends AbstractController {
     @InjectLogger
     static private Logger logger;
 
+    @Autowired
+    private HttpServletRequest httpServletRequest;
+    
     /**
      * Get a portfolio from uuid.
      *
@@ -94,7 +97,8 @@ public class PortfolioController extends AbstractController {
                                            @RequestParam(required = false) Integer level,
                                            @AuthenticationPrincipal UserInfo userInfo) throws BusinessException, IOException {
 
-        String xmlPortfolio = portfolioManager.getPortfolio(id, userInfo.getId(), level);
+    	String contextPath = httpServletRequest.getContextPath();
+    	String xmlPortfolio = portfolioManager.getPortfolio(id, userInfo.getId(), level);
 
         if( !export && !files )
           return new HttpEntity<>(xmlPortfolio);
@@ -117,7 +121,7 @@ public class PortfolioController extends AbstractController {
 
         } else if (resources && files) {
 
-            File tempZip = portfolioManager.getZippedPortfolio(portfolio, lang);
+            File tempZip = portfolioManager.getZippedPortfolio(portfolio, lang, contextPath);
             byte[] zipContent = Files.readAllBytes(tempZip.toPath());
 
             // Temp file cleanup
@@ -174,7 +178,7 @@ public class PortfolioController extends AbstractController {
             throws BusinessException, JsonProcessingException {
 
     	String portfolioCode = null;
-    	boolean specialProject = false;
+    	Boolean specialProject = null;
     	if("false".equals(project) || "0".equals(project)) specialProject = false;
     	else if("true".equals(project) || "1".equals(project)) specialProject = true;
 			else if(project != null && project.length()>0) portfolioCode = project;
@@ -370,6 +374,7 @@ public class PortfolioController extends AbstractController {
                          @RequestParam String lang,
                          @AuthenticationPrincipal UserInfo userInfo) throws Exception {
 
+    	String contextPath = httpServletRequest.getContextPath();
         List<UUID> uuids = Arrays.stream(portfolios.split(","))
                 .map(UUID::fromString)
                 .collect(Collectors.toList());
@@ -401,7 +406,7 @@ public class PortfolioController extends AbstractController {
                 }
             }
 
-            files.add(portfolioManager.getZippedPortfolio(portfolio, lang));
+            files.add(portfolioManager.getZippedPortfolio(portfolio, lang, contextPath));
         }
 
         // Make a big zip of it
@@ -471,10 +476,11 @@ public class PortfolioController extends AbstractController {
             throws BusinessException, IOException {
 
         javax.servlet.ServletContext servletContext = request.getSession().getServletContext();
+        String contextPath = servletContext.getContextPath();
         String path = servletContext.getRealPath("/");
 
         return portfolioManager
-                .importPortfolio(path, uploadfile.getInputStream(), userInfo.getId(), instance, project);
+                .importPortfolio(path, uploadfile.getInputStream(), userInfo.getId(), instance, project, contextPath);
     }
 
     /**

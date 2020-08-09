@@ -22,6 +22,7 @@ import java.util.zip.ZipInputStream;
 
 import eportfolium.com.karuta.business.contract.ConfigurationManager;
 import eportfolium.com.karuta.document.ResourceDocument;
+
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPut;
@@ -34,6 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import eportfolium.com.karuta.business.contract.FileManager;
 import org.springframework.util.FileCopyUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @Transactional
@@ -122,24 +124,43 @@ public class FileManagerImpl implements FileManager {
 	}
 
 	@Override
-	public boolean updateResource(ResourceDocument resource,
-								  InputStream content,
+	public String updateResource(ResourceDocument resource,
+			InputStream content,
 								  String lang,
-								  boolean thumbnail) {
+								  boolean thumbnail,
+								  String contextPath) {
 		String url = urlFor(resource, thumbnail, lang);
 
 		HttpPut request = new HttpPut(url);
-		request.setEntity(new InputStreamEntity(content));
-
-		try (CloseableHttpClient client = createClient();
-			 CloseableHttpResponse response = client.execute(request)) {
-			response.getEntity();
-
-			return true;
-		} catch (IOException e) {
+		request.addHeader("app", contextPath);
+		try
+		{
+			request.setEntity(new InputStreamEntity(content));
+			CloseableHttpClient client = createClient();
+			CloseableHttpResponse response = client.execute(request);
+				
+			int statusCode = response.getStatusLine().getStatusCode();
+			String retval = null;
+			StringBuilder sb = new StringBuilder();
+			if( statusCode == 200 )
+			{
+				sb = new StringBuilder();
+				InputStream objReturn = response.getEntity().getContent();
+				BufferedReader br = new BufferedReader(new InputStreamReader(objReturn, "UTF8"));
+				String line;
+				
+				while((line=br.readLine())!= null){
+					sb.append(line.trim());
+				}
+				retval = sb.toString();
+			}
+			
+			return retval;
+		}
+		catch( IOException e )
+		{
 			e.printStackTrace();
-
-			return false;
+			return null;
 		}
 	}
 
@@ -147,10 +168,12 @@ public class FileManagerImpl implements FileManager {
 	public boolean fetchResource(ResourceDocument resource,
 							  OutputStream output,
 							  String lang,
-							  boolean thumbnail) {
+							  boolean thumbnail,
+							  String contextPath) {
 		String url = urlFor(resource, thumbnail, lang);
-
+		
 		HttpGet request = new HttpGet(url);
+		request.addHeader("app", contextPath);
 
 		try (CloseableHttpClient client = createClient();
 			 CloseableHttpResponse response = client.execute(request)) {

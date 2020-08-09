@@ -49,6 +49,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.model.exception.GenericBusinessException;
@@ -201,7 +202,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	}
 
 	@Override
-	public File getZippedPortfolio(PortfolioDocument portfolio, String lang) throws IOException {
+	public File getZippedPortfolio(PortfolioDocument portfolio, String lang, String servletContext) throws IOException {
 		File zipFile = File.createTempFile(portfolio.getId().toString(), ".zip");
 
 		XmlMapper xmlMapper = new XmlMapper();
@@ -246,7 +247,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 				ZipEntry fileEntry = new ZipEntry(fullname);
 
 				zip.putNextEntry(fileEntry);
-				fileManager.fetchResource(resource, zip, lang, false);
+				fileManager.fetchResource(resource, zip, lang, false, servletContext);
 				zip.closeEntry();
 			}
 
@@ -533,7 +534,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	}
 
 	@Override
-	public String getPortfolios(long userId, Boolean active, long substid, boolean specialProject, String portfolioCode) {
+	public String getPortfolios(long userId, Boolean active, long substid, Boolean specialProject, String portfolioCode) {
 		List<Portfolio> portfolios = getPortfolios(userId, substid, active, specialProject, portfolioCode);
 
 		String psformat = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><portfolios count=\"%d\">%s</portfolios>";
@@ -840,7 +841,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 
 	@Override
 	public String importPortfolio(String path, InputStream inputStream, Long userId, boolean parseRights,
-										String projectName) throws BusinessException, IOException {
+										String projectName, String servletContext) throws BusinessException, IOException {
         if (!credentialRepository.isAdmin(userId) && !credentialRepository.isCreator(userId))
             throw new GenericBusinessException("403 FORBIDDEN : No admin right");
 
@@ -996,11 +997,12 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
                 // Il sera mis e jour avec l'UUID asmContext final dans writeNode
                 try {
                     UUID resolved = resolve.get(UUID.fromString(uuid)); /// New uuid
-                    FileInputStream input = new FileInputStream(new File(fullPath));
+                    File file = new File(fullPath);
+                    FileInputStream input = new FileInputStream(file);
 
                     if (resolved != null) {
                         /// Have to send it in FORM, compatibility with regular file posting
-						resourceManager.updateContent(resolved, userId, input, lang, false);
+						resourceManager.updateContent(resolved, userId, input, lang, false, servletContext);
                     }
                 } catch (Exception ex) {
                     // Le nom du fichier ne commence pas par un UUID,
@@ -1677,7 +1679,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	public List<Portfolio> getPortfolios(Long userId,
 								  Long substId,
 								  Boolean portfolioActive,
-								  boolean specialProject,
+								  Boolean specialProject,
 								  String portfolioCode) {
 
 		// INNER JOIN p.rootNode
@@ -1702,18 +1704,22 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		Sort sort = Sort.by("rootNode.resResource");
 		Specification<Portfolio> spec = active;
 
-		if ( specialProject )
+		if ( specialProject != null )
 		{
 			// AND p.rootNode.semantictag LIKE '%karuta-project%'
 			Specification<Portfolio> portfolioFilter = Specification.where((root, query, cb) -> {
 				Join<Portfolio, Node> rootNode = root.join("rootNode");
 
-				return cb.like(rootNode.get("semantictag"), "%karuta-project%");
+				if( specialProject )
+					return cb.like(rootNode.get("semantictag"), "%karuta-project%");
+				else
+					return cb.notLike(rootNode.get("semantictag"), "%karuta-project%");
 			});
 
 			spec = spec.and(portfolioFilter);
 		}
-		else if ( portfolioCode != null )
+		
+		if ( portfolioCode != null )
 		{
 			Specification<Portfolio> portfolioFilter = Specification.where((root, query, cb) -> {
 				Join<Portfolio, Node> rootNode = root.join("rootNode");

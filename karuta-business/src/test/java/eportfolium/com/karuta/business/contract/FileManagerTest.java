@@ -46,7 +46,8 @@ public class FileManagerTest {
 
         ResourceDocument document = new ResourceDocument();
 
-        assertFalse(manager.updateResource(document, input, lang, thumb));
+        String retval = manager.updateResource(document, input, lang, thumb, "");
+        assertNull(retval);
     }
 
     @Test
@@ -74,7 +75,8 @@ public class FileManagerTest {
         ResourceDocument document = mock(ResourceDocument.class);
         when(document.getFileid(lang)).thenReturn("foo");
 
-        assertTrue(manager.updateResource(document, input, lang, thumb));
+        String retval = manager.updateResource(document, input, lang, thumb, "");
+        assertNotNull(retval);
 
         assertEquals("/foo/thumb", captor.getValue().getURI().getPath());
 
@@ -107,7 +109,8 @@ public class FileManagerTest {
         ResourceDocument document = mock(ResourceDocument.class);
         when(document.getFileid(lang)).thenReturn("foo");
 
-        assertTrue(manager.updateResource(document, input, lang, thumb));
+        String retval = manager.updateResource(document, input, lang, thumb, "");
+        assertNotNull(retval);
 
         assertEquals("/foo", captor.getValue().getURI().getPath());
 
@@ -133,7 +136,7 @@ public class FileManagerTest {
 
         ResourceDocument document = new ResourceDocument();
 
-        assertFalse(manager.fetchResource(document, output, lang, thumb));
+        assertFalse(manager.fetchResource(document, output, lang, thumb, ""));
 
         assertEquals(0, output.size());
     }
@@ -171,7 +174,7 @@ public class FileManagerTest {
         ResourceDocument document = mock(ResourceDocument.class);
         when(document.getFileid(lang)).thenReturn("bar");
 
-        assertTrue(manager.fetchResource(document, output, lang, thumb));
+        assertTrue(manager.fetchResource(document, output, lang, thumb, ""));
 
         assertEquals("/bar/thumb", captor.getValue().getURI().getPath());
         assertEquals("hello", output.toString("UTF-8"));

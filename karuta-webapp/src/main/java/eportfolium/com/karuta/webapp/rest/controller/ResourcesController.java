@@ -17,6 +17,7 @@ package eportfolium.com.karuta.webapp.rest.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import eportfolium.com.karuta.business.UserInfo;
+import eportfolium.com.karuta.business.contract.ConfigurationManager;
 import eportfolium.com.karuta.business.contract.ResourceManager;
 import eportfolium.com.karuta.document.ResourceDocument;
 import eportfolium.com.karuta.model.bean.GroupRights;
@@ -25,11 +26,14 @@ import eportfolium.com.karuta.webapp.annotation.InjectLogger;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.ResponseEntity.BodyBuilder;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -42,8 +46,14 @@ public class ResourcesController extends AbstractController {
     @Autowired
     private ResourceManager resourceManager;
 
+    @Autowired
+    private HttpServletRequest httpServletRequest;
+    
     @InjectLogger
     private static Logger logger;
+
+  	@Autowired
+  	private ConfigurationManager configurationManager;
 
     /**
      * Fetch resource from node uuid.
@@ -73,7 +83,8 @@ public class ResourcesController extends AbstractController {
             return;
         }
 
-        ResourceDocument document = resourceManager.fetchResource(id, output, lang, "T".equals(size));
+      	String contextPath = httpServletRequest.getContextPath();
+        ResourceDocument document = resourceManager.fetchResource(id, output, lang, "T".equals(size), contextPath);
 
         if (document == null) {
             response.setStatus(404);
@@ -81,22 +92,30 @@ public class ResourcesController extends AbstractController {
             String name = document.getFilename(lang);
             String type = document.getType(lang);
 
-            response.setHeader("Content-Type", type);
+      			response.setContentType(type);
             response.setHeader("Content-Disposition", "attachment; filename=\"" + name + "\"");
         }
     }
 
-    @PutMapping("/resource/file/{id}")
-    public String rewriteFile(@PathVariable UUID id,
+    @PostMapping("/resource/file/{id}")
+    public ResponseEntity<String> rewriteFile(@PathVariable UUID id,
                               @RequestParam(defaultValue = "fr") String lang,
                               @RequestParam(required = false) String size,
-                              @RequestParam MultipartFile uploadfile,
+                              @RequestParam("uploadfile") MultipartFile uploadfile,
                               @AuthenticationPrincipal UserInfo userInfo) throws IOException, BusinessException {
-
-        if (resourceManager.updateContent(id, userInfo.getId(), uploadfile.getInputStream(), lang, "T".equals(size))) {
-            return "Updated";
+    	
+    	String contextPath = httpServletRequest.getContextPath();
+    	String retval = resourceManager.updateContent(id, userInfo.getId(), uploadfile.getInputStream(), lang, "T".equals(size), contextPath);
+        if ( retval != null ) {
+      		String url = configurationManager.get("fileserver") + "/";
+  				
+      		/// FIXME: Eh
+      		String format = "{\"files\":[{\"name\":\"%s\",\"size\":%s,\"type\":\"%s\",\"url\":\"%s\",\"fileid\":\"%s\"}]}";
+      		String json = String.format(format, uploadfile.getOriginalFilename(), uploadfile.getSize(), uploadfile.getContentType(), url+retval, retval);
+      		
+            return ResponseEntity.ok(json);
         } else {
-            return "Error while updating resource.";
+            return ResponseEntity.status(HttpStatus.NOT_MODIFIED).body(retval);
         }
     }
 
