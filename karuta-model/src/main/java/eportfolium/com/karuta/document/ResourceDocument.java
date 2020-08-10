@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.UUID;
 
 @JsonRootName("asmResource")
@@ -156,8 +157,11 @@ public class ResourceDocument {
     }
 
     public void setFileid(List<Map<String, String>> fileid) {
-        this.fileid = fileid;
-        this.dumpMap("fileid", fileid);
+    	if( this.fileid == null )
+    		this.fileid = new ArrayList<Map<String, String>>();
+    	
+    	this.fileid.add(fileid.get(0));
+      this.dumpMap("fileid", fileid);
     }
 
     public void setFileid(String lang, String fileid) {
@@ -251,11 +255,20 @@ public class ResourceDocument {
         if (values == null)
             return "";
 
+        /// From the constructor, attribute value is in ""
+        Optional<String> search = values.stream()
+            .filter(f -> f.get("lang").equals(lang))
+            .findFirst()
+            .map(m -> m.get(""));
+        
+        if( search.isPresent() )
+        	return search.get();
+        
+        /// From some other function, attribute value is in "value"
         return values.stream()
-                .filter(f -> f.get("lang").equals(lang))
-                .findFirst()
-                .map(m -> m.get("value"))
-                .orElse("");
+            .filter(f -> f.get("lang").equals(lang))
+            .findFirst()
+            .map(m -> m.get("value")).orElse("");
     }
 
     private void dumpMap(String name, List<Map<String, String>> values) {

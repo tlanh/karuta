@@ -132,6 +132,18 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 				.orElseGet(() -> new Resource(resource.getId()));
 
 		res.setXsiType(xsiType);
+		switch( xsiType )
+		{
+			case "nodeRes":
+				res.setNode(parentNodeId);
+				break;
+			case "context":
+				res.setContextNode(parentNodeId);
+				break;
+			default:
+				res.setResNode(parentNodeId);
+				break;
+		}
 		updateResourceAttrs(res, resource.getContent(), userId);
 
 		res = resourceRepository.save(res);
@@ -207,6 +219,7 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 		resourceRepository.save(resource);
 	}
 
+	//// Only for changing file
 	@Override
 	public String updateContent(UUID nodeId,
 								 Long userId,
@@ -217,8 +230,8 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 		if (!hasRight(userId, nodeId, GroupRights.WRITE))
 			throw new GenericBusinessException("No rights.");
 
-		Resource resource = resourceRepository.findByNodeId(nodeId);
-		ResourceDocument document = new ResourceDocument(resource, resource.getNode());
+		Resource resource = resourceRepository.getResourceOfResourceByNodeUuid(nodeId);
+		ResourceDocument document = new ResourceDocument(resource, resource.getResNode());
 
 		return fileManager.updateResource(document, uploadfile, lang, thumbnail, contextPath);
 	}

@@ -578,9 +578,10 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 			throw new GenericBusinessException("No root node found");
 
 		UUID rootNodeUuid = portfolio.getId() != null ? portfolio.getId() : UUID.randomUUID();
+		Map<UUID, UUID> resolve = new HashMap<UUID, UUID>();
 
 		Portfolio portfolioRecord = portfolioRepository.findById(portfolioId)
-										.orElse(add(rootNodeUuid, userId, null));
+										.orElse(add(rootNodeUuid, userId, null, resolve));
 
 		if (userId == null || userId == 0L) {
 			userId = portfolioRecord.getCredential().getId();
@@ -822,8 +823,10 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		}
 
 		UUID uuid = UUID.randomUUID();
+		
+		Map<UUID, UUID> resolve = new HashMap<UUID, UUID>();
 
-		Portfolio portfolio = add(uuid, userId, portfolioDocument);
+		Portfolio portfolio = add(uuid, userId, portfolioDocument, resolve);
 
 		/// Si nous instancions, nous n'avons pas besoin du rôle de concepteur
 		securityManager.addRole(portfolio.getId(), "all", userId);
@@ -957,7 +960,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 
             UUID uuid = UUID.randomUUID();
 
-            portfolio = add(uuid, userId, document);
+            portfolio = add(uuid, userId, document, resolve);
 
             /// Create base group
             securityManager.addRole(document.getId(), "all", userId);
@@ -1631,7 +1634,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		return newPortfolioUuid;
 	}
 
-	private Portfolio add(UUID rootNodeId, Long userId, PortfolioDocument portfolio) throws JsonProcessingException, BusinessException {
+	private Portfolio add(UUID rootNodeId, Long userId, PortfolioDocument portfolio, Map<UUID, UUID> resolve) throws JsonProcessingException, BusinessException {
 
 		Optional<Node> rootNode = nodeRepository.findById(rootNodeId);
 		Optional<Credential> credential = credentialRepository.findById(userId);
@@ -1644,8 +1647,6 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		
 		NodeDocument asmRoot = portfolio.getRoot();
 
-		Map<UUID, UUID> resolve = new HashMap<>();
-		
 		Portfolio port = new Portfolio();
 		port.setCredential(cr);
 		port.setModifUserId(cr.getId());

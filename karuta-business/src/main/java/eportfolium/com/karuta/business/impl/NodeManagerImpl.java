@@ -141,9 +141,6 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 
 		final UUID nodeId = rewriteId ? node.getId() : (forcedId != null ? forcedId : UUID.randomUUID());
 
-		if (resolve != null) // Mapping old id -> new id
-			resolve.put(node.getId(), nodeId);
-
 		// If we are dealing with the root of the tree, we need to ensure
 		// that the node's type is "asmRoot".
 		if (nodeId != null && node.getParent() != null) {
@@ -192,6 +189,9 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 		}
 
 		Node nodeEntity = add(node, nodeId, parentNode, semanticTag, code, ordrer, userId, portfolioId);
+
+		if (resolve != null) // Mapping old id -> new id
+			resolve.put(node.getId(), nodeEntity.getId());
 
 		//// Insert resource associated with this node
 		for (ResourceDocument resourceDocument : node.getResources()) {
