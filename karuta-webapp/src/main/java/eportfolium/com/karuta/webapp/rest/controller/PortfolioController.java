@@ -158,16 +158,25 @@ public class PortfolioController extends AbstractController {
                                             @RequestParam(required = false) boolean count,
                                             @RequestParam(required = false) Integer userid,
                                             @RequestParam(required = false) String project,
+                                            @RequestParam(required = false) String code,
                                             @AuthenticationPrincipal UserInfo userInfo)
             throws BusinessException, JsonProcessingException {
 
         String portfolioCode = search;
-        boolean specialProject = "true".equals(project) || "1".equals(project);
+        Boolean specialProject = null;
+        
+        if( "true".equals(project) || "1".equals(project) )
+        	specialProject = true;
+        else if( "false".equals(project) || "0".equals(project) )
+        	specialProject = false;
+        else if (project != null && project.length() > 0)
+          portfolioCode = project;
 
-        if (project != null && project.length() > 0)
-            portfolioCode = project;
-
-        if (userid != null && securityManager.isAdmin(userInfo.getId())) {
+        if( code != null )
+        {
+        	return new HttpEntity<>(portfolioManager.getPortfolioByCode(code, userInfo.getId(), true));
+        }
+        else if (userid != null && securityManager.isAdmin(userInfo.getId())) {
             return new HttpEntity<>(portfolioManager.getPortfolios(userid,
                         active, count, specialProject, portfolioCode));
 
