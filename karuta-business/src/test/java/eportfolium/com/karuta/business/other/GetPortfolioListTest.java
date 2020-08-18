@@ -135,7 +135,7 @@ public class GetPortfolioListTest {
     public void getPortfolioList_AsAdmin() {
         isAdmin();
 
-        List<Portfolio> portfolios = manager.getPortfolioList(credential.getId(), true, false, null);
+        List<Portfolio> portfolios = manager.getPortfolioList(credential.getId(), true, null, null);
 
         assertEquals(3, portfolios.size());
 
@@ -154,7 +154,9 @@ public class GetPortfolioListTest {
 
     @Test
     public void getPortfolioList_AsRegularUser() {
-        List<Portfolio> portfolios = manager.getPortfolioList(credential.getId(), true, false, null);
+        List<Portfolio> portfolios = manager.getPortfolioList(credential.getId(), true, null, null);
+
+        System.out.println(portfolioRepository.count());
 
         assertEquals(2, portfolios.size());
 
@@ -172,7 +174,7 @@ public class GetPortfolioListTest {
     public void getPortfolioList_Inactive_AsAdmin() {
         isAdmin();
 
-        List<Portfolio> portfolios = manager.getPortfolioList(credential.getId(), false, false, null);
+        List<Portfolio> portfolios = manager.getPortfolioList(credential.getId(), false, null, null);
 
         assertEquals(1, portfolios.size());
         assertEquals(portfolio4.getId(), portfolios.get(0).getId());
@@ -180,7 +182,7 @@ public class GetPortfolioListTest {
 
     @Test
     public void getPortfolioList_Inactive_AsRegularUser() {
-        List<Portfolio> portfolios = manager.getPortfolioList(credential.getId(), false, false, null);
+        List<Portfolio> portfolios = manager.getPortfolioList(credential.getId(), false, null, null);
 
         assertEquals(1, portfolios.size());
         assertEquals(portfolio4.getId(), portfolios.get(0).getId());
@@ -208,7 +210,7 @@ public class GetPortfolioListTest {
     public void getPortfolioList_WithCode_AsAdmin() {
         isAdmin();
 
-        List<Portfolio> portfolios = manager.getPortfolioList(credential.getId(), true, false, "bar");
+        List<Portfolio> portfolios = manager.getPortfolioList(credential.getId(), true, null, "bar");
 
         assertEquals(1, portfolios.size());
         assertEquals(portfolio1.getId(), portfolios.get(0).getId());
@@ -216,7 +218,7 @@ public class GetPortfolioListTest {
 
     @Test
     public void getPortfolioList_WithCode_AsRegularUser() {
-        List<Portfolio> portfolios = manager.getPortfolioList(credential.getId(), true, false, "bar");
+        List<Portfolio> portfolios = manager.getPortfolioList(credential.getId(), true, null, "bar");
 
         assertEquals(1, portfolios.size());
         assertEquals(portfolio1.getId(), portfolios.get(0).getId());

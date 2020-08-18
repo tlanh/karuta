@@ -35,7 +35,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import eportfolium.com.karuta.business.contract.FileManager;
 import org.springframework.util.FileCopyUtils;
-import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @Transactional
@@ -133,6 +132,7 @@ public class FileManagerImpl implements FileManager {
 
 		HttpPut request = new HttpPut(url);
 		request.addHeader("app", contextPath);
+
 		try
 		{
 			request.setEntity(new InputStreamEntity(content));
@@ -142,16 +142,16 @@ public class FileManagerImpl implements FileManager {
 			int statusCode = response.getStatusLine().getStatusCode();
 			String retval = null;
 			StringBuilder sb = new StringBuilder();
-			if( statusCode == 200 )
-			{
-				sb = new StringBuilder();
+
+			if (statusCode == 200) {
 				InputStream objReturn = response.getEntity().getContent();
 				BufferedReader br = new BufferedReader(new InputStreamReader(objReturn, "UTF8"));
 				String line;
 				
-				while((line=br.readLine())!= null){
+				while ((line = br.readLine()) != null) {
 					sb.append(line.trim());
 				}
+
 				retval = sb.toString();
 			}
 			

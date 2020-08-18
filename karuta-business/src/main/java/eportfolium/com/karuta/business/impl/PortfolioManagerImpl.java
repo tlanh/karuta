@@ -52,7 +52,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 import eportfolium.com.karuta.model.exception.BusinessException;
 import eportfolium.com.karuta.model.exception.GenericBusinessException;
@@ -1589,7 +1588,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	}
 
 	@Override
-	public List<Portfolio> getPortfolioList(Long userId, boolean active, boolean specialProject, String portfolioCode) {
+	public List<Portfolio> getPortfolioList(Long userId, boolean active, Boolean specialProject, String portfolioCode) {
 		Specification<Portfolio> spec = buildSpec(userId, active, specialProject, portfolioCode);
 		Sort sort = Sort.by(Sort.Order.asc("modifDate"));
 
@@ -1617,15 +1616,12 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 			return cb.equal(root.get("active"), active ? 1 : 0);
 		});
 
-		Sort sort = Sort.by("rootNode.resResource");
-
-		if ( specialProject != null )
-		{
+		if (specialProject != null) {
 			// AND p.rootNode.semantictag LIKE '%karuta-project%'
 			Specification<Portfolio> tagFilter = Specification.where((root, query, cb) -> {
 				Join<Portfolio, Node> rootNode = root.join("rootNode");
 
-				if( specialProject )
+				if (specialProject)
 					return cb.like(rootNode.get("semantictag"), "%karuta-project%");
 				else
 					return cb.notLike(rootNode.get("semantictag"), "%karuta-project%");
@@ -1634,8 +1630,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 			spec = spec.and(tagFilter);
 		}
 		
-		if ( portfolioCode != null )
-		{
+		if (portfolioCode != null) {
 			// AND p.rootNode.code LIKE '%:code%'
 			Specification<Portfolio> codeFilter = Specification.where((root, query, cb) -> {
 				Join<Portfolio, Node> rootNode = root.join("rootNode");
@@ -1654,9 +1649,6 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 			Specification<Portfolio> modifUser = Specification.where((root, query, cb) -> {
 				return cb.equal(root.get("modifUserId"), userId);
 			});
-
-			List<Portfolio> owned = portfolioRepository.findAll(spec.and(modifUser), sort);
-			List<Portfolio> shared = portfolioRepository.getPortfolioSharedWithRights(userId);
 
 			// p.credential.groups.credential = :userId
 			Specification<Portfolio> groups = Specification.where((root, query, cb) -> {

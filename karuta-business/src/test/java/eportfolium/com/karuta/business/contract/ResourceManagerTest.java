@@ -123,9 +123,16 @@ public class ResourceManagerTest {
 
         UUID nodeId = UUID.randomUUID();
 
+        Node node = new Node();
+        node.setId(nodeId);
+
         doReturn(false)
                 .when(manager)
                 .hasRight(userId, nodeId, GroupRights.WRITE);
+
+        doReturn(Optional.of(node))
+                .when(nodeRepository)
+                .findById(nodeId);
 
         ResourceDocument resourceDocument = new ResourceDocument();
 
@@ -144,6 +151,7 @@ public class ResourceManagerTest {
 
         Resource resource = new Resource();
         Node node = new Node();
+        node.setId(nodeId);
 
         doReturn(true)
                 .when(manager)
@@ -152,6 +160,10 @@ public class ResourceManagerTest {
         doReturn(Optional.of(resource))
                 .when(resourceRepository)
                 .findById(resourceId);
+
+        doReturn(resource)
+                .when(resourceRepository)
+                .save(resource);
 
         doReturn(Optional.of(node))
                 .when(nodeRepository)
@@ -171,7 +183,7 @@ public class ResourceManagerTest {
         assertEquals(resource, node.getResource());
 
         verify(resourceRepository).findById(resourceId);
-        verify(resourceRepository).save(resource);
+        verify(resourceRepository, times(2)).save(resource);
         verifyNoMoreInteractions(resourceRepository);
 
         verify(nodeRepository).findById(nodeId);
@@ -208,10 +220,10 @@ public class ResourceManagerTest {
         manager.addResource(nodeId, resourceDocument, userId);
 
         assertEquals(resourceDocument.getXsiType(), resource.getXsiType());
-        assertEquals(resource, node.getResResource());
+        assertEquals(node, resource.getResNode());
 
         verify(resourceRepository).findById(resourceId);
-        verify(resourceRepository).save(resource);
+        verify(resourceRepository, times(2)).save(resource);
         verifyNoMoreInteractions(resourceRepository);
 
         verify(nodeRepository).findById(nodeId);
@@ -326,17 +338,15 @@ public class ResourceManagerTest {
         String xsiType = "nodeRes";
 
         UUID nodeId = UUID.randomUUID();
-        Node node = new Node();
 
         Resource resource = new Resource();
+
+        Node node = new Node();
+        node.setResource(resource);
 
         ResourceDocument resourceDocument = mock(ResourceDocument.class);
         when(resourceDocument.getCode()).thenReturn(code);
         when(resourceDocument.getContent()).thenReturn("foo");
-
-        doReturn(resource)
-                .when(resourceRepository)
-                .getResourceOfResourceByNodeUuid(nodeId);
 
         doReturn(Optional.of(node))
                 .when(nodeRepository)
@@ -349,7 +359,6 @@ public class ResourceManagerTest {
 
         assertEquals(code, node.getCode());
 
-        verify(resourceRepository).getResourceOfResourceByNodeUuid(nodeId);
         verify(resourceRepository).save(resource);
         verifyNoMoreInteractions(resourceRepository);
     }
@@ -365,16 +374,19 @@ public class ResourceManagerTest {
         ResourceDocument resourceDocument = mock(ResourceDocument.class);
         when(resourceDocument.getContent()).thenReturn("foo");
 
-        doReturn(resource)
-                .when(resourceRepository)
-                .getContextResourceByNodeUuid(nodeId);
+        Node node = new Node();
+        node.setContextResource(resource);
+
+        doReturn(Optional.of(node))
+                .when(nodeRepository)
+                .findById(nodeId);
 
         manager.changeResourceByXsiType(nodeId, xsiType, resourceDocument, userId);
 
         assertEquals(userId, resource.getModifUserId());
         assertEquals(resourceDocument.getContent(), resource.getContent());
 
-        verify(resourceRepository).getContextResourceByNodeUuid(nodeId);
+        verify(nodeRepository).findById(nodeId);
         verify(resourceRepository).save(resource);
         verifyNoMoreInteractions(resourceRepository);
     }
@@ -390,16 +402,19 @@ public class ResourceManagerTest {
         ResourceDocument resourceDocument = mock(ResourceDocument.class);
         when(resourceDocument.getContent()).thenReturn("foo");
 
-        doReturn(resource)
-                .when(resourceRepository)
-                .getResourceByParentNodeUuid(nodeId);
+        Node node = new Node();
+        node.setResResource(resource);
+
+        doReturn(Optional.of(node))
+                .when(nodeRepository)
+                .findById(nodeId);
 
         manager.changeResourceByXsiType(nodeId, xsiType, resourceDocument, userId);
 
         assertEquals(userId, resource.getModifUserId());
         assertEquals(resourceDocument.getContent(), resource.getContent());
 
-        verify(resourceRepository).getResourceByParentNodeUuid(nodeId);
+        verify(nodeRepository).findById(nodeId);
         verify(resourceRepository).save(resource);
         verifyNoMoreInteractions(resourceRepository);
     }
@@ -437,37 +452,6 @@ public class ResourceManagerTest {
     }
 
     @Test
-    public void updateContent_WithProperRights_WithErrors() throws BusinessException {
-        Long userId = 42L;
-        InputStream input = new ByteArrayInputStream("".getBytes());
-        String lang = "fr";
-        boolean thumb = true;
-
-        UUID nodeId = UUID.randomUUID();
-
-        doReturn(true)
-                .when(manager)
-                .hasRight(userId, nodeId, GroupRights.WRITE);
-
-        Resource resource = new Resource();
-        resource.setNode(new Node());
-
-        doReturn(resource)
-                .when(resourceRepository)
-                .findByNodeId(nodeId);
-
-        doReturn(false)
-                .when(fileManager)
-                .updateResource(any(ResourceDocument.class), eq(input), eq(lang), eq(thumb), "");
-
-        String retval = manager.updateContent(nodeId, userId, input, lang, thumb, "");
-        assertNull(retval);
-
-        verify(resourceRepository).findByNodeId(nodeId);
-        verifyNoMoreInteractions(resourceRepository);
-    }
-
-    @Test
     public void updateContent_WithProperRights_WithoutErrors() throws BusinessException {
         Long userId = 42L;
         InputStream input = new ByteArrayInputStream("".getBytes());
@@ -481,20 +465,20 @@ public class ResourceManagerTest {
                 .hasRight(userId, nodeId, GroupRights.WRITE);
 
         Resource resource = new Resource();
-        resource.setNode(new Node());
+        resource.setResNode(new Node());
 
         doReturn(resource)
                 .when(resourceRepository)
-                .findByNodeId(nodeId);
+                .getResourceOfResourceByNodeUuid(nodeId);
 
-        doReturn(true)
+        doReturn("foo")
                 .when(fileManager)
-                .updateResource(any(ResourceDocument.class), eq(input), eq(lang), eq(thumb), "");
+                .updateResource(any(ResourceDocument.class), eq(input), eq(lang), eq(thumb), eq(""));
 
         String retval = manager.updateContent(nodeId, userId, input, lang, thumb, "");
-        assertNotNull(retval);
+        assertEquals("foo", retval);
 
-        verify(resourceRepository).findByNodeId(nodeId);
+        verify(resourceRepository).getResourceOfResourceByNodeUuid(nodeId);
         verifyNoMoreInteractions(resourceRepository);
     }
 
@@ -511,22 +495,22 @@ public class ResourceManagerTest {
 
         doReturn(resource)
                 .when(resourceRepository)
-                .findByNodeId(nodeId);
+                .getResourceOfResourceByNodeUuid(nodeId);
 
         doReturn(false)
                 .when(fileManager)
-                .fetchResource(any(ResourceDocument.class), eq(output), eq(lang), eq(thumb), "");
+                .fetchResource(any(ResourceDocument.class), eq(output), eq(lang), eq(thumb), eq(""));
 
         ResourceDocument document = manager
                 .fetchResource(nodeId, output, lang, thumb, "");
 
         assertNull(document);
 
-        verify(resourceRepository).findByNodeId(nodeId);
+        verify(resourceRepository).getResourceOfResourceByNodeUuid(nodeId);
         verifyNoMoreInteractions(resourceRepository);
 
         verify(fileManager)
-                .fetchResource(any(ResourceDocument.class), eq(output), eq(lang), eq(thumb), "");
+                .fetchResource(any(ResourceDocument.class), eq(output), eq(lang), eq(thumb), eq(""));
         verifyNoMoreInteractions(fileManager);
     }
 
@@ -543,22 +527,22 @@ public class ResourceManagerTest {
 
         doReturn(resource)
                 .when(resourceRepository)
-                .findByNodeId(nodeId);
+                .getResourceOfResourceByNodeUuid(nodeId);
 
         doReturn(true)
                 .when(fileManager)
-                .fetchResource(any(ResourceDocument.class), eq(output), eq(lang), eq(thumb), "");
+                .fetchResource(any(ResourceDocument.class), eq(output), eq(lang), eq(thumb), eq(""));
 
         ResourceDocument document = manager
                 .fetchResource(nodeId, output, lang, thumb, "");
 
         assertNotNull(document);
 
-        verify(resourceRepository).findByNodeId(nodeId);
+        verify(resourceRepository).getResourceOfResourceByNodeUuid(nodeId);
         verifyNoMoreInteractions(resourceRepository);
 
         verify(fileManager)
-                .fetchResource(any(ResourceDocument.class), eq(output), eq(lang), eq(thumb), "");
+                .fetchResource(any(ResourceDocument.class), eq(output), eq(lang), eq(thumb), eq(""));
         verifyNoMoreInteractions(fileManager);
     }
 }

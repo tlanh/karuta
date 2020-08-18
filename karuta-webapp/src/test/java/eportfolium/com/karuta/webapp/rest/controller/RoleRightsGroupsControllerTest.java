@@ -44,7 +44,7 @@ public class RoleRightsGroupsControllerTest extends ControllerTest {
         get("/rolerightsgroups?portfolio=" + portfolioId)
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("<rolerightsgroups>")))
-                .andExpect(content().string(containsString("<rolerightgroup id=\"123\">")))
+                .andExpect(content().string(containsString("<rolerightsgroup id=\"123\">")))
                 .andExpect(content().string(containsString("<label>designer</label>")))
                 .andExpect(content().string(containsString("<portfolio>" + portfolioId + "</portfolio>")))
                 .andDo(document("get-roles-in-portfolio"));

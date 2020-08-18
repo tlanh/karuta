@@ -92,7 +92,7 @@ public class ResourcesController extends AbstractController {
             String name = document.getFilename(lang);
             String type = document.getType(lang);
 
-      			response.setContentType(type);
+            response.setContentType(type);
             response.setHeader("Content-Disposition", "attachment; filename=\"" + name + "\"");
         }
     }
@@ -106,6 +106,7 @@ public class ResourcesController extends AbstractController {
     	
     	String contextPath = httpServletRequest.getContextPath();
     	String retval = resourceManager.updateContent(id, userInfo.getId(), uploadfile.getInputStream(), lang, "T".equals(size), contextPath);
+
         if ( retval != null ) {
       		String url = configurationManager.get("fileserver") + "/";
   				

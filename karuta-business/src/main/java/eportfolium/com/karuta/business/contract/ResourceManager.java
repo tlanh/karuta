@@ -19,8 +19,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.UUID;
 
-import org.springframework.web.multipart.MultipartFile;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import eportfolium.com.karuta.document.ResourceDocument;
 import eportfolium.com.karuta.model.bean.Node;

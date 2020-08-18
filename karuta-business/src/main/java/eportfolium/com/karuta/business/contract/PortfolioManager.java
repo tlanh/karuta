@@ -101,7 +101,7 @@ public interface PortfolioManager extends BaseManager {
 
 	void updateTimeByNode(UUID nodeId);
 
-	List<Portfolio> getPortfolioList(Long userId, boolean active, boolean specialProject, String portfolioCode);
+	List<Portfolio> getPortfolioList(Long userId, boolean active, Boolean specialProject, String portfolioCode);
 
 	Long getPortfolioCount(Long userId, boolean active, Boolean specialProject, String portfolioCode);
 }
