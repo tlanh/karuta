@@ -158,8 +158,7 @@ public class PortfolioController extends AbstractController {
                                             @RequestParam(required = false) boolean count,
                                             @RequestParam(required = false) Integer userid,
                                             @RequestParam(required = false) String project,
-                                            @AuthenticationPrincipal UserInfo userInfo)
-            throws BusinessException, JsonProcessingException {
+                                            @AuthenticationPrincipal UserInfo userInfo) {
 
         String portfolioCode = search;
         boolean specialProject = "true".equals(project) || "1".equals(project);

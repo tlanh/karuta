@@ -542,13 +542,11 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 				Resource nr = rn.getResource();
 				Resource cr = rn.getContextResource();
 
-				StringBuilder res = new StringBuilder();
-				res.append(String.format(rformat, nr.getId(), rn.getId(), nr.getXsiType(), nr.getContent()));
-				res.append(String.format(rformat, cr.getId(), rn.getId(), cr.getXsiType(), cr.getContent()));
+				String res = String.format(rformat, nr.getId(), rn.getId(), nr.getXsiType(), nr.getContent()) +
+						String.format(rformat, cr.getId(), rn.getId(), cr.getXsiType(), cr.getContent());
+				String rootdata = String.format(arformat, rn.getId(), rn.getMetadataWad(), rn.getMetadataEpm(), rn.getMetadata(), rn.getCode(), rn.getLabel(), rn.getDescr(), res);
 
-				String rootdata = String.format(arformat, rn.getId(), rn.getMetadataWad(), rn.getMetadataEpm(), rn.getMetadata(), rn.getCode(), rn.getLabel(), rn.getDescr(), res.toString());
-
-				boolean isowner = userId == p.getModifUserId() ? true : false;
+				boolean isowner = userId == p.getModifUserId();
 				sb.append(String.format(pformat, p.getId(), rn.getId(), isowner, rn.getModifUserId(), p.getModifDate(), rootdata));
 			}
 
@@ -572,7 +570,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 			throw new GenericBusinessException("No root node found");
 
 		UUID rootNodeUuid = portfolio.getId() != null ? portfolio.getId() : UUID.randomUUID();
-		Map<UUID, UUID> resolve = new HashMap<UUID, UUID>();
+		Map<UUID, UUID> resolve = new HashMap<>();
 
 		Portfolio portfolioRecord = portfolioRepository.findById(portfolioId)
 										.orElse(add(rootNodeUuid, userId, null, resolve));
@@ -800,7 +798,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 
 		UUID uuid = UUID.randomUUID();
 		
-		Map<UUID, UUID> resolve = new HashMap<UUID, UUID>();
+		Map<UUID, UUID> resolve = new HashMap<>();
 
 		Portfolio portfolio = add(uuid, userId, portfolioDocument, resolve);
 

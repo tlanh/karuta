@@ -1692,14 +1692,12 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 				gr.setSubmit(false);
 				gr.setTypesId(null);
 				gr.setRulesId(null);
-
-				groupRightsRepository.save(gr);
 			} else {
 				gr = new GroupRights();
 				gr.setId(new GroupRightsId(new GroupRightInfo(grid), node.getId()));
-
-				groupRightsRepository.save(gr);
 			}
+
+			groupRightsRepository.save(gr);
 		}
 
 		return !nodes.isEmpty();
