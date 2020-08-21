@@ -97,6 +97,9 @@ public abstract class ControllerTest {
     protected PortfolioManager portfolioManager;
 
     @SpyBean
+    protected NodeManager nodeManager;
+
+    @SpyBean
     protected ResourceManager resourceManager;
 
     @SpyBean

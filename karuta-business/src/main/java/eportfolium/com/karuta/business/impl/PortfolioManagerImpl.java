@@ -213,6 +213,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 				filter = (r) -> !r.getFileid(lang).isEmpty();
 
 			// Nodes with file resources inside the portfolio.
+			// TODO: FIx
 			List<ResourceDocument> fileResources = portfolio
 					.getRoot()
 					.getResources()
@@ -454,11 +455,11 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	}
 
 	@Override
-	public void removePortfolio(UUID portfolioId, Long userId) {
+	public boolean removePortfolio(UUID portfolioId, Long userId) {
 		GroupRights rights = getRightsOnPortfolio(userId, portfolioId);
 
 		if (!rights.isDelete() && !credentialRepository.isAdmin(userId)) {
-			return;
+			return false;
 		}
 
 		// S'il y a quelque chose de particulier, on s'assure que tout soit bien nettoyé
@@ -484,6 +485,8 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 
 		// Portfolio
 		portfolioRepository.deleteById(portfolioId);
+
+		return true;
 	}
 
 	@Override
@@ -744,24 +747,8 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	}
 
 	@Override
-	public PortfolioList addPortfolio(PortfolioDocument portfolioDocument, long userId, UUID portfolioModelId,
-							   boolean parseRights, String projectName)
+	public PortfolioList addPortfolio(PortfolioDocument portfolioDocument, long userId, String projectName)
 			throws BusinessException, JsonProcessingException {
-		if (!credentialRepository.isAdmin(userId) && !credentialRepository.isCreator(userId))
-			throw new GenericBusinessException("FORBIDDEN : No admin right");
-
-		// Si le modèle est renseigné, on ignore le XML poste et on récupère le contenu
-		// du modèle a la place
-		// FIXME Inutilisé, nous instancions / copions un portfolio
-
-		if (portfolioModelId != null) {
-      ObjectMapper mapper = new XmlMapper();
-      String xml = getPortfolio(portfolioModelId, userId, null);
-    
-      portfolioDocument = mapper
-	            .readerFor(PortfolioDocument.class)
-	            .readValue(xml);
-		}
 
 		NodeDocument rootNode = portfolioDocument.getRoot();
 
@@ -934,8 +921,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	}
 
 	@Override
-	public String instanciatePortfolio(UUID portfolioId, String srccode, String tgtcode, Long id,
-			boolean copyshared, String groupname, boolean setOwner) {
+	public String instanciatePortfolio(String portfolioId, String srccode, String tgtcode) {
 
 		//// Fetch nodes to be instanciated
 		Portfolio portfolio = null;
@@ -947,7 +933,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 			owner = portfolio.getCredential().getId();
 			nodelist = new ArrayList<>(portfolio.getNodes());
 		} else {
-			nodelist = nodeRepository.getNodes(portfolioId);
+			nodelist = nodeRepository.getNodes(UUID.fromString(portfolioId));
 			owner = nodelist.get(0).getModifUserId();
 		}
 
@@ -1343,15 +1329,17 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	}
 
 	@Override
-	public UUID copyPortfolio(UUID portfolioId, String srcCode, String newCode, Long userId, boolean setOwner)
+	public UUID copyPortfolio(String id, String srcCode, String newCode, Long userId)
 			throws BusinessException {
 		Portfolio originalPortfolio;
+		UUID portfolioId = null;
 
 		/// le code source est OK ?
 		if (srcCode != null) {
 			// Retrouver le portfolio à partir du code source
 			originalPortfolio = portfolioRepository.getPortfolioFromNodeCode(srcCode);
 		} else {
+			portfolioId = UUID.fromString(id);
 			originalPortfolio = portfolioRepository.findById(portfolioId).orElse(null);
 		}
 
@@ -1374,21 +1362,13 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		for (Node node : originalNodeList) {
 			Node copy = new Node(node);
 
-			if (setOwner) {
-				copy.setModifUserId(userId);
-			} else {
-				copy.setModifUserId(1L); // FIXME hard-coded root userid
-			}
+			copy.setModifUserId(userId);
 
 			////////////////////////////
 			/// Copie des ressources///
 			///////////////////////////
 			if (copy.getResource() != null) {
-				if (setOwner) {
-					copy.getResource().setModifUserId(userId);
-				} else {
-					copy.getResource().setModifUserId(1L);
-				}
+				copy.getResource().setModifUserId(userId);
 
 				resourceRepository.save(copy.getResource());
 			}
@@ -1400,20 +1380,15 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 							StringUtils.replace(copy.getResResource().getContent(), copy.getCode(), newCode));
 
 				}
-				if (setOwner) {
-					copy.getResResource().setModifUserId(userId);
-				} else {
-					copy.getResResource().setModifUserId(1L);
-				}
+
+				copy.getResResource().setModifUserId(userId);
+
 				resourceRepository.save(copy.getResResource());
 			}
 
 			if (copy.getContextResource() != null) {
-				if (setOwner) {
-					copy.getContextResource().setModifUserId(userId);
-				} else {
-					copy.getContextResource().setModifUserId(1L);
-				}
+				copy.getContextResource().setModifUserId(userId);
+
 				resourceRepository.save(copy.getContextResource());
 			}
 

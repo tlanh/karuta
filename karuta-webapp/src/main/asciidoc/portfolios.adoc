@@ -1,0 +1,421 @@
+== Portfolios
+
+=== GET /
+
+This endpoint returns all the portfolios for the current user.
+
+If you are an admin user, you can also specify a `userid` parameter to
+get the portfolios of a specific user.
+
+Here are some parameters that can be provided:
+
+.Parameters
+|===
+|Parameter |Type |Description
+
+| active
+| Boolean
+| Whether to return active portfolios or inactive ones.
+
+| search
+| String
+| Search portfolios that have a code that looks like the given value.
+
+| count
+| Boolean
+| Whether to only return the count rather than the whole list.
+
+| userid
+| Long
+| Get the portfolios for a specific user (as admin only).
+
+| project
+| Boolean or string
+| As boolean, whether to include only portfolios that have a
+  `karuta-project` semantic tag.
+
+  As string, only portfolios that have a code that looks like the
+  provided string will be returned.
+
+|===
+
+=== GET /portfolio/{id}
+
+This endpoint returns a portfolio found by its ID.
+
+Here are some parameters that can be provided:
+
+.Parameters
+|===
+|Parameter |Type |Default |Description
+
+| resources
+| Boolean
+| true
+| Whether resources must be provided as well (has effect with `files`)
+
+| files
+| Boolean
+| false
+| Returns the portfolio as a Zip file (has effect with `resources` set to true)
+
+| export
+| Boolean
+| false
+| Returns the portfolio as a downloadable XML file.
+
+| lang
+| String
+|
+| If no value is provided, resources in all locales are included.
+
+  Otherwise, only the ones in the specified locale.
+
+| level
+| Integer
+|
+| Defines the level of nesting of elements that is being considered.
+
+  If no value is provided, all elements are included, independently of
+  their level of nesting.
+
+|===
+
+==== Without any parameter provided
+
+[source,role="primary"]
+.Curl
+include::{snippets}/get-portfolio-by-id-default/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/get-portfolio-by-id-default/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/get-portfolio-by-id-default/http-response.adoc[]
+
+==== With `export` set to true
+
+[NOTE]
+Check out the `Content-Disposition` header in the response.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/get-portfolio-by-id-export/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/get-portfolio-by-id-export/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/get-portfolio-by-id-export/http-response.adoc[]
+
+==== With `resources` and `files` set to true
+
+[NOTE]
+====
+- Check out the `Content-Disposition` header in the response.
+- For simplicity purposes, the response is empty here but a Zip file is actually
+returned in this scenario.
+====
+
+[source,role="primary"]
+.Curl
+include::{snippets}/get-portfolio-by-id-files/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/get-portfolio-by-id-files/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/get-portfolio-by-id-files/http-response.adoc[]
+
+=== GET /portfolio/code/{code}
+
+This endpoint returns a portfolio found by its code.
+
+The `resources` parameter can be provided to specify whether the resources
+must be included in the response or not.
+
+==== Parameters
+
+|===
+| Parameter | Type | Description
+
+| resources
+| Boolean
+| Whether resources must be provided in the returned XML.
+
+|===
+
+[NOTE]
+When the given code doesn't match with any existing portfolio, a
+404 (Not found) is returned by this endpoint.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/get-portfolio-by-code/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/get-portfolio-by-code/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/get-portfolio-by-code/http-response.adoc[]
+
+=== PUT /portfolio/{id}/setOwner/{ownerId}
+
+This endpoint sets the owner of a portfolio.
+
+[NOTE]
+The current user either needs to be an admin or the current owner of the
+portfolio to be able to define the owner.
+
+[NOTE]
+For legacy reasons, the response body specifies whether the operation
+failed or succeeded. A 200 (OK) is returned anyway.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/set-portfolio-owner/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/set-portfolio-owner/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/set-portfolio-owner/http-response.adoc[]
+
+=== PUT /portfolio/{id}
+
+This endpoint defines whether a portfolio is active or not. You need
+to provide an `active` boolean parameter to define the value for a given
+portfolio.
+
+[NOTE]
+It is only reachable for admin users.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/define-portfolio-as-active/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/define-portfolio-as-active/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/define-portfolio-as-active/http-response.adoc[]
+
+=== POST /
+
+This endpoint imports a portfolio uploaded as an XML file.
+
+[NOTE]
+It is only reachable as an admin or designer.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/add-portfolio/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/add-portfolio/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/add-portfolio/http-response.adoc[]
+
+=== POST /portfolio/{id}/parserights
+
+This endpoint reparses the rights of a portfolio based on the data stored
+in the metadata attached with its nodes.
+
+=== POST /instanciate/{id}
+
+This endpoint instanciates a portfolio based on a given id or code.
+
+[NOTE]
+It is only accessible to admin or designer users.
+
+.Parameters
+|===
+|Parameter |Type |Description
+
+| sourcecode
+| String
+| If set, rather than looking for the portfolio by the provided ID, search
+  for the portfolio by code.
+
+| targetcode
+| String
+| The code to set to the freshly instanciated portfolio.
+
+|===
+
+[NOTE]
+====
+While you must provide a target code, it can already have been taken by another
+portfolio. In this case, Karuta generates another based upon the provided one.
+
+For example, if you provide "my-code" but it is already taken, Karuta will generate
+"my-code (1)" and so on, until one is available.
+====
+
+==== Providing an ID
+
+[source,role="primary"]
+.Curl
+include::{snippets}/instanciate-with-id/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/instanciate-with-id/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/instanciate-with-id/http-response.adoc[]
+
+==== Providing a code
+
+[source,role="primary"]
+.Curl
+include::{snippets}/instanciate-with-code/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/instanciate-with-code/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/instanciate-with-code/http-response.adoc[]
+
+=== POST /copy/{id}
+
+This endpoint makes a copy of a portfolio without rights parsing.
+
+[NOTE]
+It is only reachable as an admin or designer.
+
+.Parameters
+|===
+| Parameter | Type | Description
+
+| sourcecode
+| String
+| If set, rather than looking for the portfolio by the provided ID, search
+  for the portfolio by code.
+
+| targetcode
+| String
+| The code to attach to the freshly created copy.
+
+|===
+
+.Edge cases
+|===
+| Case | Status code
+
+| Not an admin or designer.
+| 403 (Forbidden)
+
+| The target code is already taken.
+| 409 (Conflict)
+
+|===
+
+==== Providing an ID
+
+[source,role="primary"]
+.Curl
+include::{snippets}/copy-with-id/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/copy-with-id/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/copy-with-id/http-response.adoc[]
+
+==== Providing a code
+
+[source,role="primary"]
+.Curl
+include::{snippets}/copy-with-code/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/copy-with-code/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/copy-with-code/http-response.adoc[]
+
+=== POST /shared/{userId}
+
+This endpoint returns a list of portfolio shared to a user.
+
+[NOTE]
+It is only reachable as an admin user.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/get-portfolios-shared/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/get-portfolios-shared/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/get-portfolios-shared/http-response.adoc[]
+
+=== GET /zip
+
+This endpoint returns several provided portfolios as a Zip file.
+
+=== POST /zip
+
+This endpoint imports one or several portfolios provided as a Zip file.
+The latter containing a Zip file for each portfolio.
+
+For legacy reasons, once the import is processed, the response returned by the
+server is the ID of the last inserted portfolio rather than a list of ids.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/import-zip/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/import-zip/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/import-zip/http-response.adoc[]
+
+=== DELETE /portfolio/{id}
+
+This endpoint deletes a portfolio based on a given ID.
+
+[NOTE]
+The user executing the request must either have the right to delete the
+portfolio or be an admin.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/delete-portfolio/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/delete-portfolio/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/delete-portfolio/http-response.adoc[]
