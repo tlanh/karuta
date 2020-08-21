@@ -6,7 +6,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.SpyBean;
-import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.stereotype.Service;
 import org.springframework.test.context.junit4.SpringRunner;
 
@@ -22,7 +23,8 @@ public class IsAdminOrDesignerTest {
     @SpyBean
     private Foo foo;
 
-    @Test(expected = AuthenticationException.class)
+    @Test(expected = AccessDeniedException.class)
+    @WithMockUser
     public void beingNeither() {
         foo.doNothing();
     }
