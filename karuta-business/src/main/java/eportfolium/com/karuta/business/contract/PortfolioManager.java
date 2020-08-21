@@ -82,7 +82,7 @@ public interface PortfolioManager extends BaseManager {
 	String instanciatePortfolio(UUID portfolioId, String srccode, String tgtcode, Long id,
 			boolean copyshared, String groupname, boolean setOwner);
 
-	String importPortfolio(String path, InputStream fileInputStream, Long id, boolean instantiate, String projectName, String servletContext)
+	UUID importPortfolio(InputStream fileInputStream, Long id, String servletContext)
 			throws BusinessException, IOException;
 
 	PortfolioList addPortfolio(PortfolioDocument portfolio, long userId, UUID portfolioModelId, boolean parseRights, String projectName)

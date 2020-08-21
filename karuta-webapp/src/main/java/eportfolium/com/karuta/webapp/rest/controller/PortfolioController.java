@@ -388,18 +388,14 @@ public class PortfolioController extends AbstractController {
      */
     @PostMapping(value = "/zip", consumes = "multipart/form-data")
     public String importZip(@RequestParam MultipartFile uploadfile,
-                            @RequestParam(defaultValue = "false") boolean instance,
-                            @RequestParam(required = false) String project,
                             @AuthenticationPrincipal UserInfo userInfo,
                             HttpServletRequest request)
             throws BusinessException, IOException {
 
-        javax.servlet.ServletContext servletContext = request.getSession().getServletContext();
-        String contextPath = servletContext.getContextPath();
-        String path = servletContext.getRealPath("/");
+        String contextPath = request.getServletContext().getContextPath();
 
         return portfolioManager
-                .importPortfolio(path, uploadfile.getInputStream(), userInfo.getId(), instance, project, contextPath);
+                .importPortfolio(uploadfile.getInputStream(), userInfo.getId(), contextPath).toString();
     }
 
     /**

@@ -16,7 +16,8 @@
 package eportfolium.com.karuta.business.impl;
 
 import java.io.*;
-import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -42,84 +43,35 @@ public class FileManagerImpl implements FileManager {
 	@Autowired
 	private ConfigurationManager configurationManager;
 
-	public String[] findFiles(String directoryPath, String id) {
-		// ========================================================================
-		if (id == null)
-			id = "";
-		// Current folder
-		File directory = new File(directoryPath);
-		File[] subfiles = directory.listFiles();
-		ArrayList<String> results = new ArrayList<>();
-
-		// Under this, try to find necessary files
-		for (File fileOrDir : subfiles) {
-			String name = fileOrDir.getName();
-
-			if ("__MACOSX".equals(name)) /// Could be a better filtering
-				continue;
-
-			// One folder level under this one
-			if (fileOrDir.isDirectory()) {
-				File subdir = new File(directoryPath + name);
-				File[] subsubfiles = subdir.listFiles();
-				for (File subsubfile : subsubfiles) {
-					String subname = subsubfile.getName();
-
-					if (subname.endsWith(id) || "".equals(id)) {
-						String completename = directoryPath + name + File.separatorChar + subname;
-						results.add(completename);
-					}
-				}
-			} else if (fileOrDir.isFile()) {
-				String subname = fileOrDir.getName();
-				if (name.contains(id) || id.equals("")) {
-					String completename = directoryPath + subname;
-					results.add(completename);
-				}
-			}
-		}
-
-		String[] result = new String[results.size()];
-		results.toArray(result);
-
-		return result;
-	}
-
 	@Override
-	public String unzip(String zipFile, String destinationFolder) throws IOException {
-		String folder = "";
-		File zipfile = new File(zipFile);
+	public Map<String, ByteArrayOutputStream> unzip(InputStream inputStream) {
+		Map<String, ByteArrayOutputStream> entries = new HashMap<>();
 
-		try (ZipInputStream zis = new ZipInputStream(new BufferedInputStream(new FileInputStream(zipfile)))) {
-			ZipEntry ze = null;
+		try (ZipInputStream zis = new ZipInputStream(inputStream)) {
+			ZipEntry ze;
+
 			while ((ze = zis.getNextEntry()) != null) {
-				folder = destinationFolder;
-				File f = new File(folder, ze.getName());
-
 				if (ze.isDirectory()) {
-					f.mkdirs();
 					continue;
 				}
 
-				f.getParentFile().mkdirs();
-				OutputStream fos = new BufferedOutputStream(new FileOutputStream(f));
-				try {
-					try {
-						final byte[] buf = new byte[8192];
-						int bytesRead;
-						while (-1 != (bytesRead = zis.read(buf)))
-							fos.write(buf, 0, bytesRead);
-					} finally {
-						fos.close();
-					}
-				} catch (final IOException ioe) {
-					f.delete();
-					throw ioe;
+				ByteArrayOutputStream output = new ByteArrayOutputStream();
+
+				byte[] buffer = new byte[4096];
+				int n;
+
+				while ((n = zis.read(buffer)) > 0) {
+					output.write(buffer, 0, n);
 				}
+
+				output.close();
+				entries.put(ze.getName(), output);
 			}
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 
-		return folder;
+		return entries;
 	}
 
 	@Override

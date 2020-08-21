@@ -16,6 +16,7 @@ import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.io.*;
+import java.util.Map;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -62,6 +63,20 @@ public class FileManagerTest {
                 .getStatusCode();
 
         return captor;
+    }
+
+    @Test
+    public void unzip() {
+        InputStream zipContent = getClass().getClassLoader().getResourceAsStream("archives/simple-zip.zip");
+        Map<String, ByteArrayOutputStream> files = manager.unzip(zipContent);
+
+        assertEquals(2, files.keySet().size());
+
+        assertTrue(files.containsKey("bar.txt"));
+        assertTrue(files.containsKey("foo.txt"));
+
+        assertEquals("Hello world", files.get("bar.txt").toString());
+        assertEquals("This is a test", files.get("foo.txt").toString());
     }
 
     @Test
