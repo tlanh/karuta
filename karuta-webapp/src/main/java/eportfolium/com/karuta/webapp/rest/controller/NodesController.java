@@ -152,40 +152,6 @@ public class NodesController extends AbstractController {
     }
 
     /**
-     * Get the single first semantic tag node inside specified portfolio
-     *
-     * GET /rest/api/nodes/firstbysemantictag/{portfolioId}/{semantictag}
-     *
-     * @return node in ASM format
-     */
-    @GetMapping(value = "/firstbysemantictag/{portfolioId}/{semantictag}")
-    public HttpEntity<NodeDocument> getNodeBySemanticTag(@PathVariable UUID portfolioId,
-                                                         @PathVariable String semantictag,
-                                                         @AuthenticationPrincipal UserInfo userInfo)
-            throws BusinessException, JsonProcessingException {
-
-        return new HttpEntity<>(nodeManager
-                .getNodeBySemanticTag(portfolioId, semantictag, userInfo.getId()));
-    }
-
-    /**
-     * Get multiple semantic tag nodes inside specified portfolio.
-     *
-     * GET /rest/api/nodes/nodes/bysemantictag/{portfolioId}/{semantictag}
-     *
-     * @return nodes in ASM format
-     */
-    @GetMapping(value = "/bysemantictag/{portfolioId}/{semantictag}")
-    public HttpEntity<NodeList> getNodesBySemanticTag(@PathVariable UUID portfolioId,
-                                                      @PathVariable String semantictag,
-                                                      @AuthenticationPrincipal UserInfo userInfo) throws BusinessException {
-
-        return new HttpEntity<>(nodeManager
-                        .getNodesBySemanticTag(userInfo.getId(), portfolioId, semantictag));
-
-    }
-
-    /**
      * Rewrite node.
      *
      * PUT /rest/api/nodes/node/{id}
@@ -436,19 +402,6 @@ public class NodesController extends AbstractController {
 
         return new HttpEntity<>(nodeManager.getNodeWithXSL(id, xslFile,
                 parameters, userInfo.getId()));
-    }
-
-    /**
-     * POST /rest/api/nodes/{id}/frommodelbysemantictag/{tag}
-     */
-    @PostMapping(value = "/{id}/frommodelbysemantictag/{tag}")
-    public HttpEntity<NodeList> addNodeFromModelByTag(@PathVariable UUID id,
-                                                      @PathVariable String tag,
-                                                      @AuthenticationPrincipal UserInfo userInfo)
-            throws BusinessException, JsonProcessingException {
-
-        return new HttpEntity<>(nodeManager
-                        .addNodeFromModelBySemanticTag(id, tag, userInfo.getId()));
     }
 
 }

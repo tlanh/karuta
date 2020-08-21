@@ -303,41 +303,6 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	}
 
 	@Override
-	public NodeDocument getNodeBySemanticTag(UUID portfolioId, String semantictag, Long userId)
-			throws BusinessException, JsonProcessingException {
-
-		final List<Node> nodes = nodeRepository.getNodesBySemanticTag(portfolioId, semantictag);
-
-		if (nodes.isEmpty()) {
-			return null;
-		}
-
-		// On récupère d'abord l'uuid du premier noeud trouve correspondant au
-		// semantictag
-		UUID nodeId = nodes.get(0).getId();
-
-		if (!hasRight(userId, nodeId, GroupRights.READ)) {
-			throw new GenericBusinessException("Vous n'avez pas les droits nécessaires.");
-		}
-
-		return getNode(nodeId, true, null, userId, null, true);
-	}
-
-	@Override
-	public NodeList getNodesBySemanticTag(Long userId, UUID portfolioId, String semanticTag) throws BusinessException {
-		List<Node> nodes = nodeRepository.getNodesBySemanticTag(portfolioId, semanticTag);
-
-		if (nodes.stream()
-				.anyMatch(n -> !hasRight(userId, n.getId(), GroupRights.READ))) {
-			throw new GenericBusinessException("403 FORBIDDEN : No READ credential");
-		}
-
-		return new NodeList(nodes.stream()
-				.map(n -> new NodeDocument(n.getId()))
-				.collect(Collectors.toList()));
-	}
-
-	@Override
 	public boolean isCodeExist(String code) {
 		return nodeRepository.isCodeExist(code);
 	}
@@ -880,25 +845,6 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 		}
 
 		return getNode(nodeId, true, userId, null);
-	}
-
-	@Override
-	public NodeList addNodeFromModelBySemanticTag(UUID nodeId, String semanticTag, Long userId)
-			throws BusinessException, JsonProcessingException {
-		Portfolio portfolio = portfolioRepository.getPortfolioFromNode(nodeId);
-
-		UUID portfolioModelId = null;
-
-		if (portfolio != null) {
-			portfolioModelId = portfolio.getModelId();
-		}
-
-		NodeDocument node = getNodeBySemanticTag(portfolioModelId, semanticTag, userId);
-
-		// C'est le noeud obtenu dans le modèle indiqué par la table de correspondance.
-		UUID otherParentNodeUuid = nodeRepository.getNodeUuidByPortfolioModelAndSemanticTag(portfolioModelId, semanticTag);
-
-		return addNode(otherParentNodeUuid, node, userId, true);
 	}
 
 	@Override

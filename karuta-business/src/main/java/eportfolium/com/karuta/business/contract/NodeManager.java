@@ -39,12 +39,6 @@ public interface NodeManager extends BaseManager {
 	NodeDocument getNode(UUID nodeId, boolean withChildren, String withChildrenOfXsiType, Long userId,
 			String label, boolean checkSecurity) throws JsonProcessingException;
 
-	NodeDocument getNodeBySemanticTag(UUID portfolioId, String semantictag, Long userId)
-			throws BusinessException, JsonProcessingException;
-
-	NodeList getNodesBySemanticTag(Long userId, UUID portfolioId, String semanticTag)
-			throws BusinessException;
-
 	/**
 	 * forcedParentUuid permet de forcer l'uuid parent, independamment de l'attribut
 	 * du noeud fourni
@@ -74,9 +68,6 @@ public interface NodeManager extends BaseManager {
 	boolean changeParentNode(Long userid, UUID id, UUID parentId) throws BusinessException;
 
 	Long moveNodeUp(UUID nodeId);
-
-	NodeList addNodeFromModelBySemanticTag(UUID nodeId, String semanticTag, Long userId)
-			throws BusinessException, JsonProcessingException;
 
 	String changeNodeMetadataEpm(UUID nodeId, MetadataEpmDocument metadata, Long id)
 			throws BusinessException, JsonProcessingException;
