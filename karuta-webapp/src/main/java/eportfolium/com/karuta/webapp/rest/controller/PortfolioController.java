@@ -15,13 +15,7 @@
 
 package eportfolium.com.karuta.webapp.rest.controller;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.RandomAccessFile;
-import java.nio.file.Files;
+import java.io.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -121,16 +115,11 @@ public class PortfolioController extends AbstractController {
 
         } else if (resources && files) {
 
-            File tempZip = portfolioManager.getZippedPortfolio(portfolio, lang, contextPath);
-            byte[] zipContent = Files.readAllBytes(tempZip.toPath());
-
-            // Temp file cleanup
-            tempZip.delete();
-
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + ".zip\"")
-                    .body(zipContent);
+                    .body(portfolioManager.getZippedPortfolio(portfolio, lang, contextPath).toByteArray());
+
         } else {
             return new HttpEntity<>(xmlPortfolio);
         }
@@ -162,69 +151,32 @@ public class PortfolioController extends AbstractController {
      * removed).
      *
      * GET /rest/api/portfolios.
-     *
-     * @param active             false (also show inactive portoflios)
-     * @param userid             for this user (only with root)
      */
     @GetMapping
-    public HttpEntity<Object> getPortfolios(@RequestParam(defaultValue = "true") boolean active,
+    public HttpEntity<String> getPortfolios(@RequestParam(defaultValue = "true") boolean active,
+                                            @RequestParam(required = false) String search,
+                                            @RequestParam(required = false) boolean count,
                                             @RequestParam(required = false) Integer userid,
-                                            @RequestParam(required = false) String code,
-                                            @RequestParam(required = false) UUID portfolio,
-                                            @RequestParam(required = false) Integer level,
-                                            @RequestParam(name="public", required = false) String public_var,
                                             @RequestParam(required = false) String project,
                                             @AuthenticationPrincipal UserInfo userInfo)
             throws BusinessException, JsonProcessingException {
 
-    	String portfolioCode = null;
-    	Boolean specialProject = null;
-    	if("false".equals(project) || "0".equals(project)) specialProject = false;
-    	else if("true".equals(project) || "1".equals(project)) specialProject = true;
-			else if(project != null && project.length()>0) portfolioCode = project;
+        String portfolioCode = search;
+        boolean specialProject = "true".equals(project) || "1".equals(project);
 
-        if (portfolio != null) {
-            return new HttpEntity<>(portfolioManager.getPortfolio(portfolio, userInfo.getId(), level));
+        if (project != null && project.length() > 0)
+            portfolioCode = project;
 
-        } else if (code != null) {
-            return new HttpEntity<>(portfolioManager.getPortfolioByCode(code, userInfo.getId(), false));
-
-        } else if (public_var != null) {
-            long publicid = userManager.getUserId("public");
-
-            return new HttpEntity<>(portfolioManager.getPortfolios(publicid,
-                        active, 0, specialProject, portfolioCode));
-
-        } else if (userid != null && securityManager.isAdmin(userInfo.getId())) {
+        if (userid != null && securityManager.isAdmin(userInfo.getId())) {
             return new HttpEntity<>(portfolioManager.getPortfolios(userid,
-                        active, userInfo.getSubstituteId(), specialProject, portfolioCode));
+                        active, count, specialProject, portfolioCode));
 
         } else {
             return new HttpEntity<>(portfolioManager.getPortfolios(userInfo.getId(),
-                        active, userInfo.getSubstituteId(), specialProject, portfolioCode));
+                        active, count, specialProject, portfolioCode));
+
         }
     }
-
-    /**
-     * Rewrite portfolio content.
-     *
-     * PUT /rest/api/portfolios/portfolios/{id}
-     *
-     * @param portfolio       GET /rest/api/portfolios/portfolio/{id}
-     *                           and/or the asm format
-     */
-    /*
-    @PutMapping(value = "/portfolio/{id}", consumes = "application/xml", produces = "application/xml")
-    public String putPortfolio(@RequestBody PortfolioDocument portfolio,
-                               @PathVariable UUID id,
-                               @RequestParam boolean active,
-                               @AuthenticationPrincipal UserInfo userInfo) throws BusinessException, JsonProcessingException {
-
-        portfolioManager.rewritePortfolioContent(portfolio, id, userInfo.getId(), active);
-
-        return "";
-    }
-    //*/
 
     /**
      * Reparse portfolio rights.
@@ -248,16 +200,14 @@ public class PortfolioController extends AbstractController {
      * PUT /rest/api/portfolios/portfolios/{id}/setOwner/{ownerId}
      */
     @PutMapping(value = "/portfolio/{id}/setOwner/{ownerId}")
-    public Boolean changeOwner(@PathVariable UUID id,
+    public String changeOwner(@PathVariable UUID id,
                                @PathVariable long ownerId,
                                @AuthenticationPrincipal UserInfo userInfo) {
 
-        // Vérifie si l'utilisateur connecté est administrateur ou propriétaire du
-        // portfolio actuel.
         if (securityManager.isAdmin(userInfo.getId()) || portfolioManager.isOwner(userInfo.getId(), id)) {
-            return portfolioManager.changePortfolioOwner(id, ownerId);
+            return String.valueOf(portfolioManager.changePortfolioOwner(id, ownerId));
         } else {
-            return false;
+            return "false";
         }
     }
 
@@ -338,8 +288,6 @@ public class PortfolioController extends AbstractController {
                                                 @RequestParam boolean owner,
                                                 @AuthenticationPrincipal UserInfo userInfo) throws BusinessException {
 
-        /// Check if code exist, find a suitable one otherwise. Eh.
-        // FIXME : Check original Karuta version ; no new code found.
         if (nodeManager.isCodeExist(targetcode)) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("code exist");
         }
@@ -370,16 +318,16 @@ public class PortfolioController extends AbstractController {
      * @return zipped portfolio (with files) inside zip file
      */
     @GetMapping(value = "/zip", consumes = "application/zip")
-    public Object getZip(@RequestParam String portfolios,
-                         @RequestParam String lang,
-                         @AuthenticationPrincipal UserInfo userInfo) throws Exception {
+    public ResponseEntity<byte[]> getZip(@RequestParam String portfolios,
+                                         @RequestParam(required = false) String lang,
+                                         @AuthenticationPrincipal UserInfo userInfo) throws Exception {
 
     	String contextPath = httpServletRequest.getContextPath();
         List<UUID> uuids = Arrays.stream(portfolios.split(","))
                 .map(UUID::fromString)
                 .collect(Collectors.toList());
 
-        List<File> files = new ArrayList<>();
+        Map<UUID, ByteArrayOutputStream> files = new HashMap<>();
 
         /// Suppose the first portfolio has the right name to be used
         String name = "";
@@ -406,58 +354,30 @@ public class PortfolioController extends AbstractController {
                 }
             }
 
-            files.add(portfolioManager.getZippedPortfolio(portfolio, lang, contextPath));
+            files.put(portfolio.getId(), portfolioManager.getZippedPortfolio(portfolio, lang, contextPath));
         }
 
-        // Make a big zip of it
-        File tempDir = new File(System.getProperty("java.io.tmpdir", null));
-        File bigZip = File.createTempFile("project_", ".zip", tempDir);
+        // Generate a zip of all the different zips
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        ZipOutputStream zos = new ZipOutputStream(output);
 
-        // Add content to it
-        FileOutputStream fos = new FileOutputStream(bigZip);
-        ZipOutputStream zos = new ZipOutputStream(fos);
+        for (Map.Entry<UUID, ByteArrayOutputStream> file : files.entrySet()) {
+            ZipEntry ze = new ZipEntry(file.getKey().toString() + ".zip");
 
-        byte[] buffer = new byte[0x1000];
-
-        for (File file : files) {
-            FileInputStream fis = new FileInputStream(file);
-            String filename = file.getName();
-
-            /// Write XML file to zip
-            ZipEntry ze = new ZipEntry(filename + ".zip");
             zos.putNextEntry(ze);
-            int read = 1;
-            while (read > 0) {
-                read = fis.read(buffer);
-                zos.write(buffer);
-            }
-            fis.close();
+            zos.write(file.getValue().toByteArray());
             zos.closeEntry();
         }
+
         zos.close();
 
-        /// Return zip file
-        RandomAccessFile f = new RandomAccessFile(bigZip.getAbsoluteFile(), "r");
-        byte[] b = new byte[(int) f.length()];
-        f.read(b);
-        f.close();
-
-        Date time = new Date();
         SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HHmmss");
-        String timeFormat = dt.format(time);
+        String timeFormat = dt.format(new Date());
 
-        ResponseEntity response = ResponseEntity.ok()
+        return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename = \"" + name + "-" + timeFormat + ".zip\"")
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE)
-                .body(b);
-
-        // Delete all zipped file
-        files.forEach(File::delete);
-
-        // And the over-arching zip.
-        bigZip.delete();
-
-        return response;
+                .body(output.toByteArray());
     }
 
     /**
@@ -539,7 +459,7 @@ public class PortfolioController extends AbstractController {
             .readerFor(PortfolioDocument.class)
             .readValue(content);
 
-      return new HttpEntity<>(portfolioManager.addPortfolio(document, userInfo.getId(), model,
+        return new HttpEntity<>(portfolioManager.addPortfolio(document, userInfo.getId(), model,
                instance, project));
     }
 }

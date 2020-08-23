@@ -15,25 +15,13 @@
 
 package eportfolium.com.karuta.business.impl;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.StringReader;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathExpressionException;
-import javax.xml.xpath.XPathFactory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
-import eportfolium.com.karuta.business.contract.ConfigurationManager;
 import eportfolium.com.karuta.business.contract.FileManager;
 import eportfolium.com.karuta.consumer.repositories.PortfolioRepository;
 import eportfolium.com.karuta.consumer.repositories.ResourceRepository;
@@ -43,14 +31,6 @@ import eportfolium.com.karuta.util.JavaTimeUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.NodeList;
-import org.w3c.dom.ls.DOMImplementationLS;
-import org.w3c.dom.ls.LSSerializer;
-import org.xml.sax.InputSource;
-import org.xml.sax.SAXException;
 
 import eportfolium.com.karuta.business.contract.ResourceManager;
 import eportfolium.com.karuta.model.exception.BusinessException;
@@ -105,21 +85,21 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 	@Override
 	public String addResource(UUID parentNodeId, ResourceDocument resource, Long userId)
 			throws BusinessException {
-		
-		String retval = "";
+
 		Optional<Node> node = nodeRepository.findById(parentNodeId);
-		if( node.isPresent() )
-			retval = addResource( node.get(), resource, userId);
-		return retval;
+
+		if (node.isPresent())
+			return addResource(node.get(), resource, userId);
+		else
+			return "";
 	}
 
-
 	@Override
-	public String addResource(Node parentNodeId, ResourceDocument resource, Long userId)
+	public String addResource(Node parentNode, ResourceDocument resource, Long userId)
 			throws BusinessException {
 
 		if (!credentialRepository.isAdmin(userId)
-				&& !hasRight(userId, parentNodeId.getId(), GroupRights.WRITE))
+				&& !hasRight(userId, parentNode.getId(), GroupRights.WRITE))
 			throw new GenericBusinessException("403 FORBIDDEN : No right to write");
 
 
@@ -132,33 +112,34 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 				.orElseGet(() -> new Resource(resource.getId()));
 
 		res.setXsiType(xsiType);
-		switch( xsiType )
-		{
+
+		switch (xsiType) {
 			case "nodeRes":
-				res.setNode(parentNodeId);
+				res.setNode(parentNode);
 				break;
 			case "context":
-				res.setContextNode(parentNodeId);
+				res.setContextNode(parentNode);
 				break;
 			default:
-				res.setResNode(parentNodeId);
+				res.setResNode(parentNode);
 				break;
 		}
+
 		updateResourceAttrs(res, resource.getContent(), userId);
 
 		res = resourceRepository.save(res);
-		
+
 		if (xsiType.equals("nodeRes")) {
-			parentNodeId.setResource(res);
-			parentNodeId.setSharedNodeResUuid(null);
+			parentNode.setResource(res);
+			parentNode.setSharedNodeResUuid(null);
 		} else if (xsiType.equals("context")) {
-			parentNodeId.setContextResource(res);
+			parentNode.setContextResource(res);
 		} else {
-			parentNodeId.setResResource(res);
-			parentNodeId.setSharedResUuid(null);
+			parentNode.setResResource(res);
+			parentNode.setSharedResUuid(null);
 		}
 
-		nodeRepository.save(parentNodeId);
+		nodeRepository.save(parentNode);
 
 		return "";
 	}
@@ -239,10 +220,9 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 	@Override
 	public ResourceDocument fetchResource(UUID nodeId, OutputStream output, String lang, boolean thumbnail, String contextPath) {
 		Resource resource = resourceRepository.getResourceOfResourceByNodeUuid(nodeId);
-		ResourceDocument document = new ResourceDocument();
+		ResourceDocument document = new ResourceDocument(resource, resource.getNode());
 
-		//// Since values don't get parsed correctly
-		try
+		/*try
 		{
 			DocumentBuilderFactory documentBuilderFactory =DocumentBuilderFactory.newInstance();
 			DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
@@ -273,7 +253,7 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 		catch( Exception e )
 		{
 			e.printStackTrace();
-		}
+		}*/
 
 		if (fileManager.fetchResource(document, output, lang, thumbnail, contextPath)) {
 			return document;
@@ -282,7 +262,7 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 		}
 	}
 	
-	private String findData( Document doc, String name, String lang) throws XPathExpressionException
+	/*private String findData( Document doc, String name, String lang) throws XPathExpressionException
 	{
 		XPath xPath = XPathFactory.newInstance().newXPath();
 
@@ -297,7 +277,7 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 		}
 
 		return retval;
-	}
+	}*/
 
 	private void updateResourceAttrs(Resource resource, String content, Long userId) {
 		resource.setContent(content);

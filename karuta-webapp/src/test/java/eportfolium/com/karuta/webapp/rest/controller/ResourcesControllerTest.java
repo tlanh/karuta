@@ -7,6 +7,7 @@ import eportfolium.com.karuta.model.bean.Resource;
 import eportfolium.com.karuta.webapp.rest.AsUser;
 import eportfolium.com.karuta.webapp.rest.ControllerTest;
 import org.apache.http.HttpEntity;
+import org.apache.http.StatusLine;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPut;
@@ -115,7 +116,7 @@ public class ResourcesControllerTest extends ControllerTest {
 
         doReturn(resource)
                 .when(resourceRepository)
-                .findByNodeId(nodeId);
+                .getResourceOfResourceByNodeUuid(nodeId);
 
         get("/resources/resource/file/" + nodeId)
                 .andExpect(status().isOk())
@@ -136,32 +137,46 @@ public class ResourcesControllerTest extends ControllerTest {
         Node node = new Node();
 
         Resource resource = new Resource();
-        resource.setNode(node);
+        resource.setResNode(node);
 
         doReturn(resource)
                 .when(resourceRepository)
-                .findByNodeId(parentNodeId);
+                .getResourceOfResourceByNodeUuid(parentNodeId);
 
         CloseableHttpClient client = mock(CloseableHttpClient.class);
+        CloseableHttpResponse response = mock(CloseableHttpResponse.class);
+        StatusLine statusLine = mock(StatusLine.class);
+        HttpEntity httpEntity = mock(HttpEntity.class);
 
         ArgumentCaptor<HttpPut> captor = ArgumentCaptor.forClass(HttpPut.class);
 
-        doReturn(mock(CloseableHttpResponse.class))
+        doReturn(response)
                 .when(client)
                 .execute(captor.capture());
+
+        doReturn(statusLine)
+                .when(response)
+                .getStatusLine();
+
+        doReturn(200)
+                .when(statusLine)
+                .getStatusCode();
+
+        doReturn(httpEntity)
+                .when(response)
+                .getEntity();
+
+        doReturn(new ByteArrayInputStream("".getBytes()))
+                .when(httpEntity)
+                .getContent();
 
         doReturn(client)
                 .when(fileManager)
                 .createClient();
 
         mvc.perform(multipart("/resources/resource/file/" + parentNodeId)
-                    .file("uploadfile", "Hello world !".getBytes())
-                    .with(request -> {
-                        request.setMethod("PUT");
-                        return request;
-                    }))
+                    .file("uploadfile", "Hello world !".getBytes()))
                 .andExpect(status().isOk())
-                .andExpect(content().string("Updated"))
                 .andDo(document("update-resource-file"));
 
         String textSent = new BufferedReader(

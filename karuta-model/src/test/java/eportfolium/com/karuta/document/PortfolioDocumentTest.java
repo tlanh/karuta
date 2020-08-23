@@ -109,18 +109,18 @@ public class PortfolioDocumentTest extends DocumentTest {
         assertContains("<portfolio id=\"" + portfolioId + "\" ", output);
         assertContains("root_node_id=\"" + nodeId + "\" ", output);
         assertContains("owner=\"true\"", output);
-        assertContains("modified=\"2020-11-10 10:10:10.0\">", output);
+        assertContains("modified=\"1605003010000\">", output);
 
         assertContains("<asmRoot id=\"" + nodeId + "\" semtag=\"baz\" ", output);
         assertContains("<label>foo</label>", output);
         assertContains("<description>bar</description>", output);
         assertContains("<metadata public=\"true\"/>", output);
         assertContains("<metadata-epm public=\"true\"/>", output);
-        assertContains("<metadata-wad seenoderoles=\"foo\" ", output);
+        assertContains("<metadata-wad seenoderoles=\"foo\"", output);
 
         assertContains("<asmResource id=\"" + resourceId + "\" ", output);
         assertContains("contextid=\"" + nodeId +"\" xsi_type=\"quux\"", output);
-        assertContains("last_modif=\"2020-11-10 10:10:10.0\">", output);
+        assertContains("last_modif=\"1605003010000\">", output);
         assertContains("<content><foo></foo></content>", output);
     }
 
@@ -152,6 +152,6 @@ public class PortfolioDocumentTest extends DocumentTest {
         ResourceDocument resource = node.getResources().get(0);
 
         assertEquals("foo", resource.getCode());
-        assertEquals("<foo></foo>", resource.getContent());
+        assertEquals("<code>foo</code><foo></foo>", resource.getContent());
     }
 }

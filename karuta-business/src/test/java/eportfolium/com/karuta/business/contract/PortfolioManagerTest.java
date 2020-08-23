@@ -1,7 +1,6 @@
 package eportfolium.com.karuta.business.contract;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 
 import eportfolium.com.karuta.business.ServiceTest;
@@ -17,6 +16,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import java.io.IOException;
 import java.util.*;
 
 import static org.junit.Assert.*;
@@ -151,6 +151,8 @@ public class PortfolioManagerTest {
         Node rootNode = new Node();
         rootNode.setId(UUID.randomUUID());
         rootNode.setPortfolio(portfolio);
+        rootNode.setAsmType("asmRoot");
+        rootNode.setMetadata("");
 
         portfolio.setRootNode(rootNode);
 
@@ -182,7 +184,9 @@ public class PortfolioManagerTest {
                 .getNodesWithResources(portfolio.getId());
 
         String xmlPortfolio = manager.getPortfolio(portfolioId, userId, null);
-        ObjectMapper mapper = new XmlMapper();
+
+        XmlMapper mapper = new XmlMapper();
+
         PortfolioDocument document = mapper
             .readerFor(PortfolioDocument.class)
             .readValue(xmlPortfolio);
@@ -190,7 +194,6 @@ public class PortfolioManagerTest {
         assertEquals(portfolio.getId(), document.getId());
         assertEquals(rootNode.getId(), document.getRootNodeId());
         assertTrue(document.getOwner());
-        assertEquals(userId, document.getOwnerId());
 
         NodeDocument rootDocument = document.getRoot();
 
@@ -232,11 +235,73 @@ public class PortfolioManagerTest {
 
         PortfolioList portfolioList = manager.getPortfolioShared(userId);
 
-        assertEquals(1, portfolioList.getCount());
+        assertEquals(Long.valueOf(1), portfolioList.getCount());
         assertEquals(1, portfolioList.getPortfolios().size());
 
         assertEquals(portfolioId, portfolioList.getPortfolios().get(0).getId());
         assertEquals(gid, portfolioList.getPortfolios().get(0).getGid());
+    }
+
+    @Test
+    public void getPortfolioByCode_WithResources() throws IOException, BusinessException {
+        Long userId = 42L;
+        String code = "foobar";
+
+        Portfolio portfolio = new Portfolio();
+        portfolio.setId(UUID.randomUUID());
+
+        doReturn(portfolio)
+                .when(portfolioRepository)
+                .getPortfolioFromNodeCode(code);
+
+        String document = "<portfolio></portfolio>";
+
+        doReturn(document)
+                .when(manager)
+                .getPortfolio(portfolio.getId(), userId, null);
+
+        String returned = manager.getPortfolioByCode(code, userId, true);
+
+        assertEquals(document, returned);
+
+        verify(manager).getPortfolio(portfolio.getId(), userId, null);
+        verifyNoInteractions(nodeManager);
+    }
+
+    @Test
+    public void getPortfolioByCode_WithoutResources() throws JsonProcessingException, BusinessException {
+        Long userId = 42L;
+        String code = "foobar";
+
+        Node node = new Node();
+        node.setId(UUID.randomUUID());
+
+        Portfolio portfolio = new Portfolio();
+        portfolio.setId(UUID.randomUUID());
+        portfolio.setRootNode(node);
+
+        doReturn(portfolio)
+                .when(portfolioRepository)
+                .getPortfolioFromNodeCode(code);
+
+        NodeDocument nodeDocument = new NodeDocument();
+        nodeDocument.setCode("foo");
+
+        doReturn(nodeDocument)
+                .when(nodeManager)
+                .getNode(node.getId(), false, "nodeRes", userId, null, false);
+
+        XmlMapper mapper = new XmlMapper();
+
+        PortfolioDocument returned = mapper
+                .readerFor(PortfolioDocument.class)
+                .readValue(manager.getPortfolioByCode(code, userId, false));
+
+        assertEquals(portfolio.getId(), returned.getId());
+        assertEquals(nodeDocument.getCode(), returned.getRoot().getCode());
+
+        verify(nodeManager).getNode(node.getId(), false, "nodeRes", userId, null, false);
+        verify(manager, times(0)).getPortfolio(portfolio.getId(), userId, null);
     }
 
     @Test

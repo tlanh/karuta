@@ -47,9 +47,10 @@ public class Node implements Serializable {
 	private Node parentNode;
 	private String childrenStr;
 	private int nodeOrder;
-	private String metadata;
-	private String metadataWad;
-	private String metadataEpm;
+
+	private String metadata = "";
+	private String metadataWad = "";
+	private String metadataEpm = "";
 
 	/** Link to Resource */
 	private Resource resource;

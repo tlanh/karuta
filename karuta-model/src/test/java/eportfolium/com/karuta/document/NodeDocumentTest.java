@@ -65,7 +65,7 @@ public class NodeDocumentTest extends DocumentTest {
 
         assertContains("<node id=\"" + id + "\" type=\"asmUnit\"", output);
         assertContains("xsi_type=\"foo\"", output);
-        assertContains("last_modif=\"2020-12-10 10:10:10.0\"", output);
+        assertContains("last_modif=\"1607595010000\"", output);
     }
 
     @Test
@@ -166,7 +166,7 @@ public class NodeDocumentTest extends DocumentTest {
 
         assertContains("<asmResource contextid=\"" + nodeId +"\"", output);
         assertContains("xsi_type=\"nodeRes\"", output);
-        assertContains("last_modif=\"2020-12-10 10:10:10.0\"", output);
+        assertContains("last_modif=\"1607595010000\"", output);
     }
 
     @Test

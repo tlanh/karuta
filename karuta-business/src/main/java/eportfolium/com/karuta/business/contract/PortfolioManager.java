@@ -15,7 +15,7 @@
 
 package eportfolium.com.karuta.business.contract;
 
-import java.io.File;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
@@ -43,7 +43,7 @@ public interface PortfolioManager extends BaseManager {
 								   Long userId,
 								   Integer cutoff) throws BusinessException, JsonProcessingException;
 
-	File getZippedPortfolio(PortfolioDocument portfolio, String lang, String servletContext) throws IOException;
+	ByteArrayOutputStream getZippedPortfolio(PortfolioDocument portfolio, String lang, String servletContext) throws IOException;
 
 	String getPortfolioByCode(String portfolioCode,
 										 Long userId,
@@ -57,7 +57,7 @@ public interface PortfolioManager extends BaseManager {
 
 	PortfolioGroupList getPortfolioGroupListFromPortfolio(UUID portfolioId);
 
-	String getPortfolios(long userId, Boolean active, long substid, Boolean specialProject, String portfolioCode);
+	String getPortfolios(long userId, boolean active, boolean count, Boolean specialProject, String portfolioCode);
 
 	PortfolioList getPortfolioShared(Long userId);
 
@@ -101,9 +101,7 @@ public interface PortfolioManager extends BaseManager {
 
 	void updateTimeByNode(UUID nodeId);
 
-	List<Portfolio> getPortfolios(Long userId,
-								  Long substid,
-								  Boolean portfolioActive,
-								  Boolean specialProject,
-								  String portfolioCode);
+	List<Portfolio> getPortfolioList(Long userId, boolean active, Boolean specialProject, String portfolioCode);
+
+	Long getPortfolioCount(Long userId, boolean active, Boolean specialProject, String portfolioCode);
 }

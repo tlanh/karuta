@@ -45,6 +45,7 @@ public class ResourceDocumentTest extends DocumentTest {
         node.setId(nodeId);
 
         ResourceDocument document = new ResourceDocument(resource, node);
+        String code = "<code>bar</code>";
 
         document.setCode("bar");
 
@@ -53,11 +54,11 @@ public class ResourceDocumentTest extends DocumentTest {
         assertContains("<asmResource id=\"" + resourceId + "\" ", output);
         assertContains("contextid=\"" + nodeId + "\" ", output);
         assertContains("xsi_type=\"foo\"", output);
-        assertContains("last_modif=\"2020-11-10 10:10:10.0\">", output);
+        assertContains("last_modif=\"1605003010000\">", output);
 
-        assertContains("<code>bar</code>", output);
+        assertContains(code, output);
 
-        assertContains("<content>" + rawXml + "</content>", output);
+        assertContains("<content>" + rawXml + code + "</content>", output);
     }
 
     @Test

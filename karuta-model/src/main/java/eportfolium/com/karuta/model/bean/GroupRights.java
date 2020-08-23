@@ -42,8 +42,6 @@ public class GroupRights implements Serializable {
 	public static final String WRITE = "write";
 	public static final String SUBMIT = "submit";
 	public static final String DELETE = "delete";
-	public static final String LIER = "lier";
-	public static final String DELIER = "delier";
 
 	private GroupRightsId id;
 	private boolean read;

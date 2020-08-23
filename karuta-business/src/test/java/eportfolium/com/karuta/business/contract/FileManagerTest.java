@@ -3,6 +3,7 @@ package eportfolium.com.karuta.business.contract;
 import eportfolium.com.karuta.business.ServiceTest;
 import eportfolium.com.karuta.document.ResourceDocument;
 import org.apache.http.HttpEntity;
+import org.apache.http.StatusLine;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPut;
@@ -27,6 +28,41 @@ public class FileManagerTest {
 
     @MockBean
     private ConfigurationManager configurationManager;
+
+    private ArgumentCaptor<HttpPut> doAnswer(String answer) throws IOException {
+        CloseableHttpClient client = mock(CloseableHttpClient.class);
+        CloseableHttpResponse response = mock(CloseableHttpResponse.class);
+        HttpEntity httpEntity = mock(HttpEntity.class);
+        StatusLine statusLine = mock(StatusLine.class);
+
+        doReturn(client)
+                .when(manager)
+                .createClient();
+
+        ArgumentCaptor<HttpPut> captor = ArgumentCaptor.forClass(HttpPut.class);
+
+        doReturn(response)
+                .when(client)
+                .execute(captor.capture());
+
+        doReturn(httpEntity)
+                .when(response)
+                .getEntity();
+
+        doReturn(new ByteArrayInputStream(answer.getBytes()))
+                .when(httpEntity)
+                .getContent();
+
+        doReturn(statusLine)
+                .when(response)
+                .getStatusLine();
+
+        doReturn(200)
+                .when(statusLine)
+                .getStatusCode();
+
+        return captor;
+    }
 
     @Test
     public void updateResource_WithErrors() throws IOException {
@@ -60,23 +96,14 @@ public class FileManagerTest {
                 .when(configurationManager)
                 .get("fileserver");
 
-        CloseableHttpClient client = mock(CloseableHttpClient.class);
-
-        doReturn(client)
-                .when(manager)
-                .createClient();
-
-        ArgumentCaptor<HttpPut> captor = ArgumentCaptor.forClass(HttpPut.class);
-
-        doReturn(mock(CloseableHttpResponse.class))
-                .when(client)
-                .execute(captor.capture());
+        String answer = "Hello world";
+        ArgumentCaptor<HttpPut> captor = doAnswer(answer);
 
         ResourceDocument document = mock(ResourceDocument.class);
         when(document.getFileid(lang)).thenReturn("foo");
 
         String retval = manager.updateResource(document, input, lang, thumb, "");
-        assertNotNull(retval);
+        assertEquals(answer, retval);
 
         assertEquals("/foo/thumb", captor.getValue().getURI().getPath());
 
@@ -94,23 +121,14 @@ public class FileManagerTest {
                 .when(configurationManager)
                 .get("fileserver");
 
-        CloseableHttpClient client = mock(CloseableHttpClient.class);
-
-        doReturn(client)
-                .when(manager)
-                .createClient();
-
-        ArgumentCaptor<HttpPut> captor = ArgumentCaptor.forClass(HttpPut.class);
-
-        doReturn(mock(CloseableHttpResponse.class))
-                .when(client)
-                .execute(captor.capture());
+        String answer = "foo bar";
+        ArgumentCaptor<HttpPut> captor = doAnswer(answer);
 
         ResourceDocument document = mock(ResourceDocument.class);
         when(document.getFileid(lang)).thenReturn("foo");
 
         String retval = manager.updateResource(document, input, lang, thumb, "");
-        assertNotNull(retval);
+        assertEquals(answer, retval);
 
         assertEquals("/foo", captor.getValue().getURI().getPath());
 

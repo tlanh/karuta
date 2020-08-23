@@ -10,14 +10,7 @@ import eportfolium.com.karuta.model.bean.Node;
 import eportfolium.com.karuta.model.bean.Resource;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @JsonRootName("asmResource")
 @JsonInclude(JsonInclude.Include.NON_ABSENT)
@@ -107,11 +100,10 @@ public class ResourceDocument {
         this.code = code;
         if( code != null )
         {
-	        List<Map<String, String>> temp = new ArrayList<Map<String, String>>();
-	        HashMap<String, String> tmap = new HashMap<String, String>();
-	        temp.add(tmap);
+	        HashMap<String, String> tmap = new HashMap<>();
 	        tmap.put("", code);
-	        this.dumpMap("code", temp);
+
+	        this.dumpMap("code", Collections.singletonList(tmap));
         }
     }
 
@@ -157,19 +149,16 @@ public class ResourceDocument {
     }
 
     public void setFileid(List<Map<String, String>> fileid) {
-    	if( this.fileid == null )
-    		this.fileid = new ArrayList<Map<String, String>>();
-    	
-    	this.fileid.add(fileid.get(0));
-      this.dumpMap("fileid", fileid);
+        this.fileid = fileid;
+        this.dumpMap("fileid", fileid);
     }
 
     public void setFileid(String lang, String fileid) {
     	Map<String, String> map = null;
     	if( this.fileid == null )
     	{
-    		this.fileid = new ArrayList<Map<String, String>>();
-    		map = new HashMap<String, String>();
+    		this.fileid = new ArrayList<>();
+    		map = new HashMap<>();
     		this.fileid.add(map);
     	}
     	else
@@ -260,15 +249,12 @@ public class ResourceDocument {
             .filter(f -> f.get("lang").equals(lang))
             .findFirst()
             .map(m -> m.get(""));
-        
-        if( search.isPresent() )
-        	return search.get();
-        
+
         /// From some other function, attribute value is in "value"
-        return values.stream()
-            .filter(f -> f.get("lang").equals(lang))
-            .findFirst()
-            .map(m -> m.get("value")).orElse("");
+        return search.orElseGet(() -> values.stream()
+                .filter(f -> f.get("lang").equals(lang))
+                .findFirst()
+                .map(m -> m.get("value")).orElse(""));
     }
 
     private void dumpMap(String name, List<Map<String, String>> values) {
@@ -276,24 +262,19 @@ public class ResourceDocument {
             this.content = "";
 
         StringBuilder stringBuilder = new StringBuilder("");
-        stringBuilder.append("<").append(name);
 
-        String nodecontent = "";
-        for( Map<String, String> value : values )
-        {
-        	for( Entry<String, String> entry : value.entrySet() )
-        	{
-          	if( !"".equals(entry.getKey()) )
-          		stringBuilder.append(" ").append(entry.getKey()).append("=\"").append(entry.getValue()).append("\"");
-          	else
-          		nodecontent = entry.getValue();
-        	}
-        }
-        stringBuilder.append(">");
-        stringBuilder.append(nodecontent);
-        stringBuilder.append("</");
-        stringBuilder.append(name);
-        stringBuilder.append(">");
+        values.forEach(map -> {
+            if (map.containsKey("")) {
+                stringBuilder.append("<").append(name).append(">")
+                        .append(map.get(""))
+                        .append("</").append(name).append(">");
+            } else {
+                stringBuilder.append("<").append(name);
+                map.forEach((k, v) -> stringBuilder.append(" ").append(k).append("=\"").append(v).append("\""));
+                stringBuilder.append(" />");
+            }
+
+        });
 
         content += stringBuilder.toString();
     }
