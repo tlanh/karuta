@@ -9,7 +9,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.parameters.P;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.stereotype.Service;
@@ -22,7 +21,7 @@ import static org.mockito.Mockito.doReturn;
 @RunWith(SpringRunner.class)
 @SpringBootTest
 @WithMockUser
-public class RightsExpressionsTest {
+public class RightsAnnotationsTest {
     @SpyBean
     private NodeManager nodeManager;
 
@@ -37,13 +36,13 @@ public class RightsExpressionsTest {
 
     @Service
     public static class Foo {
-        @PreAuthorize("isPublic(#id)")
+        @CanReadOrPublic
         public void doSomethingOnPublic(@P("id") UUID nodeId) { }
 
-        @PreAuthorize("canRead(#id)")
+        @CanRead
         public void readSomething(@P("id") UUID nodeId) { }
 
-        @PreAuthorize("canDelete(#id)")
+        @CanDelete
         public void deleteSomething(@P("id") UUID nodeId) { }
     }
 
@@ -94,7 +93,7 @@ public class RightsExpressionsTest {
                 .when(nodeManager)
                 .getRights(userId, nodeId);
 
-        foo.deleteSomething(nodeId);
+        foo.readSomething(nodeId);
     }
 
     @Test
