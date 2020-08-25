@@ -6,6 +6,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 @Retention(RetentionPolicy.RUNTIME)
-@PreAuthorize("hasRole('ADMIN') or @nodeManagerImpl.canDelete(principal, #id)")
+@PreAuthorize("hasRole('ADMIN') or @nodeManagerImpl.canDelete(principal, #id) or @nodeManagerImpl.isDesigner(principal, #id)")
 public @interface CanDelete {
 }

@@ -1,6 +1,7 @@
 package eportfolium.com.karuta.business.security;
 
 import eportfolium.com.karuta.business.contract.NodeManager;
+import eportfolium.com.karuta.consumer.repositories.CredentialRepository;
 import eportfolium.com.karuta.consumer.repositories.NodeRepository;
 import eportfolium.com.karuta.model.bean.GroupRights;
 import org.junit.Test;
@@ -27,6 +28,9 @@ public class RightsAnnotationsTest {
 
     @MockBean
     private NodeRepository nodeRepository;
+
+    @MockBean
+    private CredentialRepository credentialRepository;
 
     @SpyBean
     private Foo foo;
@@ -104,6 +108,15 @@ public class RightsAnnotationsTest {
         doReturn(groupRights)
                 .when(nodeManager)
                 .getRights(userId, nodeId);
+
+        foo.deleteSomething(nodeId);
+    }
+
+    @Test
+    public void canDelete_AsDesigner() {
+        doReturn(true)
+                .when(credentialRepository)
+                .isDesigner(userId, nodeId);
 
         foo.deleteSomething(nodeId);
     }
