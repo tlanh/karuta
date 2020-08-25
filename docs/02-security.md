@@ -28,7 +28,7 @@ attribute named `id` that represents the ID of the node. For example:
 
 ~~~~java
 @CanRead
-public void doSomethingThatRequireReadRight(@P("id") UUID nodeID) {
+public void doSomethingThatRequiresReadRight(@P("id") UUID nodeID) {
 
 }
 ~~~~
@@ -62,6 +62,21 @@ providing a token.
 
 Thus, you might expect 403 (Forbidden) requests if you don't properly
 provide a cookie.
+
+## Roles
+
+In Karuta, users can either be regular ones, designers or admins.
+
+The pecularity is that Karuta uses the term "designer" to either refer to
+a role or to a right on nodes.
+
+In the first case, this is modeled as the `designer` attribute being set
+to `true` in the database for the record representing the currently logged
+in user.
+
+In the second case, this is modeled as the user being part of a group
+named "designer" and attached to a given node. You can check out the
+following section for further info.
 
 ## Fine grained authorization
 
