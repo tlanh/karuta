@@ -127,6 +127,13 @@ public abstract class BaseManagerImpl implements BaseManager {
 		return hasRight(userId, nodeId, right);
 	}
 
+	@Override
+	public boolean isDesigner(UserDetails userDetails, UUID nodeId) {
+		Long userId = (userDetails instanceof UserInfo) ? ((UserInfo)userDetails).getId() : 0L;
+
+		return credentialRepository.isDesigner(userId, nodeId);
+	}
+
 	protected void processQuery(List<Pair<Node, GroupRights>> nodes,
 								Map<UUID, Tree> entries,
 								String role) throws JsonProcessingException {

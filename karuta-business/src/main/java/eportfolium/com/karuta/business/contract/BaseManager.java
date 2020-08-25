@@ -15,4 +15,6 @@ public interface BaseManager {
     boolean canDelete(UserDetails userDetails, UUID nodeId);
 
     boolean canWrite(UserDetails userDetails, UUID nodeId);
+
+    boolean isDesigner(UserDetails userDetails, UUID nodeId);
 }
