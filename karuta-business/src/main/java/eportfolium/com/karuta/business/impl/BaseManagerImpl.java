@@ -231,16 +231,14 @@ public abstract class BaseManagerImpl implements BaseManager {
 	}
 
 	protected String xmlAttributes(MetadataDocument document) throws JsonProcessingException {
-		final String attributesChain = attributeWriter.writeValueAsString(document);
+		String attributesChain = attributeWriter.writeValueAsString(document);
+
+		String extraAttributes = document.getAttributes().entrySet()
+				.stream().map(entry -> entry.getKey() +"=\"" + entry.getValue() + "\"")
+				.collect(Collectors.joining(" "));
 
 		return attributesChain
-				.substring(1, attributesChain.length() - 2).trim();
-	}
+				.substring(1, attributesChain.length() - 2).trim() + " " + extraAttributes;
 
-	protected String xmlAttributes(ResourceDocument document) throws JsonProcessingException {
-		final String attributesChain = attributeWriter.writeValueAsString(document);
-
-		return attributesChain
-				.substring(2, attributesChain.length() - 3);
 	}
 }

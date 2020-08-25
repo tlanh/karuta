@@ -9,49 +9,65 @@ import java.util.UUID;
 
 @JsonRootName("node")
 public class NodeRightsDocument {
-    private final UUID uuid;
-    private final RoleElement role;
+    private UUID uuid;
+    private RoleElement role;
 
-    private static class RoleElement {
-        private final GroupRights groupRights;
+    public static class RoleElement {
+        private RightElement right;
+        private String name;
 
         @JsonPropertyOrder({"RD", "WR", "DL", "SB"})
-        private static class RightsElement {
-            private final boolean read, write, delete, submit;
+        public static class RightElement {
+            private boolean RD;
+            private boolean WR;
+            private boolean DL;
+            private boolean SB;
 
-            public RightsElement(GroupRights groupRights) {
-                this.read = groupRights.isRead();
-                this.write = groupRights.isWrite();
-                this.delete = groupRights.isDelete();
-                this.submit = groupRights.isSubmit();
+            public RightElement() { }
+
+            public RightElement(GroupRights groupRights) {
+                this.RD = groupRights.isRead();
+                this.WR = groupRights.isWrite();
+                this.DL = groupRights.isDelete();
+                this.SB = groupRights.isSubmit();
             }
 
-            @JacksonXmlProperty(isAttribute = true)
-            public boolean RD() { return read; }
+            @JacksonXmlProperty(localName = "RD", isAttribute = true)
+            public boolean getRD() { return RD; }
 
-            @JacksonXmlProperty(isAttribute = true)
-            public boolean WR() { return write; }
+            @JacksonXmlProperty(localName = "WR", isAttribute = true)
+            public boolean getWR() { return WR; }
 
-            @JacksonXmlProperty(isAttribute = true)
-            public boolean DL() { return delete; }
+            @JacksonXmlProperty(localName = "DL", isAttribute = true)
+            public boolean getDL() { return DL; }
 
-            @JacksonXmlProperty(isAttribute = true)
-            public boolean SB() { return submit; }
+            @JacksonXmlProperty(localName = "SB", isAttribute = true)
+            public boolean getSB() { return SB; }
+
+            public void setRD(boolean RD) { this.RD = RD; }
+            public void setWR(boolean WR) { this.WR = WR; }
+            public void setDL(boolean DL) { this.DL = DL; }
+            public void setSB(boolean SB) { this.SB = SB; }
         }
 
+        public RoleElement() { }
+
         public RoleElement(GroupRights groupRights) {
-            this.groupRights = groupRights;
+            this.right = new RightElement(groupRights);
+            this.name = groupRights.getGroupRightInfo().getLabel();
         }
 
         @JacksonXmlProperty(isAttribute = true)
         public String getName() {
-            return groupRights.getGroupRightInfo().getLabel();
+            return name;
         }
 
-        public RightsElement getRights() {
-            return new RightsElement(groupRights);
+        public RightElement getRight() {
+            return right;
         }
     }
+
+    public NodeRightsDocument() { }
 
     public NodeRightsDocument(UUID uuid, GroupRights groupRights) {
         this.uuid = uuid;

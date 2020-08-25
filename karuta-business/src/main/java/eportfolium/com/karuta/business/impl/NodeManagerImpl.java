@@ -26,6 +26,7 @@ import java.util.stream.Stream;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
+import eportfolium.com.karuta.business.security.*;
 import eportfolium.com.karuta.consumer.repositories.*;
 import eportfolium.com.karuta.document.*;
 import eportfolium.com.karuta.model.bean.*;
@@ -36,6 +37,8 @@ import org.hibernate.Hibernate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -91,17 +94,9 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	private InMemoryCache<UUID, Map<UUID, List<Node>>> cachedNodes = new InMemoryCache<>(600, 1500, 6);
 
 	@Override
-	public String getNode(UUID nodeId, boolean withChildren, Long userId, Integer cutoff)
-			throws BusinessException, JsonProcessingException {
+	@CanReadOrPublic
+	public String getNode(@P("id") UUID nodeId, Long userId, Integer cutoff) throws JsonProcessingException {
 		final GroupRights rights = getRights(userId, nodeId);
-
-		if (!rights.isRead()) {
-			/// Vérifie les droits avec le compte publique (dernière chance)
-			if (!nodeRepository.isPublic(nodeId))
-				throw new GenericBusinessException("Vous n'avez pas les droits nécessaires.");
-
-			userId = credentialRepository.getPublicId();
-		}
 
 		List<Pair<Node, GroupRights>> nodes = getNodePerLevel(nodeId, userId, rights.getGroupRightInfo().getId(),
 				cutoff);
@@ -308,20 +303,15 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	}
 
 	@Override
-	public UUID getPortfolioIdFromNode(Long userId, UUID nodeId) throws BusinessException {
-		// Admin, or if user has a right to read can fetch this information
-		if (!credentialRepository.isAdmin(userId) && !hasRight(userId, nodeId, GroupRights.READ)) {
-			throw new GenericBusinessException("403 FORBIDDEN : No READ credential");
-		}
-
+	@CanRead
+	public UUID getPortfolioIdFromNode(@P("id") UUID nodeId) {
 		return nodeRepository.findById(nodeId)
 				.map(n -> n.getPortfolio().getId())
 				.orElse(null);
 	}
 
 	@Override
-	public String executeMacroOnNode(long userId, UUID nodeId, String macroName)
-            throws BusinessException, JsonProcessingException {
+	public String executeMacroOnNode(long userId, UUID nodeId, String macroName) throws JsonProcessingException {
 
         /// Selection du grid de l'utilisateur
         GroupRights gr = groupRightsRepository.getPublicRightsByUserId(nodeId, userId);
@@ -499,10 +489,8 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	}
 
 	@Override
-	public long getRoleByNode(Long userId, UUID nodeId, String role) throws BusinessException {
-		if (!credentialRepository.isAdmin(userId))
-			throw new GenericBusinessException("FORBIDDEN : No admin right");
-
+	@IsAdmin
+	public long getRoleByNode(Long userId, UUID nodeId, String role) {
 		// Check if role exists already
 		Long groupId = groupRightInfoRepository.getIdByNodeAndLabel(nodeId, role);
 
@@ -523,94 +511,13 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 
 			groupId = groupInfo.getId();
 		}
+
 		return groupId;
 	}
 
 	@Override
-	public MetadataWadDocument getNodeMetadataWad(UUID nodeId, Long userId) throws BusinessException, JsonProcessingException {
-		if (!hasRight(userId, nodeId, GroupRights.READ)) {
-			throw new GenericBusinessException("Vous n'avez pas les droits nécessaires.");
-		}
-
-		Optional<Node> node = nodeRepository.findById(nodeId);
-
-		if (!node.isPresent() || !node.get().getAsmType().equals("asmResource"))
-			return null;
-
-		return MetadataWadDocument.from(node.get().getMetadataWad());
-	}
-
-	@Override
-	public Integer changeNode(UUID nodeId, NodeDocument node, Long userId) throws BusinessException, JsonProcessingException {
-		if (!hasRight(userId, nodeId, GroupRights.WRITE))
-			throw new GenericBusinessException("403 Forbidden : no write credential ");
-
-		if (node == null)
-			return null;
-
-		String asmType = node.getType();
-		String xsiType = node.getXsiType();
-		String semtag = node.getSemtag();
-		String format = node.getFormat();
-		String label = node.getLabel();
-		String code = node.getCode();
-		String descr = node.getDescription();
-
-		String metadataStr = "";
-		String metadataWadStr = "";
-		String metadataEpmStr = "";
-
-		boolean sharedRes = false;
-		boolean sharedNode = false;
-		boolean sharedNodeRes = false;
-
-		for (ResourceDocument resourceDocument : node.getResources()) {
-			resourceManager.updateResource(nodeId, resourceDocument.getXsiType(),
-					resourceDocument.getContent(), userId);
-		}
-
-		if (node.getMetadataWad() != null) {
-			metadataWadStr = xmlAttributes(node.getMetadataWad());
-		}
-
-		if (node.getMetadataEpm() != null) {
-			metadataEpmStr = xmlAttributes(node.getMetadataEpm());
-		}
-
-		if (node.getMetadata() != null) {
-			if (node.getMetadata().getSharedResource())
-				sharedRes = true;
-			if (node.getMetadata().getSharedNode())
-				sharedNode = true;
-			if (node.getMetadata().getSharedNodeResource())
-				sharedNodeRes = true;
-
-			metadataStr = xmlAttributes(node.getMetadata());
-		}
-
-		int order = 0;
-
-		for (NodeDocument child : node.getChildren()) {
-			updateNodeOrder(child.getId(), order);
-			order++;
-		}
-
-		// TODO UpdateNode different selon creation de modèle ou instantiation copie
-		if (!node.getChildren().isEmpty())
-			updateNode(nodeId);
-
-		portfolioManager.updateTimeByNode(nodeId);
-
-		return update(nodeId, asmType, xsiType, semtag, label, code, descr, format, metadataStr,
-				metadataWadStr, metadataEpmStr, sharedRes, sharedNode, sharedNodeRes, userId);
-	}
-
-	@Override
-	public String changeNodeMetadataWad(UUID nodeId, MetadataWadDocument metadata, Long userId)
-			throws BusinessException, JsonProcessingException {
-
-		if (!hasRight(userId, nodeId, GroupRights.WRITE))
-			throw new GenericBusinessException("403 FORBIDDEN : No WRITE credential");
+	@CanWrite
+	public String changeNodeMetadataWad(@P("id") UUID nodeId, MetadataWadDocument metadata) throws JsonProcessingException {
 
 		final String metadataAttributes = xmlAttributes(metadata);
 
@@ -625,14 +532,15 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	}
 
 	@Override
-	public void removeNode(UUID nodeId, Long userId) throws BusinessException {
-		if (!hasRight(userId, nodeId, GroupRights.DELETE))
-			if (!credentialRepository.isAdmin(userId)
-					&& !credentialRepository.isDesigner(userId, nodeId))
-				throw new GenericBusinessException("403 FORBIDDEN, No admin right");
-
+	@CanDelete
+	public void removeNode(@P("id") UUID nodeId) {
 		/// Copy portfolio base info
-		final Node nodeToRemove = nodeRepository.findById(nodeId).get();
+		final Optional<Node> nodeOptional = nodeRepository.findById(nodeId);
+
+		if (!nodeOptional.isPresent())
+			return;
+
+		final Node nodeToRemove = nodeOptional.get();
 
 		/// Portfolio id, nécessaire pour plus tard !
 		final UUID portfolioId = nodeToRemove.getPortfolio().getId();
@@ -665,10 +573,8 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	}
 
 	@Override
-	public boolean changeParentNode(Long userid, UUID nodeId, UUID parentId) throws BusinessException {
-		if (!credentialRepository.isAdmin(userid) && !credentialRepository.isDesigner(userid, nodeId))
-			throw new GenericBusinessException("FORBIDDEN 403 : No admin right");
-
+	@IsAdminOrDesignerOnNode
+	public boolean changeParentNode(@P("id") UUID nodeId, UUID parentId) {
 		// To avoid defining a node as its parent.
 		if (nodeId.equals(parentId))
 			return false;
@@ -736,10 +642,8 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	}
 
 	@Override
-	public String changeNodeMetadataEpm(UUID nodeId, MetadataEpmDocument metadata, Long userId)
-			throws BusinessException, JsonProcessingException {
-		if (!hasRight(userId, nodeId, GroupRights.WRITE))
-			throw new GenericBusinessException("FORBIDDEN 403 : No WRITE credential ");
+	@CanWrite
+	public String changeNodeMetadataEpm(@P("id") UUID nodeId, MetadataEpmDocument metadata) throws JsonProcessingException {
 
 		final String metadataAttributes = xmlAttributes(metadata);
 
@@ -755,11 +659,9 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	}
 
 	@Override
-	public String changeNodeMetadata(UUID nodeId, MetadataDocument metadata, Long userId)
+	@CanWrite
+	public String changeNodeMetadata(@P("id") UUID nodeId, MetadataDocument metadata, Long userId)
 			throws BusinessException, JsonProcessingException {
-
-		if (!hasRight(userId, nodeId, GroupRights.WRITE))
-			throw new GenericBusinessException("403 FORBIDDEN, no WRITE credential");
 
 		UUID portfolioUuid = portfolioRepository.getPortfolioUuidFromNode(nodeId);
 
@@ -773,6 +675,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 			.ifPresent(node -> {
 				node.setMetadata(metadataAttributes);
 				node.setSemantictag(metadata.getSemantictag());
+
 				if( metadata.getSharedResource() != null )
 					node.setSharedRes(metadata.getSharedResource());
 				if( metadata.getSharedNode() != null )
@@ -788,63 +691,19 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	}
 
 	@Override
-	public String changeNodeContext(UUID nodeId, ResourceDocument resource, Long userId)
-			throws BusinessException {
-		if (!hasRight(userId, nodeId, GroupRights.WRITE))
-			throw new GenericBusinessException("403 FORBIDDEN : No WRITE credential");
-
+	@CanWrite
+	public String changeNodeContext(@P("id") UUID nodeId, ResourceDocument resource, Long userId) throws BusinessException {
 		resourceManager.changeResourceByXsiType(nodeId, "context", resource, userId);
 
 		return "editer";
 	}
 
 	@Override
-	public String changeNodeResource(UUID nodeId, ResourceDocument resource, Long userId)
-			throws BusinessException {
-		if (!hasRight(userId, nodeId, GroupRights.WRITE))
-			throw new GenericBusinessException("403 FORBIDDEN : No WRITE credential");
-
+	@CanWrite
+	public String changeNodeResource(@P("id") UUID nodeId, ResourceDocument resource, Long userId) throws BusinessException {
 		resourceManager.changeResourceByXsiType(nodeId, "nodeRes", resource, userId);
 
 		return "editer";
-	}
-
-	@Override
-	public NodeList addNode(UUID parentNodeId, NodeDocument node, Long userId, boolean forcedUuid)
-			throws BusinessException, JsonProcessingException {
-
-		Integer nodeOrder = nodeRepository.getNodeNextOrderChildren(parentNodeId);
-		Portfolio portfolio = portfolioRepository.getPortfolioFromNode(parentNodeId);
-
-		UUID portfolioId = portfolio != null ? portfolio.getId() : null;
-
-		Node pNode = nodeRepository.getNodes(Collections.singletonList(parentNodeId)).get(0);
-
-		// TODO getNodeRight postNode
-		Node nodeId = writeNode(node, portfolioId, userId, nodeOrder, null, pNode, forcedUuid, null, true);
-
-		portfolioManager.updateTimeByNode(portfolioId);
-
-		return new NodeList(Collections.singletonList(new NodeDocument(nodeId)));
-	}
-
-	@Override
-	public String getNodeWithXSL(UUID nodeId, String xslFile, String parameters, Long userId)
-			throws BusinessException, JsonProcessingException {
-		/// Préparation des paramètres pour les besoins futurs, format:
-		/// "par1:par1val;par2:par2val;..."
-		String[] table = parameters.split(";");
-		int parSize = table.length;
-		String[] param = new String[parSize];
-		String[] paramVal = new String[parSize];
-		for (int i = 0; i < parSize; ++i) {
-			String line = table[i];
-			int var = line.indexOf(":");
-			param[i] = line.substring(0, var);
-			paramVal[i] = line.substring(var + 1);
-		}
-
-		return getNode(nodeId, true, userId, null);
 	}
 
 	@Override
@@ -1015,7 +874,8 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
      * Même chose que postImportNode, mais on ne prend pas en compte le parsage des
      * droits
      */
-    public UUID copyNode(UUID destId, String tag, String code, UUID sourceId, Long userId)
+    @CanRead
+    public UUID copyNode(@P("id")  UUID destId, String tag, String code, UUID sourceId, Long userId)
             throws BusinessException, JsonProcessingException {
         return importNode(destId, tag, code, sourceId, userId, false);
     }
@@ -1090,7 +950,8 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 	}
 
 	@Override
-	public UUID importNode(UUID destId, String tag, String code, UUID sourceId, Long userId)
+	@CanRead
+	public UUID importNode(@P("id") UUID destId, String tag, String code, UUID sourceId, Long userId)
             throws BusinessException, JsonProcessingException {
 	    return importNode(destId, tag, code, sourceId, userId, true);
     }
@@ -1101,10 +962,6 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
             throw new IllegalArgumentException(
                     "importNode() a reçu des paramètres non valides (complétez le paramètre 'srcuuid' ou les paramètres 'tag' et 'code').");
 		}
-
-        if (sourceId != null && !hasRight(userId, sourceId, GroupRights.READ)) {
-            throw new GenericBusinessException("403 FORBIDDEN : No READ credential");
-        }
         
         // Pour la copie de la structure
         UUID portfolioId = null;
@@ -1672,14 +1529,6 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 
 	}
 
-	private void updateNodeOrder(UUID nodeUuid, int order) {
-		nodeRepository.findById(nodeUuid)
-				.ifPresent(node -> {
-					node.setNodeOrder(order);
-					nodeRepository.save(node);
-				});
-	}
-
 	private Node add(NodeDocument nodeDocument, UUID nodeId, Node nodeParent, String semanticTag, String code, int order, Long userId,
 					 UUID portfolioId) throws JsonProcessingException {
 		
@@ -1733,37 +1582,6 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 		}
 
 		return nodeRepository.save(node);
-	}
-
-	private int update(UUID nodeId, String asmType, String xsiType, String semantictag, String label, String code,
-					  String descr, String format, String metadata, String metadataWad, String metadataEpm, boolean sharedRes,
-					  boolean sharedNode, boolean sharedNodeRes, Long modifUserId) {
-		Optional<Node> nodeOptional = nodeRepository.findById(nodeId);
-
-		if (!nodeOptional.isPresent()) {
-			return -1;
-		}
-
-		Node node = nodeOptional.get();
-
-		node.setAsmType(asmType);
-		node.setFormat(format);
-		node.setXsiType(xsiType);
-		node.setSemantictag(semantictag);
-		node.setLabel(label);
-		node.setCode(code);
-		node.setDescr(descr);
-		node.setMetadata(metadata);
-		node.setMetadataWad(metadataWad);
-		node.setMetadataEpm(metadataEpm);
-		node.setSharedRes(sharedRes);
-		node.setSharedNode(sharedNode);
-		node.setSharedNodeRes(sharedNodeRes);
-		node.setModifUserId(modifUserId);
-
-		nodeRepository.save(node);
-
-		return 0;
 	}
 
 	private NodeDocument getNodeDocument(Node node) {

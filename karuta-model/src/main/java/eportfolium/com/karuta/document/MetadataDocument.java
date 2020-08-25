@@ -15,9 +15,9 @@ public class MetadataDocument {
     protected static XmlMapper xmlMapper = new XmlMapper();
 
     @JsonDeserialize(using = BooleanDeserializer.class)
-    protected boolean isPublic;
+    protected Boolean isPublic;
     @JsonDeserialize(using = BooleanDeserializer.class)
-    protected boolean isPrivate;
+    protected Boolean isPrivate;
 
     @JsonDeserialize(using = BooleanDeserializer.class)
     protected boolean sharedResource = false;
@@ -110,6 +110,11 @@ public class MetadataDocument {
 
     public void setSemantictag(String semantictag) {
         this.semantictag = semantictag;
+    }
+
+    @JsonIgnore
+    public Map<String, String> getAttributes() {
+        return attributes;
     }
     
     @JsonAnySetter
