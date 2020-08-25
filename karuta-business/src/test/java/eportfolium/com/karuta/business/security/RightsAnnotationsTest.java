@@ -48,6 +48,9 @@ public class RightsAnnotationsTest {
 
         @CanDelete
         public void deleteSomething(@P("id") UUID nodeId) { }
+
+        @CanWrite
+        public void writeSomething(@P("id") UUID nodeId) { }
     }
 
     @Test(expected = AccessDeniedException.class)
@@ -119,5 +122,26 @@ public class RightsAnnotationsTest {
                 .isDesigner(userId, nodeId);
 
         foo.deleteSomething(nodeId);
+    }
+
+    @Test(expected = AccessDeniedException.class)
+    public void canWrite_WithoutRight() {
+        doReturn(new GroupRights())
+                .when(nodeManager)
+                .getRights(userId, nodeId);
+
+        foo.writeSomething(nodeId);
+    }
+
+    @Test
+    public void canWrite_WithRight() {
+        GroupRights groupRights = new GroupRights();
+        groupRights.setWrite(true);
+
+        doReturn(groupRights)
+                .when(nodeManager)
+                .getRights(userId, nodeId);
+
+        foo.writeSomething(nodeId);
     }
 }
