@@ -5,6 +5,7 @@ import java.util.Map;
 
 import com.fasterxml.jackson.annotation.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
+
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
@@ -13,12 +14,18 @@ import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 public class MetadataDocument {
     protected static XmlMapper xmlMapper = new XmlMapper();
 
+    @JsonDeserialize(using = BooleanDeserializer.class)
     protected Boolean isPublic;
+    @JsonDeserialize(using = BooleanDeserializer.class)
     protected Boolean isPrivate;
 
-    protected Boolean sharedResource = false;
-    protected Boolean sharedNode = false;
-    protected Boolean sharedNodeResource = false;
+    @JsonDeserialize(using = BooleanDeserializer.class)
+    protected boolean sharedResource = false;
+    @JsonDeserialize(using = BooleanDeserializer.class)
+    protected boolean sharedNode = false;
+
+    @JsonDeserialize(using = BooleanDeserializer.class)
+    protected boolean sharedNodeResource;
 
     protected String semantictag;
 
@@ -103,6 +110,11 @@ public class MetadataDocument {
 
     public void setSemantictag(String semantictag) {
         this.semantictag = semantictag;
+    }
+
+    @JsonIgnore
+    public Map<String, String> getAttributes() {
+        return attributes;
     }
     
     @JsonAnySetter

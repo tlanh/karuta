@@ -66,6 +66,7 @@ public class PortfolioDocument {
         Node rootNode = portfolio.getRootNode();
 
         this.rootNodeId = rootNode.getId();
+        this.code = rootNode.getCode();
         this.ownerId = portfolio.getModifUserId();
         this.modifDate = portfolio.getModifDate();
 
@@ -79,7 +80,7 @@ public class PortfolioDocument {
             child.setMetadataWad(MetadataWadDocument.from(rootNode.getMetadataWad()));
             child.setMetadataEpm(MetadataEpmDocument.from(rootNode.getMetadataEpm()));
             child.setMetadata(MetadataDocument.from(rootNode.getMetadata()));
-        } catch( JsonProcessingException e ) {
+        } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
 

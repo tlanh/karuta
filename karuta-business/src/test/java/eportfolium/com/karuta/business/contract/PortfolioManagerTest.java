@@ -17,6 +17,7 @@ import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.*;
 
 import static org.junit.Assert.*;
@@ -46,10 +47,19 @@ public class PortfolioManagerTest {
     @MockBean
     private ResourceRepository resourceRepository;
 
+    @MockBean
+    private CredentialRepository credentialRepository;
+
     @SpyBean
     private PortfolioManager manager;
 
     @MockBean
+    private SecurityManager securityManager;
+
+    @MockBean
+    private ResourceManager resourceManager;
+
+    @SpyBean
     private NodeManager nodeManager;
 
     @Test
@@ -520,6 +530,157 @@ public class PortfolioManagerTest {
         verify(portfolioRepository).save(portfolio);
 
         verifyNoMoreInteractions(portfolioRepository);
+    }
+
+    @Test
+    public void importPortfolio_Single() throws IOException, BusinessException {
+        Long userId = 42L;
+        String context = "";
+
+        doReturn(true)
+                .when(credentialRepository)
+                .isAdmin(userId);
+
+        doReturn(Optional.of(new Credential()))
+                .when(credentialRepository)
+                .findById(userId);
+
+        Portfolio portfolio = new Portfolio();
+        portfolio.setId(UUID.randomUUID());
+
+        doReturn(portfolio)
+                .when(portfolioRepository)
+                .save(any(Portfolio.class));
+
+        ArgumentCaptor<Node> captor = ArgumentCaptor.forClass(Node.class);
+
+        doAnswer(invocationOnMock -> {
+            Node node = invocationOnMock.getArgument(0);
+            node.setId(UUID.randomUUID());
+
+            return node;
+        }).when(nodeRepository)
+                .save(captor.capture());
+
+        InputStream zipContent = getClass().getClassLoader().getResourceAsStream("archives/import-single.zip");
+
+        assertEquals(portfolio.getId(), manager.importPortfolio(zipContent, userId, context));
+
+        verify(nodeRepository).isCodeExist("NO.export");
+
+        verify(securityManager).addRole(portfolio.getId(), "all", userId);
+        verify(securityManager).addRole(portfolio.getId(), "designer", userId);
+
+        verify(nodeRepository, times(3)).save(any(Node.class));
+
+        Node asmRoot = captor.getAllValues().get(0);
+        Node firstContext = captor.getAllValues().get(1);
+        Node secondContext = captor.getAllValues().get(2);
+
+        assertEquals("asmRoot", asmRoot.getAsmType());
+        assertEquals("root", asmRoot.getSemantictag());
+
+        assertEquals("asmContext", firstContext.getAsmType());
+        assertEquals("Field", firstContext.getSemantictag());
+        assertEquals(asmRoot, firstContext.getParentNode());
+
+        assertEquals("asmContext", secondContext.getAsmType());
+        assertEquals("Image", secondContext.getSemantictag());
+        assertEquals(asmRoot, secondContext.getParentNode());
+
+        verify(resourceManager).updateContent(eq(secondContext.getId()),
+                eq(userId), any(InputStream.class), eq("fr"), eq(false), eq(context));
+    }
+
+    @Test
+    public void importPortfolio_Multiple() throws IOException, BusinessException {
+        Long userId = 42L;
+        String context = "";
+
+        doReturn(true)
+                .when(credentialRepository)
+                .isAdmin(userId);
+
+        doReturn(Optional.of(new Credential()))
+                .when(credentialRepository)
+                .findById(userId);
+
+        Portfolio portfolio1 = new Portfolio();
+        portfolio1.setId(UUID.randomUUID());
+
+        Portfolio portfolio2 = new Portfolio();
+        portfolio2.setId(UUID.randomUUID());
+
+        // Four calls to `save` should be done; two for each portfolio
+        doReturn(portfolio1).doReturn(portfolio1)
+            .doReturn(portfolio2).doReturn(portfolio2)
+                .when(portfolioRepository)
+                .save(any(Portfolio.class));
+
+        ArgumentCaptor<Node> captor = ArgumentCaptor.forClass(Node.class);
+
+        doAnswer(invocationOnMock -> {
+            Node node = invocationOnMock.getArgument(0);
+            node.setId(UUID.randomUUID());
+
+            return node;
+        }).when(nodeRepository)
+                .save(captor.capture());
+
+        InputStream zipContent = getClass().getClassLoader().getResourceAsStream("archives/import-multiple.zip");
+
+        assertEquals(portfolio2.getId(), manager.importPortfolio(zipContent, userId, context));
+
+        verify(nodeRepository).isCodeExist("NO.export");
+        verify(nodeRepository).isCodeExist("somecode");
+
+        verify(nodeRepository, times(6)).save(any(Node.class));
+
+        verify(portfolioRepository, times(4)).save(any(Portfolio.class));
+
+        verify(securityManager).addRole(portfolio1.getId(), "all", userId);
+        verify(securityManager).addRole(portfolio1.getId(), "designer", userId);
+
+        verify(securityManager).addRole(portfolio2.getId(), "all", userId);
+        verify(securityManager).addRole(portfolio2.getId(), "designer", userId);
+
+        // First portfolio
+        Node asmRoot1 = captor.getAllValues().get(0);
+        Node firstContext1 = captor.getAllValues().get(1);
+        Node secondContext1 = captor.getAllValues().get(2);
+
+        assertEquals("asmRoot", asmRoot1.getAsmType());
+        assertEquals("root", asmRoot1.getSemantictag());
+
+        assertEquals("asmContext", firstContext1.getAsmType());
+        assertEquals("Field", firstContext1.getSemantictag());
+        assertEquals(asmRoot1, firstContext1.getParentNode());
+
+        assertEquals("asmContext", secondContext1.getAsmType());
+        assertEquals("Image", secondContext1.getSemantictag());
+        assertEquals(asmRoot1, secondContext1.getParentNode());
+
+        // Second portfolio
+        Node asmRoot2 = captor.getAllValues().get(3);
+        Node firstContext2 = captor.getAllValues().get(4);
+        Node secondContext2 = captor.getAllValues().get(5);
+
+        assertEquals("asmRoot", asmRoot2.getAsmType());
+        assertEquals("root", asmRoot2.getSemantictag());
+
+        assertEquals("asmContext", firstContext2.getAsmType());
+        assertEquals("Field", firstContext2.getSemantictag());
+        assertEquals(asmRoot2, firstContext2.getParentNode());
+
+        assertEquals("asmContext", secondContext2.getAsmType());
+        assertEquals("Document", secondContext2.getSemantictag());
+        assertEquals(asmRoot2, secondContext2.getParentNode());
+
+        verify(resourceManager).updateContent(eq(secondContext1.getId()),
+                eq(userId), any(InputStream.class), eq("fr"), eq(false), eq(context));
+
+        verify(resourceManager).updateContent(eq(secondContext2.getId()),
+                eq(userId), any(InputStream.class), eq("fr"), eq(false), eq(context));
     }
 
     @Test

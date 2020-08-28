@@ -22,6 +22,7 @@ import java.util.stream.Stream;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import eportfolium.com.karuta.business.UserInfo;
 import eportfolium.com.karuta.business.contract.BaseManager;
 import eportfolium.com.karuta.consumer.repositories.CredentialRepository;
 import eportfolium.com.karuta.consumer.repositories.GroupRightsRepository;
@@ -36,6 +37,7 @@ import eportfolium.com.karuta.model.bean.GroupRights;
 import eportfolium.com.karuta.model.bean.GroupRightsId;
 import eportfolium.com.karuta.model.bean.Node;
 import eportfolium.com.karuta.model.bean.Resource;
+import org.springframework.security.core.userdetails.UserDetails;
 
 public abstract class BaseManagerImpl implements BaseManager {
 
@@ -102,6 +104,34 @@ public abstract class BaseManagerImpl implements BaseManager {
 			default:
 				return false;
 		}
+	}
+
+	@Override
+	public boolean canRead(UserDetails userDetails, UUID nodeId) {
+		return hasRight(userDetails, nodeId, GroupRights.READ);
+	}
+
+	@Override
+	public boolean canDelete(UserDetails userDetails, UUID nodeId) {
+		return hasRight(userDetails, nodeId, GroupRights.DELETE);
+	}
+
+	@Override
+	public boolean canWrite(UserDetails userDetails, UUID nodeId) {
+		return hasRight(userDetails, nodeId, GroupRights.WRITE);
+	}
+
+	private boolean hasRight(UserDetails userDetails, UUID nodeId, String right) {
+		Long userId = (userDetails instanceof UserInfo) ? ((UserInfo)userDetails).getId() : 0L;
+
+		return hasRight(userId, nodeId, right);
+	}
+
+	@Override
+	public boolean isDesigner(UserDetails userDetails, UUID nodeId) {
+		Long userId = (userDetails instanceof UserInfo) ? ((UserInfo)userDetails).getId() : 0L;
+
+		return credentialRepository.isDesigner(userId, nodeId);
 	}
 
 	protected void processQuery(List<Pair<Node, GroupRights>> nodes,
@@ -201,16 +231,14 @@ public abstract class BaseManagerImpl implements BaseManager {
 	}
 
 	protected String xmlAttributes(MetadataDocument document) throws JsonProcessingException {
-		final String attributesChain = attributeWriter.writeValueAsString(document);
+		String attributesChain = attributeWriter.writeValueAsString(document);
+
+		String extraAttributes = document.getAttributes().entrySet()
+				.stream().map(entry -> entry.getKey() +"=\"" + entry.getValue() + "\"")
+				.collect(Collectors.joining(" "));
 
 		return attributesChain
-				.substring(1, attributesChain.length() - 2).trim();
-	}
+				.substring(1, attributesChain.length() - 2).trim() + " " + extraAttributes;
 
-	protected String xmlAttributes(ResourceDocument document) throws JsonProcessingException {
-		final String attributesChain = attributeWriter.writeValueAsString(document);
-
-		return attributesChain
-				.substring(2, attributesChain.length() - 3);
 	}
 }

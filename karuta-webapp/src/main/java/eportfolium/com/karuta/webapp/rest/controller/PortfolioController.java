@@ -36,7 +36,6 @@ import eportfolium.com.karuta.document.NodeDocument;
 import eportfolium.com.karuta.document.PortfolioDocument;
 import eportfolium.com.karuta.document.PortfolioList;
 import eportfolium.com.karuta.document.ResourceDocument;
-import eportfolium.com.karuta.model.exception.GenericBusinessException;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
@@ -70,9 +69,6 @@ public class PortfolioController extends AbstractController {
 
     @InjectLogger
     static private Logger logger;
-
-    @Autowired
-    private HttpServletRequest httpServletRequest;
     
     /**
      * Get a portfolio from uuid.
@@ -85,16 +81,17 @@ public class PortfolioController extends AbstractController {
     @GetMapping(value = "/portfolio/{id}")
     public HttpEntity<Object> getPortfolio(@PathVariable UUID id,
                                            @RequestParam(defaultValue = "true") boolean resources,
-                                           @RequestParam(defaultValue = "false") boolean files,
+                                           @RequestParam(required = false) boolean files,
                                            @RequestParam(required = false) boolean export,
                                            @RequestParam(required = false) String lang,
                                            @RequestParam(required = false) Integer level,
-                                           @AuthenticationPrincipal UserInfo userInfo) throws BusinessException, IOException {
+                                           @AuthenticationPrincipal UserInfo userInfo,
+                                           HttpServletRequest request) throws BusinessException, IOException {
 
-    	String contextPath = httpServletRequest.getContextPath();
-    	String xmlPortfolio = portfolioManager.getPortfolio(id, userInfo.getId(), level);
+        String contextPath = request.getContextPath();
+        String xmlPortfolio = portfolioManager.getPortfolio(id, userInfo.getId(), level);
 
-        if( !export && !files )
+        if (!export && !files)
           return new HttpEntity<>(xmlPortfolio);
 
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HHmmss");
@@ -244,44 +241,25 @@ public class PortfolioController extends AbstractController {
      *                           uuid, search for the portfolio by code
      * @param targetcode         code we want the portfolio to have. If code already
      *                           exists, adds a number after
-     * @param copyshared         y/null Make a copy of shared nodes, rather than
-     *                           keeping the link to the original data
-     * @param owner              true/null Set the current user instanciating the
-     *                           portfolio as owner. Otherwise keep the one that
-     *                           created it.
      * @return instanciated portfolio uuid
      */
     @PostMapping("/instanciate/{id}")
     @IsAdminOrDesigner
-    public ResponseEntity<String> instanciate(@PathVariable UUID id,
-                                              @RequestParam(required = false) String sourcecode,
-                                              @RequestParam String targetcode,
-                                              @RequestParam(defaultValue = "false") boolean copyshared,
-                                              @RequestParam(required = false) String groupname,
-                                              @RequestParam(defaultValue = "false") boolean owner,
-                                              @AuthenticationPrincipal UserInfo userInfo) throws BusinessException {
+    public String instanciate(@PathVariable String id,
+                              @RequestParam(required = false) String sourcecode,
+                              @RequestParam String targetcode) {
 
-        /// Vérifiez si le code existe, trouvez-en un qui convient, sinon. Eh.
+        // Find a suitable code if the provided one already exists.
         String newcode = targetcode;
-        int num = 0;
+        int num = 1;
 
         while (nodeManager.isCodeExist(newcode))
             newcode = targetcode + " (" + num++ + ")";
-        targetcode = newcode;
 
-        String returnValue = portfolioManager.instanciatePortfolio(id, sourcecode,
-                targetcode, userInfo.getId(), copyshared, groupname, owner);
-
-        if (returnValue.startsWith("no rights"))
-            throw new GenericBusinessException(returnValue);
-        else if (returnValue.startsWith("erreur"))
-            throw new GenericBusinessException(returnValue);
-        else if ("".equals(returnValue)) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        }
-
-        return ResponseEntity.ok()
-                .body(returnValue);
+        // NOTE: We are forced to rely on a String rather than a UUID as for the path
+        // variable as, for legacy reasons, when the `sourcecode` parameter is provided,
+        // `null` is passed as the id.
+        return portfolioManager.instanciatePortfolio(id, sourcecode, newcode);
     }
 
     /**
@@ -291,18 +269,20 @@ public class PortfolioController extends AbstractController {
      */
     @PostMapping("/copy/{id}")
     @IsAdminOrDesigner
-    public ResponseEntity<String> copyPortfolio(@PathVariable UUID id,
-                                                @RequestParam (required = false)String sourcecode,
+    public ResponseEntity<String> copyPortfolio(@PathVariable String id,
+                                                @RequestParam(required = false) String sourcecode,
                                                 @RequestParam String targetcode,
-                                                @RequestParam boolean owner,
                                                 @AuthenticationPrincipal UserInfo userInfo) throws BusinessException {
 
         if (nodeManager.isCodeExist(targetcode)) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("code exist");
         }
 
+        // NOTE: We are forced to rely on a String rather than a UUID as for the path
+        // variable as, for legacy reasons, when the `sourcecode` parameter is provided,
+        // `null` is passed as the id.
         String returnValue = portfolioManager
-                .copyPortfolio(id, sourcecode, targetcode, userInfo.getId(), owner)
+                .copyPortfolio(id, sourcecode, targetcode, userInfo.getId())
                 .toString();
 
         return ResponseEntity.ok().body(returnValue);
@@ -329,9 +309,11 @@ public class PortfolioController extends AbstractController {
     @GetMapping(value = "/zip", consumes = "application/zip")
     public ResponseEntity<byte[]> getZip(@RequestParam String portfolios,
                                          @RequestParam(required = false) String lang,
-                                         @AuthenticationPrincipal UserInfo userInfo) throws Exception {
+                                         @AuthenticationPrincipal UserInfo userInfo,
+                                         HttpServletRequest request) throws Exception {
 
-    	String contextPath = httpServletRequest.getContextPath();
+        String contextPath = request.getContextPath();
+
         List<UUID> uuids = Arrays.stream(portfolios.split(","))
                 .map(UUID::fromString)
                 .collect(Collectors.toList());
@@ -397,19 +379,16 @@ public class PortfolioController extends AbstractController {
      * @return portfolio uuid
      */
     @PostMapping(value = "/zip", consumes = "multipart/form-data")
+    @IsAdminOrDesigner
     public String importZip(@RequestParam MultipartFile uploadfile,
-                            @RequestParam(defaultValue = "false") boolean instance,
-                            @RequestParam(required = false) String project,
                             @AuthenticationPrincipal UserInfo userInfo,
                             HttpServletRequest request)
             throws BusinessException, IOException {
 
-        javax.servlet.ServletContext servletContext = request.getSession().getServletContext();
-        String contextPath = servletContext.getContextPath();
-        String path = servletContext.getRealPath("/");
+        String contextPath = request.getServletContext().getContextPath();
 
         return portfolioManager
-                .importPortfolio(path, uploadfile.getInputStream(), userInfo.getId(), instance, project, contextPath);
+                .importPortfolio(uploadfile.getInputStream(), userInfo.getId(), contextPath).toString();
     }
 
     /**
@@ -418,12 +397,14 @@ public class PortfolioController extends AbstractController {
      * DELETE /rest/api/portfolios/portfolio/{id}
      */
     @DeleteMapping(value = "/portfolio/{id}")
-    public String delete(@PathVariable UUID id,
+    public HttpEntity<String> delete(@PathVariable UUID id,
                          @AuthenticationPrincipal UserInfo userInfo) {
 
-        portfolioManager.removePortfolio(id, userInfo.getId());
-
-        return "";
+        if (portfolioManager.removePortfolio(id, userInfo.getId())) {
+            return ResponseEntity.ok().build();
+        } else {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     /**
@@ -431,44 +412,20 @@ public class PortfolioController extends AbstractController {
      *
      * POST /rest/api/portfolios
      *
-     * @param model              another uuid, not sure why it's here
-     * @param instance           true/null if as an instance, parse rights.
-     *                           Otherwise just write nodes xml: ASM format
      * @return <portfolios> <portfolio id="uuid"/> </portfolios>
      */
     @PostMapping
+    @IsAdminOrDesigner
     public HttpEntity<PortfolioList> postPortfolio(@RequestParam MultipartFile uploadfile,
-                                                   @RequestParam(required = false) UUID model,
-                                                   @RequestParam(defaultValue = "false") boolean instance,
                                                    @RequestParam(defaultValue = "") String project,
-                                                   @AuthenticationPrincipal UserInfo userInfo) throws BusinessException, JsonProcessingException {
-    	 
-    	StringBuilder sbuilder = new StringBuilder();
-    	String content = "";
-    	
-        try {
-            InputStream input = uploadfile.getInputStream();
-            byte[] buffer = new byte[2048];
-            int length;
+                                                   @AuthenticationPrincipal UserInfo userInfo) throws BusinessException, IOException {
 
-            while ((length = input.read(buffer)) != -1) {
-                sbuilder.append(new String(buffer, 0, length));
-            }
-
-            input.close();
-
-            content = sbuilder.toString();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        ObjectMapper mapper = new XmlMapper();
+        XmlMapper mapper = new XmlMapper();
 
         PortfolioDocument document = mapper
             .readerFor(PortfolioDocument.class)
-            .readValue(content);
+            .readValue(uploadfile.getInputStream());
 
-        return new HttpEntity<>(portfolioManager.addPortfolio(document, userInfo.getId(), model,
-               instance, project));
+        return new HttpEntity<>(portfolioManager.addPortfolio(document, userInfo.getId(), project));
     }
 }

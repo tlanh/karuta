@@ -20,8 +20,6 @@ import java.io.OutputStream;
 import java.time.LocalDateTime;
 import java.util.*;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-
 import eportfolium.com.karuta.business.contract.FileManager;
 import eportfolium.com.karuta.consumer.repositories.PortfolioRepository;
 import eportfolium.com.karuta.consumer.repositories.ResourceRepository;
@@ -62,8 +60,7 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 	}
 
 	@Override
-	public Integer changeResource(UUID parentNodeId, ResourceDocument resource, Long userId)
-			throws BusinessException, JsonProcessingException {
+	public Integer changeResource(UUID parentNodeId, ResourceDocument resource, Long userId) throws BusinessException {
 
 		if (!hasRight(userId, parentNodeId, GroupRights.WRITE))
 			throw new GenericBusinessException("403 FORBIDDEN : No WRITE credential");

@@ -156,8 +156,6 @@ public class GetPortfolioListTest {
     public void getPortfolioList_AsRegularUser() {
         List<Portfolio> portfolios = manager.getPortfolioList(credential.getId(), true, null, null);
 
-        System.out.println(portfolioRepository.count());
-
         assertEquals(2, portfolios.size());
 
         assertNotNull(portfolio1.getId());

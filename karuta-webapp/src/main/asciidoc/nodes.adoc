@@ -1,0 +1,371 @@
+== Nodes
+
+=== GET /
+
+This endpoint allows a user to fetch nodes by giving certain parameters.
+
+.Parameters
+|===
+| Parameter | Required | Description
+
+| portfoliocode
+| Yes
+| The portfolio's code.
+
+| semtag
+| Yes
+| Apply a filter on children nodes that have a given semantic tag.
+
+| semtag_parent
+| No
+| Apply a filter on parent nodes that have a given semantic tag.
+
+  It only has effect with `code_parent`.
+
+| code_parent
+| No
+| Apply a filter on parent nodes that have a given code.
+
+  It only has effect with `semtag_parent`.
+
+| level
+| No
+| Threshold to fetch nodes nested under a given level.
+
+|===
+
+=== GET /node/{id}
+
+This endpoint returns a node found by a given ID without its child
+nodes.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/get-node/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/get-node/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/get-node/http-response.adoc[]
+
+=== GET /node/{id}/rights
+
+This endpoint returns the rights of the current user on a given
+node.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/get-node-rights/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/get-node-rights/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/get-node-rights/http-response.adoc[]
+
+=== GET /node/{id}/portfolioid
+
+This endpoints returns the portfolio's ID in which a given node is
+located.
+
+[NOTE]
+The user calling this endpoint must have the right to read on the
+concerned node.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/get-node-rights/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/get-node-rights/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/get-node-rights/http-response.adoc[]
+
+=== POST /node/{id}/rights
+
+This endpoint updates rights for the current user on a given node.
+
+Here's an example XML document:
+
+include::{snippets}/change-node-rights/request-body.adoc[]
+
+[NOTE]
+This endpoint is only reachable by admin users.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/change-node-rights/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/change-node-rights/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/change-node-rights/http-response.adoc[]
+
+=== PUT /node/{id}/metadata
+
+This endpoint updates the metadata associated with a given node.
+
+[NOTE]
+The user accessing this endpoint must have the right to write to the
+affected node.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/change-node-metadata/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/change-node-metadata/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/change-node-metadata/http-response.adoc[]
+
+=== PUT /node/{id}/metadatawad
+
+This endpoint updates the metadata WAD associated with a given node.
+
+[NOTE]
+The user accessing this endpoint must have the right to write to the
+affected node.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/change-node-metadatawad/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/change-node-metadatawad/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/change-node-metadatawad/http-response.adoc[]
+
+=== PUT /node/{id}/metadataepm
+
+This endpoint updates the metadata EPM associated with a given node.
+
+[NOTE]
+The user accessing this endpoint must have the right to write to the
+affected node.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/change-node-metadataepm/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/change-node-metadataepm/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/change-node-metadataepm/http-response.adoc[]
+
+=== PUT /node/{id}/nodecontext
+
+This endpoint updates the context attached with a given node.
+
+[NOTE]
+The user accessing this endpoint must have the right to write to the
+affected node.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/change-node-context/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/change-node-context/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/change-node-context/http-response.adoc[]
+
+=== PUT /node/{id}/noderesource
+
+This endpoint updates the resource attached with a given node.
+
+[NOTE]
+The user accessing this endpoint must have the right to write to the
+affected node.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/change-node-resource/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/change-node-resource/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/change-node-resource/http-response.adoc[]
+
+=== POST /node/import/{parent}
+
+This endpoint imports a node inside a given parent node.
+
+[NOTE]
+The user triggering this endpoint must have the right to read the
+parent node.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/import-node/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/import-node/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/import-node/http-response.adoc[]
+
+=== POST /node/copy/{parent}
+
+This endpoint copies a node inside a given parent node.
+
+[NOTE]
+The user triggering this endpoint must have the right to read the
+parent node.
+
+[NOTE]
+This endpoint works as `/node/import/{parent}` but rights aren't parsed
+based on the current user attributes.
+
+
+=== POST /node/{id}/moveup
+
+This endpoint moves a node up in a list of sibilings ; its order will be
+decreased by one.
+
+.Scenarios
+|===
+| Scenario | HTTP code | Response
+
+| Missing node
+| 404 (Not found)
+| Non-existing node
+
+| Moving first node
+| 409 (Conflict)
+| Cannot move first node
+
+| Everything's ok.
+| 204 (No content)
+|
+|===
+
+[source,role="primary"]
+.Curl
+include::{snippets}/move-node-up/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/move-node-up/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/move-node-up/http-response.adoc[]
+
+=== POST /node/{id}/parentof/{parent}
+
+This endpoint changes a node's parent node.
+
+[NOTE]
+The user triggering this endpoint must be an admin user or be a designer
+on the child node.
+
+.Scenarios
+|===
+| Scenario | HTTP Code | Response
+
+| Missing node *or* parent and child are the same
+| 409 (Conflict)
+| Cannot move
+
+| Eveything's ok
+| 200 (Ok)
+|
+
+|===
+
+[source,role="primary"]
+.Curl
+include::{snippets}/change-node-parent/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/change-node-parent/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/change-node-parent/http-response.adoc[]
+
+=== POST /node/{id}/action/{action}
+
+This endpoint allows the execution of a given macro on a node.
+
+.Available actions
+|===
+| Action | Description
+
+| reset
+| Reset the rights on the node and its children processing
+  the metadata attached with each node.
+
+| show
+| For each children, make the node visible to each role specified
+  in the node's metadata WAD `showtoroles` attribute.
+
+| hide
+| Same as `show` but the node are no longer visible.
+
+| submit
+| Set each children as submitted and set the submit date to the current
+  time in the child's metadata WAD.
+
+|===
+
+[source,role="primary"]
+.Curl
+include::{snippets}/execute-macro/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/execute-macro/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/execute-macro/http-response.adoc[]
+
+=== DELETE /node/{id}
+
+This endpoint deletes a node found by its ID.
+
+[NOTE]
+The user executing this endpoint must be an admin, a designer on the node
+or have the right to delete things on this node.
+
+[source,role="primary"]
+.Curl
+include::{snippets}/delete-node/curl-request.adoc[]
+
+[source,role="secondary"]
+.Response
+include::{snippets}/delete-node/response-body.adoc[]
+
+[source,role="secondary"]
+.Full response
+include::{snippets}/delete-node/http-response.adoc[]

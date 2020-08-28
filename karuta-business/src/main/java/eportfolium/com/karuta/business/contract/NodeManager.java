@@ -27,23 +27,16 @@ import eportfolium.com.karuta.model.exception.BusinessException;
 
 public interface NodeManager extends BaseManager {
 
-	String getNode(UUID nodeId, boolean withChildren, Long userId,
-			Integer cutoff) throws BusinessException, JsonProcessingException;
+	String getNode(UUID nodeId, Long userId, Integer cutoff) throws JsonProcessingException;
 
 	void resetRights(List<Node> children) throws JsonProcessingException;
 
 	void changeRights(UUID nodeId, String label, GroupRights rights);
 
-	UUID getPortfolioIdFromNode(Long userId, UUID nodeId) throws BusinessException;
+	UUID getPortfolioIdFromNode(UUID nodeId);
 
 	NodeDocument getNode(UUID nodeId, boolean withChildren, String withChildrenOfXsiType, Long userId,
 			String label, boolean checkSecurity) throws JsonProcessingException;
-
-	NodeDocument getNodeBySemanticTag(UUID portfolioId, String semantictag, Long userId)
-			throws BusinessException, JsonProcessingException;
-
-	NodeList getNodesBySemanticTag(Long userId, UUID portfolioId, String semanticTag)
-			throws BusinessException;
 
 	/**
 	 * forcedParentUuid permet de forcer l'uuid parent, independamment de l'attribut
@@ -56,30 +49,21 @@ public interface NodeManager extends BaseManager {
 	boolean isCodeExist(String code);
 
 	String executeMacroOnNode(long userId, UUID nodeId, String macroName)
-			throws JsonProcessingException, BusinessException;
+			throws JsonProcessingException;
 
-	MetadataWadDocument getNodeMetadataWad(UUID nodeId, Long userId)
-			throws BusinessException, JsonProcessingException;
+	void removeNode(UUID nodeId);
 
-	Integer changeNode(UUID nodeId, NodeDocument node, Long userId)
-			throws BusinessException, JsonProcessingException;
+	long getRoleByNode(Long userId, UUID nodeUuid, String role);
 
-	void removeNode(UUID nodeId, Long userId) throws BusinessException;
+	String changeNodeMetadataWad(UUID nodeId, MetadataWadDocument metadata)
+			throws JsonProcessingException;
 
-	long getRoleByNode(Long userId, UUID nodeUuid, String role) throws BusinessException;
-
-	String changeNodeMetadataWad(UUID nodeId, MetadataWadDocument metadata, Long userId)
-			throws BusinessException, JsonProcessingException;
-
-	boolean changeParentNode(Long userid, UUID id, UUID parentId) throws BusinessException;
+	boolean changeParentNode(UUID id, UUID parentId);
 
 	Long moveNodeUp(UUID nodeId);
 
-	NodeList addNodeFromModelBySemanticTag(UUID nodeId, String semanticTag, Long userId)
-			throws BusinessException, JsonProcessingException;
-
-	String changeNodeMetadataEpm(UUID nodeId, MetadataEpmDocument metadata, Long id)
-			throws BusinessException, JsonProcessingException;
+	String changeNodeMetadataEpm(UUID nodeId, MetadataEpmDocument metadata)
+			throws JsonProcessingException;
 
 	String changeNodeMetadata(UUID nodeId, MetadataDocument metadata, Long id)
 			throws BusinessException, JsonProcessingException;
@@ -89,12 +73,6 @@ public interface NodeManager extends BaseManager {
 
 	String changeNodeResource(UUID nodeId, ResourceDocument resource, Long id)
 			throws BusinessException;
-
-	NodeList addNode(UUID parentNodeId, NodeDocument node, Long userId, boolean forcedUuid)
-			throws JsonProcessingException, BusinessException;
-
-	String getNodeWithXSL(UUID nodeId, String xslFile, String parameters, Long id)
-			throws BusinessException, JsonProcessingException;
 
 	NodeList getNodes(String rootNodeCode, String childSemtag, Long userId,
 			String parentSemtag, String parentNodeCode, Integer cutoff) throws BusinessException;

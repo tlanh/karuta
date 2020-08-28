@@ -70,11 +70,6 @@ public interface PortfolioRepository extends CrudRepository<Portfolio, UUID>,
             "AND n.code = :code")
     Portfolio getPortfolioFromNodeCode(@Param("code") String code);
 
-    @Query("SELECT p FROM Node n " +
-            "INNER JOIN n.portfolio p " +
-            "WHERE n.id = :nodeId")
-    Portfolio getPortfolioFromNode(@Param("nodeId") UUID nodeId);
-
     @Query("SELECT p.id FROM Node n " +
             "INNER JOIN n.portfolio p " +
             "WHERE n.id = :nodeId")
