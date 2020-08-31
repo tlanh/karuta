@@ -2,8 +2,11 @@ package eportfolium.com.karuta.document;
 
 import com.fasterxml.jackson.annotation.*;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
+import eportfolium.com.karuta.document.conversion.BooleanDeserializer;
+import eportfolium.com.karuta.document.conversion.BooleanSerializer;
 import eportfolium.com.karuta.model.bean.GroupRights;
 import eportfolium.com.karuta.model.bean.Node;
 
@@ -25,12 +28,19 @@ public class NodeDocument {
     private String action;
 
     @JsonDeserialize(using = BooleanDeserializer.class)
+    @JsonSerialize(using = BooleanSerializer.class)
     private boolean read;
+
     @JsonDeserialize(using = BooleanDeserializer.class)
+    @JsonSerialize(using = BooleanSerializer.class)
     private boolean write;
+
     @JsonDeserialize(using = BooleanDeserializer.class)
+    @JsonSerialize(using = BooleanSerializer.class)
     private boolean delete;
+
     @JsonDeserialize(using = BooleanDeserializer.class)
+    @JsonSerialize(using = BooleanSerializer.class)
     private boolean submit;
 
     private String role;

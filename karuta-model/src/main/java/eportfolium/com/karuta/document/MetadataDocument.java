@@ -7,8 +7,11 @@ import com.fasterxml.jackson.annotation.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
+import eportfolium.com.karuta.document.conversion.BooleanDeserializer;
+import eportfolium.com.karuta.document.conversion.BooleanSerializer;
 
 @JsonRootName("metadata")
 public class MetadataDocument {
@@ -23,7 +26,6 @@ public class MetadataDocument {
     protected boolean sharedResource = false;
     @JsonDeserialize(using = BooleanDeserializer.class)
     protected boolean sharedNode = false;
-
     @JsonDeserialize(using = BooleanDeserializer.class)
     protected boolean sharedNodeResource;
 
@@ -43,6 +45,7 @@ public class MetadataDocument {
 
     @JsonGetter("public")
     @JacksonXmlProperty(isAttribute = true)
+    @JsonSerialize(using = BooleanSerializer.class)
     public Boolean getPublic() {
         return isPublic;
     }
@@ -56,6 +59,7 @@ public class MetadataDocument {
     @JsonGetter("private")
     @JacksonXmlProperty(isAttribute = true)
     @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+    @JsonSerialize(using = BooleanSerializer.class)
     public Boolean getPrivate() {
         return isPrivate;
     }
@@ -69,6 +73,7 @@ public class MetadataDocument {
     @JsonGetter("sharedResource")
     @JacksonXmlProperty(isAttribute = true)
     @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+    @JsonSerialize(using = BooleanSerializer.class)
     public Boolean getSharedResource() {
         return sharedResource;
     }
@@ -81,6 +86,7 @@ public class MetadataDocument {
     @JsonGetter("sharedNode")
     @JacksonXmlProperty(isAttribute = true)
     @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+    @JsonSerialize(using = BooleanSerializer.class)
     public Boolean getSharedNode() {
         return sharedNode;
     }
@@ -93,6 +99,7 @@ public class MetadataDocument {
     @JsonGetter("sharedNodeResource")
     @JacksonXmlProperty(isAttribute = true)
     @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+    @JsonSerialize(using = BooleanSerializer.class)
     public Boolean getSharedNodeResource() {
         return sharedNodeResource;
     }
