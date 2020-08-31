@@ -1,4 +1,4 @@
-package eportfolium.com.karuta.document;
+package eportfolium.com.karuta.document.conversion;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 
 import java.io.IOException;
 
-class BooleanDeserializer extends JsonDeserializer<Object> {
+public class BooleanDeserializer extends JsonDeserializer<Object> {
     @Override
     public Object deserialize(JsonParser jp, DeserializationContext context) throws IOException {
         String value = jp.readValueAs(String.class);

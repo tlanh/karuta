@@ -88,7 +88,7 @@ public class SomeServiceTest {
 
 Controller tests must extend the `ControllerTest` class, where some common
 logic as well as all repositories and services already wired can be found.
-You also need to annotation them with the `@WebMvcTest` annotation.
+You also need to annotate them with `@WebMvcTest`.
 
 As almost all requests require the user to be authenticated, you can rely
 on the `@AsUser`, `@AsDesigner` or `@AsAdmin` method on tests to execute
