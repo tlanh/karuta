@@ -170,6 +170,17 @@ public class NodeDocumentTest extends DocumentTest {
     }
 
     @Test
+    public void serializationWithUnsetXsiType() throws JsonProcessingException {
+        NodeDocument nodeDocument = new NodeDocument();
+
+        assertEquals("", nodeDocument.getXsiType());
+
+        String output = mapper.writeValueAsString(nodeDocument);
+
+        assertContains("xsi_type=\"\"", output);
+    }
+
+    @Test
     public void deserialization() throws JsonProcessingException {
         String xml = "<node type=\"asmStructure\" xsi_type=\"bar\">" +
                         "<label>foo</label>" +

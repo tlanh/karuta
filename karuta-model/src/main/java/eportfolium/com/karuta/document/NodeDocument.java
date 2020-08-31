@@ -18,7 +18,7 @@ import java.util.*;
 public class NodeDocument {
     private UUID id;
     protected String type;
-    private String xsiType;
+    private String xsiType = "";
     private String label;
     private String code;
     private String description;
