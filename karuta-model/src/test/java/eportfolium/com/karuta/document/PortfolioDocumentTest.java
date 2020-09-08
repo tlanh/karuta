@@ -114,8 +114,8 @@ public class PortfolioDocumentTest extends DocumentTest {
         assertContains("<asmRoot id=\"" + nodeId + "\" semtag=\"baz\" ", output);
         assertContains("<label>foo</label>", output);
         assertContains("<description>bar</description>", output);
-        assertContains("<metadata public=\"true\"/>", output);
-        assertContains("<metadata-epm public=\"true\"/>", output);
+        assertContains("<metadata public=\"Y\"/>", output);
+        assertContains("<metadata-epm public=\"Y\"/>", output);
         assertContains("<metadata-wad seenoderoles=\"foo\"", output);
 
         assertContains("<asmResource id=\"" + resourceId + "\" ", output);

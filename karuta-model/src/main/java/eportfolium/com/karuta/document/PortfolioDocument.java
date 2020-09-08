@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonRootName;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
+import eportfolium.com.karuta.document.conversion.BooleanDeserializer;
 import eportfolium.com.karuta.model.bean.Node;
 import eportfolium.com.karuta.model.bean.Portfolio;
 
@@ -66,6 +67,7 @@ public class PortfolioDocument {
         Node rootNode = portfolio.getRootNode();
 
         this.rootNodeId = rootNode.getId();
+        this.code = rootNode.getCode();
         this.ownerId = portfolio.getModifUserId();
         this.modifDate = portfolio.getModifDate();
 
@@ -79,7 +81,7 @@ public class PortfolioDocument {
             child.setMetadataWad(MetadataWadDocument.from(rootNode.getMetadataWad()));
             child.setMetadataEpm(MetadataEpmDocument.from(rootNode.getMetadataEpm()));
             child.setMetadata(MetadataDocument.from(rootNode.getMetadata()));
-        } catch( JsonProcessingException e ) {
+        } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
 

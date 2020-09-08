@@ -16,7 +16,6 @@
 package eportfolium.com.karuta.business.impl;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.function.BiConsumer;
@@ -33,7 +32,6 @@ import javax.persistence.criteria.JoinType;
 import javax.persistence.criteria.SetJoin;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import eportfolium.com.karuta.business.contract.*;
 import eportfolium.com.karuta.business.contract.SecurityManager;
@@ -215,6 +213,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 				filter = (r) -> !r.getFileid(lang).isEmpty();
 
 			// Nodes with file resources inside the portfolio.
+			// TODO: FIx
 			List<ResourceDocument> fileResources = portfolio
 					.getRoot()
 					.getResources()
@@ -456,11 +455,11 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	}
 
 	@Override
-	public void removePortfolio(UUID portfolioId, Long userId) {
+	public boolean removePortfolio(UUID portfolioId, Long userId) {
 		GroupRights rights = getRightsOnPortfolio(userId, portfolioId);
 
 		if (!rights.isDelete() && !credentialRepository.isAdmin(userId)) {
-			return;
+			return false;
 		}
 
 		// S'il y a quelque chose de particulier, on s'assure que tout soit bien nettoyé
@@ -486,6 +485,8 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 
 		// Portfolio
 		portfolioRepository.deleteById(portfolioId);
+
+		return true;
 	}
 
 	@Override
@@ -542,13 +543,11 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 				Resource nr = rn.getResource();
 				Resource cr = rn.getContextResource();
 
-				StringBuilder res = new StringBuilder();
-				res.append(String.format(rformat, nr.getId(), rn.getId(), nr.getXsiType(), nr.getContent()));
-				res.append(String.format(rformat, cr.getId(), rn.getId(), cr.getXsiType(), cr.getContent()));
+				String res = String.format(rformat, nr.getId(), rn.getId(), nr.getXsiType(), nr.getContent()) +
+						String.format(rformat, cr.getId(), rn.getId(), cr.getXsiType(), cr.getContent());
+				String rootdata = String.format(arformat, rn.getId(), rn.getMetadataWad(), rn.getMetadataEpm(), rn.getMetadata(), rn.getCode(), rn.getLabel(), rn.getDescr(), res);
 
-				String rootdata = String.format(arformat, rn.getId(), rn.getMetadataWad(), rn.getMetadataEpm(), rn.getMetadata(), rn.getCode(), rn.getLabel(), rn.getDescr(), res.toString());
-
-				boolean isowner = userId == p.getModifUserId() ? true : false;
+				boolean isowner = userId == p.getModifUserId();
 				sb.append(String.format(pformat, p.getId(), rn.getId(), isowner, rn.getModifUserId(), p.getModifDate(), rootdata));
 			}
 
@@ -572,7 +571,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 			throw new GenericBusinessException("No root node found");
 
 		UUID rootNodeUuid = portfolio.getId() != null ? portfolio.getId() : UUID.randomUUID();
-		Map<UUID, UUID> resolve = new HashMap<UUID, UUID>();
+		Map<UUID, UUID> resolve = new HashMap<>();
 
 		Portfolio portfolioRecord = portfolioRepository.findById(portfolioId)
 										.orElse(add(rootNodeUuid, userId, null, resolve));
@@ -748,24 +747,8 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	}
 
 	@Override
-	public PortfolioList addPortfolio(PortfolioDocument portfolioDocument, long userId, UUID portfolioModelId,
-							   boolean parseRights, String projectName)
+	public PortfolioList addPortfolio(PortfolioDocument portfolioDocument, long userId, String projectName)
 			throws BusinessException, JsonProcessingException {
-		if (!credentialRepository.isAdmin(userId) && !credentialRepository.isCreator(userId))
-			throw new GenericBusinessException("FORBIDDEN : No admin right");
-
-		// Si le modèle est renseigné, on ignore le XML poste et on récupère le contenu
-		// du modèle a la place
-		// FIXME Inutilisé, nous instancions / copions un portfolio
-
-		if (portfolioModelId != null) {
-      ObjectMapper mapper = new XmlMapper();
-      String xml = getPortfolio(portfolioModelId, userId, null);
-    
-      portfolioDocument = mapper
-	            .readerFor(PortfolioDocument.class)
-	            .readValue(xml);
-		}
 
 		NodeDocument rootNode = portfolioDocument.getRoot();
 
@@ -800,7 +783,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 
 		UUID uuid = UUID.randomUUID();
 		
-		Map<UUID, UUID> resolve = new HashMap<UUID, UUID>();
+		Map<UUID, UUID> resolve = new HashMap<>();
 
 		Portfolio portfolio = add(uuid, userId, portfolioDocument, resolve);
 
@@ -819,93 +802,55 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	}
 
 	@Override
-	public String importPortfolio(String path, InputStream inputStream, Long userId, boolean parseRights,
-										String projectName, String servletContext) throws BusinessException, IOException {
-        if (!credentialRepository.isAdmin(userId) && !credentialRepository.isCreator(userId))
-            throw new GenericBusinessException("403 FORBIDDEN : No admin right");
-
-        if (projectName == null)
-            projectName = "";
-        else
-            projectName = projectName.trim();
-
-        DataInputStream inZip = new DataInputStream(inputStream);
-
-        String filename;
-        String[] xmlFiles;
-        String[] allFiles;
-        byte[] buff = new byte[0x100000]; // 1MB buffer
-
-        String outsideDir = path.substring(0, path.lastIndexOf(File.separator)) + "_files" + File.separator;
-        File outsideDirectoryFile = new File(outsideDir);
-
-        // if the directory does not exist, create it
-        if (!outsideDirectoryFile.exists()) {
-            outsideDirectoryFile.mkdir();
-        }
-
-        // Création de l'archive au format zip.
-        String portfolioUuidPreliminaire = UUID.randomUUID().toString();
-        filename = outsideDir + "xml_" + portfolioUuidPreliminaire + ".zip";
-        FileOutputStream outZip = new FileOutputStream(filename);
-
-        int len;
-
-        while ((len = inZip.read(buff)) != -1) {
-            outZip.write(buff, 0, len);
-        }
-
-        inZip.close();
-        outZip.close();
-
-        final String destination = outsideDir + portfolioUuidPreliminaire + File.separator;
+	public UUID importPortfolio(InputStream inputStream, Long userId, String servletContext)
+			throws BusinessException, IOException {
 
         // -- unzip --
-        fileManager.unzip(filename, destination);
+        Map<String, ByteArrayOutputStream> entries = fileManager.unzip(inputStream);
 
         // Unzip just the next zip level. I hope there will be no zipped documents...
-        String[] zipFiles = fileManager.findFiles(destination, "zip");
+		List<Map<String, ByteArrayOutputStream>> innerZips = entries.entrySet()
+				.stream()
+				.filter(entry -> entry.getKey().endsWith("zip"))
+				.map(entry -> fileManager.unzip(new ByteArrayInputStream(entry.getValue().toByteArray())))
+				.collect(Collectors.toList());
 
-        for (String zipFile : zipFiles) {
-            fileManager.unzip(zipFile, destination);
-        }
+		innerZips.forEach(files -> files.forEach(entries::put));
 
-        xmlFiles = fileManager.findFiles(destination, "xml");
-        allFiles = fileManager.findFiles(destination, null);
+		Map<String, ByteArrayOutputStream> xmlFiles = entries.entrySet()
+				.stream()
+				.filter(entry -> {
+					String key = entry.getKey();
+
+					if (!key.endsWith("xml"))
+						return false;
+
+					// Since we are dealing with paths provided by the Zip API, the path separator
+					// is a slash independently of the platform.
+					int position = key.lastIndexOf("/");
+					String xmlFilename = key.substring(position == -1 ? 0 : position);
+
+					// Case when we add an XML in the portfolio
+					return !xmlFilename.contains("_");
+				})
+				.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
         ////// Lecture du fichier de portfolio
         //// Importation du portfolio
         // --- Lecture fichier XML ----
         ///// Pour associer l'ancien uuid -> nouveau, pour les fichiers
+
         Map<UUID, UUID> resolve = new HashMap<>();
         Portfolio portfolio = null;
-        PortfolioDocument document = null;
         boolean hasLoaded = false;
 
-        for (String xmlFilepath : xmlFiles) {
-            String xmlFilename = xmlFilepath.substring(xmlFilepath.lastIndexOf(File.separator));
-            if (xmlFilename.contains("_"))
-                continue; // Case when we add an XML in the portfolio
+        for (Map.Entry<String, ByteArrayOutputStream> xmlFile : xmlFiles.entrySet()) {
+            XmlMapper mapper = new XmlMapper();
+				// .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
-            BufferedReader br = new BufferedReader(
-                    new InputStreamReader(new FileInputStream(xmlFilepath), StandardCharsets.UTF_8));
-
-            String line;
-            StringBuilder sb = new StringBuilder();
-
-            while ((line = br.readLine()) != null) {
-                sb.append(line.trim());
-            }
-
-            br.close();
-            String xml = sb.toString();
-
-            ObjectMapper mapper = new XmlMapper();
-//            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-            
-            document = mapper
+			PortfolioDocument document = mapper
                     .readerFor(PortfolioDocument.class)
-                    .readValue(xml);
+                    .readValue(xmlFile.getValue().toByteArray());
 
             NodeDocument asmRoot = document.getRoot();
 
@@ -920,88 +865,63 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
             if (resource.isPresent()) {
                 String code = resource.get().getCode();
 
-                if (!"".equals(projectName)) { // If a new name has been specified
-                    // Find if it contains a project name
-                    int dot = code.indexOf(".");
-
-                    if (dot > 0)
-                        code = projectName + code.substring(dot);
-                    else // If no dot, it's a project, skip it
-                        continue;
-                }
-
                 if (nodeRepository.isCodeExist(code))
                     throw new GenericBusinessException("409 Conflict : Existing code.");
             }
 
-            UUID uuid = UUID.randomUUID();
-
-            portfolio = add(uuid, userId, document, resolve);
+            portfolio = add(UUID.randomUUID(), userId, document, resolve);
 
             /// Create base group
-            securityManager.addRole(document.getId(), "all", userId);
+            securityManager.addRole(portfolio.getId(), "all", userId);
 
-            /// Finalement on crée un rôle de designer
-            Long groupid = securityManager.addRole(document.getId(), "designer", userId);
-
-            /// Ajoute la personne dans ce groupe
+            /// Finally, create a designer role and add the user to it.
+            Long groupid = securityManager.addRole(portfolio.getId(), "designer", userId);
             groupUserRepository.save(new GroupUser(groupid, userId));
 
             hasLoaded = true;
         }
 
         if (hasLoaded) {
-            for (String fullPath : allFiles) {
-                String tmpFileName = fullPath.substring(fullPath.lastIndexOf(File.separator) + 1);
+            for (Map.Entry<String, ByteArrayOutputStream> file : entries.entrySet()) {
+				// Since we are dealing with paths provided by the Zip API, the path separator
+				// is a slash independently of the platform.
+                String fileName = file.getKey().substring(file.getKey().lastIndexOf("/") + 1);
 
-                if (!tmpFileName.contains("_"))
+                if (!fileName.contains("_"))
                     continue; // We want ressources now, they have '_' in their name
-                int index = tmpFileName.indexOf("_");
+
+                int index = fileName.indexOf("_");
                 if (index == -1)
-                    index = tmpFileName.indexOf(".");
-                int last = tmpFileName.lastIndexOf(File.separator);
+                    index = fileName.indexOf(".");
+
+                int last = fileName.lastIndexOf("/");
+
                 if (last == -1)
                     last = 0;
-                String uuid = tmpFileName.substring(last, index);
 
-                String lang;
+                String uuid = fileName.substring(last, index);
 
-                lang = tmpFileName.substring(index + 1, index + 3);
+                String lang = fileName.substring(index + 1, index + 3);
 
                 if ("un".equals(lang)) // Hack sort of fixing previous implementation
                     lang = "en";
 
-                // Attention on initialise la ligne file
-                // avec l'UUID d'origine de l'asmContext parent
-                // Il sera mis e jour avec l'UUID asmContext final dans writeNode
-                try {
-                    UUID resolved = resolve.get(UUID.fromString(uuid)); /// New uuid
-                    File file = new File(fullPath);
-                    FileInputStream input = new FileInputStream(file);
+                UUID resolved = resolve.get(UUID.fromString(uuid)); // New uuid
 
-                    if (resolved != null) {
-                        /// Have to send it in FORM, compatibility with regular file posting
-						resourceManager.updateContent(resolved, userId, input, lang, false, servletContext);
-                    }
-                } catch (Exception ex) {
-                    // Le nom du fichier ne commence pas par un UUID,
-                    // ce n'est donc pas une ressource
-                    ex.printStackTrace();
-                }
+				if (resolved != null) {
+					InputStream input = new ByteArrayInputStream(file.getValue().toByteArray());
+
+					/// Have to send it in FORM, compatibility with regular file posting
+					resourceManager.updateContent(resolved, userId, input, lang, false, servletContext);
+				}
             }
         }
 
-		File zipfile = new File(filename);
-		zipfile.delete();
-		File zipdir = new File(outsideDir + portfolioUuidPreliminaire + File.separator);
-		zipdir.delete();
-
-		return portfolio.getId().toString();
+		return portfolio.getId();
 	}
 
 	@Override
-	public String instanciatePortfolio(UUID portfolioId, String srccode, String tgtcode, Long id,
-			boolean copyshared, String groupname, boolean setOwner) {
+	public String instanciatePortfolio(String portfolioId, String srccode, String tgtcode) {
 
 		//// Fetch nodes to be instanciated
 		Portfolio portfolio = null;
@@ -1013,7 +933,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 			owner = portfolio.getCredential().getId();
 			nodelist = new ArrayList<>(portfolio.getNodes());
 		} else {
-			nodelist = nodeRepository.getNodes(portfolioId);
+			nodelist = nodeRepository.getNodes(UUID.fromString(portfolioId));
 			owner = nodelist.get(0).getModifUserId();
 		}
 
@@ -1409,15 +1329,17 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 	}
 
 	@Override
-	public UUID copyPortfolio(UUID portfolioId, String srcCode, String newCode, Long userId, boolean setOwner)
+	public UUID copyPortfolio(String id, String srcCode, String newCode, Long userId)
 			throws BusinessException {
 		Portfolio originalPortfolio;
+		UUID portfolioId = null;
 
 		/// le code source est OK ?
 		if (srcCode != null) {
 			// Retrouver le portfolio à partir du code source
 			originalPortfolio = portfolioRepository.getPortfolioFromNodeCode(srcCode);
 		} else {
+			portfolioId = UUID.fromString(id);
 			originalPortfolio = portfolioRepository.findById(portfolioId).orElse(null);
 		}
 
@@ -1440,21 +1362,13 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		for (Node node : originalNodeList) {
 			Node copy = new Node(node);
 
-			if (setOwner) {
-				copy.setModifUserId(userId);
-			} else {
-				copy.setModifUserId(1L); // FIXME hard-coded root userid
-			}
+			copy.setModifUserId(userId);
 
 			////////////////////////////
 			/// Copie des ressources///
 			///////////////////////////
 			if (copy.getResource() != null) {
-				if (setOwner) {
-					copy.getResource().setModifUserId(userId);
-				} else {
-					copy.getResource().setModifUserId(1L);
-				}
+				copy.getResource().setModifUserId(userId);
 
 				resourceRepository.save(copy.getResource());
 			}
@@ -1466,20 +1380,15 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 							StringUtils.replace(copy.getResResource().getContent(), copy.getCode(), newCode));
 
 				}
-				if (setOwner) {
-					copy.getResResource().setModifUserId(userId);
-				} else {
-					copy.getResResource().setModifUserId(1L);
-				}
+
+				copy.getResResource().setModifUserId(userId);
+
 				resourceRepository.save(copy.getResResource());
 			}
 
 			if (copy.getContextResource() != null) {
-				if (setOwner) {
-					copy.getContextResource().setModifUserId(userId);
-				} else {
-					copy.getContextResource().setModifUserId(1L);
-				}
+				copy.getContextResource().setModifUserId(userId);
+
 				resourceRepository.save(copy.getContextResource());
 			}
 

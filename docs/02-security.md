@@ -4,8 +4,8 @@ The security is handled at different levels in the application but
 throughout the code base, Spring Security is used to handle this.
 
 Inside services or controllers, you can find annotations that
-restrict the ability for a user to execute a whole method. These
-annotations are:
+restrict the ability for a user to execute a whole method. They are
+divided in two different categories ; the regular annotations:
 
 * `@PreAuthorize`
 * `@IsAdmin`
@@ -14,19 +14,37 @@ annotations are:
 While `@PreAuthorize` is provided by Spring Security, `@IsAdmin`
 and `@IsAdminOrDesigner` are named explicitly.
 
+And the annotations that are specifically for node records:
+
+* `@CanRead`
+* `@CanReadOrPublic`
+* `@CanWrite`
+* `@CanDelete`
+* `@IsAdminOrDesignerOnNode`
+
+The names should be descriptive enough. The only requirement with these
+annotations is that the method that rely on them must have a `UUID`
+attribute named `id` that represents the ID of the node. For example:
+
+~~~~java
+@CanRead
+public void doSomethingThatRequiresReadRight(@P("id") UUID nodeID) {
+
+}
+~~~~
+
+These annotations rely on the fine grained authorization. You can find
+more information at the end of this document.
+
 The `UserInfo` class (present in `karuta-business`) holds the information
 about the currently logged in user.
 
-You can get an instance of this class from a controller by injecting an
-`Authentication` object inside the parameter list of a controller method
-like so:
+You can get an instance of this class from a controller like so:
 
 ~~~java
 class AController {
     @RequestMapping("/whatever")
-    public HttpEntity<SomeDocument> whatever(Authentication authentication) {
-        UserInfo userInfo = (UserInfo)authentication.getPrincipal();
-
+    public HttpEntity<SomeDocument> whatever(@AuthenticationPrincipal UserInfo userInfo) {
         // ...
     }
 }
@@ -44,6 +62,21 @@ providing a token.
 
 Thus, you might expect 403 (Forbidden) requests if you don't properly
 provide a cookie.
+
+## Roles
+
+In Karuta, users can either be regular ones, designers or admins.
+
+The pecularity is that Karuta uses the term "designer" to either refer to
+a role or to a right on nodes.
+
+In the first case, this is modeled as the `designer` attribute being set
+to `true` in the database for the record representing the currently logged
+in user.
+
+In the second case, this is modeled as the user being part of a group
+named "designer" and attached to a given node. You can check out the
+following section for further info.
 
 ## Fine grained authorization
 

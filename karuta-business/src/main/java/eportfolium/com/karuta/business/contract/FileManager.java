@@ -16,19 +16,15 @@
 package eportfolium.com.karuta.business.contract;
 
 import eportfolium.com.karuta.document.ResourceDocument;
-import eportfolium.com.karuta.model.bean.Resource;
 
 import org.apache.http.client.HttpClient;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
-import java.util.UUID;
+import java.util.Map;
 
 public interface FileManager {
 
-	String[] findFiles(String directoryPath, String id);
-
-	String unzip(String zipFile, String destinationFolder) throws IOException;
+	Map<String, ByteArrayOutputStream> unzip(InputStream inputStream);
 
 	String updateResource(ResourceDocument resource,
 						   InputStream content,

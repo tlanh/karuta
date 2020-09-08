@@ -30,7 +30,11 @@ include::group-rights-infos.adoc[]
 
 include::groups.adoc[]
 
+include::nodes.adoc[]
+
 include::portfolio-groups.adoc[]
+
+include::portfolios.adoc[]
 
 include::resources.adoc[]
 

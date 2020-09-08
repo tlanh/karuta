@@ -7,7 +7,6 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -18,8 +17,6 @@ public interface CredentialRepository extends CrudRepository<Credential, Long> {
 
     @Query("SELECT c FROM Credential c WHERE c.login = :login AND c.isAdmin = :admin")
     Credential findByLoginAndAdmin(@Param("login") String login, @Param("admin") Integer admin);
-
-    boolean existsByLogin(String login);
 
     @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END " +
             "FROM Credential c WHERE c.id = :id AND c.isAdmin = 1")

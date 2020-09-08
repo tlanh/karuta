@@ -89,10 +89,10 @@ public class NodeDocumentTest extends DocumentTest {
 
         assertContains("<node id=\"" + id + "\" type=\"asmStructure\"", output);
 
-        assertContains("read=\"true\"", output);
-        assertContains("write=\"true\"", output);
-        assertContains("delete=\"true\"", output);
-        assertContains("submit=\"true\"", output);
+        assertContains("read=\"Y\"", output);
+        assertContains("write=\"Y\"", output);
+        assertContains("delete=\"Y\"", output);
+        assertContains("submit=\"Y\"", output);
         assertContains("action=\"baz\"", output);
 
         assertContains("role=\"foo\"", output);
@@ -116,7 +116,7 @@ public class NodeDocumentTest extends DocumentTest {
     @Test
     public void serializationWithMetadata() throws JsonProcessingException {
         MetadataDocument metadata = MetadataDocument.from("public=\"true\"");
-        MetadataWadDocument metadataWad = MetadataWadDocument.from("seenoderoles=\"true\"");
+        MetadataWadDocument metadataWad = MetadataWadDocument.from("seenoderoles=\"foo\"");
         MetadataEpmDocument metadataEpm = MetadataEpmDocument.from("public=\"true\"");
 
         Node node = new Node();
@@ -128,9 +128,9 @@ public class NodeDocumentTest extends DocumentTest {
 
         String output = mapper.writeValueAsString(document);
 
-        assertContains("<metadata public=\"true\"", output);
-        assertContains("<metadata-wad seenoderoles=\"true\"", output);
-        assertContains("<metadata-epm public=\"true\"", output);
+        assertContains("<metadata public=\"Y\"", output);
+        assertContains("<metadata-wad seenoderoles=\"foo\"", output);
+        assertContains("<metadata-epm public=\"Y\"", output);
     }
 
     @Test
@@ -167,6 +167,17 @@ public class NodeDocumentTest extends DocumentTest {
         assertContains("<asmResource contextid=\"" + nodeId +"\"", output);
         assertContains("xsi_type=\"nodeRes\"", output);
         assertContains("last_modif=\"1607595010000\"", output);
+    }
+
+    @Test
+    public void serializationWithUnsetXsiType() throws JsonProcessingException {
+        NodeDocument nodeDocument = new NodeDocument();
+
+        assertEquals("", nodeDocument.getXsiType());
+
+        String output = mapper.writeValueAsString(nodeDocument);
+
+        assertContains("xsi_type=\"\"", output);
     }
 
     @Test

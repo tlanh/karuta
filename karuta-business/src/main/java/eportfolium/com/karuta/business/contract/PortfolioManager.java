@@ -33,7 +33,7 @@ public interface PortfolioManager extends BaseManager {
 
 	Long addPortfolioGroup(String groupname, String type, Long parentId);
 
-	void removePortfolio(UUID portfolioId, Long userId);
+	boolean removePortfolio(UUID portfolioId, Long userId);
 
 	boolean removePortfolioFromPortfolioGroups(UUID portfolioId, Long portfolioGroupId);
 
@@ -79,13 +79,12 @@ public interface PortfolioManager extends BaseManager {
 	boolean rewritePortfolioContent(PortfolioDocument portfolio, UUID portfolioId, Long userId, Boolean portfolioActive)
 			throws BusinessException, JsonProcessingException;
 
-	String instanciatePortfolio(UUID portfolioId, String srccode, String tgtcode, Long id,
-			boolean copyshared, String groupname, boolean setOwner);
+	String instanciatePortfolio(String portfolioId, String srccode, String tgtcode);
 
-	String importPortfolio(String path, InputStream fileInputStream, Long id, boolean instantiate, String projectName, String servletContext)
+	UUID importPortfolio(InputStream fileInputStream, Long id, String servletContext)
 			throws BusinessException, IOException;
 
-	PortfolioList addPortfolio(PortfolioDocument portfolio, long userId, UUID portfolioModelId, boolean parseRights, String projectName)
+	PortfolioList addPortfolio(PortfolioDocument portfolio, long userId, String projectName)
 			throws BusinessException, JsonProcessingException;
 
 	GroupRightInfoList getGroupRightsInfos(UUID portfolioId);
@@ -94,7 +93,7 @@ public interface PortfolioManager extends BaseManager {
 
 	GroupInfoList getRolesByPortfolio(UUID portfolioId, Long userId);
 
-	UUID copyPortfolio(UUID portfolioId, String srccode, String tgtcode, Long userId, boolean setOwner)
+	UUID copyPortfolio(String id, String srccode, String tgtcode, Long userId)
 			throws BusinessException;
 
 	void updateTime(UUID portfolioId);

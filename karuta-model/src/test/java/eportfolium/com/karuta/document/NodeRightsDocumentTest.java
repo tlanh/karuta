@@ -8,6 +8,9 @@ import org.junit.Test;
 
 import java.util.UUID;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 public class NodeRightsDocumentTest extends DocumentTest {
     @Test
     public void serialization() throws JsonProcessingException {
@@ -30,6 +33,27 @@ public class NodeRightsDocumentTest extends DocumentTest {
         String output = mapper.writeValueAsString(nodeRightsDocument);
 
         assertContains("<node uuid=\"" + nodeId.toString() +"\">", output);
-        assertContains("<role name=\"foo\"><rights RD=\"true\" WR=\"true\" DL=\"true\" SB=\"true\"/></role>", output);
+        assertContains("<role name=\"foo\"><right RD=\"true\" WR=\"true\" DL=\"true\" SB=\"true\"/></role>", output);
+    }
+
+    @Test
+    public void basicDeserialization() throws JsonProcessingException {
+        UUID id = UUID.randomUUID();
+
+        String xml = "<node uuid=\"" + id +"\">" +
+                    "<role name=\"designer\">" +
+                        "<right RD=\"true\" WR=\"true\" SB=\"true\" DL=\"true\"/>" +
+                    "</role>" +
+                "</node>";
+
+        NodeRightsDocument nodeRightsDocument = mapper.readValue(xml, NodeRightsDocument.class);
+
+        assertEquals(id, nodeRightsDocument.getUuid());
+        assertEquals("designer", nodeRightsDocument.getRole().getName());
+
+        assertTrue(nodeRightsDocument.getRole().getRight().getRD());
+        assertTrue(nodeRightsDocument.getRole().getRight().getWR());
+        assertTrue(nodeRightsDocument.getRole().getRight().getDL());
+        assertTrue(nodeRightsDocument.getRole().getRight().getSB());
     }
 }

@@ -208,19 +208,6 @@ public class PortfolioRepositoryTest extends TestHelpers {
     }
 
     @Test
-    public void getPortfolioFromNode() {
-        Portfolio portfolio = portfolioRecord();
-
-        Node node = savableNode();
-        node.setPortfolio(portfolio);
-        nodeRepository.save(node);
-
-        Portfolio found = repository.getPortfolioFromNode(node.getId());
-
-        assertEquals(portfolio.getId(), found.getId());
-    }
-
-    @Test
     public void getPortfolioUuidFromNode() {
         Portfolio portfolio = portfolioRecord();
 

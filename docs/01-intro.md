@@ -25,7 +25,7 @@ Once this repository is cloned, you can import it in your favorite IDE.
 
 ## Running tests
 
-See the [Tests](tests.md) document for further information on the testing
+See the [Tests](03-tests.md) document for further information on the testing
 aspects.
 
 To fully package the different components and run the different tests,
