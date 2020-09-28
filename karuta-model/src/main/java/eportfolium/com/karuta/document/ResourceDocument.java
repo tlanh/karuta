@@ -6,6 +6,7 @@ import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper;
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
 
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlText;
 import eportfolium.com.karuta.model.bean.Node;
 import eportfolium.com.karuta.model.bean.Resource;
 
@@ -23,10 +24,57 @@ public class ResourceDocument {
 
     private String code;
 
+    public abstract static class TagWithLang {
+        protected String lang;
+        protected String value;
+
+        public TagWithLang() { }
+
+        public TagWithLang(String lang, String value) {
+            this.lang = lang;
+            this.value = value;
+        }
+
+        @JsonProperty("lang")
+        public String getLang() {
+            return lang;
+        }
+
+        @JacksonXmlText
+        public String getValue() {
+            return value;
+        }
+    }
+
+    static class FilenameTag extends TagWithLang {
+        public FilenameTag() { }
+
+        public FilenameTag(String lang, String value) {
+            super(lang, value);
+        }
+    }
+
+    static class FileidTag extends TagWithLang {
+        public FileidTag() { }
+
+        public FileidTag(String lang, String value) {
+            super(lang, value);
+        }
+    }
+
+    static class TypeTag extends TagWithLang {
+        public TypeTag() { }
+
+        public TypeTag(String lang, String value) {
+            super(lang, value);
+        }
+    }
+
+
     // For file resources
-    private List<Map<String, String>> filename;
-    private List<Map<String, String>> fileid;
-    private List<Map<String, String>> type;
+    private List<FilenameTag> filename;
+    private List<FileidTag> fileid;
+    private List<TypeTag> type;
 
     public ResourceDocument() { }
 
@@ -98,18 +146,15 @@ public class ResourceDocument {
 
     public void setCode(String code) {
         this.code = code;
-        if( code != null )
-        {
-	        HashMap<String, String> tmap = new HashMap<>();
-	        tmap.put("", code);
 
-	        this.dumpMap("code", Collections.singletonList(tmap));
+        if (code != null) {
+	        this.content += "<code>" + code + "</code>";
         }
     }
 
     @JsonGetter("filename")
     @JacksonXmlElementWrapper(useWrapping = false)
-    public List<Map<String, String>> getFilename() {
+    public List<FilenameTag> getFilename() {
         return filename;
     }
 
@@ -117,30 +162,15 @@ public class ResourceDocument {
         return findValueForLang(filename, lang);
     }
 
-    public void setFilename(List<Map<String, String>> filename) {
+    public void setFilename(List<FilenameTag> filename) {
         this.filename = filename;
         this.dumpMap("filename", filename);
-    }
-
-    public void setFilename(String lang, String filename) {
-    	Map<String, String> map = null;
-    	if( this.filename == null )
-    	{
-    		this.filename = new ArrayList<Map<String, String>>();
-    		map = new HashMap<String, String>();
-    		this.filename.add(map);
-    	}
-    	else
-    		map = this.fileid.get(0);
-    	map.put("lang", lang);
-    	map.put("value", filename);
-      this.dumpMap("filename", this.filename);
     }
 
 
     @JsonGetter("fileid")
     @JacksonXmlElementWrapper(useWrapping = false)
-    public List<Map<String, String>> getFileid() {
+    public List<FileidTag> getFileid() {
         return fileid;
     }
 
@@ -148,52 +178,22 @@ public class ResourceDocument {
         return findValueForLang(fileid, lang);
     }
 
-    public void setFileid(List<Map<String, String>> fileid) {
+    public void setFileid(List<FileidTag> fileid) {
         this.fileid = fileid;
         this.dumpMap("fileid", fileid);
     }
 
-    public void setFileid(String lang, String fileid) {
-    	Map<String, String> map = null;
-    	if( this.fileid == null )
-    	{
-    		this.fileid = new ArrayList<>();
-    		map = new HashMap<>();
-    		this.fileid.add(map);
-    	}
-    	else
-    		map = this.fileid.get(0);
-    	map.put("lang", lang);
-    	map.put("value", fileid);
-      this.dumpMap("fileid", this.fileid);
-    }
-
     @JsonGetter("type")
     @JacksonXmlElementWrapper(useWrapping = false)
-    public List<Map<String, String>> getType() { return type; }
+    public List<TypeTag> getType() { return type; }
 
     public String getType(String lang) {
         return findValueForLang(type, lang);
     }
 
-    public void setType(List<Map<String, String>> type) {
+    public void setType(List<TypeTag> type) {
         this.type = type;
         this.dumpMap("type", type);
-    }
-
-    public void setType(String lang, String type) {
-    	Map<String, String> map = null;
-    	if( this.type == null )
-    	{
-    		this.type = new ArrayList<Map<String, String>>();
-    		map = new HashMap<String, String>();
-    		this.type.add(map);
-    	}
-    	else
-    		map = this.type.get(0);
-    	map.put("lang", lang);
-    	map.put("value", type);
-      this.dumpMap("type", this.type);
     }
 
     @JsonRawValue
@@ -240,39 +240,30 @@ public class ResourceDocument {
         content += builder.toString();
     }
 
-    private String findValueForLang(List<Map<String, String>> values, String lang) {
+    private String findValueForLang(List<? extends TagWithLang> values, String lang) {
         if (values == null)
             return "";
 
-        /// From the constructor, attribute value is in ""
-        Optional<String> search = values.stream()
-            .filter(f -> f.get("lang").equals(lang))
-            .findFirst()
-            .map(m -> m.get(""));
+        Optional<? extends TagWithLang> search = values.stream()
+            .filter(f -> f.getLang().equals(lang))
+            .findFirst();
 
-        /// From some other function, attribute value is in "value"
-        return search.orElseGet(() -> values.stream()
-                .filter(f -> f.get("lang").equals(lang))
-                .findFirst()
-                .map(m -> m.get("value")).orElse(""));
+        return search
+                .map(TagWithLang::getValue)
+                .orElse("");
     }
 
-    private void dumpMap(String name, List<Map<String, String>> values) {
+    private void dumpMap(String name, List<? extends TagWithLang> values) {
         if (this.content == null)
             this.content = "";
 
-        StringBuilder stringBuilder = new StringBuilder("");
+        StringBuilder stringBuilder = new StringBuilder();
 
-        values.forEach(map -> {
-            if (map.containsKey("")) {
-                stringBuilder.append("<").append(name).append(">")
-                        .append(map.get(""))
-                        .append("</").append(name).append(">");
-            } else {
-                stringBuilder.append("<").append(name);
-                map.forEach((k, v) -> stringBuilder.append(" ").append(k).append("=\"").append(v).append("\""));
-                stringBuilder.append(" />");
-            }
+        values.forEach(tag -> {
+            stringBuilder.append("<").append(name)
+                    .append(" lang=\"").append(tag.getLang()).append("\">")
+                    .append(tag.getValue())
+                    .append("</").append(name).append(">");
 
         });
 
