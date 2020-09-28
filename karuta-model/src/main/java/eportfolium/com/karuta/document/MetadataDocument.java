@@ -36,7 +36,7 @@ public class MetadataDocument {
     public MetadataDocument() { }
 
     public static MetadataDocument from(String xml) throws JsonProcessingException {
-        String withTag = "<metadata " + (xml != null ? xml : "") + " />";
+        String withTag = "<metadata " + processEntities(xml) + " />";
 
         return xmlMapper.readerFor(MetadataDocument.class)
                     .readValue(withTag);
@@ -127,5 +127,16 @@ public class MetadataDocument {
     @JsonAnySetter
     public void setAttribute(String k, String v) {
     	attributes.put(k, v);
+    }
+
+    protected static String processEntities(String xml) {
+        if (xml == null)
+            return "";
+
+        return xml.replace("&nbsp;", "&amp;nbsp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replaceAll("\\(\\s*\"", "(&quot;")
+                .replaceAll("\"\\s*\\)", "&quot;)");
     }
 }
