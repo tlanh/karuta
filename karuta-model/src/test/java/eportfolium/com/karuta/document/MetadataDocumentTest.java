@@ -35,6 +35,32 @@ public class MetadataDocumentTest extends DocumentTest {
     }
 
     @Test
+    public void fromSpecialEntities() throws JsonProcessingException {
+        MetadataDocument document;
+        String xml;
+
+        xml = "semantictag=\"&nbsp;\"";
+        document = MetadataDocument.from(xml);
+
+        assertEquals("&nbsp;", document.getSemantictag());
+
+        xml = "semantictag=\"Hello<br>world\"";
+        document = MetadataDocument.from(xml);
+
+        assertEquals("Hello<br>world", document.getSemantictag());
+
+        xml = "semantictag=\"foo.has(\"asmResource\")\"";
+        document = MetadataDocument.from(xml);
+
+        assertEquals("foo.has(\"asmResource\")", document.getSemantictag());
+
+        xml = "semantictag=\"foo.has(   \"asmResource\"  )\"";
+        document = MetadataDocument.from(xml);
+
+        assertEquals("foo.has(\"asmResource\")", document.getSemantictag());
+    }
+
+    @Test
     public void settingPublicReflectPrivate() {
         MetadataDocument document = new MetadataDocument();
 

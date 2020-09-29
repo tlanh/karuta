@@ -26,7 +26,7 @@ public class MetadataWadDocument extends MetadataDocument {
     private Date submitteddate;
     
     public static MetadataWadDocument from(String xml) throws JsonProcessingException {
-        String withTag = "<metadata-wad " + (xml != null ? xml : "")  + " />";
+        String withTag = "<metadata-wad " + processEntities(xml) + " />";
 
         return xmlMapper.readerFor(MetadataWadDocument.class)
                 .readValue(withTag);
