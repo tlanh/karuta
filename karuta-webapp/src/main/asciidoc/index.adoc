@@ -10,9 +10,9 @@ requires the user to be authenticated to authorize a request.
 This means that you need to provide the cookie containing the attached session
 in every single request you make.
 
-If you are using `curl`, this means that you need to use the `-b` option first
-when you reach the login endpoint and then use the `-c` option passing the
-path to the file previously generated with `-b`.
+If you are using `curl`, this means that you need to use the `-c` option first
+when you reach the login endpoint and then use the `-b` option passing the
+path to the file previously generated with `-c`.
 
 Apart from **few ones**, most endpoints can consume or produce either XML or
 JSON. By default, XML is implied but you can specify the `Accept` or

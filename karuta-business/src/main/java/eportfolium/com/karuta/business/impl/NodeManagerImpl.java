@@ -37,7 +37,6 @@ import org.hibernate.Hibernate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -965,7 +964,6 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
         
         // Pour la copie de la structure
         UUID portfolioId = null;
-        UUID baseUuid = null;
 
         Node baseNode = null;
         Map<UUID, List<Node>> nodes = null;
@@ -983,11 +981,10 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
             checkCache( portfolioUuid );
             
             // Keep copy for later
-            nodes = cachedNodes.get(portfolioId);
-            baseUuid = sourceId;
+            nodes = cachedNodes.get(portfolioUuid);
 
             /// Fetch base node from child list;
-            List<Node> clist = nodes.get(baseUuid);
+            List<Node> clist = nodes.get(sourceId);
             baseNode = clist.get(0);	// First element is parent
         } else {
         	/// Code/Tag
@@ -1020,8 +1017,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
             }
 
             if (nodeSearch != null) {
-            		baseNode = nodeSearch;
-                baseUuid = nodeSearch.getId();
+            	baseNode = nodeSearch;
             } else {
                 throw new GenericBusinessException(
                         "Aucun noeud trouvé pour le code : " + code + " et le tag : " + tag);
@@ -1049,16 +1045,12 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 
         /// Contient les noeuds à copier.
         final Set<Node> nodesToCopy = new LinkedHashSet<>();
-        /// Contient les uuid des noeuds à copier.
-        final Set<UUID> nodesUuidToCopy = new LinkedHashSet<>();
 
-        final Map<Integer, Set<UUID>> parentIdMap = new HashMap<>();
+        /// Contient les uuid des noeuds à copier.
         Queue<Node> resolveParent = new LinkedList<>();
 
         nodesToCopy.add(baseCopyNode);
         resolveParent.add(baseCopyNode);
-
-        parentIdMap.put(0, nodesUuidToCopy);
 
         Node qnode = baseCopyNode;
 
@@ -1099,42 +1091,32 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 
         // Contain a mapping between original elements and their copy.
         final Map<Node, Node> allNodes = new HashMap<>();
-        final Map<Resource, Resource> resources = new HashMap<>();
 
         for (Node node : nodesToCopy) {
 
-            if (node.getResource() != null) {
-                Resource resourceCopy = node.getResource();
-                resourceCopy.setModifUserId(userId);
+        	Arrays.asList(node.getResource(), node.getResResource(), node.getContextResource()).forEach(original -> {
+        		if (original != null) {
+        			Resource resourceCopy = new Resource(original);
+        			resourceCopy.setModifUserId(userId);
 
-                if (!node.isSharedRes() || !node.getSharedNode() || !node.isSharedNodeRes()) {
-                    resourceCopy = resourceRepository.save(resourceCopy);
-                    resources.put(node.getResource(), resourceCopy);
-                }
-            }
+					if (!node.isSharedRes() || !node.getSharedNode() || !node.isSharedNodeRes()) {
+						resourceCopy.setNode(node);
+						resourceRepository.save(resourceCopy);
 
-            if (node.getResResource() != null) {
-                Resource resourceCopy = node.getResResource();
-                resourceCopy.setModifUserId(userId);
+						if (original.getId() == node.getResource().getId()) {
+							node.setResource(resourceCopy);
+						} else if (original.getId() == node.getResResource().getId()) {
+							node.setResource(resourceCopy);
+						} else {
+							node.setContextResource(resourceCopy);
+						}
 
-                if (!node.isSharedRes() || !node.getSharedNode() || !node.isSharedNodeRes()) {
-                	resourceCopy = resourceRepository.save(resourceCopy);
-                    resources.put(node.getResource(), resourceCopy);
-                }
-            }
+						nodeRepository.save(node);
+					}
+				}
+			});
 
-            if (node.getContextResource() != null) {
-                Resource resourceCopy = node.getContextResource();
-                resourceCopy.setModifUserId(userId);
-
-                if (!node.isSharedRes() || !node.getSharedNode() || !node.isSharedNodeRes()) {
-                	resourceCopy = resourceRepository.save(resourceCopy);
-                    resources.put(node.getResource(), resourceCopy);
-                }
-            }
-
-//            nodeRepository.save(node);
-            allNodes.put(node, node);	///// !
+            allNodes.put(node, node);
         }
 
 

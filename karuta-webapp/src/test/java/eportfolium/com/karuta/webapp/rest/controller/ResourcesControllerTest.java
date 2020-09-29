@@ -110,9 +110,9 @@ public class ResourcesControllerTest extends ControllerTest {
         resource.setNode(node);
         resource.setXsiType("nodeRes");
         resource.setModifDate(new Date());
-        resource.setContent("<filename lang=\"fr\" value=\"foo.txt\"/>" +
-                "<filename lang=\"en\" value=\"bar.txt\" />" +
-                "<type lang=\"fr\" value=\"text/plain\" />");
+        resource.setContent("<filename lang=\"fr\">foo.txt</filename>" +
+                "<filename lang=\"en\">bar.txt</filename>" +
+                "<type lang=\"fr\">text/plain</type>");
 
         doReturn(resource)
                 .when(resourceRepository)
