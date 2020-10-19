@@ -210,14 +210,33 @@ public class ResourceManagerImpl extends BaseManagerImpl implements ResourceMana
 
 		Resource resource = resourceRepository.getResourceOfResourceByNodeUuid(nodeId);
 		ResourceDocument document = new ResourceDocument(resource, resource.getResNode());
-
-		return fileManager.updateResource(document, uploadfile, lang, thumbnail, contextPath);
+		String uuid = fileManager.updateResource(document, uploadfile, lang, thumbnail, contextPath);
+		document.setFileid(lang, uuid);
+		String content = document.getContent();
+		
+		resource.setContent(content);
+		resourceRepository.save(resource);
+		
+		return uuid;
 	}
 
 	@Override
 	public ResourceDocument fetchResource(UUID nodeId, OutputStream output, String lang, boolean thumbnail, String contextPath) {
 		Resource resource = resourceRepository.getResourceOfResourceByNodeUuid(nodeId);
-		ResourceDocument document = new ResourceDocument(resource, resource.getNode());
+		String type = resource.getXsiType();
+		ResourceDocument document = null;
+		switch(type)
+		{
+			case "context":
+				document = new ResourceDocument(resource, resource.getContextNode());
+				break;
+			case "nodeRes":
+				document = new ResourceDocument(resource, resource.getNode());
+				break;
+			default:
+				document = new ResourceDocument(resource, resource.getResNode());
+				break;
+		}
 
 		/*try
 		{

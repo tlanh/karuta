@@ -73,7 +73,7 @@ public class ResourceDocument {
 
     // For file resources
     private List<FilenameTag> filename;
-    private List<FileidTag> fileid;
+    private List<FileidTag> fileid = new ArrayList<FileidTag>();
     private List<TypeTag> type;
 
     public ResourceDocument() { }
@@ -90,6 +90,7 @@ public class ResourceDocument {
         this.modifDate = resource.getModifDate();
 
         this.content = resource.getContent();
+        if( this.content == null ) this.content = "";
 
         if (resource.getContent() != null) {
             try {
@@ -99,6 +100,7 @@ public class ResourceDocument {
 
                 this.filename = subset.getFilename();
                 this.fileid = subset.getFileid();
+                if( this.fileid == null ) this.fileid = new ArrayList<FileidTag>(); 
                 this.type = subset.getType();
             } catch (IOException e) {
                 e.printStackTrace();
@@ -181,6 +183,32 @@ public class ResourceDocument {
     public void setFileid(List<FileidTag> fileid) {
         this.fileid = fileid;
         this.dumpMap("fileid", fileid);
+    }
+
+    public void setFileid(String lang, String fileid) {
+			/// Clear previous fileid tag before reconstruction
+			String fileidpat = "<fileid.*?/fileid>";
+			this.content = this.content.replaceAll(fileidpat, "");
+			
+			/// Replace previous value
+    	boolean exist = false;
+    	for( FileidTag l : this.fileid )	// Not great, eh.
+    	{
+    		if( l.lang.equals(lang) )
+    		{
+    			exist = true;
+    			l.value = fileid;
+					
+    			break;
+    		}
+    	}
+    	if( !exist )
+  		{
+    		FileidTag tag = new FileidTag(lang, fileid);
+    		this.fileid.add(tag);
+  		}
+    	
+      this.dumpMap("fileid", this.fileid);
     }
 
     @JsonGetter("type")
