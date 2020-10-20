@@ -15,7 +15,7 @@ public class NodeList {
     }
 
     @JacksonXmlElementWrapper(useWrapping = false)
-    @JacksonXmlProperty(localName = "node")
+    @JacksonXmlProperty(localName = "asmRoot")
     public List<NodeDocument> getNodes() {
         return nodes;
     }
