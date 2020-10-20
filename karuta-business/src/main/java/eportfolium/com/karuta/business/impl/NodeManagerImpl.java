@@ -24,6 +24,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.persistence.PersistenceUnitUtil;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import eportfolium.com.karuta.business.security.*;
@@ -938,6 +940,13 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 						branch.add(pNode);	/// Parent node as first eleemnt
 						resolve.put(parentId, branch);
 					}
+					node = (Node) Hibernate.unproxy(node);
+					Resource r = node.getResource();
+					if( r != null ) node.setResource((Resource) Hibernate.unproxy(r));
+					r = node.getContextResource();
+					if( r != null ) node.setContextResource((Resource) Hibernate.unproxy(r));
+					r = node.getResResource();
+					if( r != null ) node.setResResource((Resource) Hibernate.unproxy(r));
 					branch.add(node);
 				}
 				// Mettre tous les noeuds dans le cache.
@@ -1035,6 +1044,12 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
         baseCopyNode.setModifUserId(userId);
         baseCopyNode.setPortfolio(destPortfolio);
         baseCopyNode.setNodeOrder(nodeOrder+1);
+        Resource r = baseCopyNode.getContextResource();
+        if( r != null ) resourceRepository.save(r);
+        r = baseCopyNode.getResource();
+        if( r != null ) resourceRepository.save(r);
+        r = baseCopyNode.getResResource();
+        if( r != null ) resourceRepository.save(r);
         baseCopyNode = nodeRepository.save(baseCopyNode);
         
         /// Ajout de l'enfant dans le noeud de destination
@@ -1071,6 +1086,13 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
               	ccopy.setModifUserId(userId);
               	ccopy.setPortfolio(destPortfolio);
               	
+                Resource r2 = baseCopyNode.getContextResource();
+                if( r2 != null ) resourceRepository.save(r2);
+                r2 = baseCopyNode.getResource();
+                if( r2 != null ) resourceRepository.save(r2);
+                r2 = baseCopyNode.getResResource();
+                if( r2 != null ) resourceRepository.save(r2);
+
               	ccopy = nodeRepository.save(ccopy);
               	cList.add(ccopy.getId().toString());
               	
@@ -1094,6 +1116,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 
         for (Node node : nodesToCopy) {
 
+        	/*
         	Arrays.asList(node.getResource(), node.getResResource(), node.getContextResource()).forEach(original -> {
         		if (original != null) {
         			Resource resourceCopy = new Resource(original);
@@ -1115,6 +1138,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 					}
 				}
 			});
+					//*/
 
             allNodes.put(node, node);
         }
