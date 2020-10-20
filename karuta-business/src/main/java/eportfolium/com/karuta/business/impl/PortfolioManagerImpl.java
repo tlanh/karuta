@@ -1373,17 +1373,18 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 				resourceRepository.save(copy.getResource());
 			}
 
-			if (copy.getResResource() != null) {
+			if (copy.getResource() != null) {
 				// Mise a jour du code dans le contenu du noeud.
 				if (StringUtils.equalsIgnoreCase(copy.getAsmType(), "asmRoot")) {
-					copy.getResResource().setContent(
-							StringUtils.replace(copy.getResResource().getContent(), copy.getCode(), newCode));
-
+					String content = copy.getResource().getContent();
+					String find = String.format("<code>%s</code>", copy.getCode());
+					String replaced = String.format("<code>%s</code>", newCode);
+					content = content.replaceFirst(find, replaced);
+					copy.getResource().setContent(content);
 				}
+				copy.getResource().setModifUserId(userId);
 
-				copy.getResResource().setModifUserId(userId);
-
-				resourceRepository.save(copy.getResResource());
+				resourceRepository.save(copy.getResource());
 			}
 
 			if (copy.getContextResource() != null) {
