@@ -1367,10 +1367,10 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 			////////////////////////////
 			/// Copie des ressources///
 			///////////////////////////
-			if (copy.getResource() != null) {
-				copy.getResource().setModifUserId(userId);
-
-				resourceRepository.save(copy.getResource());
+			if( copy.getResResource() != null )
+			{
+				copy.getResResource().setModifUserId(userId);
+				resourceRepository.save(copy.getResResource());
 			}
 
 			if (copy.getResource() != null) {
@@ -1383,13 +1383,11 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 					copy.getResource().setContent(content);
 				}
 				copy.getResource().setModifUserId(userId);
-
 				resourceRepository.save(copy.getResource());
 			}
 
 			if (copy.getContextResource() != null) {
 				copy.getContextResource().setModifUserId(userId);
-
 				resourceRepository.save(copy.getContextResource());
 			}
 

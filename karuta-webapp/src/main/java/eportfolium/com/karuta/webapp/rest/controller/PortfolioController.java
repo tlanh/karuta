@@ -128,12 +128,14 @@ public class PortfolioController extends AbstractController {
      *
      * GET /rest/api/portfolios/code/{code}
      */
-    @GetMapping(value = "/portfolio/code/{code:.+}")
-    public HttpEntity<String> getByCode(@PathVariable String code,
-                                                   @RequestParam(required = false) boolean resources,
-                                                   @AuthenticationPrincipal UserInfo userInfo)
+    @GetMapping(value = "/portfolio/code/**")
+    public HttpEntity<String> getByCode( @RequestParam(required = false) boolean resources,
+                                                   @AuthenticationPrincipal UserInfo userInfo,
+                                                   HttpServletRequest request )
             throws BusinessException, JsonProcessingException {
 
+    	String code = request.getRequestURI();
+    	code = code.split("/code/")[1];
         String portfolio = portfolioManager
                 .getPortfolioByCode(code, userInfo.getId(), resources);
 
