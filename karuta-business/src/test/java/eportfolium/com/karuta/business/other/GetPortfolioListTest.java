@@ -109,22 +109,36 @@ public class GetPortfolioListTest {
         portfolio3.setModifUserId(otherUser.getId());
         portfolio3.setActive(1);
 
+        Node root3 = nodeRecord();
+        root3.setPortfolio(portfolio3);
+        root3.setSemantictag("");
+        root3.setCode("");
+        portfolio3.setRootNode(root3);
+
         portfolio4 = portfolioRecord();
         portfolio4.setActive(0);
+
+        Node root4 = nodeRecord();
+        root4.setPortfolio(portfolio4);
+        root4.setSemantictag("");
+        root4.setCode("");
+        portfolio4.setRootNode(root4);
 
         portfolioRepository.saveAll(Arrays.asList(portfolio1, portfolio2, portfolio3, portfolio4));
 
         // Set a rootNode with a code for `portfolio1`
         Node codeNode = nodeRecord();
         codeNode.setPortfolio(portfolio1);
-        codeNode.setCode("foo-bar-baz");
+        codeNode.setSemantictag("");
+        codeNode.setCode("code.portfolio1");
 
         // Set a rootNode with a semantic tag for `portfolio2`
         Node projectNode = nodeRecord();
         projectNode.setPortfolio(portfolio2);
-        projectNode.setSemantictag("it-is-a-karuta-project-thing");
+        projectNode.setCode("code");
+        projectNode.setSemantictag("karuta-project");
 
-        nodeRepository.saveAll(Arrays.asList(codeNode, projectNode));
+        nodeRepository.saveAll(Arrays.asList(codeNode, projectNode, root3, root4));
 
         portfolio1.setRootNode(codeNode);
         portfolio2.setRootNode(projectNode);
@@ -193,7 +207,7 @@ public class GetPortfolioListTest {
         List<Portfolio> portfolios = manager.getPortfolioList(credential.getId(), true, true, null);
 
         assertEquals(1, portfolios.size());
-        assertEquals(portfolio2.getId(), portfolios.get(0).getId());
+        assertEquals(portfolio1.getId(), portfolios.get(0).getId());
     }
 
     @Test
@@ -201,14 +215,14 @@ public class GetPortfolioListTest {
         List<Portfolio> portfolios = manager.getPortfolioList(credential.getId(), true, true, null);
 
         assertEquals(1, portfolios.size());
-        assertEquals(portfolio2.getId(), portfolios.get(0).getId());
+        assertEquals(portfolio1.getId(), portfolios.get(0).getId());
     }
 
     @Test
     public void getPortfolioList_WithCode_AsAdmin() {
         isAdmin();
 
-        List<Portfolio> portfolios = manager.getPortfolioList(credential.getId(), true, null, "bar");
+        List<Portfolio> portfolios = manager.getPortfolioList(credential.getId(), true, null, "portfolio1");
 
         assertEquals(1, portfolios.size());
         assertEquals(portfolio1.getId(), portfolios.get(0).getId());
@@ -216,7 +230,7 @@ public class GetPortfolioListTest {
 
     @Test
     public void getPortfolioList_WithCode_AsRegularUser() {
-        List<Portfolio> portfolios = manager.getPortfolioList(credential.getId(), true, null, "bar");
+        List<Portfolio> portfolios = manager.getPortfolioList(credential.getId(), true, null, "portfolio1");
 
         assertEquals(1, portfolios.size());
         assertEquals(portfolio1.getId(), portfolios.get(0).getId());
