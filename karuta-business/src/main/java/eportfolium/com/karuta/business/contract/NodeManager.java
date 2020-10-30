@@ -38,6 +38,8 @@ public interface NodeManager extends BaseManager {
 	NodeDocument getNode(UUID nodeId, boolean withChildren, String withChildrenOfXsiType, Long userId,
 			String label, boolean checkSecurity) throws JsonProcessingException;
 
+	String getNodeWithXSL(UUID nodeUuid, String folder, String xslFile, String parameters, Long userId );
+	
 	/**
 	 * forcedParentUuid permet de forcer l'uuid parent, independamment de l'attribut
 	 * du noeud fourni

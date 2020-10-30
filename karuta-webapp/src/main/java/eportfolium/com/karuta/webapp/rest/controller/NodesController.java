@@ -29,7 +29,10 @@ import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.File;
 import java.util.UUID;
+
+import javax.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/nodes")
@@ -41,6 +44,26 @@ public class NodesController extends AbstractController {
     @InjectLogger
     private Logger logger;
 
+  	/**
+  	 *	Fetch node content with XSL processing
+  	 *	GET /rest/api/nodes/{node-id}
+  	 *	parameters:
+  	 *	return:
+  	 **/
+    @GetMapping(value = "/{id}")
+    public HttpEntity<String> getXSLNode(@PathVariable UUID id,
+                                            @RequestParam(value = "xsl-file", required = true) String xslFile,
+                                            @RequestParam(required = true) String lang,
+                                            @AuthenticationPrincipal UserInfo userInfo,
+                                            HttpServletRequest request)
+            throws BusinessException, JsonProcessingException {
+    	String parameters = "lang:"+lang;
+    	
+    	String folder = request.getServletContext().getRealPath(File.separator);
+    	
+    	return new HttpEntity<>(nodeManager.getNodeWithXSL(id, folder, xslFile, parameters, userInfo.getId()));
+    }
+    
     /**
      * Get a node without children.
      *
