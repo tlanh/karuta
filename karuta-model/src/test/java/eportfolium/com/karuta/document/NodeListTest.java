@@ -19,7 +19,7 @@ public class NodeListTest extends DocumentTest {
         String output = mapper.writeValueAsString(list);
 
         assertContains("<nodes>", output);
-        assertContains("<asmRoot id=\"" + firstId + "\" ", output);
-        assertContains("<asmRoot id=\"" + secondId + "\" ", output);
+        assertContains("<node id=\"" + firstId + "\"", output);
+        assertContains("<node id=\"" + secondId + "\"", output);
     }
 }
