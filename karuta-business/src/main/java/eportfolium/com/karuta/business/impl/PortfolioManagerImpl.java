@@ -1504,6 +1504,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		
 		HashMap<String, Integer> projects = new HashMap<>();
 		HashMap<String, List<Portfolio>> portfo = new HashMap<>();
+		List<Portfolio> projectPortfo = new ArrayList<Portfolio>();
 		
 		if( specialProject == null )
 		{
@@ -1518,14 +1519,27 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 			if( p.getRootNode().getSemantictag().contains("karuta-project") )
 			{	/// Projects
 				projects.put(code, 1);
+				projectPortfo.add(p);
 			}
 			else
-			{	/// Simple portfolio
-				List<Portfolio> plist = portfo.get(code);
+			{
+				/// Simple portfolio
+				int first = code.indexOf(".");
+				if( first == -1 ) first = code.length();
+				String start = code.substring(0, first);
+				List<Portfolio> plist;
+				if( projects.containsKey(start) )	// Inside a project
+				{
+				}
+				else	// With no project
+				{
+					start = "";
+				}
+				plist = portfo.get(start);
 				if( plist == null )
 				{
 					plist = new ArrayList<>();
-					portfo.put(code, plist);
+					portfo.put(start, plist);
 				}
 				plist.add(p);
 			}
@@ -1534,23 +1548,23 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		/// Effective list
 		List<Portfolio> inproject = new ArrayList<>();
 		List<Portfolio> outproject = new ArrayList<>();
-		for( String k : portfo.keySet() )
+		for( String k : projects.keySet() )
 		{
 			/// Check if this code was declared in project list
-			if( projects.containsKey(k) )
+			if( portfo.containsKey(k) )
 			{	/// Has a parent project -> is in project
 				inproject.addAll(portfo.get(k));
 			}
 			else
 			{	/// No parent project -> out project
-				outproject.addAll(portfo.get(k));
+//				outproject.addAll(portfo.get(k));
 			}
 		}
 		
 		if( specialProject )
-			return inproject;
+			return projectPortfo;
 		else
-			return outproject;
+			return portfo.get("");
 
 	}
 
@@ -1561,6 +1575,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		
 		HashMap<String, Integer> projects = new HashMap<>();
 		HashMap<String, Integer> portfo = new HashMap<>();
+		List<Portfolio> projectPortfo = new ArrayList<Portfolio>();
 		
 		if( specialProject == null )
 		{
@@ -1576,12 +1591,25 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 			if( p.getRootNode().getSemantictag().contains("karuta-project") )
 			{	/// Projects
 				projects.put(code, 1);
+				projectPortfo.add(p);
 			}
 			else
 			{	/// Simple portfolio
-				Integer num = portfo.get(code);
+				int first = code.indexOf(".");
+				if( first == -1 ) first = code.length();
+				String start = code.substring(0,first);
+				Integer num;
+				if( projects.containsKey(start) )	// Inside a project
+				{
+					num = portfo.get(start);
+				}
+				else	// With no project
+				{
+					start = "";
+					num = portfo.get(start);
+				}
 				if( num == null ) num = 0;
-				portfo.put(code, num+1);
+				portfo.put(start, num+1);
 			}
 		}
 		
@@ -1597,12 +1625,13 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 			}
 			else
 			{	/// No parent project -> out project
-				outproject += portfo.get(k);
 			}
 		}
 		
+		outproject = portfo.get("");
+		
 		if( specialProject )
-			return inproject;
+			return (long) projectPortfo.size();
 		else
 			return outproject;
 	}

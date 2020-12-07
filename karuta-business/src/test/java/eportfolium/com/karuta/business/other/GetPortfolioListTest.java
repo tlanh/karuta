@@ -207,7 +207,7 @@ public class GetPortfolioListTest {
         List<Portfolio> portfolios = manager.getPortfolioList(credential.getId(), true, true, null);
 
         assertEquals(1, portfolios.size());
-        assertEquals(portfolio1.getId(), portfolios.get(0).getId());
+        assertEquals(portfolio2.getId(), portfolios.get(0).getId());
     }
 
     @Test
@@ -215,7 +215,7 @@ public class GetPortfolioListTest {
         List<Portfolio> portfolios = manager.getPortfolioList(credential.getId(), true, true, null);
 
         assertEquals(1, portfolios.size());
-        assertEquals(portfolio1.getId(), portfolios.get(0).getId());
+        assertEquals(portfolio2.getId(), portfolios.get(0).getId());
     }
 
     @Test
