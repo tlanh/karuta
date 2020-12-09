@@ -196,7 +196,11 @@ public abstract class BaseManagerImpl implements BaseManager {
 			Resource noderesres = node.getResResource();
 			if( noderesres != null )
 			{
-				String resData = String.format(resFormat, node.getId(), noderesres.getId(), noderesres.getModifDate(), noderesres.getXsiType(), noderesres.getContent());
+				String convertedContent = noderesres.getContent();
+				/// 2 times because Spring convert tags when sending data
+				convertedContent = convertedContent.replace("&", "&amp;");
+				convertedContent = convertedContent.replace("&", "&amp;");
+				String resData = String.format(resFormat, node.getId(), noderesres.getId(), noderesres.getModifDate(), noderesres.getXsiType(), convertedContent);
 				data.append(resData);
 			}
 
