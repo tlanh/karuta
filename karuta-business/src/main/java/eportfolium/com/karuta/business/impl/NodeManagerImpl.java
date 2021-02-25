@@ -1136,14 +1136,18 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
         /// Contient les uuid des noeuds à copier.
         Queue<Node> resolveParent = new LinkedList<>();
 
+        /// Noeud de reference a traverser
+        Queue<Node> refParent = new LinkedList<>();
+        
         nodesToCopy.add(baseCopyNode);
         resolveParent.add(baseCopyNode);
 
+        Node refNode = baseNode;
         Node qnode = baseCopyNode;
 
         while (qnode != null ) {
             //// Retrieve current branch
-          	List<Node> childs = nodes.get(qnode.getId());
+          	List<Node> childs = nodes.get(refNode.getId());
           	if( childs == null )	// Leaf
         		{
               qnode = resolveParent.poll();
@@ -1158,11 +1162,11 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
               	ccopy.setModifUserId(userId);
               	ccopy.setPortfolio(destPortfolio);
               	
-                Resource r2 = baseCopyNode.getContextResource();
+                Resource r2 = ccopy.getContextResource();
                 if( r2 != null ) resourceRepository.save(r2);
-                r2 = baseCopyNode.getResource();
+                r2 = ccopy.getResource();
                 if( r2 != null ) resourceRepository.save(r2);
-                r2 = baseCopyNode.getResResource();
+                r2 = ccopy.getResResource();
                 if( r2 != null ) resourceRepository.save(r2);
 
               	ccopy = nodeRepository.save(ccopy);
@@ -1172,10 +1176,13 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
               	nodesToCopy.add(ccopy);
               	/// Add to queue for traversing
               	resolveParent.add(cNode);
+              	/// Need to traverse this node next
+              	refParent.add(cNode);
               }
               qnode.setChildrenStr(String.join(",", cList));
               nodeRepository.save(qnode);
               
+              refNode = refParent.poll();
             qnode = resolveParent.poll();
         }
 
