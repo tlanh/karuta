@@ -1141,18 +1141,24 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
         
         nodesToCopy.add(baseCopyNode);
         resolveParent.add(baseCopyNode);
+        refParent.add(baseNode);
 
         Node refNode = baseNode;
         Node qnode = baseCopyNode;
 
-        while (qnode != null ) {
-            //// Retrieve current branch
+        while ( !refParent.isEmpty() ) {
+        	// Current parent to traverse
+        	refNode = refParent.poll();
+        	// Current parent to attach to
+        	qnode = resolveParent.poll();
+            //// Retrieve childrens
           	List<Node> childs = nodes.get(refNode.getId());
           	if( childs == null )	// Leaf
         		{
-              qnode = resolveParent.poll();
           		continue;
         		}
+          	/// First element in list is the parent node, remove it
+          	childs.remove(0);
           	List<String> cList = new ArrayList<>();
           	/// For listed childs
               for (Node cNode : childs ) {
@@ -1174,16 +1180,14 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
               	
               	/// Copy list to submit (Or need to submit before)
               	nodesToCopy.add(ccopy);
-              	/// Add to queue for traversing
-              	resolveParent.add(cNode);
+              	/// Add new parent to attach new child to
+              	resolveParent.add(ccopy);
               	/// Need to traverse this node next
               	refParent.add(cNode);
               }
               qnode.setChildrenStr(String.join(",", cList));
               nodeRepository.save(qnode);
               
-              refNode = refParent.poll();
-            qnode = resolveParent.poll();
         }
 
         //////////////////////////////////////////
