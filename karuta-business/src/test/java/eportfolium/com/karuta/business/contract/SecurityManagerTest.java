@@ -447,7 +447,7 @@ public class SecurityManagerTest {
 
         manager.addRole(portfolioId, label, userId);
 
-        verify(groupRightInfoRepository).save(any(GroupRightInfo.class));
+        verify(groupRightInfoRepository, times(2)).save(any(GroupRightInfo.class));
         verify(groupInfoRepository).save(any(GroupInfo.class));
     }
 

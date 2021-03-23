@@ -155,8 +155,27 @@ public abstract class BaseManagerImpl implements BaseManager {
 					"<metadata-epm %s/>" +
 					"<metadata %s/>";
 			
+			/// Because Jackson decoded data at input, into DB
+			String metawad = node.getMetadataWad();
+			metawad = metawad.replace("&nbsp;", "&amp;nbsp;")
+          .replace("<", "&lt;")
+          .replace(">", "&gt;")
+          .replaceAll("\\(\\s*\"", "(&quot;")
+          .replaceAll("\"\\s*\\)", "&quot;)");
+			String metaepm = node.getMetadataEpm();
+			metaepm = metaepm.replace("&nbsp;", "&amp;nbsp;")
+          .replace("<", "&lt;")
+          .replace(">", "&gt;")
+          .replaceAll("\\(\\s*\"", "(&quot;")
+          .replaceAll("\"\\s*\\)", "&quot;)");
+			String meta = node.getMetadata();
+			meta = meta.replace("&nbsp;", "&amp;nbsp;")
+          .replace("<", "&lt;")
+          .replace(">", "&gt;")
+          .replaceAll("\\(\\s*\"", "(&quot;")
+          .replaceAll("\"\\s*\\)", "&quot;)");
 			String nodeData = String.format(nodeFormat, node.getAsmType(), groupRights.isDelete(), node.getId(), groupRights.isRead(), "", groupRights.isSubmit(), groupRights.isWrite(), node.getModifDate(), node.getXsiType(),
-					node.getMetadataWad(), node.getMetadataEpm(), node.getMetadata());
+					metawad, metaepm, meta);
 			data.append(nodeData);
 			
 			String resFormat = "<asmResource contextid=\"%s\" id=\"%s\" last_modif=\"%s\" xsi_type=\"%s\">%s</asmResource>";
@@ -177,7 +196,11 @@ public abstract class BaseManagerImpl implements BaseManager {
 			Resource noderesres = node.getResResource();
 			if( noderesres != null )
 			{
-				String resData = String.format(resFormat, node.getId(), noderesres.getId(), noderesres.getModifDate(), noderesres.getXsiType(), noderesres.getContent());
+				String convertedContent = noderesres.getContent();
+				/// 2 times because Spring convert tags when sending data
+				convertedContent = convertedContent.replace("&", "&amp;");
+				convertedContent = convertedContent.replace("&", "&amp;");
+				String resData = String.format(resFormat, node.getId(), noderesres.getId(), noderesres.getModifDate(), noderesres.getXsiType(), convertedContent);
 				data.append(resData);
 			}
 

@@ -479,6 +479,7 @@ public class ResourceManagerTest {
         assertEquals("foo", retval);
 
         verify(resourceRepository).getResourceOfResourceByNodeUuid(nodeId);
+        verify(resourceRepository).save(any(Resource.class));
         verifyNoMoreInteractions(resourceRepository);
     }
 
@@ -491,7 +492,8 @@ public class ResourceManagerTest {
         UUID nodeId = UUID.randomUUID();
 
         Resource resource = new Resource();
-        resource.setNode(new Node());
+        resource.setXsiType("TextField");
+        resource.setResNode(new Node());
 
         doReturn(resource)
                 .when(resourceRepository)
@@ -523,7 +525,8 @@ public class ResourceManagerTest {
         UUID nodeId = UUID.randomUUID();
 
         Resource resource = new Resource();
-        resource.setNode(new Node());
+        resource.setXsiType("TextField");
+        resource.setResNode(new Node());
 
         doReturn(resource)
                 .when(resourceRepository)

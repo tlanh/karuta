@@ -396,6 +396,7 @@ public class NodesControllerTest extends ControllerTest {
                 .save(captor.capture());
 
         Node node = new Node();
+        node.setId(UUID.randomUUID());
         node.setPortfolio(portfolio);
         node.setSemantictag(srcetag);
         node.setCode(srcecode);

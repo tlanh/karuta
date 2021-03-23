@@ -1367,28 +1367,27 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 			////////////////////////////
 			/// Copie des ressources///
 			///////////////////////////
-			if (copy.getResource() != null) {
-				copy.getResource().setModifUserId(userId);
-
-				resourceRepository.save(copy.getResource());
+			if( copy.getResResource() != null )
+			{
+				copy.getResResource().setModifUserId(userId);
+				resourceRepository.save(copy.getResResource());
 			}
 
-			if (copy.getResResource() != null) {
+			if (copy.getResource() != null) {
 				// Mise a jour du code dans le contenu du noeud.
 				if (StringUtils.equalsIgnoreCase(copy.getAsmType(), "asmRoot")) {
-					copy.getResResource().setContent(
-							StringUtils.replace(copy.getResResource().getContent(), copy.getCode(), newCode));
-
+					String content = copy.getResource().getContent();
+					String find = String.format("<code>%s</code>", copy.getCode());
+					String replaced = String.format("<code>%s</code>", newCode);
+					content = content.replaceFirst(find, replaced);
+					copy.getResource().setContent(content);
 				}
-
-				copy.getResResource().setModifUserId(userId);
-
-				resourceRepository.save(copy.getResResource());
+				copy.getResource().setModifUserId(userId);
+				resourceRepository.save(copy.getResource());
 			}
 
 			if (copy.getContextResource() != null) {
 				copy.getContextResource().setModifUserId(userId);
-
 				resourceRepository.save(copy.getContextResource());
 			}
 
@@ -1501,12 +1500,140 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 		Specification<Portfolio> spec = buildSpec(userId, active, specialProject, portfolioCode);
 		Sort sort = Sort.by(Sort.Order.asc("modifDate"));
 
-		return portfolioRepository.findAll(spec, sort);
+		List<Portfolio> portfolios = portfolioRepository.findAll(spec, sort);
+		
+		HashMap<String, Integer> projects = new HashMap<>();
+		HashMap<String, List<Portfolio>> portfo = new HashMap<>();
+		List<Portfolio> projectPortfo = new ArrayList<Portfolio>();
+		
+		if( specialProject == null )
+		{
+			return portfolios;
+		}
+		
+		for( Portfolio p : portfolios )
+		{
+			String code = p.getRootNode().getCode();
+			code = code.split("\\.")[0];
+			
+			if( p.getRootNode().getSemantictag().contains("karuta-project") )
+			{	/// Projects
+				projects.put(code, 1);
+				projectPortfo.add(p);
+			}
+			else
+			{
+				/// Simple portfolio
+				int first = code.indexOf(".");
+				if( first == -1 ) first = code.length();
+				String start = code.substring(0, first);
+				List<Portfolio> plist;
+				if( projects.containsKey(start) )	// Inside a project
+				{
+				}
+				else	// With no project
+				{
+					start = "";
+				}
+				plist = portfo.get(start);
+				if( plist == null )
+				{
+					plist = new ArrayList<>();
+					portfo.put(start, plist);
+				}
+				plist.add(p);
+			}
+		}
+		
+		/// Effective list
+		List<Portfolio> inproject = new ArrayList<>();
+		List<Portfolio> outproject = new ArrayList<>();
+		for( String k : projects.keySet() )
+		{
+			/// Check if this code was declared in project list
+			if( portfo.containsKey(k) )
+			{	/// Has a parent project -> is in project
+				inproject.addAll(portfo.get(k));
+			}
+			else
+			{	/// No parent project -> out project
+//				outproject.addAll(portfo.get(k));
+			}
+		}
+		
+		if( specialProject )
+			return projectPortfo;
+		else
+			return portfo.get("");
+
 	}
 
 	@Override
 	public Long getPortfolioCount(Long userId, boolean active, Boolean specialProject, String portfolioCode) {
-		return portfolioRepository.count(buildSpec(userId, active, specialProject, portfolioCode));
+		Specification<Portfolio> spec = buildSpec(userId, active, specialProject, portfolioCode);
+		List<Portfolio> portfolios = portfolioRepository.findAll(spec);
+		
+		HashMap<String, Integer> projects = new HashMap<>();
+		HashMap<String, Integer> portfo = new HashMap<>();
+		List<Portfolio> projectPortfo = new ArrayList<Portfolio>();
+		
+		if( specialProject == null )
+		{
+			long totalcount = portfolios.size();
+			return totalcount;
+		}
+		
+		for( Portfolio p : portfolios )
+		{
+			String code = p.getRootNode().getCode();
+			code = code.split("\\.")[0];
+			
+			if( p.getRootNode().getSemantictag().contains("karuta-project") )
+			{	/// Projects
+				projects.put(code, 1);
+				projectPortfo.add(p);
+			}
+			else
+			{	/// Simple portfolio
+				int first = code.indexOf(".");
+				if( first == -1 ) first = code.length();
+				String start = code.substring(0,first);
+				Integer num;
+				if( projects.containsKey(start) )	// Inside a project
+				{
+					num = portfo.get(start);
+				}
+				else	// With no project
+				{
+					start = "";
+					num = portfo.get(start);
+				}
+				if( num == null ) num = 0;
+				portfo.put(start, num+1);
+			}
+		}
+		
+		long inproject = 0;
+		long outproject = 0;
+		/// Counting
+		for( String k : portfo.keySet() )
+		{
+			/// Check if this code was declared in project list
+			if( projects.containsKey(k) )
+			{	/// Has a parent project -> is in project
+				inproject += portfo.get(k);
+			}
+			else
+			{	/// No parent project -> out project
+			}
+		}
+		
+		outproject = portfo.get("");
+		
+		if( specialProject )
+			return (long) projectPortfo.size();
+		else
+			return outproject;
 	}
 
 	private Specification<Portfolio> buildSpec(Long userId, boolean active, Boolean specialProject, String portfolioCode) {
@@ -1525,7 +1652,9 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 			return cb.equal(root.get("active"), active ? 1 : 0);
 		});
 
+		/*
 		if (specialProject != null) {
+			//// Parse list and check number
 			// AND p.rootNode.semantictag LIKE '%karuta-project%'
 			Specification<Portfolio> tagFilter = Specification.where((root, query, cb) -> {
 				Join<Portfolio, Node> rootNode = root.join("rootNode");
@@ -1538,6 +1667,7 @@ public class PortfolioManagerImpl extends BaseManagerImpl implements PortfolioMa
 
 			spec = spec.and(tagFilter);
 		}
+		//*/
 		
 		if (portfolioCode != null) {
 			// AND p.rootNode.code LIKE '%:code%'

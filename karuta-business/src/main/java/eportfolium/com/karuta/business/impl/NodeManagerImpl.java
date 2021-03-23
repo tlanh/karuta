@@ -15,6 +15,9 @@
 
 package eportfolium.com.karuta.business.impl;
 
+import java.io.File;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.function.BiConsumer;
@@ -23,6 +26,14 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import javax.xml.transform.stream.StreamSource;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
@@ -37,9 +48,12 @@ import org.hibernate.Hibernate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.w3c.dom.Document;
+import org.xml.sax.InputSource;
 
 import eportfolium.com.karuta.business.contract.GroupManager;
 import eportfolium.com.karuta.business.contract.NodeManager;
@@ -296,6 +310,66 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 		return nodeDocument;
 	}
 
+	@Override
+	public String getNodeWithXSL( UUID nodeUuid, String folder, String xslFile, String parameters, Long userId )
+	{
+		String xml;
+		try {
+			/// Preparing parameters for future need, format: "par1:par1val;par2:par2val;..."
+			String[] table = parameters.split(";");
+			int parSize = table.length;
+			String param[] = new String[parSize];
+			String paramVal[] = new String[parSize];
+			for( int i=0; i<parSize; ++i )
+			{
+				String line = table[i];
+				int var = line.indexOf(":");
+				param[i] = line.substring(0, var);
+				paramVal[i] = line.substring(var+1);
+			}
+
+			/// TODO: Test this more, should use getNode rather than having another output
+			xml = getNode(nodeUuid, userId, null).toString();
+			if( xml == null )
+				return null;
+
+    	String path = folder.substring(0,folder.lastIndexOf(File.separator, folder.length()-2)+1);
+    	xslFile = path+xslFile;
+
+			xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+					"<!DOCTYPE xsl:stylesheet [" +
+					"<!ENTITY % lat1 PUBLIC \"-//W3C//ENTITIES Latin 1 for XHTML//EN\" \""+folder+"xhtml-lat1.ent\">" +
+					"<!ENTITY % symbol PUBLIC \"-//W3C//ENTITIES Symbols for XHTML//EN\" \""+folder+"xhtml-symbol.ent\">" +
+					"<!ENTITY % special PUBLIC \"-//W3C//ENTITIES Special for XHTML//EN\" \""+folder+"xhtml-special.ent\">" +
+					"%lat1;" +
+					"%symbol;" +
+					"%special;" +
+					"]>" + // For the pesky special characters
+					xml;
+			//// XSLT processing
+			System.out.println(xml);
+			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+			Document xmldoc =null;
+			DocumentBuilder builder = factory.newDocumentBuilder();
+			xmldoc = builder.parse(new InputSource(new StringReader(xml)));
+			log.debug("processXSLTfile2String-"+xslFile);
+			Transformer transformer = TransformerFactory.newInstance().newTransformer(new StreamSource(new File(xslFile)));
+			StreamResult result = new StreamResult(new StringWriter());
+			DOMSource source = new DOMSource(xmldoc);
+			for (int i = 0; i < param.length; i++) {
+				log.debug("setParemater - "+param[i]+":"+paramVal[i]+"...");
+				transformer.setParameter(param[i], paramVal[i]);
+				log.debug("ok");
+			}
+			transformer.transform(source, result);
+			log.debug("processXSLTfile2String-"+xslFile);
+			return result.getWriter().toString();
+		} catch (Exception e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+	
 	@Override
 	public boolean isCodeExist(String code) {
 		return nodeRepository.isCodeExist(code);
@@ -938,6 +1012,13 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 						branch.add(pNode);	/// Parent node as first eleemnt
 						resolve.put(parentId, branch);
 					}
+					node = (Node) Hibernate.unproxy(node);
+					Resource r = node.getResource();
+					if( r != null ) node.setResource((Resource) Hibernate.unproxy(r));
+					r = node.getContextResource();
+					if( r != null ) node.setContextResource((Resource) Hibernate.unproxy(r));
+					r = node.getResResource();
+					if( r != null ) node.setResResource((Resource) Hibernate.unproxy(r));
 					branch.add(node);
 				}
 				// Mettre tous les noeuds dans le cache.
@@ -1035,6 +1116,12 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
         baseCopyNode.setModifUserId(userId);
         baseCopyNode.setPortfolio(destPortfolio);
         baseCopyNode.setNodeOrder(nodeOrder+1);
+        Resource r = baseCopyNode.getContextResource();
+        if( r != null ) resourceRepository.save(r);
+        r = baseCopyNode.getResource();
+        if( r != null ) resourceRepository.save(r);
+        r = baseCopyNode.getResResource();
+        if( r != null ) resourceRepository.save(r);
         baseCopyNode = nodeRepository.save(baseCopyNode);
         
         /// Ajout de l'enfant dans le noeud de destination
@@ -1049,19 +1136,29 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
         /// Contient les uuid des noeuds à copier.
         Queue<Node> resolveParent = new LinkedList<>();
 
+        /// Noeud de reference a traverser
+        Queue<Node> refParent = new LinkedList<>();
+        
         nodesToCopy.add(baseCopyNode);
         resolveParent.add(baseCopyNode);
+        refParent.add(baseNode);
 
+        Node refNode = baseNode;
         Node qnode = baseCopyNode;
 
-        while (qnode != null ) {
-            //// Retrieve current branch
-          	List<Node> childs = nodes.get(qnode.getId());
+        while ( !refParent.isEmpty() ) {
+        	// Current parent to traverse
+        	refNode = refParent.poll();
+        	// Current parent to attach to
+        	qnode = resolveParent.poll();
+            //// Retrieve childrens
+          	List<Node> childs = nodes.get(refNode.getId());
           	if( childs == null )	// Leaf
         		{
-              qnode = resolveParent.poll();
           		continue;
         		}
+          	/// First element in list is the parent node, remove it
+          	childs.remove(0);
           	List<String> cList = new ArrayList<>();
           	/// For listed childs
               for (Node cNode : childs ) {
@@ -1071,18 +1168,26 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
               	ccopy.setModifUserId(userId);
               	ccopy.setPortfolio(destPortfolio);
               	
+                Resource r2 = ccopy.getContextResource();
+                if( r2 != null ) resourceRepository.save(r2);
+                r2 = ccopy.getResource();
+                if( r2 != null ) resourceRepository.save(r2);
+                r2 = ccopy.getResResource();
+                if( r2 != null ) resourceRepository.save(r2);
+
               	ccopy = nodeRepository.save(ccopy);
               	cList.add(ccopy.getId().toString());
               	
               	/// Copy list to submit (Or need to submit before)
               	nodesToCopy.add(ccopy);
-              	/// Add to queue for traversing
-              	resolveParent.add(cNode);
+              	/// Add new parent to attach new child to
+              	resolveParent.add(ccopy);
+              	/// Need to traverse this node next
+              	refParent.add(cNode);
               }
               qnode.setChildrenStr(String.join(",", cList));
               nodeRepository.save(qnode);
               
-            qnode = resolveParent.poll();
         }
 
         //////////////////////////////////////////
@@ -1094,6 +1199,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 
         for (Node node : nodesToCopy) {
 
+        	/*
         	Arrays.asList(node.getResource(), node.getResResource(), node.getContextResource()).forEach(original -> {
         		if (original != null) {
         			Resource resourceCopy = new Resource(original);
@@ -1115,6 +1221,7 @@ public class NodeManagerImpl extends BaseManagerImpl implements NodeManager {
 					}
 				}
 			});
+					//*/
 
             allNodes.put(node, node);
         }

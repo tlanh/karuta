@@ -128,12 +128,14 @@ public class PortfolioController extends AbstractController {
      *
      * GET /rest/api/portfolios/code/{code}
      */
-    @GetMapping(value = "/portfolio/code/{code:.+}")
-    public HttpEntity<String> getByCode(@PathVariable String code,
-                                                   @RequestParam(required = false) boolean resources,
-                                                   @AuthenticationPrincipal UserInfo userInfo)
+    @GetMapping(value = "/portfolio/code/**")
+    public HttpEntity<String> getByCode( @RequestParam(required = false) boolean resources,
+                                                   @AuthenticationPrincipal UserInfo userInfo,
+                                                   HttpServletRequest request )
             throws BusinessException, JsonProcessingException {
 
+    	String code = request.getRequestURI();
+    	code = code.split("/code/")[1];
         String portfolio = portfolioManager
                 .getPortfolioByCode(code, userInfo.getId(), resources);
 
@@ -155,15 +157,25 @@ public class PortfolioController extends AbstractController {
                                             @RequestParam(required = false) boolean count,
                                             @RequestParam(required = false) Integer userid,
                                             @RequestParam(required = false) String project,
-                                            @AuthenticationPrincipal UserInfo userInfo) {
+                                            @RequestParam(required = false) String code,
+                                            @AuthenticationPrincipal UserInfo userInfo)
+            throws BusinessException, JsonProcessingException {
 
         String portfolioCode = search;
-        boolean specialProject = "true".equals(project) || "1".equals(project);
+        Boolean specialProject = null;
+        
+        if( "true".equals(project) || "1".equals(project) )
+        	specialProject = true;
+        else if( "false".equals(project) || "0".equals(project) )
+        	specialProject = false;
+        else if (project != null && project.length() > 0)
+          portfolioCode = project;
 
-        if (project != null && project.length() > 0)
-            portfolioCode = project;
-
-        if (userid != null && securityManager.isAdmin(userInfo.getId())) {
+        if( code != null )
+        {
+        	return new HttpEntity<>(portfolioManager.getPortfolioByCode(code, userInfo.getId(), true));
+        }
+        else if (userid != null && securityManager.isAdmin(userInfo.getId())) {
             return new HttpEntity<>(portfolioManager.getPortfolios(userid,
                         active, count, specialProject, portfolioCode));
 

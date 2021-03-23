@@ -309,10 +309,14 @@ public class SecurityManagerImpl implements SecurityManager {
 			return gri.getGroupInfo().getId();
 		} else {
 			GroupRightInfo ngri = new GroupRightInfo(new Portfolio(portfolioId), role);
-			groupRightInfoRepository.save(ngri);
+			groupRightInfoRepository.save(ngri);	// To generate some ID first
 
 			GroupInfo gi = new GroupInfo(ngri.getId(), 1L, role);
 			groupInfoRepository.save(gi);
+			
+			// Back link to GroupInfo
+			ngri.setGroupInfo( gi );
+			groupRightInfoRepository.save(ngri);
 
 			return gi.getId();
 		}
